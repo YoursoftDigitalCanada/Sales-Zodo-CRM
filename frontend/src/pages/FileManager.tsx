@@ -2257,7 +2257,7 @@ const FileManagerPage = () => {
         {/* Header */}
         <header className="crm-module-header sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-4 py-3 sm:px-6 sm:py-4">
-            <div className="flex items-center justify-between">
+            <div className="crm-toolbar-row">
               {/* Title & Breadcrumb */}
               <div className="flex items-center gap-3">
                 {canNavigateBack ? (
@@ -2265,14 +2265,14 @@ const FileManagerPage = () => {
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="h-10 w-10 rounded-md border-[rgba(15,23,42,0.06)]"
+                    className="crm-toolbar-button crm-toolbar-button-secondary crm-toolbar-icon-button"
                     onClick={handleGoBack}
                   >
                     <ArrowLeft size={16} />
                   </Button>
                 ) : null}
                 <div>
-                <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
+                <div className="crm-toolbar-breadcrumb hidden sm:flex mb-1">
                   <span>Dashboard</span>
                   <ChevronRight size={14} />
                   {breadcrumbs.map((crumb, index) => (
@@ -2292,18 +2292,18 @@ const FileManagerPage = () => {
                     </React.Fragment>
                   ))}
                 </div>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">
+                <h1 className="crm-toolbar-title">
                   {activeTabLabel}
                 </h1>
                 </div>
               </div>
 
               {/* Header Actions */}
-              <div className="flex items-center gap-2 sm:gap-3">
+              <div className="crm-toolbar-actions gap-2 sm:gap-3">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-md border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE] hover:text-[#0891B2]"
+                  className="crm-toolbar-button crm-toolbar-button-secondary"
                   onClick={() => { loadData(); loadStorage(); }}
                 >
                   <RefreshCw size={16} className="sm:mr-2" />

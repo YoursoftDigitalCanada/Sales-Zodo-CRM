@@ -447,16 +447,17 @@ const SupportPage = () => {
       <div className="flex-1 overflow-auto">
         <div className={cn("max-w-[1400px] mx-auto", isMobile ? "p-3" : "p-6")}>
           {/* Header */}
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className={cn("mb-6 flex", isMobile ? "flex-col gap-4" : "items-center justify-between")}>
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className={cn("crm-module-header sticky top-0 z-20 mb-6 rounded-xl px-4 py-4", isMobile ? "space-y-4" : "")}>
+            <div className={cn("crm-toolbar-row", isMobile && "items-start")}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center"><Headphones size={20} className="text-[#0891B2]" /></div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Support Center</h1>
-                <p className="text-sm text-[#94A3B8]">{stats.open} open tickets · {stats.totalArticles} articles · {stats.totalFaqs} FAQs</p>
+              <div className="crm-toolbar-meta">
+                <h1 className="crm-toolbar-title">Support Center</h1>
+                <p className="crm-toolbar-copy">{stats.open} open tickets · {stats.totalArticles} articles · {stats.totalFaqs} FAQs</p>
               </div>
             </div>
-            <div className={cn("flex items-center gap-3", isMobile && "flex-wrap")}>
-              <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => { loadTickets(); toast({ title: "Refreshed" }); }}>
+            <div className={cn("crm-toolbar-actions", isMobile && "flex-wrap")}>
+              <Button variant="outline" size="sm" className="crm-toolbar-button crm-toolbar-button-secondary" onClick={() => { loadTickets(); toast({ title: "Refreshed" }); }}>
                 <RefreshCw size={16} className={cn("mr-2", isLoading && "animate-spin")} />Refresh
               </Button>
               {activeTab === "tickets" && (
@@ -470,10 +471,11 @@ const SupportPage = () => {
                 </div>
               )}
               {activeTab === "tickets" && canCreateTickets && (
-                <Button size="sm" className={cn("bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md", isMobile && "flex-1")} onClick={() => setIsFormOpen(true)}>
+                <Button size="sm" className={cn("crm-toolbar-button crm-toolbar-button-primary", isMobile && "flex-1")} onClick={() => setIsFormOpen(true)}>
                   <Plus size={16} className="mr-2" />New Ticket
                 </Button>
               )}
+            </div>
             </div>
           </motion.div>
 

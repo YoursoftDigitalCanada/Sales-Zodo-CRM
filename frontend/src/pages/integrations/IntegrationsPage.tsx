@@ -225,27 +225,27 @@ export default function IntegrationsPage() {
             <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
                 {/* Header */}
                 <header className="crm-module-header bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4 flex-shrink-0">
-                    <div className="flex items-center justify-between">
+                    <div className="crm-toolbar-row">
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
                                 <Plug size={20} className="text-[#0891B2]" />
                             </div>
-                            <div>
-                                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Integrations</h1>
-                                <p className="text-sm text-[#475569] mt-0.5">
+                            <div className="crm-toolbar-meta">
+                                <h1 className="crm-toolbar-title">Integrations</h1>
+                                <p className="crm-toolbar-copy">
                                     {connectedIntegrations.length} connected · {totalEventsToday.toLocaleString()} events today
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
+                        <div className="crm-toolbar-actions">
+                            <div className="crm-toolbar-search w-full sm:w-56">
+                                <Search className="crm-toolbar-search-icon" />
                                 <input
                                     type="text"
                                     placeholder="Search integrations..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-56 h-9 pl-9 pr-3 rounded-md bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)] text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0891B2]/20"
+                                    className="crm-toolbar-search-input"
                                 />
                             </div>
                         </div>

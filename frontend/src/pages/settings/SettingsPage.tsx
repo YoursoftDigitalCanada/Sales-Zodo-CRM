@@ -698,6 +698,28 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
+      <header className="crm-module-header sticky top-0 z-20">
+        <div className="mx-auto max-w-[1500px] px-4 sm:px-6">
+          <div className="crm-toolbar-row">
+            <div className="crm-toolbar-meta">
+              <div className="crm-toolbar-breadcrumb">
+                <span>Settings</span>
+                {activeTabItem ? (
+                  <>
+                    <ChevronRight size={14} />
+                    <span className="crm-toolbar-breadcrumb-current">{activeTabItem.label}</span>
+                  </>
+                ) : null}
+              </div>
+              <h1 className="crm-toolbar-title">Workspace Settings</h1>
+              <p className="crm-toolbar-copy">
+                {activeTabItem?.description || "Manage workspace preferences, billing, email, security, and team operations."}
+              </p>
+            </div>
+            {activeTabItem ? <span className="crm-toolbar-status-chip hidden sm:inline-flex">{activeTabItem.label}</span> : null}
+          </div>
+        </div>
+      </header>
       <div className="mx-auto flex max-w-[1500px] flex-col gap-6 px-4 py-6 sm:px-6 xl:flex-row">
         {isMobile ? (
           showMobileSettingsIndex ? (

@@ -265,21 +265,21 @@ export default function RolesPage() {
             <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
                 {/* Header */}
                 <header className="crm-module-header bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4 flex-shrink-0">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="crm-toolbar-row">
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-lg bg-[#0891B2]/10 flex items-center justify-center">
                                 <Shield size={20} className="text-[#0891B2]" />
                             </div>
-                            <div>
-                                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Roles & Permissions</h1>
-                                <p className="text-sm text-[#475569] mt-0.5">Manage access control and team permissions</p>
+                            <div className="crm-toolbar-meta">
+                                <h1 className="crm-toolbar-title">Roles & Permissions</h1>
+                                <p className="crm-toolbar-copy">Manage access control and team permissions</p>
                             </div>
                         </div>
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                            <button onClick={handleExport} className="flex items-center gap-2 h-9 px-4 border border-[rgba(15,23,42,0.12)] bg-white text-[#475569] rounded-lg text-sm font-medium hover:bg-[#F8FAFC]">
+                        <div className="crm-toolbar-actions">
+                            <button onClick={handleExport} className="crm-toolbar-button crm-toolbar-button-secondary">
                                 <Download size={14} /> Export
                             </button>
-                            <button onClick={() => { setShowRoleForm(true); setActiveTab("roles"); }} className="flex items-center gap-2 h-9 px-4 bg-[#0891B2] text-white rounded-lg text-sm font-medium hover:bg-[#0891B2]/90">
+                            <button onClick={() => { setShowRoleForm(true); setActiveTab("roles"); }} className="crm-toolbar-button crm-toolbar-button-primary">
                                 <Plus size={14} /> New Role
                             </button>
                         </div>

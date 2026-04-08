@@ -2837,19 +2837,19 @@ const LetterBoxPage = () => {
         {/* Header */}
         <header className="crm-module-header sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[rgba(15,23,42,0.06)]">
           <div className={cn(isMobile ? "px-3 py-3" : "px-6 py-4")}>
-            <div className="flex items-center justify-between gap-3">
+            <div className="crm-toolbar-row gap-3">
               {/* Title & Breadcrumb */}
-              <div>
-                <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
+              <div className="crm-toolbar-meta">
+                <div className="crm-toolbar-breadcrumb hidden sm:flex mb-1">
                   <span>Dashboard</span>
                   <ChevronRight size={14} />
-                  <span className="text-[#0891B2] font-medium">Letter Box</span>
+                  <span className="crm-toolbar-breadcrumb-current">Letter Box</span>
                 </div>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Letter Box</h1>
+                <h1 className="crm-toolbar-title">Letter Box</h1>
               </div>
 
               {/* Header Actions */}
-              <div className={cn("flex items-center gap-3", isMobile && "gap-2")}>
+              <div className={cn("crm-toolbar-actions", isMobile && "gap-2")}>
                 {emailConfigured?.mailboxAddress ? (
                   <Badge variant="outline" className="hidden md:inline-flex border-[rgba(15,23,42,0.08)] bg-white text-[#0F172A]">
                     {emailConfigured.mailboxAddress}
@@ -2859,7 +2859,7 @@ const LetterBoxPage = () => {
                 <Button
                   variant="outline"
                   onClick={() => setShowMailboxSettings(true)}
-                  className="hidden sm:inline-flex rounded-md border-[rgba(15,23,42,0.08)] bg-white text-[#0F172A] hover:text-[#0891B2]"
+                  className="crm-toolbar-button crm-toolbar-button-secondary hidden sm:inline-flex"
                 >
                   <Settings size={16} className="mr-2" />
                   My Mailbox

@@ -4889,19 +4889,19 @@ const AllLeads = () => {
         {/* Header */}
         <header className="crm-module-header sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
+            <div className="crm-toolbar-row">
+              <div className="crm-toolbar-meta">
+                <div className="crm-toolbar-breadcrumb hidden sm:flex mb-1">
                   <Link to="/dashboard" className="hover:text-[#6637F4]">
                     Dashboard
                   </Link>
                   <ChevronRight size={14} />
-                  <span className="text-[#0F172A] font-medium">Leads</span>
+                  <span className="crm-toolbar-breadcrumb-current">Leads</span>
                 </div>
-                <h1 className="text-lg sm:text-2xl font-bold text-[#0F172A]">All Leads</h1>
+                <h1 className="crm-toolbar-title text-lg sm:text-[clamp(1.35rem,1.12rem+0.48vw,1.75rem)]">All Leads</h1>
               </div>
 
-              <div className="flex items-center gap-2 sm:gap-3">
+              <div className="crm-toolbar-actions gap-2 sm:gap-3">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -4909,7 +4909,7 @@ const AllLeads = () => {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="rounded-md hidden sm:inline-flex"
+                          className="crm-toolbar-button crm-toolbar-button-secondary crm-toolbar-icon-button hidden sm:inline-flex"
                           onClick={() => importFileInputRef.current?.click()}
                           disabled={bulkActionLoading === "import"}
                         >
@@ -4926,7 +4926,7 @@ const AllLeads = () => {
                       <Button
                         variant="outline"
                         size="icon"
-                        className="rounded-md hidden sm:inline-flex"
+                        className="crm-toolbar-button crm-toolbar-button-secondary crm-toolbar-icon-button hidden sm:inline-flex"
                         onClick={() => exportLeadRecords(filteredLeads, "leads")}
                         disabled={bulkActionLoading === "export"}
                       >
@@ -4943,7 +4943,7 @@ const AllLeads = () => {
                       setCurrentLead(null);
                       setIsFormOpen(true);
                     }}
-                    className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2"
+                    className="crm-toolbar-button crm-toolbar-button-primary gap-2"
                     size="sm"
                   >
                     <UserPlus size={16} />

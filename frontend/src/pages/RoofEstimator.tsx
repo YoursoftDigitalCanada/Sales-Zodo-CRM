@@ -688,21 +688,21 @@ export default function RoofEstimator() {
     <div className="min-h-screen bg-[#F8FAFC]" {...(isMobile ? handlers : {})}>
       {/* ── Header ───────────────────────────────────────── */}
       <header className="crm-module-header sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-[rgba(15,23,42,0.06)]/50">
-        <div className={cn("flex items-center justify-between", isMobile ? "min-h-16 px-4 py-3" : "h-16 px-6")}>
-          <div className={cn("flex items-center gap-2 text-sm", isMobile && "min-w-0")}>
+        <div className={cn("crm-toolbar-row", isMobile ? "min-h-16 px-4 py-3" : "px-6")}>
+          <div className={cn("crm-toolbar-breadcrumb", isMobile && "min-w-0")}>
             <span className="text-[#475569]">CRM</span>
             <ChevronRight size={16} className="text-[#475569]" />
-            <span className="truncate font-medium text-[#0F172A]">EagleView Roof Estimator</span>
+            <span className="crm-toolbar-breadcrumb-current truncate">EagleView Roof Estimator</span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
+          <div className="crm-toolbar-actions">
+            <span className="crm-toolbar-status-chip bg-blue-100 text-blue-700 border-blue-200">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
               EagleView Sandbox
             </span>
             {!isMobile && canCreateEstimates && (
               <Button
                 onClick={() => navigate("/roof-estimator/new")}
-                className="bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md shadow-sm"
+                className="crm-toolbar-button crm-toolbar-button-primary"
               >
                 <Plus size={18} className="mr-2" />
                 Create Estimate

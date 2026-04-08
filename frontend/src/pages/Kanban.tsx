@@ -1117,18 +1117,18 @@ const KanbanPage: React.FC = () => {
         {/* HEADER */}
         {/* ============================================ */}
         <header className="crm-module-header sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]/50">
-          <div className="flex h-20 items-center justify-between px-6">
+          <div className="crm-toolbar-row px-6">
             {/* Left Section - Search */}
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#475569]" />
+            <div className="crm-toolbar-actions gap-4">
+              <div className="crm-toolbar-search">
+                <Search className="crm-toolbar-search-icon" />
                 <input
                   type="text"
                   placeholder="Search tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className={cn(
-                    "h-11 pl-10 pr-4 rounded-md bg-white/5 border-none text-sm placeholder:text-[#475569] focus:outline-none focus:ring-2 focus:ring-[#22D3EE]/20 focus:bg-white transition-all",
+                    "crm-toolbar-search-input pr-4",
                     isMobile ? "w-[180px]" : "w-64"
                   )}
                 />
@@ -1136,12 +1136,12 @@ const KanbanPage: React.FC = () => {
 
               {/* Priority Filter */}
               {isMobile ? (
-                <Button variant="outline" className="h-11 rounded-md" onClick={() => setFiltersOpen(true)}>
+                <Button variant="outline" className="crm-toolbar-button crm-toolbar-button-secondary" onClick={() => setFiltersOpen(true)}>
                   <Filter size={16} />
                 </Button>
               ) : (
                 <Select value={filterPriority} onValueChange={setFilterPriority}>
-                  <SelectTrigger className="w-40 h-11 rounded-md border-[rgba(15,23,42,0.06)]">
+                  <SelectTrigger className="w-40 h-11 rounded-xl border-[rgba(15,23,42,0.08)] bg-white text-[#0F172A] shadow-sm">
                     <div className="flex items-center gap-2">
                       <Filter size={14} className="text-[#475569]" />
                       <SelectValue placeholder="All Priorities" />
@@ -1169,13 +1169,13 @@ const KanbanPage: React.FC = () => {
             </div>
 
             {/* Right Section */}
-            <div className="flex items-center gap-3">
+            <div className="crm-toolbar-actions">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => openAddDialog()}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 bg-[#0891B2] text-white text-sm font-medium rounded-md  hover:bg-[#0891B2]/90 transition-colors",
+                  "crm-toolbar-button crm-toolbar-button-primary",
                   isMobile && "hidden"
                 )}
               >

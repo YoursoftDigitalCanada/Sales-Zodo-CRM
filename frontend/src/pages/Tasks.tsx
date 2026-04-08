@@ -2718,18 +2718,18 @@ const TasksPage = () => {
         {/* Header */}
         <header className="crm-module-header sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Tasks</h1>
-                <p className="text-[#94A3B8] text-sm sm:text-base">Manage and track your tasks</p>
+            <div className="crm-toolbar-row">
+              <div className="crm-toolbar-meta">
+                <h1 className="crm-toolbar-title">Tasks</h1>
+                <p className="crm-toolbar-copy">Manage and track your tasks</p>
               </div>
 
-              <div className="flex items-center gap-2 sm:gap-3">
+              <div className="crm-toolbar-actions gap-2 sm:gap-3">
                 {/* Mobile sidebar toggle */}
                 <Button
                   variant="outline"
                   size="sm"
-                  className="lg:hidden rounded-md"
+                  className="crm-toolbar-button crm-toolbar-button-secondary lg:hidden"
                   onClick={() => setShowMobileSidebar(!showMobileSidebar)}
                 >
                   <Filter size={16} className="mr-1" />
@@ -2737,29 +2737,32 @@ const TasksPage = () => {
                 </Button>
 
                 {/* View Mode Toggle */}
-                <div className="hidden sm:flex items-center bg-white/5 rounded-md p-1">
+                <div className="crm-toolbar-segment hidden sm:flex">
                   <Button
-                    variant={viewMode === "list" ? "secondary" : "ghost"}
+                    variant="ghost"
                     size="sm"
-                    className="rounded-md"
+                    data-active={viewMode === "list"}
+                    className="crm-toolbar-segment-button"
                     onClick={() => setViewMode("list")}
                   >
                     <List size={16} className="mr-1" />
                     <span className="hidden md:inline">List</span>
                   </Button>
                   <Button
-                    variant={viewMode === "grid" ? "secondary" : "ghost"}
+                    variant="ghost"
                     size="sm"
-                    className="rounded-md"
+                    data-active={viewMode === "grid"}
+                    className="crm-toolbar-segment-button"
                     onClick={() => setViewMode("grid")}
                   >
                     <LayoutGrid size={16} className="mr-1" />
                     <span className="hidden md:inline">Grid</span>
                   </Button>
                   <Button
-                    variant={viewMode === "kanban" ? "secondary" : "ghost"}
+                    variant="ghost"
                     size="sm"
-                    className="rounded-md"
+                    data-active={viewMode === "kanban"}
+                    className="crm-toolbar-segment-button"
                     onClick={() => setViewMode("kanban")}
                   >
                     <KanbanSquare size={16} className="mr-1" />
@@ -2772,7 +2775,7 @@ const TasksPage = () => {
                     setCurrentTask(null);
                     setIsFormOpen(true);
                   }}
-                  className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-1 sm:gap-2"
+                  className="crm-toolbar-button crm-toolbar-button-primary gap-1 sm:gap-2"
                   size="sm"
                 >
                   <Plus size={18} />

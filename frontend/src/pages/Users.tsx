@@ -2787,26 +2787,26 @@ export default function UsersPage() {
       <main className="flex-1 transition-all duration-300">
         <header className="crm-module-header sticky top-0 z-30 border-b border-[rgba(15,23,42,0.06)] bg-white/80 backdrop-blur-md">
           <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="mb-1 hidden items-center gap-2 text-sm text-[#94A3B8] sm:flex">
+            <div className="crm-toolbar-row">
+              <div className="crm-toolbar-meta">
+                <div className="crm-toolbar-breadcrumb mb-1 hidden sm:flex">
                   <span>Dashboard</span>
                   <ChevronRight size={14} />
-                  <span className="font-medium text-[#0891B2]">Users</span>
+                  <span className="crm-toolbar-breadcrumb-current">Users</span>
                 </div>
-                <h1 className="text-xl font-bold text-[#0F172A] sm:text-2xl">User Management</h1>
+                <h1 className="crm-toolbar-title">User Management</h1>
               </div>
 
-              <div className="hidden items-center gap-3 sm:flex">
+              <div className="crm-toolbar-actions hidden sm:flex">
                 <Button
                   variant="outline"
                   onClick={() => setShowInviteDialog(true)}
-                  className="rounded-md border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE] hover:text-[#0891B2]"
+                  className="crm-toolbar-button crm-toolbar-button-secondary"
                 >
                   <MailPlus size={16} className="mr-2" />
                   Invite Users
                 </Button>
-                <Button onClick={handleCreateUser} className="rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
+                <Button onClick={handleCreateUser} className="crm-toolbar-button crm-toolbar-button-primary">
                   <UserPlus size={16} className="mr-2" />
                   Add User
                 </Button>

@@ -546,21 +546,21 @@ const LeadSourcesPage = () => {
             <main className="flex-1 transition-all duration-300">
                 {/* Header */}
                 <header className="crm-module-header sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
-                    <div className="flex h-16 items-center justify-between px-6">
-                        <div className="flex items-center gap-2 text-sm">
+                    <div className="crm-toolbar-row px-6">
+                        <div className="crm-toolbar-breadcrumb">
                             <button onClick={() => navigate("/dashboard")} className="text-[#475569] hover:text-[#6637F4] transition-colors">
                                 Dashboard
                             </button>
                             <ChevronRight size={14} className="text-[#475569]" />
-                            <span className="font-semibold text-[#6637F4]">Lead Sources</span>
+                            <span className="crm-toolbar-breadcrumb-current">Lead Sources</span>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="crm-toolbar-actions">
                             <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => setAddDialogOpen(true)}
                                 className={cn(
-                                    "flex items-center gap-2 px-4 py-2.5 bg-[#6637F4] text-white text-sm font-medium rounded-xl hover:bg-[#6637F4]/90 transition-colors shadow-sm shadow-[#6637F4]/25",
+                                    "crm-toolbar-button crm-toolbar-button-primary",
                                     isMobile && "hidden"
                                 )}
                             >

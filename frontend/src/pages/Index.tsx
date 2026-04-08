@@ -1348,31 +1348,34 @@ const Index = () => {
           ) : (
             <div className="flex h-12 items-center justify-between px-3 md:px-5">
               <div className="flex items-center gap-2 md:gap-6 flex-1 min-w-0">
-                <div className="relative flex-1 max-w-[160px] sm:max-w-xs md:max-w-none md:flex-none md:w-72">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#475569]" />
+                <div className="crm-toolbar-search flex-1 max-w-[160px] sm:max-w-xs md:max-w-none md:flex-none md:w-72">
+                  <Search className="crm-toolbar-search-icon" />
                   <input
                     type="text"
                     placeholder="Search jobs, estimates, clients..."
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     onClick={() => setShowSearchModal(true)}
-                    className="w-full h-8 pl-9 pr-4 md:pr-14 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-xs text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#0891B2]/30 transition-colors"
+                    className="crm-toolbar-search-input h-10 pr-4 text-sm md:pr-14"
                   />
-                  <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded bg-[#F1F5F9] text-[10px] text-[#475569] border border-[rgba(15,23,42,0.06)] font-mono hidden md:flex items-center gap-1">
+                  <kbd className="crm-toolbar-kbd absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex">
                     <Command size={10} />
                     K
                   </kbd>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
+              <div className="crm-toolbar-actions flex-shrink-0 gap-1.5 sm:gap-2 md:gap-3">
                 <div className="hidden lg:flex items-center gap-2">
                   {quickActions.slice(0, 3).map((action) => (
                     <Button
                       key={action.id}
-                      variant={action.variant}
                       size="sm"
                       onClick={() => navigate(action.path)}
+                      className={cn(
+                        "crm-toolbar-button",
+                        action.variant === "default" ? "crm-toolbar-button-primary" : "crm-toolbar-button-secondary"
+                      )}
                     >
                       <action.icon />
                       <span>{action.label}</span>
@@ -1382,7 +1385,7 @@ const Index = () => {
 
                 <button
                   onClick={toggleDarkMode}
-                  className="p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors"
+                  className="crm-toolbar-button crm-toolbar-button-secondary crm-toolbar-icon-button text-[#475569]"
                 >
                   {isDarkMode ? <Sun size={15} /> : <Moon size={15} />}
                 </button>
@@ -1390,7 +1393,7 @@ const Index = () => {
                 <div ref={notificationRef} className="relative">
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}
-                    className="relative overflow-visible p-2 rounded-md bg-white border border-[rgba(15,23,42,0.06)] text-[#94A3B8] hover:text-[#475569] transition-colors"
+                    className="crm-toolbar-button crm-toolbar-button-secondary crm-toolbar-icon-button relative overflow-visible text-[#475569]"
                   >
                     <Bell size={15} />
                     {unreadNotificationsCount > 0 ? (

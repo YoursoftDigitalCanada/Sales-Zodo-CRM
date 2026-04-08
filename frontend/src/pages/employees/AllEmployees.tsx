@@ -639,29 +639,31 @@ const AllEmployeesPage: React.FC = () => {
   return (
     <div className="min-h-screen space-y-6 bg-[#F8FAFC] p-4 sm:p-6" {...pullHandlers}>
       <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">All Employees</h1>
-          <p className="text-[#475569] mt-1">
+      <div className="crm-module-header sticky top-0 z-20 -mx-4 rounded-xl px-4 py-4 sm:-mx-6 sm:px-6">
+        <div className="crm-toolbar-row">
+        <div className="crm-toolbar-meta">
+          <h1 className="crm-toolbar-title">All Employees</h1>
+          <p className="crm-toolbar-copy">
             Manage your team members and their information
           </p>
         </div>
-        <div className="hidden items-center gap-3 sm:flex">
-          <Button variant="outline" className="gap-2">
+        <div className="crm-toolbar-actions hidden sm:flex">
+          <Button variant="outline" className="crm-toolbar-button crm-toolbar-button-secondary gap-2">
             <Upload className="w-4 h-4" />
             Import
           </Button>
-          <Button variant="outline" className="gap-2" onClick={handleExport}>
+          <Button variant="outline" className="crm-toolbar-button crm-toolbar-button-secondary gap-2" onClick={handleExport}>
             <Download className="w-4 h-4" />
             Export
           </Button>
           <Button
             onClick={() => setIsAddDialogOpen(true)}
-            className="gap-2 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white "
+            className="crm-toolbar-button crm-toolbar-button-primary gap-2"
           >
             <Plus className="w-4 h-4" />
             Add Employee
           </Button>
+        </div>
         </div>
       </div>
 

@@ -339,20 +339,20 @@ export default function HelpCenterPage() {
             <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
                 {/* Header */}
                 <header className="crm-module-header bg-white border-b border-[rgba(15,23,42,0.06)] px-6 py-4 flex-shrink-0">
-                    <div className="flex items-center justify-between">
+                    <div className="crm-toolbar-row">
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-lg bg-[#0891B2]/10 flex items-center justify-center">
                                 <HelpCircle size={20} className="text-[#0891B2]" />
                             </div>
-                            <div>
-                                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Help Center</h1>
-                                <p className="text-sm text-[#475569] mt-0.5">Everything you need to master ZODO CRM</p>
+                            <div className="crm-toolbar-meta">
+                                <h1 className="crm-toolbar-title">Help Center</h1>
+                                <p className="crm-toolbar-copy">Everything you need to master ZODO CRM</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="crm-toolbar-actions">
                             <button
                                 onClick={() => scrollToSection(contactRef)}
-                                className="flex items-center gap-2 px-4 py-2 bg-[#0891B2] text-white rounded-lg font-medium text-sm hover:bg-[#0891B2]/90 transition-all"
+                                className="crm-toolbar-button crm-toolbar-button-primary"
                             >
                                 <MessageSquare size={16} />
                                 Contact Support

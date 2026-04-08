@@ -359,19 +359,19 @@ const InspectionList = () => {
             {/* Header */}
             <header className="crm-module-header bg-white border-b border-gray-100 sticky top-0 z-10">
                 <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <div className="crm-toolbar-row">
+                        <div className="crm-toolbar-meta">
+                            <h1 className="crm-toolbar-title flex items-center gap-2 text-gray-900">
                                 <ClipboardList size={24} className="text-[#1E40AF]" />
                                 Inspections
                             </h1>
-                            <p className="text-sm text-gray-500 mt-0.5">Manage roof inspections and damage assessments</p>
+                            <p className="crm-toolbar-copy">Manage roof inspections and damage assessments</p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="crm-toolbar-actions gap-2">
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button variant="outline" size="icon" className="rounded-lg h-9 w-9 border-gray-200">
+                                        <Button variant="outline" size="icon" className="crm-toolbar-button crm-toolbar-button-secondary crm-toolbar-icon-button">
                                             <Upload size={16} className="text-gray-500" />
                                         </Button>
                                     </TooltipTrigger>
@@ -381,7 +381,7 @@ const InspectionList = () => {
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Button variant="outline" size="icon" className="rounded-lg h-9 w-9 border-gray-200">
+                                        <Button variant="outline" size="icon" className="crm-toolbar-button crm-toolbar-button-secondary crm-toolbar-icon-button">
                                             <Download size={16} className="text-gray-500" />
                                         </Button>
                                     </TooltipTrigger>
@@ -389,7 +389,7 @@ const InspectionList = () => {
                                 </Tooltip>
                             </TooltipProvider>
                             <Button
-                                className="rounded-lg bg-[#1E40AF] hover:bg-[#1E40AF]/90 text-white gap-2"
+                                className="crm-toolbar-button crm-toolbar-button-primary gap-2"
                                 onClick={() => navigate("/inspections/new")}
                             >
                                 <Plus size={16} />

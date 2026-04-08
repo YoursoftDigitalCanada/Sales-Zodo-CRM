@@ -1351,9 +1351,9 @@ const ClientListPage = () => {
         {/* HEADER */}
         {/* ============================================ */}
         <header className="crm-module-header sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]/50">
-          <div className="flex h-20 items-center justify-between px-6">
+          <div className="crm-toolbar-row px-6">
             {/* Left - Breadcrumb */}
-            <div className="flex items-center gap-2 text-sm">
+            <div className="crm-toolbar-breadcrumb">
               <button
                 onClick={() => navigate("/dashboard")}
                 className="text-[#475569] hover:text-[#0891B2] transition-colors"
@@ -1361,17 +1361,17 @@ const ClientListPage = () => {
                 Dashboard
               </button>
               <ChevronRight size={14} className="text-[#475569]" />
-              <span className="font-semibold text-[#0891B2]">Clients</span>
+              <span className="crm-toolbar-breadcrumb-current">Clients</span>
             </div>
 
             {/* Right - Actions */}
-            <div className="flex items-center gap-3">
+            <div className="crm-toolbar-actions">
               {canCreateClients ? (
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => navigate("/client-list/add")}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0891B2] text-white text-sm font-medium rounded-md  hover:bg-[#0891B2]/90 transition-colors"
+                  className="crm-toolbar-button crm-toolbar-button-primary"
                 >
                   <Plus size={16} />
                   <span>Add Client</span>

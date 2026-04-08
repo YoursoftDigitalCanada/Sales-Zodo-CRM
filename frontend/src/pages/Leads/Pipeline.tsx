@@ -1504,22 +1504,22 @@ const Pipeline = () => {
         {/* Header */}
         <header className="crm-module-header sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="hidden sm:flex items-center gap-2 text-sm text-[#94A3B8] mb-1">
+            <div className="crm-toolbar-row">
+              <div className="crm-toolbar-meta">
+                <div className="crm-toolbar-breadcrumb hidden sm:flex mb-1">
                   <Link to="/dashboard" className="hover:text-[#6637F4]">Dashboard</Link>
                   <ChevronRight size={14} />
                   <Link to="/leads" className="hover:text-[#6637F4]">Leads</Link>
                   <ChevronRight size={14} />
-                  <span className="text-[#0F172A] font-medium">Pipeline</span>
+                  <span className="crm-toolbar-breadcrumb-current">Pipeline</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Sales Pipeline</h1>
-                  <span className="px-2 py-1 bg-[#6637F4]/10 text-[#6637F4] text-xs font-bold rounded-md">LIVE</span>
+                  <h1 className="crm-toolbar-title">Sales Pipeline</h1>
+                  <span className="crm-toolbar-status-chip">LIVE</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="crm-toolbar-actions">
                 <div className={cn("hidden md:flex items-center gap-4 mr-4", isMobile && "hidden")}>
                   <div className="text-center">
                     <p className="text-xs text-[#94A3B8]">Total Leads</p>
@@ -1537,18 +1537,18 @@ const Pipeline = () => {
                   </div>
                 </div>
 
-                <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                <div className="crm-toolbar-search">
+                  <Search size={16} className="crm-toolbar-search-icon" />
                   <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search leads..."
-                    className="pl-9 h-10 w-full sm:w-64 rounded-md border-[rgba(15,23,42,0.06)]"
+                    className="crm-toolbar-search-input w-full sm:w-64"
                   />
                 </div>
 
                 {isMobile ? (
-                  <Button variant="outline" className="rounded-md gap-2" onClick={() => setFiltersOpen(true)}>
+                  <Button variant="outline" className="crm-toolbar-button crm-toolbar-button-secondary gap-2" onClick={() => setFiltersOpen(true)}>
                     <Filter size={16} />
                     {activeFilterCount > 0 && (
                       <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-[#6637F4]/10 text-[#6637F4] text-xs font-semibold">
@@ -1559,7 +1559,7 @@ const Pipeline = () => {
                 ) : (
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="rounded-md gap-2">
+                      <Button variant="outline" className="crm-toolbar-button crm-toolbar-button-secondary gap-2">
                         <Filter size={16} />
                         Filter
                         {activeFilterCount > 0 && (

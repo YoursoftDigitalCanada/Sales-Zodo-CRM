@@ -2297,18 +2297,17 @@ const CalendarPage = () => {
         {/* Header */}
         <header className="crm-module-header sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-[rgba(15,23,42,0.06)]">
           <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="rounded-md" onClick={navigatePrevious}><ChevronLeft size={18} /></Button>
-                  <Button variant="outline" size="icon" className="rounded-md" onClick={navigateNext}><ChevronRight size={18} /></Button>
-                  <Button variant="outline" className="rounded-md" onClick={goToToday}>Today</Button>
+            <div className="crm-toolbar-row">
+              <div className="flex items-center gap-6 flex-wrap">
+                <div className="crm-toolbar-actions gap-2">
+                  <Button variant="outline" size="icon" className="crm-toolbar-button crm-toolbar-button-secondary crm-toolbar-icon-button" onClick={navigatePrevious}><ChevronLeft size={18} /></Button>
+                  <Button variant="outline" size="icon" className="crm-toolbar-button crm-toolbar-button-secondary crm-toolbar-icon-button" onClick={navigateNext}><ChevronRight size={18} /></Button>
+                  <Button variant="outline" className="crm-toolbar-button crm-toolbar-button-secondary" onClick={goToToday}>Today</Button>
                 </div>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">{getPeriodTitle()}</h1>
+                <h1 className="crm-toolbar-title">{getPeriodTitle()}</h1>
               </div>
-              <div className="flex items-center gap-3">
-                {/* Pill-style Tab Switcher */}
-                <div className="flex items-center bg-gray-100 rounded-full p-1">
+              <div className="crm-toolbar-actions">
+                <div className="crm-toolbar-segment">
                   {(["month", "week", "day", "agenda"] as const).map((mode) => {
                     const icons = { month: LayoutGrid, week: Columns, day: CalendarIcon, agenda: List };
                     const Icon = icons[mode];
@@ -2316,12 +2315,8 @@ const CalendarPage = () => {
                       <button
                         key={mode}
                         onClick={() => setViewMode(mode)}
-                        className={cn(
-                          "flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-full transition-all duration-200",
-                          viewMode === mode
-                            ? "bg-[#6637F4] text-white shadow-sm"
-                            : "text-gray-500 hover:text-gray-700"
-                        )}
+                        data-active={viewMode === mode}
+                        className="crm-toolbar-segment-button"
                       >
                         <Icon size={14} />
                         <span className="capitalize">{mode}</span>
@@ -2329,15 +2324,13 @@ const CalendarPage = () => {
                     );
                   })}
                 </div>
-                {/* Search - expands on focus */}
-                <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569] z-10" />
-                  <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search events..." className="pl-9 h-10 w-48 focus:w-64 transition-all duration-300 rounded-md border-[rgba(15,23,42,0.06)]" />
+                <div className="crm-toolbar-search w-full sm:w-56 lg:w-64">
+                  <Search size={16} className="crm-toolbar-search-icon z-10" />
+                  <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search events..." className="crm-toolbar-search-input" />
                 </div>
-                {/* Add Event Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md gap-2"><Plus size={18} />Add Event<ChevronRight size={14} className="rotate-90 ml-0.5" /></Button>
+                    <Button className="crm-toolbar-button crm-toolbar-button-primary"><Plus size={18} />Add Event<ChevronRight size={14} className="rotate-90 ml-0.5" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="rounded-lg w-48">
                     <DropdownMenuItem onClick={() => { setCurrentEvent(null); setIsFormOpen(true); }} className="gap-2 cursor-pointer"><CalendarIcon size={15} className="text-[#3B82F6]" />Add Event</DropdownMenuItem>

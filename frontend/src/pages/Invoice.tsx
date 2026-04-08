@@ -1891,14 +1891,14 @@ const InvoicePage = () => {
         {/* HEADER */}
         {/* ============================================ */}
         <header className="crm-module-header sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-[rgba(15,23,42,0.06)]/50">
-          <div className="flex h-16 items-center justify-between px-6">
-            <div className="flex items-center gap-2 text-sm">
+          <div className="crm-toolbar-row px-6">
+            <div className="crm-toolbar-breadcrumb">
               <span className="text-[#475569]">Dashboard</span>
               <ChevronRight size={16} className="text-[#475569]" />
-              <span className="font-medium text-[#0F172A]">Invoices</span>
+              <span className="crm-toolbar-breadcrumb-current">Invoices</span>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="crm-toolbar-actions">
               <NotificationBell
                 buttonClassName="border-0 bg-transparent p-2 text-[#475569] hover:bg-white/10"
                 iconClassName="text-[#475569]"

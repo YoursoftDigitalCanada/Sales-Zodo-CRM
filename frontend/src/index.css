@@ -642,11 +642,12 @@ html.dark textarea::placeholder {
 
 /* ── Shared module navbar ── */
 .crm-module-header {
-  background: rgba(255, 255, 255, 0.95);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
   color: #0F172A;
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
 }
 
 .crm-module-header>div:first-child {
@@ -666,6 +667,226 @@ html.dark textarea::placeholder {
   color: #475569;
 }
 
+.crm-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.crm-toolbar-meta {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.crm-toolbar-title {
+  font-size: clamp(1.35rem, 1.12rem + 0.48vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: #0F172A;
+}
+
+.crm-toolbar-copy {
+  font-size: 0.94rem;
+  color: #475569;
+}
+
+.crm-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.crm-toolbar-search {
+  position: relative;
+  min-width: 0;
+}
+
+.crm-toolbar-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 0.85rem;
+  width: 1rem;
+  height: 1rem;
+  transform: translateY(-50%);
+  color: #64748B;
+  pointer-events: none;
+}
+
+.crm-toolbar-search-input {
+  width: 100%;
+  min-height: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #FFFFFF;
+  padding: 0 0.95rem 0 2.5rem;
+  font-size: 0.925rem;
+  color: #0F172A;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.crm-toolbar-search-input::placeholder {
+  color: #94A3B8;
+}
+
+.crm-toolbar-search-input:focus {
+  outline: none;
+  border-color: rgba(8, 145, 178, 0.35);
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.16);
+}
+
+.crm-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 2.75rem;
+  height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.crm-toolbar-button svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.crm-toolbar-button-primary {
+  border: 1px solid rgba(8, 145, 178, 0.16);
+  background: #0891B2;
+  color: #FFFFFF;
+  box-shadow: 0 8px 20px rgba(8, 145, 178, 0.16);
+}
+
+.crm-toolbar-button-primary:hover {
+  background: #0E7490;
+  color: #FFFFFF;
+}
+
+.crm-toolbar-button-secondary {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #FFFFFF;
+  color: #0F172A;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.crm-toolbar-button-secondary:hover {
+  border-color: rgba(8, 145, 178, 0.22);
+  background: #F8FAFC;
+  color: #0891B2;
+}
+
+.crm-toolbar-icon-button {
+  width: 2.75rem;
+  padding: 0;
+}
+
+.crm-toolbar-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 0.9rem;
+  background: #F1F5F9;
+  padding: 0.25rem;
+}
+
+.crm-toolbar-segment-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.25rem;
+  border-radius: 0.7rem;
+  padding: 0 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.crm-toolbar-segment-button[data-active="true"] {
+  background: #FFFFFF;
+  color: #0891B2;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.crm-toolbar-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+  color: #64748B;
+}
+
+.crm-toolbar-breadcrumb a,
+.crm-toolbar-breadcrumb button {
+  color: inherit;
+  transition: color 0.2s ease;
+}
+
+.crm-toolbar-breadcrumb a:hover,
+.crm-toolbar-breadcrumb button:hover {
+  color: #0891B2;
+}
+
+.crm-toolbar-breadcrumb-current {
+  color: #0891B2;
+  font-weight: 600;
+}
+
+.crm-toolbar-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(8, 145, 178, 0.12);
+  background: rgba(8, 145, 178, 0.08);
+  padding: 0 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #0E7490;
+}
+
+.crm-toolbar-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  background: #F1F5F9;
+  color: #0F172A;
+  font-weight: 700;
+}
+
+.crm-toolbar-kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #F1F5F9;
+  padding: 0.2rem 0.45rem;
+  font-family: ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #475569;
+}
+
 /* ── Sidebar drawer overlay ── */
 .sidebar-overlay {
   position: fixed;
@@ -682,6 +903,18 @@ html.dark textarea::placeholder {
     min-height: 64px;
     padding-top: 0.75rem;
     padding-bottom: 0.75rem;
+  }
+
+  .crm-toolbar-actions {
+    width: 100%;
+  }
+
+  .crm-toolbar-search {
+    width: 100%;
+  }
+
+  .crm-toolbar-search-input {
+    min-width: 0;
   }
 
   .ai-copilot-panel {

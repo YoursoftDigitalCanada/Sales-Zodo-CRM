@@ -374,6 +374,25 @@ const responsiveGrid = (
   gap,
 });
 
+const responsiveSplitRow = (
+  isCompact: boolean,
+  desktopAlignment: React.CSSProperties["alignItems"] = "center",
+): React.CSSProperties => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: isCompact ? "flex-start" : desktopAlignment,
+  flexDirection: isCompact ? "column" : "row",
+  gap: isCompact ? 8 : 12,
+});
+
+const responsiveInlineBetween = (isCompact: boolean): React.CSSProperties => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: isCompact ? "flex-start" : "center",
+  flexWrap: isCompact ? "wrap" : "nowrap",
+  gap: isCompact ? 8 : 12,
+});
+
 function Field({ label, children, hint, compact }: { label: string; children: React.ReactNode; hint?: string; compact?: boolean }) {
   return (
     <div style={{ marginBottom: compact ? 10 : 16 }}>
@@ -450,8 +469,13 @@ export default function RoofEstimatorWizard() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const { isMobile, isTablet } = useIsMobile();
+  const { isMobile, isTablet, width } = useIsMobile();
   const isCompact = isMobile || isTablet;
+  const summaryChipColumns = isCompact
+    ? width < 480
+      ? "1fr"
+      : "repeat(2, minmax(0, 1fr))"
+    : "repeat(auto-fit, minmax(160px, 1fr))";
 
   const [data, setData] = useState<WizardData>(DEFAULT_DATA);
   const [saving, setSaving] = useState(false);
@@ -1413,8 +1437,8 @@ export default function RoofEstimatorWizard() {
       <style>{`
         .roof-estimator-shell {
           display: grid;
-          grid-template-columns: minmax(220px, 250px) minmax(0, 1fr) 360px;
-          gap: 24px;
+          grid-template-columns: minmax(210px, 230px) minmax(0, 1fr) minmax(300px, 340px);
+          gap: 20px;
           align-items: start;
         }
 
@@ -1445,9 +1469,9 @@ export default function RoofEstimatorWizard() {
           gap: 10px;
         }
 
-        @media (max-width: 1240px) {
+        @media (max-width: 1280px) {
           .roof-estimator-shell {
-            grid-template-columns: minmax(220px, 240px) minmax(0, 1fr);
+            grid-template-columns: minmax(200px, 220px) minmax(0, 1fr);
           }
 
           .roof-estimator-preview {
@@ -1456,7 +1480,7 @@ export default function RoofEstimatorWizard() {
           }
         }
 
-        @media (max-width: 860px) {
+        @media (max-width: 980px) {
           .roof-estimator-shell {
             grid-template-columns: 1fr;
             gap: 16px;
@@ -1467,21 +1491,30 @@ export default function RoofEstimatorWizard() {
           }
 
           .roof-estimator-nav-list {
-            flex-direction: row;
-            overflow-x: auto;
-            padding-bottom: 6px;
-            scroll-snap-type: x proximity;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
           }
 
           .roof-estimator-nav-list > button {
-            min-width: 140px;
-            scroll-snap-align: start;
+            min-width: 0;
+            width: 100%;
           }
 
           .roof-estimator-action-bar {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             align-items: stretch;
+          }
+        }
+
+        @media (max-width: 560px) {
+          .roof-estimator-nav-list {
+            grid-template-columns: 1fr;
+          }
+
+          .roof-estimator-action-bar {
+            grid-template-columns: 1fr;
           }
         }
 
@@ -1520,7 +1553,7 @@ export default function RoofEstimatorWizard() {
       </button>
 
       <div style={{ display: "flex", justifyContent: "space-between", gap: isMobile ? 12 : 20, alignItems: "flex-start", flexWrap: "wrap", marginBottom: isMobile ? 14 : 24 }}>
-        <div style={{ flex: 1, minWidth: isMobile ? 0 : 280 }}>
+        <div style={{ flex: 1, minWidth: 0, width: isCompact ? "100%" : undefined }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
             <span style={{
               display: "inline-flex", alignItems: "center", gap: 6,
@@ -1550,11 +1583,10 @@ export default function RoofEstimatorWizard() {
           )}
 
           <div style={{
-            display: "flex",
-            flexWrap: isMobile ? "nowrap" : "wrap",
-            gap: isMobile ? 6 : 10,
-            overflowX: isMobile ? "auto" : "visible",
-            paddingBottom: isMobile ? 4 : 0,
+            display: "grid",
+            gridTemplateColumns: summaryChipColumns,
+            gap: isMobile ? 8 : 10,
+            width: "100%",
           }}>
             {[
               { label: "Client", value: data.clientName || "Not selected" },
@@ -1565,13 +1597,12 @@ export default function RoofEstimatorWizard() {
               <div key={chip.label} style={{
                 padding: isMobile ? "7px 10px" : "10px 12px", borderRadius: isMobile ? 10 : 12, background: "#fff",
                 border: "1px solid #E2E8F0", boxShadow: "0 1px 3px rgba(15,23,42,.04)",
-                minWidth: isMobile ? 120 : 150,
-                flexShrink: 0,
+                minWidth: 0,
               }}>
                 <div style={{ fontSize: isMobile ? 9 : 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: isMobile ? 2 : 4 }}>
                   {chip.label}
                 </div>
-                <div style={{ fontSize: isMobile ? 12 : 13, color: "#0F172A", fontWeight: 700 }}>{chip.value}</div>
+                <div style={{ fontSize: isMobile ? 12 : 13, color: "#0F172A", fontWeight: 700, overflowWrap: "anywhere" }}>{chip.value}</div>
               </div>
             ))}
           </div>
@@ -1579,7 +1610,7 @@ export default function RoofEstimatorWizard() {
 
         {walletBalance !== null && (
           <div style={{
-            minWidth: isMobile ? "100%" : 240, maxWidth: isMobile ? "100%" : 280, background: "#fff", borderRadius: 16,
+            minWidth: 0, width: isCompact ? "100%" : 280, maxWidth: isCompact ? "100%" : 280, background: "#fff", borderRadius: 16,
             border: "1px solid #E2E8F0", boxShadow: "0 8px 28px rgba(15,23,42,.06)",
             padding: "16px 18px",
           }}>
@@ -1665,7 +1696,7 @@ export default function RoofEstimatorWizard() {
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: isMobile ? 11 : 13, fontWeight: 800, color: isActive ? "#4C1D95" : "#0F172A" }}>{section.shortLabel}</div>
-                      <div style={{ fontSize: 11, color: "#64748B", marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div style={{ fontSize: 11, color: "#64748B", marginTop: 3, whiteSpace: "normal", overflowWrap: "anywhere", lineHeight: 1.35 }}>
                         {sectionSummaries[section.id]}
                       </div>
                     </div>
@@ -1725,7 +1756,8 @@ export default function RoofEstimatorWizard() {
               <div style={{
                 padding: isMobile ? "7px 10px" : "10px 12px", borderRadius: isMobile ? 8 : 12,
                 background: "#fff", border: "1px solid #E2E8F0",
-                minWidth: isMobile ? "100%" : 132,
+                minWidth: 0,
+                width: isCompact ? "100%" : "auto",
               }}>
                 <div style={{ fontSize: isMobile ? 9 : 10, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: isMobile ? 2 : 4 }}>
                   Current Focus
@@ -1816,7 +1848,7 @@ export default function RoofEstimatorWizard() {
           <div style={{
             padding: "16px 18px", borderBottom: "1px solid #E2E8F0",
             fontSize: 14, fontWeight: 800, color: "#0F172A",
-            display: "flex", alignItems: "center", justifyContent: "space-between",
+            ...responsiveInlineBetween(isCompact),
           }}>
             <span>📊 Live Estimate Preview</span>
             <span style={{ fontSize: 11, color: hasValidEagleViewMeasurement ? "#047857" : "#94A3B8", fontWeight: 700 }}>
@@ -1867,17 +1899,17 @@ export default function RoofEstimatorWizard() {
                 padding: "10px 12px", borderRadius: 12, background: "#F8FAFC", border: "1px solid #E2E8F0",
               }}>
                 <div style={{ fontSize: 10, color: "#94A3B8", textTransform: "uppercase", fontWeight: 800, marginBottom: 4 }}>Client</div>
-                <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 700 }}>{data.clientName || "Not selected"}</div>
+                <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 700, overflowWrap: "anywhere" }}>{data.clientName || "Not selected"}</div>
               </div>
               <div style={{
                 padding: "10px 12px", borderRadius: 12, background: "#F8FAFC", border: "1px solid #E2E8F0",
               }}>
                 <div style={{ fontSize: 10, color: "#94A3B8", textTransform: "uppercase", fontWeight: 800, marginBottom: 4 }}>Company</div>
-                <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 700 }}>{data.clientCompany || "—"}</div>
+                <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 700, overflowWrap: "anywhere" }}>{data.clientCompany || "—"}</div>
               </div>
             </div>
             {data.address && (
-              <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 600, marginBottom: 10 }}>{data.address}</div>
+              <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 600, marginBottom: 10, overflowWrap: "anywhere" }}>{data.address}</div>
             )}
             <div style={{ ...responsiveGrid(isCompact, "1fr 1fr", "1fr 1fr", 8) }}>
               <MiniStat label="Roof Area" value={`${data.roofAreaSqft.toLocaleString()} sq ft`} />
@@ -1892,7 +1924,7 @@ export default function RoofEstimatorWizard() {
                 { label: "Labor", value: totalLaborCost },
                 { label: "Equipment", value: totalEquipmentCost },
               ].map((r) => (
-                <div key={r.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                <div key={r.label} style={{ ...responsiveInlineBetween(isCompact), fontSize: 12, marginBottom: 4 }}>
                   <span style={{ color: "#64748B" }}>{r.label}</span>
                   <span style={{ color: "#0F172A", fontWeight: 600 }}>{fmt(r.value)}</span>
                 </div>
@@ -1903,13 +1935,13 @@ export default function RoofEstimatorWizard() {
                 { label: `Profit (${data.profitMarginPercent}%)`, value: profitAmount },
                 { label: `Tax (${data.taxPercent}%)`, value: taxAmount },
               ].map((r) => (
-                <div key={r.label} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
+                <div key={r.label} style={{ ...responsiveInlineBetween(isCompact), fontSize: 11, marginBottom: 3 }}>
                   <span style={{ color: "#94A3B8" }}>{r.label}</span>
                   <span style={{ color: "#475569", fontWeight: 500 }}>{fmt(r.value)}</span>
                 </div>
               ))}
               <div style={{
-                display: "flex", justifyContent: "space-between", fontSize: 16,
+                ...responsiveSplitRow(isCompact), fontSize: 16,
                 fontWeight: 800, color: "#6637F4", paddingTop: 10, marginTop: 6, borderTop: "2px solid #6637F4",
               }}>
                 <span>TOTAL</span>
@@ -1920,7 +1952,8 @@ export default function RoofEstimatorWizard() {
             <div style={{
               marginTop: 14, padding: "10px 14px", borderRadius: 10,
               background: "rgba(102,55,244,.06)", border: "1px solid rgba(102,55,244,.12)",
-              display: "flex", alignItems: "center", gap: 8, fontSize: 12,
+              display: "flex", alignItems: isCompact ? "flex-start" : "center", gap: 8, fontSize: 12,
+              flexDirection: isCompact ? "column" : "row",
             }}>
               <span>💳</span>
               <div>
@@ -2186,7 +2219,7 @@ function Step1ClientInfo({
       )}
 
       {data.sourceType !== "manual" && (
-        <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <span style={{
             padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
             background: data.sourceType === "client" ? "rgba(102,55,244,.1)" : "rgba(234,88,12,.1)",
@@ -2284,7 +2317,7 @@ function Step2Address({ data, up, onAddressInput, onSelectAddress, eagleViewLoad
 
       {/* Measurement source badge */}
       {data.measurementSource && (
-        <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <span style={{
             padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
             background: "rgba(59,130,246,.12)",
@@ -2399,7 +2432,7 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
               }}
             >
               <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 700, marginBottom: 10 }}>{mat.label}</div>
-              <div style={responsiveGrid(true, "1fr 80px 120px", "1fr 1fr", 10)}>
+              <div style={responsiveGrid(true, "1fr 80px 120px", "repeat(auto-fit, minmax(150px, 1fr))", 10)}>
                 <Field label="Qty">
                   <NumberInput value={data[mat.qtyKey] as number} onChange={(v) => up(mat.qtyKey, v as any)} />
                 </Field>
@@ -2441,7 +2474,7 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
 
       {/* Other Materials — dynamic rows */}
       <div style={{ marginTop: 20, borderTop: "1px solid #E2E8F0", paddingTop: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <div style={{ ...responsiveInlineBetween(isCompact), marginBottom: 10 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: "#0F172A" }}>Other Materials</span>
           <button onClick={addMaterial} style={{
             padding: "6px 14px", borderRadius: 6, border: "1px solid #6637F4",
@@ -2471,7 +2504,7 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
                 <input value={m.name} onChange={(e) => updateMaterial(idx, "name", e.target.value)}
                   placeholder="e.g. Drip Edge" style={inputStyle} />
               </Field>
-              <div style={responsiveGrid(true, "1fr 80px 120px", "1fr 1fr", 10)}>
+              <div style={responsiveGrid(true, "1fr 80px 120px", "repeat(auto-fit, minmax(150px, 1fr))", 10)}>
                 <Field label="Qty">
                   <NumberInput value={m.qty} onChange={(v) => updateMaterial(idx, "qty", v)} />
                 </Field>
@@ -2479,7 +2512,7 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
                   <NumberInput value={m.cost} onChange={(v) => updateMaterial(idx, "cost", v)} prefix="$" />
                 </Field>
               </div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ ...responsiveInlineBetween(true) }}>
                 <span style={{ fontSize: 12, color: "#64748B" }}>Total: <strong style={{ color: "#0F172A" }}>{fmtLine(m.qty || 1, m.cost || 0)}</strong></span>
                 <button onClick={() => removeMaterial(idx)} title="Remove" style={{
                   padding: "8px 10px",
@@ -2515,7 +2548,7 @@ function Step3Materials({ data, up, total, otherMaterials, onOtherMaterialsChang
       </div>
 
       <div style={{
-        display: "flex", justifyContent: "space-between", alignItems: "center",
+        ...responsiveSplitRow(isCompact),
         padding: "14px 18px", background: "rgba(102,55,244,.06)", borderRadius: 10,
         marginTop: 12,
       }}>
@@ -2551,12 +2584,12 @@ function Step4Labor({ data, up, total, isCompact = false, hideHeader = false }: 
         <Field label="Rate per Worker / Day" compact={isCompact}><NumberInput value={data.laborRatePerWorker} onChange={(v) => up("laborRatePerWorker", v)} prefix="$" /></Field>
       </div>
 
-      <div style={{ fontSize: 13, color: "#64748B", padding: "12px 0", borderBottom: "1px solid #E2E8F0" }}>
+      <div style={{ fontSize: 13, color: "#64748B", padding: "12px 0", borderBottom: "1px solid #E2E8F0", overflowWrap: "anywhere" }}>
         <strong>{data.numberOfLaborers}</strong> workers × <strong>{data.daysRequired}</strong> days × <strong>${data.laborRatePerWorker.toLocaleString()}</strong>/day
       </div>
 
       <div style={{
-        display: "flex", justifyContent: "space-between", alignItems: "center",
+        ...responsiveSplitRow(isCompact),
         padding: "14px 18px", background: "rgba(102,55,244,.06)", borderRadius: 10,
         marginTop: 12,
       }}>
@@ -2594,7 +2627,7 @@ function Step5Extras({ data, up, total, isCompact = false, hideHeader = false }:
       </div>
 
       <div style={{
-        display: "flex", justifyContent: "space-between", alignItems: "center",
+        ...responsiveSplitRow(isCompact),
         padding: "14px 18px", background: "rgba(102,55,244,.06)", borderRadius: 10,
         marginTop: 8,
       }}>
@@ -2642,7 +2675,7 @@ function Step6Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmou
           { label: `Tax (${data.taxPercent}%)`, value: taxAmount },
         ].map((r) => (
           <div key={r.label} style={{
-            display: "flex", justifyContent: "space-between", padding: "6px 0",
+            ...responsiveInlineBetween(isCompact), padding: "6px 0",
             fontSize: 13, borderBottom: "1px solid #E2E8F0",
           }}>
             <span style={{ color: "#64748B" }}>{r.label}</span>
@@ -2650,7 +2683,7 @@ function Step6Profit({ data, up, subtotal, overheadAmount, profitAmount, taxAmou
           </div>
         ))}
         <div style={{
-          display: "flex", justifyContent: "space-between", paddingTop: 12,
+          ...responsiveSplitRow(isCompact, "baseline"), paddingTop: 12,
           fontSize: 18, fontWeight: 800, color: "#6637F4",
         }}>
           <span>Final Estimate</span>
@@ -2689,10 +2722,10 @@ function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCos
       }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>👤 Client Information</div>
         <div style={{ ...responsiveGrid(isCompact, "1fr 1fr"), fontSize: 12 }}>
-          <div><span style={{ color: "#94A3B8" }}>Name</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.clientName || "—"}</div></div>
-          <div><span style={{ color: "#94A3B8" }}>Email</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.clientEmail || "—"}</div></div>
-          <div><span style={{ color: "#94A3B8" }}>Phone</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.clientPhone || "—"}</div></div>
-          <div><span style={{ color: "#94A3B8" }}>Company</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.clientCompany || "—"}</div></div>
+          <div><span style={{ color: "#94A3B8" }}>Name</span><div style={{ color: "#0F172A", fontWeight: 500, overflowWrap: "anywhere" }}>{data.clientName || "—"}</div></div>
+          <div><span style={{ color: "#94A3B8" }}>Email</span><div style={{ color: "#0F172A", fontWeight: 500, overflowWrap: "anywhere" }}>{data.clientEmail || "—"}</div></div>
+          <div><span style={{ color: "#94A3B8" }}>Phone</span><div style={{ color: "#0F172A", fontWeight: 500, overflowWrap: "anywhere" }}>{data.clientPhone || "—"}</div></div>
+          <div><span style={{ color: "#94A3B8" }}>Company</span><div style={{ color: "#0F172A", fontWeight: 500, overflowWrap: "anywhere" }}>{data.clientCompany || "—"}</div></div>
         </div>
       </div>
 
@@ -2703,12 +2736,12 @@ function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCos
       }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>🏠 Property Details</div>
         <div style={{ ...responsiveGrid(isCompact, "1fr 1fr 1fr"), fontSize: 12 }}>
-          <div><span style={{ color: "#94A3B8" }}>Address</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.address || "—"}</div></div>
+          <div><span style={{ color: "#94A3B8" }}>Address</span><div style={{ color: "#0F172A", fontWeight: 500, overflowWrap: "anywhere" }}>{data.address || "—"}</div></div>
           <div><span style={{ color: "#94A3B8" }}>Roof Area</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.roofAreaSqft.toLocaleString()} sq ft</div></div>
           <div><span style={{ color: "#94A3B8" }}>Roof Squares</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{roofSquares.toFixed(1)}</div></div>
           <div><span style={{ color: "#94A3B8" }}>Pitch</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.pitch}</div></div>
           <div><span style={{ color: "#94A3B8" }}>Type</span><div style={{ color: "#0F172A", fontWeight: 500, textTransform: "capitalize" }}>{data.roofType}</div></div>
-          <div><span style={{ color: "#94A3B8" }}>Shingle</span><div style={{ color: "#0F172A", fontWeight: 500 }}>{data.shingleType || "—"}</div></div>
+          <div><span style={{ color: "#94A3B8" }}>Shingle</span><div style={{ color: "#0F172A", fontWeight: 500, overflowWrap: "anywhere" }}>{data.shingleType || "—"}</div></div>
         </div>
       </div>
 
@@ -2724,7 +2757,7 @@ function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCos
           { label: "Equipment & Extras", value: totalEquipmentCost, color: "#F59E0B" },
         ].map((r) => (
           <div key={r.label} style={{
-            display: "flex", justifyContent: "space-between", alignItems: "center",
+            ...responsiveInlineBetween(isCompact),
             padding: "8px 0", borderBottom: "1px solid #F1F5F9",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2743,7 +2776,7 @@ function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCos
           { label: `Tax (${data.taxPercent}%)`, value: taxAmount },
         ].map((r) => (
           <div key={r.label} style={{
-            display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 13,
+            ...responsiveInlineBetween(isCompact), padding: "6px 0", fontSize: 13,
           }}>
             <span style={{ color: "#64748B" }}>{r.label}</span>
             <span style={{ color: "#0F172A", fontWeight: 600 }}>{fmt(r.value)}</span>
@@ -2752,7 +2785,7 @@ function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCos
 
         {/* Final price */}
         <div style={{
-          display: "flex", justifyContent: "space-between", alignItems: "center",
+          ...responsiveSplitRow(isCompact),
           marginTop: 12, paddingTop: 16, borderTop: "2px solid #6637F4",
         }}>
           <div>
@@ -2761,6 +2794,7 @@ function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCos
           </div>
           <div style={{
             background: "rgba(102,55,244,.08)", borderRadius: 10, padding: "10px 16px", textAlign: "center",
+            width: isCompact ? "100%" : "auto",
           }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: "#6637F4" }}>{roofSquares.toFixed(1)}</div>
             <div style={{ fontSize: 10, color: "#64748B" }}>Roof Squares</div>
@@ -2804,7 +2838,7 @@ function Step7Final({ data, totalMaterialCost, totalLaborCost, totalEquipmentCos
           <textarea
             value={data.notes}
             readOnly
-            style={{ ...inputStyle, minHeight: 60, resize: "vertical" }}
+            style={{ ...(isCompact ? inputStyleCompact : inputStyle), minHeight: 60, resize: "vertical" }}
             placeholder="No notes"
           />
         </Field>

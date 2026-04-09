@@ -1399,12 +1399,12 @@ export const LeadFormDialog = ({
           nextErrors.lastName = lastNameError;
         }
 
-        const phoneError = getCanadianPhoneError(formData.phone, "Phone number");
+        const phoneError = getCanadianPhoneError(formData.phone, "Phone number", { required: true });
         if (phoneError) {
           nextErrors.phone = phoneError;
         }
 
-        const emailError = getEmailAddressError(formData.email, "Email");
+        const emailError = getEmailAddressError(formData.email, "Email", { required: true });
         if (emailError) {
           nextErrors.email = emailError;
         }
@@ -1677,14 +1677,7 @@ export const LeadFormDialog = ({
     }
   }, [activeTab, formData.isInsuranceClaim]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!isLastTab) {
-      handleNext();
-      return;
-    }
-
+  const submitLeadForm = useCallback(async () => {
     const combinedErrors: Record<string, string> = {};
     let firstInvalidTab: LeadFormTab | null = null;
 
@@ -1722,7 +1715,17 @@ export const LeadFormDialog = ({
     } finally {
       setSaving(false);
     }
-  };
+  }, [formData, onClose, onSubmit, tabOrder, validateTab]);
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!isLastTab) {
+      return;
+    }
+
+    await submitLeadForm();
+  }, [isLastTab, submitLeadForm]);
 
   // Helper for toggling multi-select values (knownDamageType)
   const toggleDamageType = (val: string) => {
@@ -1815,7 +1818,9 @@ export const LeadFormDialog = ({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Email Address</Label>
+                <Label className="text-sm font-medium text-[#475569]">
+                  Email Address <span className="text-red-500">*</span>
+                </Label>
                 <div className="relative">
                   <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
@@ -1823,6 +1828,7 @@ export const LeadFormDialog = ({
                     value={formData.email}
                     onChange={(e) => setFieldValue("email", e.target.value)}
                     placeholder="john@company.com"
+                    required
                     className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("email"))}
                   />
                 </div>
@@ -1832,7 +1838,7 @@ export const LeadFormDialog = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">
-                    Phone Number
+                    Phone Number <span className="text-red-500">*</span>
                   </Label>
                   <div className="relative">
                     <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
@@ -1840,6 +1846,7 @@ export const LeadFormDialog = ({
                       value={formData.phone}
                       onChange={(e) => setFieldValue("phone", e.target.value)}
                       placeholder="+1 (416) 555-0123"
+                      required
                       className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("phone"))}
                     />
                   </div>
@@ -2725,8 +2732,8 @@ export const LeadFormDialog = ({
               </Button>
             )}
             <Button
-              type={isLastTab ? "submit" : "button"}
-              onClick={isLastTab ? undefined : handleNext}
+              type="button"
+              onClick={isLastTab ? () => void submitLeadForm() : handleNext}
               disabled={saving}
               className="bg-[#6637F4] hover:bg-[#6637F4]/90 text-white rounded-md"
             >

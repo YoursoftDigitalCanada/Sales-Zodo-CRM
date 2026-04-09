@@ -1,6 +1,7 @@
 // src/pages/FileManager.tsx
 
 import React, { useRef, useState, useCallback, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -1708,6 +1709,33 @@ const FilePreviewDialog = ({
 const FileManagerPage = () => {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [searchParams] = useSearchParams();
+  const leadFilterId = searchParams.get("leadId") || undefined;
+  const clientFilterId = searchParams.get("clientId") || undefined;
+  const projectFilterId = searchParams.get("projectId") || undefined;
+
+  const linkedRecordFilters = useMemo(() => ({
+    leadId: leadFilterId,
+    clientId: clientFilterId,
+    projectId: projectFilterId,
+  }), [clientFilterId, leadFilterId, projectFilterId]);
+  const hasLinkedRecordFilters = Boolean(
+    linkedRecordFilters.leadId || linkedRecordFilters.clientId || linkedRecordFilters.projectId,
+  );
+  const linkedRecordLabel = linkedRecordFilters.projectId
+    ? "Job Files"
+    : linkedRecordFilters.clientId
+      ? "Client Files"
+      : linkedRecordFilters.leadId
+        ? "Lead Files"
+        : "My Files";
+  const linkedRecordSubtitle = linkedRecordFilters.projectId
+    ? "Showing files linked to this job."
+    : linkedRecordFilters.clientId
+      ? "Showing files linked to this client."
+      : linkedRecordFilters.leadId
+        ? "Showing files linked to this lead."
+        : null;
 
   // State
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -1722,7 +1750,7 @@ const FileManagerPage = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null; name: string }[]>([{ id: null, name: "My Files" }]);
+  const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null; name: string }[]>([{ id: null, name: linkedRecordLabel }]);
   const [storage, setStorage] = useState<StorageAnalyticsType | null>(null);
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -1735,6 +1763,12 @@ const FileManagerPage = () => {
   const [deleteItem, setDeleteItem] = useState<FileItem | null>(null);
   const isTrashView = activeTab === "trash";
   const canNavigateBack = activeTab === "all" && breadcrumbs.length > 1;
+
+  useEffect(() => {
+    setCurrentFolderId(null);
+    setBreadcrumbs([{ id: null, name: linkedRecordLabel }]);
+    setSelectedItems([]);
+  }, [linkedRecordLabel]);
 
   useEffect(() => {
     if (uploadingFiles.length === 0) {
@@ -1809,6 +1843,13 @@ const FileManagerPage = () => {
         ]);
         apiFiles = trashedFiles;
         apiFolders = trashedFolders;
+      } else if (hasLinkedRecordFilters) {
+        apiFiles = await getFiles({
+          folderId: currentFolderId || undefined,
+          search: searchTerm || undefined,
+          ...linkedRecordFilters,
+        });
+        apiFolders = [];
       } else {
         const [filesRes, foldersRes] = await Promise.all([
           getFiles({ folderId: currentFolderId || undefined, search: searchTerm || undefined }),
@@ -1826,7 +1867,7 @@ const FileManagerPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, currentFolderId, searchTerm]);
+  }, [activeTab, currentFolderId, hasLinkedRecordFilters, linkedRecordFilters, searchTerm]);
 
   // Load storage analytics
   const loadStorage = useCallback(async () => {
@@ -2191,7 +2232,9 @@ const FileManagerPage = () => {
 
     if (nextTab !== "all") {
       setCurrentFolderId(null);
-      setBreadcrumbs([{ id: null, name: "My Files" }]);
+      setBreadcrumbs([{ id: null, name: linkedRecordLabel }]);
+    } else {
+      setBreadcrumbs([{ id: null, name: linkedRecordLabel }]);
     }
   };
 
@@ -2210,7 +2253,9 @@ const FileManagerPage = () => {
   const activeTabLabel = activeTab === "all"
     ? breadcrumbs.length > 1
       ? breadcrumbs[breadcrumbs.length - 1].name
-      : "File Manager"
+      : hasLinkedRecordFilters
+        ? linkedRecordLabel
+        : "File Manager"
     : activeTab === "recent"
       ? "Recent Files"
       : activeTab === "starred"
@@ -2295,6 +2340,9 @@ const FileManagerPage = () => {
                 <h1 className="crm-toolbar-title">
                   {activeTabLabel}
                 </h1>
+                {activeTab === "all" && linkedRecordSubtitle ? (
+                  <p className="text-xs text-[#94A3B8]">{linkedRecordSubtitle}</p>
+                ) : null}
                 </div>
               </div>
 

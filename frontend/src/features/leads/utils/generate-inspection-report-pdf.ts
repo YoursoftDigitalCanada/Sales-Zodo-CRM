@@ -163,6 +163,17 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+export function getInspectionReportFileName(
+  snapshot: Pick<InspectionReportSnapshot, "customerName" | "inspectionId">,
+): string {
+  const safeCustomer = slugify(snapshot.customerName || "");
+  const inspectionSuffix = snapshot.inspectionId.slice(0, 8).toLowerCase();
+
+  return safeCustomer
+    ? `${safeCustomer}-inspection-report-${inspectionSuffix}.pdf`
+    : `inspection-${inspectionSuffix}.pdf`;
+}
+
 async function loadImageAsDataUrl(url: string): Promise<string | null> {
   try {
     const response = await fetch(url);
@@ -581,10 +592,7 @@ export async function generateInspectionReportPdf(
       doc.text(`Page ${page} of ${totalPages}`, pageWidth - margin, pageHeight - 8, { align: "right" });
     }
 
-    const safeCustomer = slugify(snapshot.customerName || "");
-    const fileName = safeCustomer
-      ? `${safeCustomer}-inspection-report.pdf`
-      : `inspection-${snapshot.inspectionId.slice(0, 8)}.pdf`;
+    const fileName = getInspectionReportFileName(snapshot);
 
     return {
       blob: doc.output("blob"),

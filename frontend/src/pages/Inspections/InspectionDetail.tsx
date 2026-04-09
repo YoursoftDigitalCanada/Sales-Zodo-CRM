@@ -14,7 +14,6 @@ import {
     ArrowLeft,
     Save,
     CheckCircle2,
-    Share2,
     Phone,
     Mail,
     MapPin,
@@ -29,6 +28,7 @@ import {
 } from "lucide-react";
 import {
     deleteFile,
+    downloadFile,
     fetchFileBlob,
     getFileById,
     uploadFile,
@@ -41,11 +41,7 @@ import {
 import type { CompanyProfile } from "@/features/settings/services/settings-service";
 import { getCompanyProfile } from "@/features/settings/services/settings-service";
 import InspectionReportPreviewDialog from "@/components/inspections/InspectionReportPreviewDialog";
-import {
-    buildInspectionReportSnapshot,
-    downloadInspectionReportBlob,
-    generateInspectionReportPdf,
-} from "@/features/leads/utils/generate-inspection-report-pdf";
+import { ensureInspectionReportFile } from "@/features/leads/utils/ensure-inspection-report-file";
 import InspectionPhotoSection from "./InspectionPhotoSection";
 
 // ============================================
@@ -166,7 +162,7 @@ const InspectionDetail = () => {
     const [reportGenerating, setReportGenerating] = useState(false);
     const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
     const [reportPreviewUrl, setReportPreviewUrl] = useState<string | null>(null);
-    const [reportBlob, setReportBlob] = useState<Blob | null>(null);
+    const [reportFileId, setReportFileId] = useState<string | null>(null);
     const [reportFileName, setReportFileName] = useState("inspection-report.pdf");
 
     // Form state — populated from API data
@@ -218,13 +214,12 @@ const InspectionDetail = () => {
         return profile;
     };
 
-    const updateReportPreview = (blob: Blob, fileName: string) => {
+    const updateReportPreview = (previewUrl: string, fileId: string, fileName: string) => {
         clearReportPreviewUrl();
-        const nextUrl = URL.createObjectURL(blob);
-        reportPreviewUrlRef.current = nextUrl;
-        setReportBlob(blob);
+        reportPreviewUrlRef.current = previewUrl;
+        setReportFileId(fileId);
         setReportFileName(fileName);
-        setReportPreviewUrl(nextUrl);
+        setReportPreviewUrl(previewUrl);
     };
 
     // ---------- Load Data ----------
@@ -541,9 +536,18 @@ const InspectionDetail = () => {
         }
     };
 
-    const handleDownloadReport = () => {
-        if (!reportBlob) return;
-        downloadInspectionReportBlob(reportBlob, reportFileName);
+    const handleDownloadReport = async () => {
+        if (!reportFileId) return;
+
+        try {
+            await downloadFile(reportFileId, reportFileName);
+        } catch {
+            toast({
+                title: "Download failed",
+                description: "We couldn't download the inspection PDF right now.",
+                variant: "destructive",
+            });
+        }
     };
 
     const handleGeneratePdf = async () => {
@@ -553,11 +557,11 @@ const InspectionDetail = () => {
         setReportPreviewOpen(true);
         clearReportPreviewUrl();
         setReportPreviewUrl(null);
-        setReportBlob(null);
+        setReportFileId(null);
 
         try {
             const companyProfile = await ensureCompanyProfile();
-            const snapshot = buildInspectionReportSnapshot(inspection, {
+            const snapshotOverrides = {
                 customerName: customer.name,
                 customerEmail: customer.email,
                 customerPhone: customer.phone,
@@ -578,13 +582,18 @@ const InspectionDetail = () => {
                 ventilation,
                 decking,
                 damageChecks,
-            });
+            };
 
-            const result = await generateInspectionReportPdf(snapshot, { companyProfile });
-            updateReportPreview(result.blob, result.fileName);
+            const result = await ensureInspectionReportFile({
+                inspection,
+                companyProfile,
+                reuseExisting: false,
+                snapshotOverrides,
+            });
+            updateReportPreview(result.previewUrl, result.fileId, result.fileName);
             toast({
                 title: "Inspection PDF ready",
-                description: "The report is open in preview. Download it only if you want to save a copy.",
+                description: "The report was saved to CRM files and opened here for review.",
             });
         } catch {
             setReportPreviewOpen(false);
@@ -676,10 +685,6 @@ const InspectionDetail = () => {
                         >
                             <CheckCircle2 size={14} />
                             <span className="hidden sm:inline">Complete</span>
-                        </Button>
-                        <Button variant="outline" size="sm" className="rounded-lg gap-1.5 border-gray-200">
-                            <Share2 size={14} />
-                            <span className="hidden sm:inline">Share</span>
                         </Button>
                     </div>
                 </div>
@@ -1093,7 +1098,7 @@ const InspectionDetail = () => {
                 title="Inspection Report Preview"
                 subtitle={customer.name || "Inspection report"}
                 loading={reportGenerating}
-                onDownload={handleDownloadReport}
+                onDownload={() => void handleDownloadReport()}
             />
         </div>
     );

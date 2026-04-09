@@ -34,6 +34,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
+import { downloadFile } from "@/features/files/services/files-service";
 import {
     Search,
     Plus,
@@ -66,11 +67,7 @@ import { getAllInspections, type InspectionEntity } from "@/features/leads/servi
 import type { CompanyProfile } from "@/features/settings/services/settings-service";
 import { getCompanyProfile } from "@/features/settings/services/settings-service";
 import InspectionReportPreviewDialog from "@/components/inspections/InspectionReportPreviewDialog";
-import {
-    buildInspectionReportSnapshot,
-    downloadInspectionReportBlob,
-    generateInspectionReportPdf,
-} from "@/features/leads/utils/generate-inspection-report-pdf";
+import { ensureInspectionReportFile } from "@/features/leads/utils/ensure-inspection-report-file";
 
 // ============================================
 // TYPES
@@ -260,7 +257,7 @@ const InspectionList = () => {
     const [reportGeneratingId, setReportGeneratingId] = useState<string | null>(null);
     const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
     const [reportPreviewUrl, setReportPreviewUrl] = useState<string | null>(null);
-    const [reportBlob, setReportBlob] = useState<Blob | null>(null);
+    const [reportFileId, setReportFileId] = useState<string | null>(null);
     const [reportFileName, setReportFileName] = useState("inspection-report.pdf");
     const [reportSubtitle, setReportSubtitle] = useState("Inspection report");
     const companyProfileRef = React.useRef<CompanyProfile | null>(null);
@@ -300,21 +297,29 @@ const InspectionList = () => {
         return profile;
     };
 
-    const updateReportPreview = (blob: Blob, fileName: string, subtitle: string) => {
+    const updateReportPreview = (previewUrl: string, fileId: string, fileName: string, subtitle: string) => {
         if (reportPreviewUrlRef.current) {
             URL.revokeObjectURL(reportPreviewUrlRef.current);
         }
-        const nextUrl = URL.createObjectURL(blob);
-        reportPreviewUrlRef.current = nextUrl;
-        setReportBlob(blob);
+        reportPreviewUrlRef.current = previewUrl;
+        setReportFileId(fileId);
         setReportFileName(fileName);
         setReportSubtitle(subtitle);
-        setReportPreviewUrl(nextUrl);
+        setReportPreviewUrl(previewUrl);
     };
 
-    const handleDownloadReport = () => {
-        if (!reportBlob) return;
-        downloadInspectionReportBlob(reportBlob, reportFileName);
+    const handleDownloadReport = async () => {
+        if (!reportFileId) return;
+
+        try {
+            await downloadFile(reportFileId, reportFileName);
+        } catch {
+            toast({
+                title: "Download failed",
+                description: "We couldn't download the inspection PDF right now.",
+                variant: "destructive",
+            });
+        }
     };
 
     const handlePreviewReport = async (inspection: Inspection) => {
@@ -335,23 +340,34 @@ const InspectionList = () => {
             reportPreviewUrlRef.current = null;
         }
         setReportPreviewUrl(null);
-        setReportBlob(null);
+        setReportFileId(null);
 
         try {
             const companyProfile = await ensureCompanyProfile();
-            const snapshot = buildInspectionReportSnapshot(rawInspection, {
-                customerName: inspection.customerName,
-                customerEmail: inspection.customerEmail,
-                customerPhone: inspection.customerPhone,
-                propertyAddress: inspection.address,
-                insuranceCompany: inspection.insuranceCompany,
-                claimNumber: inspection.claimNumber,
+            const result = await ensureInspectionReportFile({
+                inspection: rawInspection,
+                companyProfile,
+                reuseExisting: true,
+                snapshotOverrides: {
+                    customerName: inspection.customerName,
+                    customerEmail: inspection.customerEmail,
+                    customerPhone: inspection.customerPhone,
+                    propertyAddress: inspection.address,
+                    insuranceCompany: inspection.insuranceCompany,
+                    claimNumber: inspection.claimNumber,
+                },
             });
-            const result = await generateInspectionReportPdf(snapshot, { companyProfile });
-            updateReportPreview(result.blob, result.fileName, inspection.customerName || "Inspection report");
+            updateReportPreview(
+                result.previewUrl,
+                result.fileId,
+                result.fileName,
+                inspection.customerName || "Inspection report",
+            );
             toast({
-                title: "Inspection PDF ready",
-                description: "The report is open in preview. Download it only if you want a local copy.",
+                title: result.created ? "Inspection PDF ready" : "Inspection PDF opened",
+                description: result.created
+                    ? "The report was generated, saved to CRM files, and opened here for review."
+                    : "The saved inspection PDF is open here for review.",
             });
         } catch {
             setReportPreviewOpen(false);
@@ -801,7 +817,7 @@ const InspectionList = () => {
                 title="Inspection Report Preview"
                 subtitle={reportSubtitle}
                 loading={reportGeneratingId !== null}
-                onDownload={handleDownloadReport}
+                onDownload={() => void handleDownloadReport()}
             />
         </div>
     );

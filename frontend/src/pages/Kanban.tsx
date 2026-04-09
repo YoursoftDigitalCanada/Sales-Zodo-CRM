@@ -66,6 +66,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { getKanbanTasks, createTask, updateTask, deleteTask } from "@/features/tasks";
+import { MobileCreateFab } from "@/features/clients/components/responsive-helpers";
 
 // ============================================
 // TYPES
@@ -1339,13 +1340,13 @@ const KanbanPage: React.FC = () => {
       </footer>
 
       {isMobile && (
-        <Button
-          size="icon"
-          className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] shadow-[0_16px_36px_rgba(8,145,178,0.35)] hover:bg-[#0E7490]"
+        <MobileCreateFab
           onClick={() => openAddDialog()}
+          ariaLabel="Add Task"
+          className="bg-[#0891B2] shadow-[0_16px_36px_rgba(8,145,178,0.35)] hover:bg-[#0E7490]"
         >
           <Plus size={22} />
-        </Button>
+        </MobileCreateFab>
       )}
 
       {/* Task Dialog */}

@@ -79,7 +79,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { ListCardSkeleton, SwipeActionCard } from "@/features/clients/components/responsive-helpers";
+import { ListCardSkeleton, MobileCreateFab, SwipeActionCard } from "@/features/clients/components/responsive-helpers";
 import AddSourceDialog from "./AddSourceDialog";
 
 // ── TYPES ──────────────────────────────────────────────────────────
@@ -746,13 +746,13 @@ const LeadSourcesPage = () => {
             </main>
 
             {isMobile && (
-                <Button
-                    size="icon"
-                    className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#6637F4] shadow-[0_16px_36px_rgba(102,55,244,0.35)] hover:bg-[#6637F4]/90"
+                <MobileCreateFab
                     onClick={() => setAddDialogOpen(true)}
+                    ariaLabel="Add Lead Source"
+                    className="bg-[#6637F4] shadow-[0_16px_36px_rgba(102,55,244,0.35)] hover:bg-[#6637F4]/90"
                 >
                     <Plus size={22} />
-                </Button>
+                </MobileCreateFab>
             )}
 
             {/* Add Source Dialog */}

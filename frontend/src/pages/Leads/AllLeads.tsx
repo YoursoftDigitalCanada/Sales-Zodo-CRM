@@ -102,6 +102,7 @@ import {
 } from "@contracts/contact";
 import {
   ListCardSkeleton,
+  MobileCreateFab,
   PullToRefreshIndicator,
   SwipeActionCard,
   usePullToRefresh,
@@ -5609,16 +5610,16 @@ const AllLeads = () => {
           )}
 
           {selectedLeads.size === 0 && canCreateLeads && (
-            <Button
+            <MobileCreateFab
               onClick={() => {
                 setCurrentLead(null);
                 setIsFormOpen(true);
               }}
-              size="icon"
-              className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#6637F4] shadow-[0_16px_36px_rgba(102,55,244,0.35)] hover:bg-[#6637F4]/90"
+              ariaLabel="Add Lead"
+              className="bg-[#6637F4] shadow-[0_16px_36px_rgba(102,55,244,0.35)] hover:bg-[#6637F4]/90"
             >
               <Plus size={22} />
-            </Button>
+            </MobileCreateFab>
           )}
         </>
       )}

@@ -119,6 +119,14 @@ type PullToRefreshHandlers = {
   onTouchEnd: () => void;
 };
 
+type MobileCreateFabProps = {
+  children: React.ReactNode;
+  onClick: () => void;
+  ariaLabel: string;
+  className?: string;
+  disabled?: boolean;
+};
+
 export function usePullToRefresh({
   enabled,
   onRefresh,
@@ -179,6 +187,29 @@ export function PullToRefreshIndicator({
         <span>{isRefreshing ? "Refreshing..." : pullDistance >= 72 ? "Release to refresh" : "Pull to refresh"}</span>
       </div>
     </div>
+  );
+}
+
+export function MobileCreateFab({
+  children,
+  onClick,
+  ariaLabel,
+  className,
+  disabled = false,
+}: MobileCreateFabProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      className={cn(
+        "fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-xl transition-transform active:scale-95 disabled:pointer-events-none disabled:opacity-50",
+        className
+      )}
+    >
+      {children}
+    </button>
   );
 }
 

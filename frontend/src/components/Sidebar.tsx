@@ -835,9 +835,11 @@ export function Sidebar({
         }
       }
     });
-    // Auto-close mobile drawer on route change
+  }, [location.pathname, visibleNavigationItems]);
+
+  useEffect(() => {
     closeMobileDrawer();
-  }, [location.pathname, visibleNavigationItems, closeMobileDrawer]);
+  }, [location.pathname, closeMobileDrawer]);
 
   useEffect(() => {
     const loadUser = () => {
@@ -970,7 +972,13 @@ export function Sidebar({
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => {
+              if (isMobile) {
+                closeMobileDrawer();
+                return;
+              }
+              setCollapsed(!collapsed);
+            }}
             className={cn(
               "p-2 rounded-md hover:bg-[#F1F5F9]/20 text-[#475569] hover:text-[#6637F4] transition-all",
               collapsed && "mx-auto"

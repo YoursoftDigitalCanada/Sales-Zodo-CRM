@@ -98,7 +98,7 @@ import {
 } from "@/features/projects/roofing-operations";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { SwipeActionCard } from "@/features/clients/components/responsive-helpers";
+import { MobileCreateFab, SwipeActionCard } from "@/features/clients/components/responsive-helpers";
 import { useCanPerformAction } from "@/hooks/usePermissionAccess";
 
 function useDebouncedValue<T>(value: T, delay = 300): T {
@@ -1196,13 +1196,13 @@ export default function ProjectsPage() {
       </main>
 
       {isMobile && canCreateProjects && (
-        <Button
-          size="icon"
-          className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] shadow-[0_16px_36px_rgba(8,145,178,0.35)] hover:bg-[#0E7490]"
+        <MobileCreateFab
           onClick={() => navigate("/projects/add")}
+          ariaLabel="Add Job"
+          className="bg-[#0891B2] shadow-[0_16px_36px_rgba(8,145,178,0.35)] hover:bg-[#0E7490]"
         >
           <Plus size={22} />
-        </Button>
+        </MobileCreateFab>
       )}
 
       <Drawer open={isMobile && filtersOpen} onOpenChange={setFiltersOpen}>

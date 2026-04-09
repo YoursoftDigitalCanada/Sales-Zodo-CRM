@@ -1686,8 +1686,8 @@ const Index = () => {
                     <p className="mt-1 text-[11px] text-[#94A3B8]">Pipeline, estimates, and collections in one swipeable row.</p>
                   </div>
                   <div className="-mx-1 overflow-x-auto pb-1">
-                    <div className="flex gap-3 px-1">
-                      <div className="min-w-[250px] flex-none">
+                    <div className="flex items-stretch gap-3 px-1">
+                      <div className="flex min-w-[250px] flex-none">
                         <StatCard
                           title="Total Potential Revenue"
                           value={formatMoney(totalPotentialRevenue)}
@@ -1701,7 +1701,7 @@ const Index = () => {
                           aiInsight={totalPotentialRevenue > 0 ? "Focus on pipeline and collections today" : undefined}
                         />
                       </div>
-                      <div className="min-w-[250px] flex-none">
+                      <div className="flex min-w-[250px] flex-none">
                         <StatCard
                           title="Hot Leads Value"
                           value={formatMoney(hotLeadsValue)}
@@ -1715,7 +1715,7 @@ const Index = () => {
                           aiInsight={hotLeads.length > 0 ? "Call these first for fastest revenue" : undefined}
                         />
                       </div>
-                      <div className="min-w-[250px] flex-none">
+                      <div className="flex min-w-[250px] flex-none">
                         <StatCard
                           title="Estimates Sent Value"
                           value={formatMoney(estimatesSentValue)}
@@ -1729,7 +1729,7 @@ const Index = () => {
                           aiInsight={sentEstimates.length > 0 ? "Follow up before validity dates expire" : undefined}
                         />
                       </div>
-                      <div className="min-w-[250px] flex-none">
+                      <div className="flex min-w-[250px] flex-none">
                         <StatCard
                           title="Pending Payments Value"
                           value={formatMoney(pendingPaymentsValue)}
@@ -2228,7 +2228,7 @@ const Index = () => {
                   </div>
                 </div>
 
-                <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 md:gap-4 xl:grid-cols-4">
                   <StatCard
                     title="Total Potential Revenue"
                     value={formatMoney(totalPotentialRevenue)}

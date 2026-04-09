@@ -2478,7 +2478,7 @@ const ClientGroupsPage = () => {
         <Button
           onClick={handleCreateGroup}
           size="icon"
-          className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] text-white shadow-lg hover:bg-[#0891B2]/90"
+          className="mobile-create-fab fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] text-white shadow-lg hover:bg-[#0891B2]/90"
           aria-label="Create group"
         >
           <Plus size={22} />

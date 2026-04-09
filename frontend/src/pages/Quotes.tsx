@@ -1527,7 +1527,7 @@ const QuotesPage = () => {
               <Button
                 type="button"
                 onClick={() => { setCurrentQuote(null); setIsFormOpen(true); }}
-                className="fixed bottom-5 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] p-0 text-white shadow-lg hover:bg-[#0891B2]/90"
+                className="mobile-create-fab fixed bottom-5 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] p-0 text-white shadow-lg hover:bg-[#0891B2]/90"
               >
                 <Plus size={22} />
               </Button>

@@ -470,7 +470,7 @@ const DepartmentsPage: React.FC = () => {
         <Button
           onClick={() => setIsAddDialogOpen(true)}
           size="icon"
-          className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full bg-[#0891B2] text-white shadow-lg hover:bg-[#0891B2]/90 sm:hidden"
+          className="mobile-create-fab fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full bg-[#0891B2] text-white shadow-lg hover:bg-[#0891B2]/90 sm:hidden"
           aria-label="Add Department"
         >
           <Plus className="h-5 w-5" />

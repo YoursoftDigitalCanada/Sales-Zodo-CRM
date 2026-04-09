@@ -204,7 +204,7 @@ export function MobileCreateFab({
       disabled={disabled}
       aria-label={ariaLabel}
       className={cn(
-        "fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-xl transition-transform active:scale-95 disabled:pointer-events-none disabled:opacity-50",
+        "mobile-create-fab fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-xl transition-transform active:scale-95 disabled:pointer-events-none disabled:opacity-50",
         className
       )}
     >

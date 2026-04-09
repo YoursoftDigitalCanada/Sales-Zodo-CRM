@@ -1044,7 +1044,7 @@ export default function RoofEstimator() {
         <Button
           onClick={() => navigate("/roof-estimator/new")}
           size="icon"
-          className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] shadow-[0_16px_36px_rgba(8,145,178,0.32)] hover:bg-[#0E7490]"
+          className="mobile-create-fab fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#0891B2] shadow-[0_16px_36px_rgba(8,145,178,0.32)] hover:bg-[#0E7490]"
         >
           <Plus size={22} />
         </Button>

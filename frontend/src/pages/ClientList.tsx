@@ -2174,7 +2174,7 @@ const ClientListPage = () => {
               <button
                 type="button"
                 onClick={() => navigate("/client-list/add")}
-                className="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#0891B2] text-white shadow-xl transition-transform active:scale-95"
+                className="mobile-create-fab fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#0891B2] text-white shadow-xl transition-transform active:scale-95"
                 aria-label="Add Client"
               >
                 <Plus size={22} />

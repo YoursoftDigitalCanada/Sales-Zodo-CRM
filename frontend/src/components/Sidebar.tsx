@@ -111,14 +111,6 @@ interface SidebarProps {
   setMobileOpen?: (value: boolean) => void;
 }
 
-interface MobileTabItem {
-  icon: LucideIcon;
-  label: string;
-  path: string;
-  featureId?: FeatureId;
-  permissionModule?: string | string[];
-}
-
 type BadgeColor = NonNullable<NavigationItem["badgeColor"]>;
 
 interface SidebarRuntimeMetaEntry {
@@ -686,27 +678,6 @@ export function Sidebar({
   const visibleNavigationItems = useMemo(
     () => filterNavigationItems(runtimeNavigationItems, enabledFeatureSet, userPermissions, isOwnerOrAdmin),
     [enabledFeatureSet, runtimeNavigationItems, userPermissions, isOwnerOrAdmin]
-  );
-
-  const mobileNavigationTabs = useMemo<MobileTabItem[]>(
-    () => [
-      { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", permissionModule: "dashboard" },
-      { icon: Target, label: "Pipeline", path: "/leads/pipeline", featureId: "leads", permissionModule: "leads" },
-      { icon: Briefcase, label: "Jobs", path: "/projects", featureId: "projects", permissionModule: "projects" },
-      { icon: Receipt, label: "Finance", path: "/invoice", featureId: "finance", permissionModule: "invoices" },
-      { icon: MessageSquare, label: "Chats", path: "/chats", featureId: "chat", permissionModule: "chat" },
-    ].filter((tab) => {
-      if (!hasFeatureAccess(tab.featureId, enabledFeatureSet)) {
-        return false;
-      }
-
-      if (!isOwnerOrAdmin && !hasModulePermission(tab.permissionModule, userPermissions)) {
-        return false;
-      }
-
-      return true;
-    }),
-    [enabledFeatureSet, isOwnerOrAdmin, userPermissions]
   );
 
   useEffect(() => {
@@ -1458,30 +1429,6 @@ export function Sidebar({
             collapsed ? "w-20" : "w-72"
           )}
         />
-      )}
-
-      {/* ─── Mobile Bottom Tab Bar ─── */}
-      {isMobile && mobileNavigationTabs.length > 0 && (
-        <nav className="fixed bottom-0 left-0 right-0 z-[60] bg-white/98 backdrop-blur-lg border-t border-[rgba(15,23,42,0.08)]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-          <div className="flex items-center justify-around h-14">
-            {mobileNavigationTabs.map((tab) => {
-              const active = location.pathname === tab.path || location.pathname.startsWith(tab.path + "/");
-              return (
-                <Link
-                  key={tab.path}
-                  to={tab.path}
-                  className={cn(
-                    "flex flex-col items-center gap-0.5 min-w-0 px-2 py-1 transition-colors",
-                    active ? "text-[#6637F4]" : "text-[#94A3B8]"
-                  )}
-                >
-                  <tab.icon size={20} strokeWidth={active ? 2.2 : 1.5} />
-                  <span className={cn("text-[10px] leading-tight", active ? "font-semibold" : "font-medium")}>{tab.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
       )}
 
       {/* Custom Scrollbar Styles */}

@@ -62,8 +62,8 @@ export function GlobalAiFloatingButton() {
                         style={{
                             bottom: isMobile
                                 ? isRoofEstimatorRoute
-                                    ? "calc(56px + env(safe-area-inset-bottom, 0px) + 108px)"
-                                    : "calc(56px + env(safe-area-inset-bottom, 0px) + 20px)"
+                                    ? "calc(env(safe-area-inset-bottom, 0px) + 108px)"
+                                    : "calc(env(safe-area-inset-bottom, 0px) + 20px)"
                                 : "24px",
                         }}
                     >

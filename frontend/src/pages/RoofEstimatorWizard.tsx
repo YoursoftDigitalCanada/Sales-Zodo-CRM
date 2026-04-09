@@ -340,9 +340,8 @@ const ESTIMATE_SECTIONS: { id: SectionId; title: string; shortLabel: string; ico
   { id: "summary", title: "Estimate Summary", shortLabel: "Summary", icon: "📋", description: "Final review and generation." },
 ];
 
-const MOBILE_BOTTOM_NAV_HEIGHT = 56;
-const MOBILE_ACTION_BAR_OFFSET = `calc(${MOBILE_BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px) + 8px)`;
-const MOBILE_PAGE_BOTTOM_PADDING = 180;
+const MOBILE_ACTION_BAR_OFFSET = "calc(env(safe-area-inset-bottom, 0px) + 8px)";
+const MOBILE_PAGE_BOTTOM_PADDING = 132;
 
 /* ─── Styled Input ───────────────────────────────────────── */
 

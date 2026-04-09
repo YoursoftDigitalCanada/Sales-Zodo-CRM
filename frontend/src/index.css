@@ -973,6 +973,7 @@ html.dark textarea::placeholder {
 @media (max-width: 767px) {
   .main-content {
     padding-top: 56px;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
     /* mobile navbar height */
     margin-left: 0 !important;
   }

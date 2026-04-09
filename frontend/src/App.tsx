@@ -6,6 +6,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GlobalAiFloatingButton } from "@/components/ai/GlobalAiFloatingButton";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { SessionTakeoverGuard } from "@/components/SessionTakeoverGuard";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate } from "react-router-dom";
@@ -1072,6 +1073,7 @@ const AppRoutes = () => {
           <div className="min-w-0 flex-1 overflow-x-hidden main-content pt-14 md:pt-0">
             {routesContent}
           </div>
+          <MobileBottomNav />
         </div>
       ) : (
         routesContent

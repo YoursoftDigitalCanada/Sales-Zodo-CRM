@@ -60,8 +60,17 @@ import {
     ArrowDownRight,
     Flame,
     X,
+    Loader2,
 } from "lucide-react";
 import { getAllInspections, type InspectionEntity } from "@/features/leads/services/inspections-service";
+import type { CompanyProfile } from "@/features/settings/services/settings-service";
+import { getCompanyProfile } from "@/features/settings/services/settings-service";
+import InspectionReportPreviewDialog from "@/components/inspections/InspectionReportPreviewDialog";
+import {
+    buildInspectionReportSnapshot,
+    downloadInspectionReportBlob,
+    generateInspectionReportPdf,
+} from "@/features/leads/utils/generate-inspection-report-pdf";
 
 // ============================================
 // TYPES
@@ -240,7 +249,7 @@ const InspectionList = () => {
     const { toast } = useToast();
 
     // State
-    const [inspections, setInspections] = useState<Inspection[]>([]);
+    const [inspectionRecords, setInspectionRecords] = useState<InspectionEntity[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
@@ -248,6 +257,14 @@ const InspectionList = () => {
     const [filterStatus, setFilterStatus] = useState("all");
     const [filterDamageType, setFilterDamageType] = useState("all");
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+    const [reportGeneratingId, setReportGeneratingId] = useState<string | null>(null);
+    const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
+    const [reportPreviewUrl, setReportPreviewUrl] = useState<string | null>(null);
+    const [reportBlob, setReportBlob] = useState<Blob | null>(null);
+    const [reportFileName, setReportFileName] = useState("inspection-report.pdf");
+    const [reportSubtitle, setReportSubtitle] = useState("Inspection report");
+    const companyProfileRef = React.useRef<CompanyProfile | null>(null);
+    const reportPreviewUrlRef = React.useRef<string | null>(null);
 
     // Fetch data
     useEffect(() => {
@@ -255,15 +272,98 @@ const InspectionList = () => {
             try {
                 setLoading(true);
                 const data = await getAllInspections();
-                setInspections(data.map(mapApiInspection));
+                setInspectionRecords(data);
             } catch {
-                setInspections([]);
+                setInspectionRecords([]);
             } finally {
                 setLoading(false);
             }
         };
         fetchData();
     }, []);
+
+    useEffect(() => {
+        return () => {
+            if (reportPreviewUrlRef.current) {
+                URL.revokeObjectURL(reportPreviewUrlRef.current);
+                reportPreviewUrlRef.current = null;
+            }
+        };
+    }, []);
+
+    const inspections = useMemo(() => inspectionRecords.map(mapApiInspection), [inspectionRecords]);
+
+    const ensureCompanyProfile = async () => {
+        if (companyProfileRef.current) return companyProfileRef.current;
+        const profile = await getCompanyProfile();
+        companyProfileRef.current = profile;
+        return profile;
+    };
+
+    const updateReportPreview = (blob: Blob, fileName: string, subtitle: string) => {
+        if (reportPreviewUrlRef.current) {
+            URL.revokeObjectURL(reportPreviewUrlRef.current);
+        }
+        const nextUrl = URL.createObjectURL(blob);
+        reportPreviewUrlRef.current = nextUrl;
+        setReportBlob(blob);
+        setReportFileName(fileName);
+        setReportSubtitle(subtitle);
+        setReportPreviewUrl(nextUrl);
+    };
+
+    const handleDownloadReport = () => {
+        if (!reportBlob) return;
+        downloadInspectionReportBlob(reportBlob, reportFileName);
+    };
+
+    const handlePreviewReport = async (inspection: Inspection) => {
+        const rawInspection = inspectionRecords.find((record) => record.id === inspection.id);
+        if (!rawInspection) {
+            toast({
+                title: "Inspection not found",
+                description: "We couldn't find the inspection details needed to build the PDF.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setReportGeneratingId(inspection.id);
+        setReportPreviewOpen(true);
+        if (reportPreviewUrlRef.current) {
+            URL.revokeObjectURL(reportPreviewUrlRef.current);
+            reportPreviewUrlRef.current = null;
+        }
+        setReportPreviewUrl(null);
+        setReportBlob(null);
+
+        try {
+            const companyProfile = await ensureCompanyProfile();
+            const snapshot = buildInspectionReportSnapshot(rawInspection, {
+                customerName: inspection.customerName,
+                customerEmail: inspection.customerEmail,
+                customerPhone: inspection.customerPhone,
+                propertyAddress: inspection.address,
+                insuranceCompany: inspection.insuranceCompany,
+                claimNumber: inspection.claimNumber,
+            });
+            const result = await generateInspectionReportPdf(snapshot, { companyProfile });
+            updateReportPreview(result.blob, result.fileName, inspection.customerName || "Inspection report");
+            toast({
+                title: "Inspection PDF ready",
+                description: "The report is open in preview. Download it only if you want a local copy.",
+            });
+        } catch {
+            setReportPreviewOpen(false);
+            toast({
+                title: "PDF generation failed",
+                description: "We couldn't open the inspection PDF right now.",
+                variant: "destructive",
+            });
+        } finally {
+            setReportGeneratingId(null);
+        }
+    };
 
     // Computed values
     const inspectors = useMemo(() => {
@@ -635,12 +735,17 @@ const InspectionList = () => {
                                                                         variant="ghost"
                                                                         size="icon"
                                                                         className="h-7 w-7 rounded-lg hover:bg-blue-50 hover:text-[#1E40AF]"
-                                                                        onClick={() => navigate(`/inspections/${inspection.id}`)}
+                                                                        onClick={() => void handlePreviewReport(inspection)}
+                                                                        disabled={reportGeneratingId === inspection.id}
                                                                     >
-                                                                        <Eye size={14} />
+                                                                        {reportGeneratingId === inspection.id ? (
+                                                                            <Loader2 size={14} className="animate-spin" />
+                                                                        ) : (
+                                                                            <Eye size={14} />
+                                                                        )}
                                                                     </Button>
                                                                 </TooltipTrigger>
-                                                                <TooltipContent>View</TooltipContent>
+                                                                <TooltipContent>View PDF</TooltipContent>
                                                             </Tooltip>
                                                         </TooltipProvider>
                                                         <TooltipProvider>
@@ -665,7 +770,7 @@ const InspectionList = () => {
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end" className="rounded-lg w-44">
-                                                                <DropdownMenuItem className="rounded-lg" onClick={() => navigate(`/inspections/${inspection.id}`)}>
+                                                                <DropdownMenuItem className="rounded-lg" onClick={() => void handlePreviewReport(inspection)}>
                                                                     <Eye size={14} className="mr-2" /> View Report
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem className="rounded-lg">
@@ -687,6 +792,17 @@ const InspectionList = () => {
                     </div>
                 </motion.div>
             </div>
+
+            <InspectionReportPreviewDialog
+                open={reportPreviewOpen}
+                onOpenChange={setReportPreviewOpen}
+                pdfUrl={reportPreviewUrl}
+                fileName={reportFileName}
+                title="Inspection Report Preview"
+                subtitle={reportSubtitle}
+                loading={reportGeneratingId !== null}
+                onDownload={handleDownloadReport}
+            />
         </div>
     );
 };

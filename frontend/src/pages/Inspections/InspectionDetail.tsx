@@ -38,6 +38,14 @@ import {
     updateInspection,
     type InspectionEntity,
 } from "@/features/leads/services/inspections-service";
+import type { CompanyProfile } from "@/features/settings/services/settings-service";
+import { getCompanyProfile } from "@/features/settings/services/settings-service";
+import InspectionReportPreviewDialog from "@/components/inspections/InspectionReportPreviewDialog";
+import {
+    buildInspectionReportSnapshot,
+    downloadInspectionReportBlob,
+    generateInspectionReportPdf,
+} from "@/features/leads/utils/generate-inspection-report-pdf";
 import InspectionPhotoSection from "./InspectionPhotoSection";
 
 // ============================================
@@ -145,6 +153,8 @@ const InspectionDetail = () => {
     const { id } = useParams();
     const { toast } = useToast();
     const photoUrlsRef = useRef<string[]>([]);
+    const reportPreviewUrlRef = useRef<string | null>(null);
+    const companyProfileRef = useRef<CompanyProfile | null>(null);
 
     // Data state
     const [inspection, setInspection] = useState<InspectionEntity | null>(null);
@@ -153,6 +163,11 @@ const InspectionDetail = () => {
     const [photoLoading, setPhotoLoading] = useState(false);
     const [photoMutating, setPhotoMutating] = useState(false);
     const [inspectionPhotos, setInspectionPhotos] = useState<StoredInspectionPhoto[]>([]);
+    const [reportGenerating, setReportGenerating] = useState(false);
+    const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
+    const [reportPreviewUrl, setReportPreviewUrl] = useState<string | null>(null);
+    const [reportBlob, setReportBlob] = useState<Blob | null>(null);
+    const [reportFileName, setReportFileName] = useState("inspection-report.pdf");
 
     // Form state — populated from API data
     const [measurementSource, setMeasurementSource] = useState("manual");
@@ -189,6 +204,29 @@ const InspectionDetail = () => {
         photoUrlsRef.current = [];
     };
 
+    const clearReportPreviewUrl = () => {
+        if (reportPreviewUrlRef.current) {
+            URL.revokeObjectURL(reportPreviewUrlRef.current);
+            reportPreviewUrlRef.current = null;
+        }
+    };
+
+    const ensureCompanyProfile = async () => {
+        if (companyProfileRef.current) return companyProfileRef.current;
+        const profile = await getCompanyProfile();
+        companyProfileRef.current = profile;
+        return profile;
+    };
+
+    const updateReportPreview = (blob: Blob, fileName: string) => {
+        clearReportPreviewUrl();
+        const nextUrl = URL.createObjectURL(blob);
+        reportPreviewUrlRef.current = nextUrl;
+        setReportBlob(blob);
+        setReportFileName(fileName);
+        setReportPreviewUrl(nextUrl);
+    };
+
     // ---------- Load Data ----------
     useEffect(() => {
         const loadInspection = async () => {
@@ -216,6 +254,7 @@ const InspectionDetail = () => {
     useEffect(() => {
         return () => {
             clearPhotoUrls();
+            clearReportPreviewUrl();
         };
     }, []);
 
@@ -502,6 +541,63 @@ const InspectionDetail = () => {
         }
     };
 
+    const handleDownloadReport = () => {
+        if (!reportBlob) return;
+        downloadInspectionReportBlob(reportBlob, reportFileName);
+    };
+
+    const handleGeneratePdf = async () => {
+        if (!inspection) return;
+
+        setReportGenerating(true);
+        setReportPreviewOpen(true);
+        clearReportPreviewUrl();
+        setReportPreviewUrl(null);
+        setReportBlob(null);
+
+        try {
+            const companyProfile = await ensureCompanyProfile();
+            const snapshot = buildInspectionReportSnapshot(inspection, {
+                customerName: customer.name,
+                customerEmail: customer.email,
+                customerPhone: customer.phone,
+                propertyAddress: customer.address,
+                insuranceCompany: customer.insurance,
+                claimNumber: customer.claimNumber,
+                inspectorName: inspDetails.inspector,
+                inspectionType: inspDetails.inspectionType || inspDetails.cause,
+                weatherConditions: inspDetails.weather,
+                measurementSource,
+                recommendation,
+                inspectorNotes,
+                measurements,
+                roofField,
+                flashings,
+                ridgeHip,
+                guttersState,
+                ventilation,
+                decking,
+                damageChecks,
+            });
+
+            const result = await generateInspectionReportPdf(snapshot, { companyProfile });
+            updateReportPreview(result.blob, result.fileName);
+            toast({
+                title: "Inspection PDF ready",
+                description: "The report is open in preview. Download it only if you want to save a copy.",
+            });
+        } catch {
+            setReportPreviewOpen(false);
+            toast({
+                title: "PDF generation failed",
+                description: "We couldn't build the inspection PDF right now.",
+                variant: "destructive",
+            });
+        } finally {
+            setReportGenerating(false);
+        }
+    };
+
     // ---------- Loading State ----------
     if (loading) {
         return (
@@ -534,8 +630,8 @@ const InspectionDetail = () => {
         <div className="min-h-screen bg-[#F9FAFB]">
             {/* Top Header Bar */}
             <header className="crm-module-header bg-white border-b border-gray-100 sticky top-0 z-10">
-                <div className="px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                <div className="px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-3">
                         <Button
                             variant="ghost"
                             size="sm"
@@ -551,7 +647,17 @@ const InspectionDetail = () => {
                             Inspection Report
                         </h1>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg gap-1.5 border-gray-200"
+                            onClick={() => void handleGeneratePdf()}
+                            disabled={reportGenerating}
+                        >
+                            {reportGenerating ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+                            <span className="hidden sm:inline">Generate PDF</span>
+                        </Button>
                         <Button
                             variant="outline"
                             size="sm"
@@ -978,6 +1084,17 @@ const InspectionDetail = () => {
                     </Button>
                 </motion.div>
             </div>
+
+            <InspectionReportPreviewDialog
+                open={reportPreviewOpen}
+                onOpenChange={setReportPreviewOpen}
+                pdfUrl={reportPreviewUrl}
+                fileName={reportFileName}
+                title="Inspection Report Preview"
+                subtitle={customer.name || "Inspection report"}
+                loading={reportGenerating}
+                onDownload={handleDownloadReport}
+            />
         </div>
     );
 };

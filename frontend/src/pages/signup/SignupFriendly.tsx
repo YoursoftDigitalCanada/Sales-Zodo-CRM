@@ -299,7 +299,7 @@ export default function SignupFriendly() {
             {/* Feature cards */}
             <div style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 12 }}>
               {[
-                { icon: ShieldCheck, title: "OTP-secured signup", desc: "Email + phone verification" },
+                { icon: ShieldCheck, title: "OTP-secured signup", desc: "Email verification only" },
                 { icon: Building2, title: "Multi-tenant ready", desc: "Isolated workspace per signup" },
                 { icon: Sparkles, title: "AI-powered tools", desc: "Estimators, analytics, copilot" },
               ].map((f) => (
@@ -744,24 +744,34 @@ export default function SignupFriendly() {
                   {/* ═══ STEP 5 ═══ */}
                   {w.step === 5 && (
                     <div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 24 }}>
-                        {([
-                          { channel: "email" as const, title: "Email OTP", desc: `Verify via ${w.form.email || "email"}`, icon: Mail },
-                          { channel: "phone" as const, title: "Phone OTP", desc: w.normalizedPhone || "Verify by SMS", icon: Phone },
-                        ]).map((opt) => {
-                          const sel = w.otpChannel === opt.channel;
-                          return (
-                            <button key={opt.channel} type="button" onClick={() => w.switchOtpChannel(opt.channel)} style={{
-                              padding: "16px", borderRadius: 16, border: `2px solid ${sel ? "#0891B2" : "transparent"}`,
-                              backgroundColor: sel ? "rgba(8,145,178,0.05)" : "#F8FAFC", cursor: "pointer", textAlign: "left",
-                              transition: "all 250ms", fontFamily: "Urbanist, system-ui, sans-serif",
-                            }}>
-                              <opt.icon style={{ width: 20, height: 20, color: sel ? "#0891B2" : "#94A3B8" }} />
-                              <p style={{ fontSize: 14, fontWeight: 700, color: "#0F172A", marginTop: 10 }}>{opt.title}</p>
-                              <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, lineHeight: 1.5 }}>{opt.desc}</p>
-                            </button>
-                          );
-                        })}
+                      <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "16px",
+                        borderRadius: 16,
+                        backgroundColor: "#F8FAFC",
+                        border: "1px solid #F1F5F9",
+                        marginBottom: 24,
+                      }}>
+                        <div style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 14,
+                          backgroundColor: "rgba(8,145,178,0.08)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}>
+                          <Mail style={{ width: 20, height: 20, color: "#0891B2" }} />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: 14, fontWeight: 700, color: "#0F172A" }}>Email verification</p>
+                          <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, lineHeight: 1.5 }}>
+                            We send your signup code only to {w.form.email || "your work email"}.
+                          </p>
+                        </div>
                       </div>
 
                       {/* Request code */}
@@ -770,12 +780,12 @@ export default function SignupFriendly() {
                           <div>
                             <p style={{ fontSize: 14, fontWeight: 700, color: "#0F172A" }}>{w.hasSentOtp ? "Code sent ✓" : "Request code"}</p>
                             <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>
-                              {w.hasSentOtp && w.otpSentTo ? `Sent to ${w.otpSentTo}. Expires ${formatTimer(w.otpExpiresIn)}.` : `We’ll send a 6-digit code to your ${w.otpChannel === "email" ? "email" : "phone"} when you request it.`}
+                              {w.hasSentOtp && w.otpSentTo ? `Sent to ${w.otpSentTo}. Expires ${formatTimer(w.otpExpiresIn)}.` : "We’ll send a 6-digit code to your email when you request it."}
                             </p>
                           </div>
                           <button
                             type="button"
-                            onClick={() => void w.requestOtp(w.otpChannel)}
+                            onClick={() => void w.requestOtp()}
                             disabled={w.isSendingOtp}
                             style={{
                               height: 36, padding: "0 16px", borderRadius: 99, border: "none",

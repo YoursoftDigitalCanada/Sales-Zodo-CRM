@@ -17,8 +17,7 @@ export type SignupPlan = "basic" | "standard" | "premium";
 
 export interface SignupOtpPayload {
   email: string;
-  phone?: string;
-  channel: "email" | "phone";
+  channel?: "email";
 }
 
 export interface SignupOtpVerifyPayload extends SignupOtpPayload {

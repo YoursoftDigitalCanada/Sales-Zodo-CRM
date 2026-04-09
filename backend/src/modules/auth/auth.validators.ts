@@ -33,16 +33,14 @@ export const registerSchema = z.object({
 export const signupOtpSendSchema = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
-    phone: z.string().min(6, 'Phone number is required for phone OTP').optional(),
-    channel: z.enum(['email', 'phone']),
+    channel: z.literal('email').default('email'),
   }),
 });
 
 export const signupOtpVerifySchema = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
-    phone: z.string().min(6, 'Phone number is required for phone OTP').optional(),
-    channel: z.enum(['email', 'phone']),
+    channel: z.literal('email').default('email'),
     otp: z.string().regex(/^\d{6}$/, 'OTP must be 6 digits'),
   }),
 });

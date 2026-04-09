@@ -746,35 +746,38 @@ export default function SignupMinimal() {
             {/* ═══ STEP 5: VERIFY ═══ */}
             {w.step === 5 && (
               <div>
-                {/* OTP channel selector */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 24 }}>
-                  {([
-                    { channel: "email" as const, title: "Email OTP", desc: `Verify via ${w.form.email || "email"}`, icon: Mail },
-                    { channel: "phone" as const, title: "Phone OTP", desc: w.normalizedPhone || "Verify by SMS", icon: Phone },
-                  ]).map((opt) => {
-                    const selected = w.otpChannel === opt.channel;
-                    return (
-                      <button
-                        key={opt.channel}
-                        type="button"
-                        onClick={() => w.switchOtpChannel(opt.channel)}
-                        style={{
-                          padding: "16px",
-                          border: `1.5px solid ${selected ? "#0891B2" : "#E2E8F0"}`,
-                          borderRadius: 8,
-                          backgroundColor: selected ? "rgba(8,145,178,0.04)" : "#FFF",
-                          cursor: "pointer",
-                          textAlign: "left",
-                          transition: "all 200ms ease",
-                          fontFamily: "Urbanist, system-ui, sans-serif",
-                        }}
-                      >
-                        <opt.icon style={{ width: 18, height: 18, color: selected ? "#0891B2" : "#94A3B8" }} />
-                        <p style={{ fontSize: 14, fontWeight: 600, color: "#0F172A", marginTop: 10 }}>{opt.title}</p>
-                        <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>{opt.desc}</p>
-                      </button>
-                    );
-                  })}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "16px",
+                    border: "1.5px solid #E2E8F0",
+                    borderRadius: 8,
+                    backgroundColor: "#FFF",
+                    marginBottom: 24,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 10,
+                      backgroundColor: "rgba(8,145,178,0.08)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Mail style={{ width: 18, height: 18, color: "#0891B2" }} />
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: "#0F172A" }}>Email verification</p>
+                    <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>
+                      We’ll verify this signup using {w.form.email || "your work email"} only.
+                    </p>
+                  </div>
                 </div>
 
                 {/* Send/resend OTP */}
@@ -795,12 +798,12 @@ export default function SignupMinimal() {
                       <p style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>
                         {w.hasSentOtp && w.otpSentTo
                           ? `Sent to ${w.otpSentTo}. Expires in ${formatTimer(w.otpExpiresIn)}.`
-                          : `We’ll send a 6-digit code to your ${w.otpChannel === "email" ? "email" : "phone"} when requested.`}
+                          : "We’ll send a 6-digit code to your email when requested."}
                       </p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => void w.requestOtp(w.otpChannel)}
+                      onClick={() => void w.requestOtp()}
                       disabled={w.isSendingOtp}
                       style={{
                         height: 34,

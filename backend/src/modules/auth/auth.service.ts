@@ -42,7 +42,7 @@ import { authManager } from './auth.manager';
 
 export class AuthService {
   async sendSignupOtp(input: SignupOtpSendInput): Promise<{
-    channel: 'email' | 'phone';
+    channel: 'email';
     expiresIn: number;
     destination: string;
     debugCode?: string;
@@ -303,7 +303,7 @@ export class AuthService {
       );
     }
 
-    signupOtpService.assertVerified(email, phone);
+    signupOtpService.assertVerified(email);
 
     const { firstName, lastName } = this.splitFullName(input.name);
     const passwordHash = await hashPassword(input.password);
@@ -392,7 +392,7 @@ export class AuthService {
       return { user, employee };
     });
 
-    signupOtpService.consumeVerification(email, phone);
+    signupOtpService.consumeVerification(email);
 
     const tokens = await this.generateTokens(
       result.user.id,

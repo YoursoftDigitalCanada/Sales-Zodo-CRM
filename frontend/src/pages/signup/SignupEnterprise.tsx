@@ -559,29 +559,34 @@ export default function SignupEnterprise() {
                     {/* ═══ STEP 5 ═══ */}
                     {w.step === 5 && (
                       <div>
-                        {/* Channel selector */}
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
-                          {([
-                            { channel: "email" as const, title: "Email", desc: w.form.email || "email", icon: Mail },
-                            { channel: "phone" as const, title: "Phone", desc: w.normalizedPhone || "Verify by SMS", icon: Phone },
-                          ]).map((opt) => {
-                            const sel = w.otpChannel === opt.channel;
-                            return (
-                              <button key={opt.channel} type="button" onClick={() => w.switchOtpChannel(opt.channel)} style={{
-                                padding: "12px 14px", borderRadius: 6,
-                                border: `1.5px solid ${sel ? "#0891B2" : "#E2E8F0"}`,
-                                backgroundColor: sel ? "rgba(8,145,178,0.03)" : "#FFF",
-                                cursor: "pointer", textAlign: "left", transition: "all 150ms",
-                                fontFamily: "Urbanist, system-ui, sans-serif",
-                              }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                  <opt.icon style={{ width: 14, height: 14, color: sel ? "#0891B2" : "#94A3B8" }} />
-                                  <span style={{ fontSize: 13, fontWeight: 600, color: "#0F172A" }}>{opt.title}</span>
-                                </div>
-                                <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{opt.desc}</p>
-                              </button>
-                            );
-                          })}
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "12px 14px",
+                          borderRadius: 6,
+                          border: "1px solid #E2E8F0",
+                          backgroundColor: "#FFF",
+                          marginBottom: 20,
+                        }}>
+                          <div style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 6,
+                            backgroundColor: "rgba(8,145,178,0.08)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}>
+                            <Mail style={{ width: 16, height: 16, color: "#0891B2" }} />
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: "#0F172A" }}>Email verification</p>
+                            <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              Codes are sent only to {w.form.email || "your work email"}.
+                            </p>
+                          </div>
                         </div>
 
                         {/* Send/resend */}
@@ -590,10 +595,10 @@ export default function SignupEnterprise() {
                             <div>
                               <p style={{ fontSize: 13, fontWeight: 600, color: "#0F172A" }}>{w.hasSentOtp ? "Code delivered" : "Request code"}</p>
                               <p style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }}>
-                                {w.hasSentOtp && w.otpSentTo ? `Sent to ${w.otpSentTo}. Expires ${formatTimer(w.otpExpiresIn)}.` : `We’ll send a 6-digit code to your ${w.otpChannel === "email" ? "email" : "phone"} when requested.`}
+                                {w.hasSentOtp && w.otpSentTo ? `Sent to ${w.otpSentTo}. Expires ${formatTimer(w.otpExpiresIn)}.` : "We’ll send a 6-digit code to your email when requested."}
                               </p>
                             </div>
-                            <button type="button" onClick={() => void w.requestOtp(w.otpChannel)} disabled={w.isSendingOtp} style={{
+                            <button type="button" onClick={() => void w.requestOtp()} disabled={w.isSendingOtp} style={{
                               height: 32, padding: "0 14px", borderRadius: 4, border: "1px solid #0891B2", backgroundColor: "transparent",
                               color: "#0891B2", fontSize: 12, fontWeight: 600, cursor: w.isSendingOtp ? "not-allowed" : "pointer",
                               display: "flex", alignItems: "center", gap: 4, fontFamily: "Urbanist, system-ui, sans-serif",

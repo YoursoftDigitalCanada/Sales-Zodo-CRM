@@ -23,7 +23,6 @@ import {
 
 export type SignupStep = 1 | 2 | 3 | 4 | 5;
 export type CompanyType = "individual" | "startup" | "sme" | "enterprise";
-export type OtpChannel = "email" | "phone";
 
 export interface CountryOption {
   code: string;
@@ -235,7 +234,6 @@ export function useSignupWizard() {
   });
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [otpChannel, setOtpChannel] = useState<OtpChannel>("email");
   const [otpCode, setOtpCode] = useState("");
   const [otpSentTo, setOtpSentTo] = useState("");
   const [otpExpiresIn, setOtpExpiresIn] = useState(0);
@@ -334,14 +332,13 @@ export function useSignupWizard() {
     setStep((c) => (c - 1) as SignupStep);
   };
 
-  const requestOtp = async (channel: OtpChannel) => {
+  const requestOtp = async () => {
     setIsSendingOtp(true);
     setOtpDebugCode(null);
     try {
       const response = await sendSignupOtp({
         email: form.email.trim().toLowerCase(),
-        phone: normalizedPhone || undefined,
-        channel,
+        channel: "email",
       });
       const data = (response?.data as Record<string, unknown>) || {};
       const expiresIn = Number(data.expiresIn || 300);
@@ -355,7 +352,7 @@ export function useSignupWizard() {
       setOtpCode("");
 
       toast({
-        title: channel === "email" ? "Email OTP sent" : "Phone OTP sent",
+        title: "Email OTP sent",
         description:
           debugCode
             ? `Dev OTP: ${debugCode}`
@@ -375,9 +372,9 @@ export function useSignupWizard() {
   // Auto-send OTP when reaching step 5
   useEffect(() => {
     if (step !== 5 || hasSentOtp) return;
-    void requestOtp(otpChannel);
+    void requestOtp();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, hasSentOtp, otpChannel]);
+  }, [step, hasSentOtp]);
 
   const handleVerifyAndSignup = async () => {
     if (!stepValid[5]) return;
@@ -385,8 +382,7 @@ export function useSignupWizard() {
     try {
       await verifySignupOtp({
         email: form.email.trim().toLowerCase(),
-        phone: normalizedPhone || undefined,
-        channel: otpChannel,
+        channel: "email",
         otp: otpCode.trim(),
       });
 
@@ -449,22 +445,12 @@ export function useSignupWizard() {
     }
   };
 
-  const switchOtpChannel = (channel: OtpChannel) => {
-    setOtpChannel(channel);
-    setHasSentOtp(false);
-    setOtpExpiresIn(0);
-    setOtpSentTo("");
-    setOtpDebugCode(null);
-    setOtpCode("");
-  };
-
   return {
     // State
     step,
     form,
     touched,
     isSubmitting,
-    otpChannel,
     otpCode,
     otpSentTo,
     otpExpiresIn,
@@ -493,6 +479,5 @@ export function useSignupWizard() {
     setOtpCode,
     setShowPassword,
     setShowConfirmPassword,
-    switchOtpChannel,
   };
 }

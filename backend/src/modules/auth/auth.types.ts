@@ -14,8 +14,7 @@ export interface RegisterRequest {
 
 export interface SignupOtpSendRequest {
   email: string;
-  phone?: string;
-  channel: 'email' | 'phone';
+  channel?: 'email';
 }
 
 export interface SignupOtpVerifyRequest extends SignupOtpSendRequest {

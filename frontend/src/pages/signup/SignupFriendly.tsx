@@ -233,7 +233,7 @@ export default function SignupFriendly() {
 
           {/* Header */}
           <div style={{ position: "relative", zIndex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div className="friendly-left-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <Link to="/" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
                 <img src={logo} alt="Zodo CRM" style={{ height: 36, width: "auto" }} />
               </Link>
@@ -257,7 +257,7 @@ export default function SignupFriendly() {
             </div>
 
             {/* Hero text */}
-            <div style={{ marginTop: 48 }}>
+            <div className="friendly-hero" style={{ marginTop: 48 }}>
               <div
                 style={{
                   display: "inline-flex",
@@ -278,6 +278,7 @@ export default function SignupFriendly() {
                 BUILT FOR SERVICE BUSINESSES
               </div>
               <h1
+                className="friendly-hero-title"
                 style={{
                   fontSize: 38,
                   fontWeight: 700,
@@ -297,7 +298,7 @@ export default function SignupFriendly() {
             </div>
 
             {/* Feature cards */}
-            <div style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="friendly-feature-list" style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 12 }}>
               {[
                 { icon: ShieldCheck, title: "OTP-secured signup", desc: "Email verification only" },
                 { icon: Building2, title: "Multi-tenant ready", desc: "Isolated workspace per signup" },
@@ -342,6 +343,7 @@ export default function SignupFriendly() {
 
           {/* Plan preview */}
           <div
+            className="friendly-plan-preview"
             style={{
               position: "relative",
               zIndex: 1,
@@ -386,6 +388,7 @@ export default function SignupFriendly() {
           <div style={{ width: "100%", maxWidth: 560 }}>
             {/* Form card */}
             <div
+              className="friendly-form-card"
               style={{
                 backgroundColor: "#FFFFFF",
                 borderRadius: 18,
@@ -397,6 +400,7 @@ export default function SignupFriendly() {
             >
               {/* Sticky step header */}
               <div
+                className="friendly-step-header"
                 style={{
                   position: "sticky",
                   top: 0,
@@ -457,7 +461,7 @@ export default function SignupFriendly() {
                   />
                 </div>
 
-                <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
+                <div className="friendly-step-pills" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
                   {STEPS.map((s) => {
                     const isActive = s.id === w.step;
                     const isDone = s.id < w.step;
@@ -567,7 +571,7 @@ export default function SignupFriendly() {
                       <label style={{ display: "block", fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#475569", marginBottom: 10 }}>
                         Company Type
                       </label>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      <div className="friendly-company-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                         {COMPANY_TYPES.map((ct) => {
                           const sel = w.form.companyType === ct.value;
                           return (
@@ -630,8 +634,8 @@ export default function SignupFriendly() {
                       <label style={{ display: "block", fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#475569", marginBottom: 7 }}>
                         Phone Number
                       </label>
-                      <div style={{ display: "flex", borderRadius: 14, overflow: "hidden", border: "2px solid transparent", backgroundColor: "#F1F5F9", marginBottom: 16, transition: "all 250ms" }}>
-                        <div style={{ height: 50, display: "flex", alignItems: "center", gap: 6, padding: "0 14px", borderRight: "1px solid #E2E8F0", fontSize: 14, fontWeight: 600, color: "#475569", whiteSpace: "nowrap" }}>
+                      <div className="friendly-phone-row" style={{ display: "flex", borderRadius: 14, overflow: "hidden", border: "2px solid transparent", backgroundColor: "#F1F5F9", marginBottom: 16, transition: "all 250ms" }}>
+                        <div className="friendly-phone-prefix" style={{ height: 50, display: "flex", alignItems: "center", gap: 6, padding: "0 14px", borderRight: "1px solid #E2E8F0", fontSize: 14, fontWeight: 600, color: "#475569", whiteSpace: "nowrap" }}>
                           <Phone style={{ width: 14, height: 14, color: "#94A3B8" }} />
                           {w.selectedCountry.flag} {w.selectedCountry.dialCode}
                         </div>
@@ -816,12 +820,12 @@ export default function SignupFriendly() {
               </AnimatePresence>
 
               {/* ── Footer ── */}
-              <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid #F1F5F9", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+              <div className="friendly-footer" style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid #F1F5F9", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
                 <p style={{ fontSize: 13, color: "#94A3B8" }}>
                   Have an account?{" "}
                   <Link to="/login" style={{ color: "#0891B2", fontWeight: 700, textDecoration: "none" }}>Sign in</Link>
                 </p>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div className="friendly-footer-actions" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   {w.step > 1 && (
                     <button type="button" onClick={w.goBack} disabled={w.isSubmitting} style={{
                       height: 44, padding: "0 18px", borderRadius: 14, border: "1.5px solid #E2E8F0",
@@ -876,8 +880,102 @@ export default function SignupFriendly() {
           .friendly-left { padding: 22px !important; }
           .friendly-right { padding: 0 !important; }
         }
+        @media (max-width: 767px) {
+          .friendly-left {
+            padding: 18px !important;
+            border-radius: 22px !important;
+          }
+          .friendly-left-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px;
+          }
+          .friendly-hero {
+            margin-top: 30px !important;
+          }
+          .friendly-hero-title {
+            font-size: 30px !important;
+          }
+          .friendly-feature-list {
+            margin-top: 24px !important;
+          }
+          .friendly-plan-preview {
+            margin-top: 24px !important;
+            padding: 16px !important;
+          }
+          .friendly-form-card {
+            padding: 0 20px 20px !important;
+            border-radius: 20px !important;
+          }
+          .friendly-step-header {
+            position: static !important;
+            padding: 20px 0 16px !important;
+            margin-bottom: 18px !important;
+          }
+          .friendly-step-pills {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            overflow: visible !important;
+          }
+          .friendly-step-pills > div {
+            min-width: 0 !important;
+          }
+          .friendly-company-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .friendly-phone-row {
+            flex-direction: column !important;
+            gap: 10px;
+            overflow: visible !important;
+            border: none !important;
+            background: transparent !important;
+          }
+          .friendly-phone-prefix {
+            width: 100%;
+            height: 48px !important;
+            justify-content: flex-start !important;
+            border: 2px solid #E2E8F0 !important;
+            border-radius: 14px !important;
+            background: #F1F5F9 !important;
+          }
+          .friendly-phone-row input {
+            width: 100%;
+            height: 48px !important;
+            border: 2px solid #E2E8F0 !important;
+            border-radius: 14px !important;
+            background: #F1F5F9 !important;
+          }
+          .friendly-footer {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .friendly-footer-actions {
+            width: 100%;
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .friendly-footer-actions button {
+            width: 100%;
+            justify-content: center !important;
+          }
+        }
         @media (max-width: 640px) {
           .friendly-root { padding: 12px !important; gap: 12px !important; }
+        }
+        @media (max-width: 420px) {
+          .friendly-root { padding: 10px !important; gap: 10px !important; }
+          .friendly-left {
+            padding: 16px !important;
+          }
+          .friendly-hero-title {
+            font-size: 26px !important;
+          }
+          .friendly-form-card {
+            padding: 0 16px 18px !important;
+          }
+          .friendly-step-pills {
+            grid-template-columns: 1fr !important;
+          }
         }
       `}</style>
     </>

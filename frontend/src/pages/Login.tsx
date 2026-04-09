@@ -185,7 +185,7 @@ const LoginPage = () => {
   return (
     <>
       <style>{STYLES}</style>
-      <div style={{ width: "100vw", height: "100vh", display: "grid", gridTemplateColumns: "45% 55%", overflow: "hidden", fontFamily: V.font }}>
+      <div className="login-shell" style={{ width: "100%", minHeight: "100svh", display: "grid", gridTemplateColumns: "45% 55%", overflow: "hidden", fontFamily: V.font }}>
 
         {/* ═══ LEFT PANEL ═══ */}
         <div className="login-left-panel" style={{ background: V.panelGrad, backgroundSize: "400% 400%", animation: "gradientShift 10s ease infinite, fadeInLeft 0.6s ease", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 40, position: "relative", overflow: "hidden" }}>
@@ -237,16 +237,16 @@ const LoginPage = () => {
         </div>
 
         {/* ═══ RIGHT PANEL ═══ */}
-        <div style={{ background: rightBg, display: "flex", alignItems: "center", justifyContent: "center", padding: 48, position: "relative", overflowY: "auto", animation: "fadeInRight 0.6s ease", transition: "background 0.3s ease" }}>
+        <div className="login-right-panel" style={{ background: rightBg, display: "flex", alignItems: "center", justifyContent: "center", padding: 48, position: "relative", overflowY: "auto", animation: "fadeInRight 0.6s ease", transition: "background 0.3s ease" }}>
           {/* Dark mode toggle */}
-          <button onClick={() => setDark(!dark)} aria-label="Toggle dark mode" style={{ position: "absolute", top: 24, right: 24, width: 40, height: 40, borderRadius: "50%", background: dark ? V.dmInputBg : "#f1f5f9", border: `1px solid ${border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, transition: "all 0.2s" }}>{dark ? "☀️" : "🌙"}</button>
+          <button className="login-theme-toggle" onClick={() => setDark(!dark)} aria-label="Toggle dark mode" style={{ position: "absolute", top: 24, right: 24, width: 40, height: 40, borderRadius: "50%", background: dark ? V.dmInputBg : "#f1f5f9", border: `1px solid ${border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, transition: "all 0.2s" }}>{dark ? "☀️" : "🌙"}</button>
 
           {/* Mobile logo */}
           <div className="login-mobile-logo" style={{ display: "none" }}>
             <a href="/" aria-label="ZODO CRM Home"><img src={logo} alt="ZODO CRM" style={{ width: 100, margin: "0 auto 28px", display: "block", cursor: "pointer" }} /></a>
           </div>
 
-          <div style={{ width: "100%", maxWidth: 420 }}>
+          <div className="login-form-shell" style={{ width: "100%", maxWidth: 420 }}>
             {/* Badge */}
             <span style={{ display: "inline-block", background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.20)", borderRadius: 9999, padding: "6px 16px", color: V.primary, fontSize: 13, fontWeight: 500, marginBottom: 16, animation: "fadeInUp 0.5s ease 0.1s both" }}>✦ Welcome Back</span>
 
@@ -254,7 +254,7 @@ const LoginPage = () => {
             <p style={{ fontSize: 14, color: textSub, marginBottom: 28, animation: "fadeInUp 0.5s ease 0.3s both", transition: "color 0.3s" }}>Enter your credentials to access your dashboard</p>
 
             {/* Social */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20, animation: "fadeInUp 0.5s ease 0.4s both" }}>
+            <div className="login-social-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20, animation: "fadeInUp 0.5s ease 0.4s both" }}>
               {[{ icon: <GoogleIcon />, label: "Google" }, { icon: <GithubIcon dark={dark} />, label: "GitHub" }, { icon: <MicrosoftIcon />, label: "Microsoft" }].map(b => (
                 <button key={b.label} onClick={() => social(b.label)} style={{ height: 44, background: cardBg, border: `1.5px solid ${border}`, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 13, fontWeight: 500, color: dark ? V.dmText : "#374151", cursor: "pointer", transition: "all 0.25s" }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = V.primary; e.currentTarget.style.transform = "translateY(-1px)"; }}
@@ -290,7 +290,7 @@ const LoginPage = () => {
 
               {/* Password */}
               <div style={{ marginBottom: 16, animation: "fadeInUp 0.5s ease 0.6s both" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <div className="login-password-head" style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <label style={{ fontSize: 14, fontWeight: 600, color: dark ? "#e2e8f0" : "#374151", transition: "color 0.3s" }}>Password</label>
                   <NavLink to="/forgot-password" style={{ fontSize: 13, color: V.primary, textDecoration: "none", transition: "opacity 0.2s" }} onMouseEnter={e => (e.currentTarget.style.textDecoration = "underline")} onMouseLeave={e => (e.currentTarget.style.textDecoration = "none")}>Forgot password?</NavLink>
                 </div>
@@ -318,7 +318,7 @@ const LoginPage = () => {
               </div>
 
               {/* Remember me */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "16px 0 20px", animation: "fadeInUp 0.5s ease 0.65s both" }}>
+              <div className="login-remember-row" style={{ display: "flex", alignItems: "center", gap: 8, margin: "16px 0 20px", animation: "fadeInUp 0.5s ease 0.65s both" }}>
                 <div onClick={() => setRememberMe(!rememberMe)} style={{ width: 18, height: 18, borderRadius: 5, border: rememberMe ? "none" : `1.5px solid ${border}`, background: rememberMe ? V.gradBtn : (dark ? V.dmInputBg : "#fff"), display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s", flexShrink: 0 }}>
                   {rememberMe && <CheckIcon />}
                 </div>
@@ -350,10 +350,10 @@ const LoginPage = () => {
             </p>
 
             {/* Trust badges */}
-            <div style={{ paddingTop: 20, borderTop: `1px solid ${border}`, display: "flex", justifyContent: "center", alignItems: "center", gap: 20, animation: "fadeInUp 0.5s ease 0.8s both", transition: "border-color 0.3s" }}>
+            <div className="login-trust-row" style={{ paddingTop: 20, borderTop: `1px solid ${border}`, display: "flex", justifyContent: "center", alignItems: "center", gap: 20, animation: "fadeInUp 0.5s ease 0.8s both", transition: "border-color 0.3s" }}>
               {[{ e: "🔒", t: "SSL Secured" }, null, { e: "🛡️", t: "SOC 2 Ready" }, null, { e: "✅", t: "GDPR Compliant" }].map((b, i) =>
-                b ? <span key={i} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: V.textLight }}>{b.e} {b.t}</span>
-                  : <span key={i} style={{ width: 1, height: 14, background: border, transition: "background 0.3s" }} />
+                b ? <span key={i} className="login-trust-item" style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: V.textLight }}>{b.e} {b.t}</span>
+                  : <span key={i} className="login-trust-divider" style={{ width: 1, height: 14, background: border, transition: "background 0.3s" }} />
               )}
             </div>
           </div>
@@ -362,16 +362,55 @@ const LoginPage = () => {
 
       {/* Responsive */}
       <style>{`
-        @media(max-width:1024px){
-          .login-left-panel{grid-column:1}
+        .login-shell{
+          grid-template-columns: 45% 55%;
         }
-        @media(max-width:767px){
-          div[style*="grid-template-columns: 45% 55%"]{
-            display:flex!important;flex-direction:column!important;
+
+        @media(max-width:1199px){
+          .login-left-panel{padding:32px!important}
+          .login-right-panel{padding:36px!important}
+        }
+
+        @media(max-width:960px){
+          .login-shell{
+            grid-template-columns: 1fr!important;
+            min-height: 100svh;
           }
           .login-left-panel{display:none!important}
-          .login-mobile-logo{display:block!important;text-align:center;margin-top:20px;}
-          div[style*="gridTemplateColumns: 1fr 1fr 1fr"]{grid-template-columns:1fr!important}
+          .login-right-panel{
+            min-height:100svh;
+            padding:28px 20px 24px!important;
+            align-items:flex-start!important;
+          }
+          .login-mobile-logo{display:block!important;text-align:center;margin-top:12px;}
+          .login-form-shell{max-width:480px!important;margin:0 auto;padding-top:48px;}
+          .login-theme-toggle{top:16px!important;right:16px!important}
+          .login-social-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+        }
+
+        @media(max-width:640px){
+          .login-right-panel{padding:20px 16px 18px!important}
+          .login-form-shell{max-width:none!important;padding-top:44px;}
+          .login-social-grid{grid-template-columns:1fr!important}
+          .login-password-head{
+            flex-direction:column!important;
+            align-items:flex-start!important;
+            gap:6px;
+          }
+          .login-remember-row{
+            align-items:flex-start!important;
+          }
+          .login-trust-row{
+            justify-content:flex-start!important;
+            flex-wrap:wrap!important;
+            gap:12px!important;
+          }
+          .login-trust-divider{display:none!important}
+        }
+
+        @media(max-width:420px){
+          .login-right-panel{padding:16px 12px 16px!important}
+          .login-form-shell{padding-top:40px;}
         }
       `}</style>
     </>

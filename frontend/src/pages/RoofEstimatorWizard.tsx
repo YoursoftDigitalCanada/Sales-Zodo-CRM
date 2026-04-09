@@ -481,7 +481,6 @@ export default function RoofEstimatorWizard() {
   const [saving, setSaving] = useState(false);
   const [estimateId, setEstimateId] = useState<string | null>(id || null);
   const [activeSection, setActiveSection] = useState<SectionId>("client");
-  const [showMobilePreview, setShowMobilePreview] = useState(false);
 
   // Step 1: Client/Lead
   const [clients, setClients] = useState<ClientEntity[]>([]);
@@ -1627,33 +1626,6 @@ export default function RoofEstimatorWizard() {
         )}
       </div>
 
-      {isMobile && (
-        <button
-          type="button"
-          onClick={() => setShowMobilePreview((current) => !current)}
-          style={{
-            width: "100%",
-            marginBottom: 10,
-            padding: "10px 12px",
-            borderRadius: 12,
-            border: "1px solid #E2E8F0",
-            background: "#fff",
-            color: "#0F172A",
-            fontSize: 12,
-            fontWeight: 700,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            boxShadow: "0 4px 12px rgba(15,23,42,.05)",
-          }}
-        >
-          <span>{showMobilePreview ? "Hide live preview" : "Show live preview"}</span>
-          <span style={{ color: "#64748B", fontWeight: 600 }}>
-            {hasValidEagleViewMeasurement ? `${roofSquares.toFixed(1)} sq` : "No roof data"}
-          </span>
-        </button>
-      )}
-
       <div className="roof-estimator-shell">
         <aside className="roof-estimator-nav" style={{
           background: "#fff",
@@ -1839,7 +1811,6 @@ export default function RoofEstimatorWizard() {
           </div>
         </div>
 
-        {(!isMobile || showMobilePreview) && (
         <aside className="roof-estimator-preview" style={{
           background: "#fff", borderRadius: 20,
           border: "1px solid #E2E8F0", boxShadow: "0 16px 36px rgba(15,23,42,.05)",
@@ -1967,7 +1938,6 @@ export default function RoofEstimatorWizard() {
             </div>
           </div>
         </aside>
-        )}
       </div>
     </div>
   );

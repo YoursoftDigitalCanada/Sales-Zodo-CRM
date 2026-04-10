@@ -3,6 +3,7 @@ import { mailboxRepository } from '../../modules/emails/mailbox.repository';
 import { settingsRepository } from '../../modules/settings/settings.repository';
 import { requestContextStore } from './request-context.store';
 import { mailerService } from './mailer.service';
+import { config } from '../../config';
 
 export interface TenantEmailAttachment {
   filename: string;
@@ -28,7 +29,7 @@ type TenantSender = {
   send: (options: Omit<TenantEmailOptions, 'tenantId' | 'preferredUserId'>) => Promise<{ sent: boolean; error?: string }>;
 };
 
-const SIGNUP_FROM_EMAIL = 'no-reply@zodo.ca';
+const SIGNUP_FROM_EMAIL = config.email.from || config.email.user || 'security@zodo.ca';
 const SIGNUP_FROM_NAME = 'ZODO CRM';
 
 class TenantMailerService {

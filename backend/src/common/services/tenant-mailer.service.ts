@@ -129,12 +129,18 @@ class TenantMailerService {
     };
   }
 
-  async sendSignupEmail(options: Omit<TenantEmailOptions, 'tenantId' | 'preferredUserId'>): Promise<boolean> {
-    return mailerService.sendMail({
+  async sendSignupEmail(options: Omit<TenantEmailOptions, 'tenantId' | 'preferredUserId'>): Promise<{ sent: boolean; error?: string; senderEmail: string; senderName: string }> {
+    const delivery = await mailerService.sendGlobalMailDetailed({
       ...options,
       fromName: SIGNUP_FROM_NAME,
       fromEmail: SIGNUP_FROM_EMAIL,
     });
+
+    return {
+      ...delivery,
+      senderEmail: SIGNUP_FROM_EMAIL,
+      senderName: SIGNUP_FROM_NAME,
+    };
   }
 }
 

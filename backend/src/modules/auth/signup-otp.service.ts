@@ -88,27 +88,33 @@ class SignupOtpService {
     };
 
     this.records.set(key, record);
-    const sent = await tenantMailerService.sendSignupEmail({
+    const delivery = await tenantMailerService.sendSignupEmail({
       to: email,
       subject: 'Your Zodo CRM verification code',
       html: this.buildEmailTemplate(otp),
       text: `Your Zodo CRM verification code is ${otp}. It expires in 5 minutes.`,
     });
 
-    if (!sent) {
+    if (!delivery.sent) {
       this.records.delete(key);
       logger.error('[Signup OTP] Failed to send email OTP', {
         email,
+        senderEmail: delivery.senderEmail,
+        senderName: delivery.senderName,
         smtpHost: config.email.host,
         smtpUser: config.email.user,
+        error: delivery.error,
       });
       throw new ServiceUnavailableError(
-        'OTP email could not be sent right now. Please check SMTP settings and try again.'
+        delivery.error
+          ? `OTP email could not be sent from ${delivery.senderEmail} right now. ${delivery.error}`
+          : `OTP email could not be sent from ${delivery.senderEmail} right now. Please try again in a moment.`
       );
     }
 
     logger.info('[Signup OTP] Email OTP delivered', {
       email,
+      senderEmail: delivery.senderEmail,
       expiresInSeconds: Math.ceil(EMAIL_OTP_TTL_MS / 1000),
     });
 

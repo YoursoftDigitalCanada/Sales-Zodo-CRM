@@ -49,6 +49,17 @@ class MailerService {
         return smtpResponse || `${errorCode}${error?.message || 'Unknown mailer error'}`;
     }
 
+    private getGlobalSmtpConfig(overrides?: { senderName?: string; senderEmail?: string }) {
+        return {
+            host: config.email.host || '',
+            port: config.email.port || 587,
+            user: config.email.user || '',
+            pass: config.email.pass || '',
+            senderName: overrides?.senderName || 'ZODO CRM',
+            senderEmail: overrides?.senderEmail || config.email.from || config.email.user || 'no-reply@zodo.ca',
+        };
+    }
+
     /**
      * Reconfigure SMTP transport at runtime (called when tenant updates SMTP settings).
      */
@@ -214,33 +225,43 @@ class MailerService {
         fromName?: string;
         fromEmail?: string;
     }): Promise<boolean> {
-        if (!this.transporter) {
-            console.warn('⚠️ Skipping email — SMTP not configured');
-            return false;
+        const result = await this.sendGlobalMailDetailed(opts);
+        return result.sent;
+    }
+
+    async sendGlobalMailDetailed(opts: {
+        to: string | string[];
+        cc?: string | string[];
+        bcc?: string | string[];
+        subject: string;
+        html: string;
+        text?: string;
+        attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
+        fromName?: string;
+        fromEmail?: string;
+    }): Promise<{ sent: boolean; error?: string }> {
+        const smtpConfig = this.getGlobalSmtpConfig({
+            senderName: opts.fromName,
+            senderEmail: opts.fromEmail,
+        });
+
+        if (!smtpConfig.host || !smtpConfig.user || !smtpConfig.pass) {
+            console.warn('⚠️ Global SMTP not configured for mail delivery');
+            return {
+                sent: false,
+                error: 'The global signup email service is not configured on the server.',
+            };
         }
-        try {
-            const fromName = opts.fromName || 'ZODO CRM';
-            const fromEmail = opts.fromEmail || config.email.from || config.email.user;
-            const info = await this.transporter.sendMail({
-                from: `"${fromName}" <${fromEmail}>`,
-                to: Array.isArray(opts.to) ? opts.to.join(', ') : opts.to,
-                cc: Array.isArray(opts.cc) ? opts.cc.join(', ') : opts.cc,
-                bcc: Array.isArray(opts.bcc) ? opts.bcc.join(', ') : opts.bcc,
-                subject: opts.subject,
-                html: opts.html,
-                text: opts.text,
-                attachments: opts.attachments?.map((a) => ({
-                    filename: a.filename,
-                    content: a.content,
-                    contentType: a.contentType || 'application/pdf',
-                })),
-            });
-            console.log('📧 Email sent:', info.messageId, '→', opts.to);
-            return true;
-        } catch (err: any) {
-            console.error('❌ Email send failed:', err.message);
-            return false;
-        }
+
+        return this.sendMailWithConfigDetailed(smtpConfig, {
+            to: opts.to,
+            cc: opts.cc,
+            bcc: opts.bcc,
+            subject: opts.subject,
+            html: opts.html,
+            text: opts.text,
+            attachments: opts.attachments,
+        });
     }
 }
 

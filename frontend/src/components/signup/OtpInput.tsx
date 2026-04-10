@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, type KeyboardEvent, type ClipboardEvent } from "react";
+import { useRef, useState, useCallback, useEffect, type KeyboardEvent, type ClipboardEvent } from "react";
 
 interface OtpInputProps {
   value: string;
@@ -29,10 +29,10 @@ const VARIANT_STYLES: Record<string, { box: string; active: string; filled: stri
 
 export function OtpInput({ value, onChange, length = 6, variant = "friendly", disabled }: OtpInputProps) {
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const styles = VARIANT_STYLES[variant] || VARIANT_STYLES.friendly;
 
-  // Sync value to individual inputs
-  const digits = value.padEnd(length, "").split("").slice(0, length);
+  const digits = Array.from({ length }, (_, index) => value[index] ?? "");
 
   const focusInput = useCallback((idx: number) => {
     const clamped = Math.max(0, Math.min(idx, length - 1));
@@ -49,18 +49,23 @@ export function OtpInput({ value, onChange, length = 6, variant = "friendly", di
 
   const handleChange = (idx: number, char: string) => {
     if (disabled) return;
-    const digit = char.replace(/[^\d]/g, "").slice(-1);
-    if (!digit) return;
+    const sanitized = char.replace(/[^\d]/g, "").slice(0, length);
+    if (!sanitized) return;
 
     const arr = [...digits];
-    arr[idx] = digit;
-    const newValue = arr.join("").replace(/\s/g, "");
+    const nextDigits = sanitized.split("");
+
+    nextDigits.forEach((digit, offset) => {
+      const nextIndex = idx + offset;
+      if (nextIndex < length) {
+        arr[nextIndex] = digit;
+      }
+    });
+
+    const newValue = arr.join("");
     onChange(newValue);
 
-    // Auto-advance
-    if (idx < length - 1) {
-      focusInput(idx + 1);
-    }
+    focusInput(Math.min(idx + nextDigits.length, length - 1));
   };
 
   const handleKeyDown = (idx: number, e: KeyboardEvent<HTMLInputElement>) => {
@@ -89,7 +94,7 @@ export function OtpInput({ value, onChange, length = 6, variant = "friendly", di
     const pasted = e.clipboardData.getData("text").replace(/[^\d]/g, "").slice(0, length);
     if (pasted) {
       onChange(pasted);
-      focusInput(Math.min(pasted.length, length - 1));
+      focusInput(Math.min(Math.max(pasted.length - 1, 0), length - 1));
     }
   };
 
@@ -107,9 +112,13 @@ export function OtpInput({ value, onChange, length = 6, variant = "friendly", di
           autoComplete="one-time-code"
           onChange={(e) => handleChange(idx, e.target.value)}
           onKeyDown={(e) => handleKeyDown(idx, e)}
-          onPaste={idx === 0 ? handlePaste : undefined}
-          onFocus={(e) => e.target.select()}
-          className={`${styles.box} ${digit ? styles.filled : ""} focus:${styles.active} disabled:opacity-50 disabled:cursor-not-allowed`}
+          onPaste={handlePaste}
+          onFocus={(e) => {
+            setActiveIndex(idx);
+            e.target.select();
+          }}
+          onBlur={() => setActiveIndex((current) => (current === idx ? null : current))}
+          className={`${styles.box} ${digit ? styles.filled : ""} ${activeIndex === idx ? styles.active : ""} disabled:opacity-50 disabled:cursor-not-allowed`}
           style={{
             caretColor: "#0891B2",
           }}

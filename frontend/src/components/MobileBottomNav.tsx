@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  Briefcase,
-  GitBranch,
+  Calculator,
   LayoutDashboard,
-  MessageSquare,
+  ReceiptText,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,22 +25,22 @@ const navigationItems: MobileBottomNavItem[] = [
     matchPrefixes: ["/dashboard"],
   },
   {
-    label: "Pipeline",
-    path: "/leads/pipeline",
-    icon: GitBranch,
-    matchPrefixes: ["/leads/pipeline"],
+    label: "AI Estimator",
+    path: "/roof-estimator",
+    icon: Calculator,
+    matchPrefixes: ["/roof-estimator"],
   },
   {
-    label: "Jobs",
-    path: "/projects",
-    icon: Briefcase,
-    matchPrefixes: ["/projects", "/kanban"],
+    label: "Invoice",
+    path: "/invoice",
+    icon: ReceiptText,
+    matchPrefixes: ["/invoice"],
   },
   {
-    label: "Chats",
-    path: "/chats",
-    icon: MessageSquare,
-    matchPrefixes: ["/chats"],
+    label: "Leads",
+    path: "/leads",
+    icon: Users,
+    matchPrefixes: ["/leads"],
   },
 ];
 
@@ -55,9 +55,9 @@ export function MobileBottomNav() {
     () =>
       navigationItems.filter((item) => {
         if (item.path === "/dashboard") return canPerformAction("dashboard", "view");
-        if (item.path === "/leads/pipeline") return canPerformAction("leads", "view");
-        if (item.path === "/projects") return canPerformAction("projects", "view");
-        if (item.path === "/chats") return canPerformAction("chat", "view");
+        if (item.path === "/roof-estimator") return canPerformAction("roof-estimator", "view");
+        if (item.path === "/invoice") return canPerformAction("invoices", "view");
+        if (item.path === "/leads") return canPerformAction("leads", "view");
         return true;
       }),
     [],
@@ -92,7 +92,7 @@ export function MobileBottomNav() {
               )}
             >
               <Icon size={20} className={cn("mb-1.5", active ? "text-white" : "text-[#475569]")} />
-              <span>{item.label}</span>
+              <span className="text-center leading-tight">{item.label}</span>
             </Link>
           );
         })}

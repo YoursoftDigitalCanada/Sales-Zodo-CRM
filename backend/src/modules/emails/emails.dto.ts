@@ -20,6 +20,7 @@ export interface SendEmailDto {
     fromAddress?: string;
     clientId?: string;
     leadId?: string;
+    messageId?: string;
     attachments?: {
         filename: string;
         mimeType: string;

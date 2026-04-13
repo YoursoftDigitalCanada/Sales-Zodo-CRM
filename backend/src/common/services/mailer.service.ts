@@ -101,7 +101,7 @@ class MailerService {
             text?: string;
             attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
         }
-    ): Promise<{ sent: boolean; error?: string }> {
+    ): Promise<{ sent: boolean; error?: string; messageId?: string }> {
         if (!nodemailer) {
             console.warn('⚠️ Skipping email — nodemailer not available');
             return { sent: false, error: 'nodemailer is not installed' };
@@ -148,7 +148,10 @@ class MailerService {
                 })),
             });
             console.log('📧 Email sent:', info.messageId, '→', opts.to);
-            return { sent: true };
+            return {
+                sent: true,
+                messageId: typeof info?.messageId === 'string' ? info.messageId : undefined,
+            };
         } catch (err: any) {
             const errorMessage = this.formatErrorMessage(err);
             const guidance = getSmtpTransportGuidance(normalizeSmtpTransportConfig(smtpConfig).port || 587);

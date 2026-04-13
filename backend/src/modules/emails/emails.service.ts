@@ -197,6 +197,7 @@ export class EmailsService {
 
         const email = await emailsRepository.send(tenantId, {
             ...data,
+            messageId: delivery.messageId,
             fromName: senderName,
             fromAddress: senderEmail,
             attachments: uploadedAttachments.map(({ filename, mimeType, size, path: attachmentPath }) => ({
@@ -406,6 +407,7 @@ export class EmailsService {
                     fromName: senderName,
                     fromAddress: senderEmail,
                     sentAt: new Date(),
+                    messageId: delivery.messageId,
                 });
             } catch (error) {
                 console.error('[EmailScheduler] Failed to send scheduled draft', draft.id, error);

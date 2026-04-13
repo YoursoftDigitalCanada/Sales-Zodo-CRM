@@ -1,6 +1,6 @@
 import { ImapFlow } from 'imapflow';
 const { simpleParser } = require('mailparser');
-import { PrismaClient } from '@prisma/client';
+import { EmailFolder, PrismaClient } from '@prisma/client';
 import fs from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
@@ -11,6 +11,13 @@ const prisma = new PrismaClient();
 const INITIAL_SYNC_MAX_MESSAGES = 250;
 const INCREMENTAL_UNSEEN_LOOKBACK_DAYS = 7;
 const INCREMENTAL_SEEN_LOOKBACK_DAYS = 3;
+const INCREMENTAL_SENT_LOOKBACK_DAYS = 14;
+
+interface MailboxSyncTarget {
+    path: string;
+    folder: EmailFolder;
+    initialSync: boolean;
+}
 
 export interface ImapConfig {
     host: string;
@@ -70,24 +77,45 @@ class ImapService {
         let fetched = 0;
 
         try {
-            const existingEmailCount = await prisma.email.count({
-                where: { tenantId, mailboxOwnerUserId, deletedAt: null },
-            });
+            const [existingInboxCount, existingSentCount] = await Promise.all([
+                prisma.email.count({
+                    where: { tenantId, mailboxOwnerUserId, folder: 'INBOX', deletedAt: null },
+                }),
+                prisma.email.count({
+                    where: { tenantId, mailboxOwnerUserId, folder: 'SENT', deletedAt: null },
+                }),
+            ]);
 
             await client.connect();
-            const lock = await client.getMailboxLock('INBOX');
 
-            try {
-                // On the first sync, backfill the latest mailbox history instead of only
-                // looking at the last few days. This prevents an apparently empty inbox
-                // when the user connects an existing mailbox that already has older mail.
-                if (existingEmailCount === 0) {
-                    fetched += await this._backfillInitialHistory(client, tenantId, mailboxOwnerUserId, config.user);
-                } else {
-                    fetched += await this._fetchIncrementalHistory(client, tenantId, mailboxOwnerUserId, config.user);
+            const syncTargets = await this._resolveSyncTargets(client, {
+                hasInboxHistory: existingInboxCount > 0,
+                hasSentHistory: existingSentCount > 0,
+            });
+
+            for (const target of syncTargets) {
+                const lock = await client.getMailboxLock(target.path);
+                try {
+                    // Backfill the latest history per mailbox the first time we see that
+                    // folder, then switch to incremental syncs for later polls.
+                    if (target.initialSync) {
+                        fetched += await this._backfillInitialHistory(
+                            client,
+                            tenantId,
+                            mailboxOwnerUserId,
+                            target.folder,
+                        );
+                    } else {
+                        fetched += await this._fetchIncrementalHistory(
+                            client,
+                            tenantId,
+                            mailboxOwnerUserId,
+                            target.folder,
+                        );
+                    }
+                } finally {
+                    lock.release();
                 }
-            } finally {
-                lock.release();
             }
 
             await client.logout();
@@ -103,7 +131,52 @@ class ImapService {
         return fetched;
     }
 
-    private async _backfillInitialHistory(client: ImapFlow, tenantId: string, mailboxOwnerUserId: string, imapUser: string): Promise<number> {
+    private _isSelectableMailbox(mailbox: { flags?: Set<string> }) {
+        return !mailbox.flags?.has('\\Noselect') && !mailbox.flags?.has('\\NonExistent');
+    }
+
+    private async _resolveSyncTargets(
+        client: ImapFlow,
+        history: { hasInboxHistory: boolean; hasSentHistory: boolean },
+    ): Promise<MailboxSyncTarget[]> {
+        const mailboxes = await client.list();
+        const inboxMailbox = mailboxes.find((mailbox) =>
+            this._isSelectableMailbox(mailbox)
+            && (mailbox.specialUse === '\\Inbox' || mailbox.path.toUpperCase() === 'INBOX')
+        );
+        const sentMailbox = mailboxes.find((mailbox) =>
+            this._isSelectableMailbox(mailbox)
+            && (
+                mailbox.specialUse === '\\Sent'
+                || /\bsent\b|\bsent items\b|\bsent mail\b/i.test(mailbox.name || mailbox.path)
+            )
+        );
+
+        const targets: MailboxSyncTarget[] = [];
+
+        targets.push({
+            path: inboxMailbox?.path || 'INBOX',
+            folder: 'INBOX',
+            initialSync: !history.hasInboxHistory,
+        });
+
+        if (sentMailbox?.path && sentMailbox.path !== (inboxMailbox?.path || 'INBOX')) {
+            targets.push({
+                path: sentMailbox.path,
+                folder: 'SENT',
+                initialSync: !history.hasSentHistory,
+            });
+        }
+
+        return targets;
+    }
+
+    private async _backfillInitialHistory(
+        client: ImapFlow,
+        tenantId: string,
+        mailboxOwnerUserId: string,
+        folder: EmailFolder,
+    ): Promise<number> {
         const uidList = await client.search({ all: true }, { uid: true });
 
         if (!uidList || uidList.length === 0) {
@@ -116,7 +189,7 @@ class ImapService {
         for await (const msg of client.fetch(latestUids, { source: true, envelope: true, uid: true }, { uid: true })) {
             try {
                 const parsed = await simpleParser(msg.source);
-                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, imapUser);
+                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, folder);
             } catch (parseErr: any) {
                 console.error(`⚠️ Failed to parse initial-sync email UID ${msg.uid}:`, parseErr.message);
             }
@@ -125,8 +198,34 @@ class ImapService {
         return fetched;
     }
 
-    private async _fetchIncrementalHistory(client: ImapFlow, tenantId: string, mailboxOwnerUserId: string, imapUser: string): Promise<number> {
+    private async _fetchIncrementalHistory(
+        client: ImapFlow,
+        tenantId: string,
+        mailboxOwnerUserId: string,
+        folder: EmailFolder,
+    ): Promise<number> {
         let fetched = 0;
+
+        if (folder === 'SENT') {
+            const sentSince = new Date();
+            sentSince.setDate(sentSince.getDate() - INCREMENTAL_SENT_LOOKBACK_DAYS);
+
+            const sentMessages = client.fetch(
+                { since: sentSince },
+                { source: true, envelope: true, uid: true },
+            );
+
+            for await (const msg of sentMessages) {
+                try {
+                    const parsed = await simpleParser(msg.source);
+                    fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, folder);
+                } catch (parseErr: any) {
+                    console.error(`⚠️ Failed to parse sent email UID ${msg.uid}:`, parseErr.message);
+                }
+            }
+
+            return fetched;
+        }
 
         const unseenSince = new Date();
         unseenSince.setDate(unseenSince.getDate() - INCREMENTAL_UNSEEN_LOOKBACK_DAYS);
@@ -139,7 +238,7 @@ class ImapService {
         for await (const msg of unseenMessages) {
             try {
                 const parsed = await simpleParser(msg.source);
-                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, imapUser);
+                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, folder);
             } catch (parseErr: any) {
                 console.error(`⚠️ Failed to parse email UID ${msg.uid}:`, parseErr.message);
             }
@@ -156,7 +255,7 @@ class ImapService {
         for await (const msg of seenMessages) {
             try {
                 const parsed = await simpleParser(msg.source);
-                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, imapUser);
+                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, folder);
             } catch (parseErr: any) {
                 console.error(`⚠️ Failed to parse seen email UID ${msg.uid}:`, parseErr.message);
             }
@@ -169,7 +268,12 @@ class ImapService {
      * Store a parsed email in the database, deduplicating by messageId.
      * Returns 1 if stored, 0 if skipped (duplicate).
      */
-    private async _storeEmail(tenantId: string, mailboxOwnerUserId: string, parsed: any, imapUser: string): Promise<number> {
+    private async _storeEmail(
+        tenantId: string,
+        mailboxOwnerUserId: string,
+        parsed: any,
+        folder: EmailFolder,
+    ): Promise<number> {
         const messageId = parsed.messageId || null;
 
         // Deduplicate by messageId
@@ -192,8 +296,8 @@ class ImapService {
             : []
         ).map((a: any) => ({ email: a.address || '', name: a.name || '' }));
 
-        // Determine if this is a sent email (from the IMAP user) or received
-        const isSent = fromAddr?.address?.toLowerCase() === imapUser.toLowerCase();
+        const isSent = folder === 'SENT';
+        const timestamp = parsed.date || new Date();
 
         const storedAttachments = await this.storeAttachments(tenantId, parsed.attachments || []);
 
@@ -211,7 +315,7 @@ class ImapService {
                 subject: parsed.subject || '(No Subject)',
                 bodyText: parsed.text || null,
                 bodyHtml: parsed.html || null,
-                folder: isSent ? 'SENT' : 'INBOX',
+                folder,
                 status: isSent ? 'SENT' : 'RECEIVED',
                 isRead: isSent, // Sent emails are read by default
                 hasAttachments: storedAttachments.length > 0,
@@ -221,8 +325,8 @@ class ImapService {
                     }
                     : undefined,
                 size: BigInt(parsed.html?.length || parsed.text?.length || 0),
-                receivedAt: parsed.date || new Date(),
-                sentAt: isSent ? (parsed.date || new Date()) : null,
+                receivedAt: isSent ? null : timestamp,
+                sentAt: isSent ? timestamp : null,
             },
         });
 

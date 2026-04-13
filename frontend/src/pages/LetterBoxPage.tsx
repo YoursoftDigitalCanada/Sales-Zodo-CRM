@@ -603,6 +603,35 @@ const getTomorrowMorningIso = () => {
   return next.toISOString();
 };
 
+const folderToApiFolder = (folderId: string) => {
+  switch (folderId) {
+    case "inbox":
+      return "INBOX";
+    case "sent":
+      return "SENT";
+    case "drafts":
+      return "DRAFTS";
+    case "trash":
+      return "TRASH";
+    case "spam":
+      return "SPAM";
+    case "archive":
+      return "ARCHIVE";
+    default:
+      return null;
+  }
+};
+
+const mergeEmailCollections = (baseEmails: Email[], additionalEmails: Email[]) => {
+  const byId = new Map<string, Email>();
+
+  [...baseEmails, ...additionalEmails].forEach((email) => {
+    byId.set(email.id, email);
+  });
+
+  return Array.from(byId.values()).sort((a, b) => (b.sortAt || 0) - (a.sortAt || 0));
+};
+
 const getInitialComposeValues = (
   replyTo?: Email,
   forwardEmail?: Email,
@@ -2011,15 +2040,26 @@ const LetterBoxPage = () => {
   const loadEmails = useCallback(async (silent = false) => {
     try {
       if (!silent) setEmailsLoading(true);
-      const data = await apiGetEmails();
-      const mapped: Email[] = (Array.isArray(data) ? data : []).map((email) => mapEmailResponseToEmail(email as EmailResponse));
-      setEmails(mapped);
+      const selectedApiFolder = folderToApiFolder(selectedFolder);
+      const [allEmailsData, selectedFolderData] = await Promise.all([
+        apiGetEmails({ limit: 200 }),
+        selectedApiFolder
+          ? apiGetEmails({ folder: selectedApiFolder, limit: 200 })
+          : Promise.resolve([]),
+      ]);
+      const mappedAll: Email[] = (Array.isArray(allEmailsData) ? allEmailsData : []).map((email) =>
+        mapEmailResponseToEmail(email as EmailResponse),
+      );
+      const mappedSelected: Email[] = (Array.isArray(selectedFolderData) ? selectedFolderData : []).map((email) =>
+        mapEmailResponseToEmail(email as EmailResponse),
+      );
+      setEmails(mergeEmailCollections(mappedAll, mappedSelected));
     } catch (err) {
       console.error('Failed to load emails:', err);
     } finally {
       setEmailsLoading(false);
     }
-  }, []);
+  }, [selectedFolder]);
 
   // Initial load
   useEffect(() => {

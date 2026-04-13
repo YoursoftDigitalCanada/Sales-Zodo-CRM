@@ -44,6 +44,7 @@ export class EmailsRepository {
         return prisma.email.create({
             data: {
                 tenantId,
+                messageId: data.messageId || undefined,
                 subject: data.subject,
                 bodyText: data.bodyText,
                 bodyHtml: data.bodyHtml,
@@ -128,6 +129,9 @@ export class EmailsRepository {
         const { page = 1, limit = 20, search, folder, clientId, leadId, labelId, sortBy = 'receivedAt', sortOrder = 'desc' } = query;
         const now = new Date();
         const andFilters: Prisma.EmailWhereInput[] = [];
+        const effectiveSortBy = folder === 'SENT' && sortBy === 'receivedAt'
+            ? 'sentAt'
+            : sortBy;
 
         if (folder === 'INBOX') {
             andFilters.push({
@@ -157,7 +161,13 @@ export class EmailsRepository {
             ...(andFilters.length > 0 ? { AND: andFilters } : {}),
         };
         const [data, total] = await Promise.all([
-            prisma.email.findMany({ where, include: emailInclude, orderBy: { [sortBy]: sortOrder }, skip: (page - 1) * limit, take: limit }),
+            prisma.email.findMany({
+                where,
+                include: emailInclude,
+                orderBy: { [effectiveSortBy]: sortOrder } as Prisma.EmailOrderByWithRelationInput,
+                skip: (page - 1) * limit,
+                take: limit,
+            }),
             prisma.email.count({ where }),
         ]);
         return { data, total };
@@ -344,6 +354,7 @@ export class EmailsRepository {
             fromName: string;
             fromAddress: string;
             sentAt: Date;
+            messageId?: string;
         },
     ) {
         return prisma.email.update({
@@ -351,6 +362,7 @@ export class EmailsRepository {
             data: {
                 folder: 'SENT',
                 status: 'SENT',
+                messageId: data.messageId || undefined,
                 fromName: data.fromName,
                 fromAddress: data.fromAddress,
                 sentAt: data.sentAt,

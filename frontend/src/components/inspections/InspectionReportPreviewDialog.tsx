@@ -31,13 +31,13 @@ const InspectionReportPreviewDialog = ({
 }: InspectionReportPreviewDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl w-[96vw] p-0 rounded-xl overflow-hidden max-h-[95vh]">
+      <DialogContent className="max-w-6xl w-[96vw] overflow-hidden rounded-xl p-0 max-h-[95vh]">
         <DialogHeader className="sr-only">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{subtitle || fileName}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-center justify-between gap-3 border-b border-gray-200 bg-[#F8FAFC] px-4 py-4">
+        <div className="flex flex-col gap-3 border-b border-gray-200 bg-[#F8FAFC] px-4 py-4 pr-14 sm:flex-row sm:items-center sm:justify-between sm:pr-16">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#1E40AF]/10">
               <FileText size={20} className="text-[#1E40AF]" />
@@ -54,7 +54,7 @@ const InspectionReportPreviewDialog = ({
             type="button"
             variant="outline"
             size="sm"
-            className="rounded-lg border-gray-200"
+            className="w-full rounded-lg border-gray-200 sm:w-auto"
             onClick={onDownload}
             disabled={!pdfUrl || loading}
           >

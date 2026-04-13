@@ -448,24 +448,35 @@ export async function generateInspectionReportPdf(
     const logoData = companyProfile?.logoUrl
       ? await loadImageAsDataUrl(companyProfile.logoUrl)
       : null;
+    const wrappedCompanyLines = companyLines.flatMap((line) => {
+      const lines = doc.splitTextToSize(line, 72);
+      return Array.isArray(lines) ? lines : [String(lines)];
+    });
+    const logoHeight = logoData ? 14 : 0;
+    const companyBlockHeight = wrappedCompanyLines.length > 0
+      ? (wrappedCompanyLines.length * 4)
+      : 0;
+    const brandingBlockHeight = Math.max(logoHeight, companyBlockHeight);
 
     if (logoData) {
       drawContainedImage(logoData, margin, y, 32, 14);
     }
 
-    doc.setTextColor(...slate);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("INSPECTION REPORT", margin, y + 18);
-
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(...muted);
-    companyLines.forEach((line, index) => {
+    wrappedCompanyLines.forEach((line, index) => {
       doc.text(line, pageWidth - margin, y + 4 + (index * 4), { align: "right" });
     });
 
-    y += 26;
+    const titleBaselineY = y + brandingBlockHeight + 8;
+
+    doc.setTextColor(...slate);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("INSPECTION REPORT", margin, titleBaselineY);
+
+    y = titleBaselineY + 8;
 
     doc.setFillColor(...softFill);
     doc.setDrawColor(...lightBorder);

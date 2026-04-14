@@ -223,8 +223,20 @@ const resolveCreateRoute = (pathname: string): {
   return null;
 };
 
+const PUBLIC_SITE_PATHS = new Set([
+  "/",
+  "/login",
+  "/signup",
+  "/onboarding",
+  "/product",
+  "/solutions",
+  "/ai-estimator",
+  "/pricing",
+  "/contact",
+]);
+
 const isPublicPath = (pathname: string): boolean => {
-  if (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname === "/onboarding") {
+  if (PUBLIC_SITE_PATHS.has(pathname)) {
     return true;
   }
   if (pathname.startsWith("/quote/")) {

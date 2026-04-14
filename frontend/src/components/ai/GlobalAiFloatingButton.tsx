@@ -9,7 +9,17 @@ import { APP_SHORTCUT_EVENTS } from "@/lib/app-shortcuts";
 import useIsMobile from "@/hooks/useIsMobile";
 
 // Pages where the FAB should NOT appear (public/auth routes)
-const HIDDEN_ROUTES = ["/", "/login", "/signup", "/onboarding"];
+const HIDDEN_ROUTES = new Set([
+    "/",
+    "/login",
+    "/signup",
+    "/onboarding",
+    "/product",
+    "/solutions",
+    "/ai-estimator",
+    "/pricing",
+    "/contact",
+]);
 
 export function GlobalAiFloatingButton() {
     const [isOpen, setIsOpen] = useState(false);
@@ -20,7 +30,7 @@ export function GlobalAiFloatingButton() {
     const isRoofEstimatorRoute = location.pathname.startsWith("/roof-estimator");
 
     // Hide on public routes
-    const isHiddenRoute = HIDDEN_ROUTES.includes(location.pathname);
+    const isHiddenRoute = HIDDEN_ROUTES.has(location.pathname);
 
     // Stop the attention pulse after 8 seconds
     useEffect(() => {

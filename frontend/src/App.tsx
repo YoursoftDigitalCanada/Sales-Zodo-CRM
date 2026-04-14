@@ -43,6 +43,11 @@ import { AccessGuard } from "@/components/AccessGuard";
 
 // Page Imports
 import LandingPage from "./pages/LandingPage";
+import ProductPage from "./pages/ProductPage";
+import SolutionsPage from "./pages/SolutionsPage";
+import AIEstimatorPage from "./pages/AIEstimatorPage";
+import PricingPage from "./pages/PricingPage";
+import ContactPage from "./pages/ContactPage";
 import PublicQuoteView from "./pages/PublicQuoteView";
 import Onboarding from "./pages/Onboarding";
 import TasksPage from "./pages/Tasks";
@@ -466,6 +471,11 @@ const AppRoutes = () => {
       <Routes>
         {/* ========== PUBLIC ROUTES ========== */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/product" element={<ProductPage />} />
+        <Route path="/solutions" element={<SolutionsPage />} />
+        <Route path="/ai-estimator" element={<AIEstimatorPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/quote/:token" element={<PublicQuoteView />} />

@@ -1050,7 +1050,8 @@ export function RoofEstimatorSection() {
               </p>
             </div>
 
-            <AnimatePresence mode="wait">
+            <div className="min-h-[460px] lg:min-h-[500px]">
+              <AnimatePresence mode="wait">
               {showResults ? (
                 <motion.div
                   key="results"
@@ -1058,7 +1059,7 @@ export function RoofEstimatorSection() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.4 }}
-                  className="rounded-xl bg-card p-6 shadow-lg"
+                  className="flex min-h-[460px] flex-col rounded-xl bg-card p-6 shadow-lg lg:min-h-[500px]"
                 >
                   <div className="mb-4 flex items-center justify-between">
                     <div className="text-sm font-semibold text-foreground">Roof Estimate</div>
@@ -1125,7 +1126,7 @@ export function RoofEstimatorSection() {
                   key="placeholder"
                   initial={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-[hsl(var(--section-dark-foreground)/0.15)] bg-[hsl(var(--section-dark-foreground)/0.04)] p-6 text-center"
+                  className="flex min-h-[460px] flex-col items-center justify-center rounded-xl border border-dashed border-[hsl(var(--section-dark-foreground)/0.15)] bg-[hsl(var(--section-dark-foreground)/0.04)] p-6 text-center lg:min-h-[500px]"
                 >
                   {isEstimating ? (
                     <>
@@ -1146,7 +1147,8 @@ export function RoofEstimatorSection() {
                   )}
                 </motion.div>
               )}
-            </AnimatePresence>
+              </AnimatePresence>
+            </div>
           </div>
         </motion.div>
       </SectionShell>
@@ -1167,6 +1169,18 @@ export function TabShowcase({
 }) {
   const [activeTab, setActiveTab] = useState(0);
   const BadgeIcon = badgeIcon === "dollar" ? DollarSign : Settings;
+
+  useEffect(() => {
+    if (tabs.length <= 1) {
+      return undefined;
+    }
+
+    const interval = window.setInterval(() => {
+      setActiveTab((current) => (current + 1) % tabs.length);
+    }, 2600);
+
+    return () => window.clearInterval(interval);
+  }, [tabs]);
 
   return (
     <section className="bg-background py-16 md:py-24">

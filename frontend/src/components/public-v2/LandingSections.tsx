@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
@@ -193,6 +193,58 @@ const footerSections = [
   { title: "COMPANY", links: [{ label: "About Us", to: "/contact" }, { label: "Careers", to: "/contact" }, { label: "Contact", to: "/contact" }, { label: "Press", to: "/contact" }, { label: "Affiliates", to: "/contact" }] },
   { title: "COMPARE", links: [{ label: "vs JobNimbus", to: "/product" }, { label: "vs AccuLynx", to: "/product" }, { label: "vs Roofr", to: "/product" }, { label: "vs JobProgress", to: "/product" }, { label: "vs Leap", to: "/product" }] },
 ];
+
+const canadaDemoAddresses = [
+  { address: "2488 Yonge Street, Toronto, ON", city: "Toronto, ON" },
+  { address: "1515 Rue Sherbrooke O, Montreal, QC", city: "Montreal, QC" },
+  { address: "1025 Robson Street, Vancouver, BC", city: "Vancouver, BC" },
+];
+
+const cadFormatter = new Intl.NumberFormat("en-CA", {
+  style: "currency",
+  currency: "CAD",
+  maximumFractionDigits: 0,
+});
+
+interface RoofEstimatePreview {
+  address: string;
+  city: string;
+  confidence: number;
+  roofArea: string;
+  pitch: string;
+  type: string;
+  materials: string;
+  underlayment: string;
+  labor: string;
+  total: string;
+}
+
+function randomBetween(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function buildRoofEstimate(address: string, city?: string): RoofEstimatePreview {
+  const area = randomBetween(1900, 3400);
+  const pitch = ["5/12", "6/12", "7/12", "8/12"][randomBetween(0, 3)];
+  const type = ["Gable", "Hip", "Cross Gable", "Dutch Gable"][randomBetween(0, 3)];
+  const totalValue = Math.round((area * (6.2 + Math.random() * 1.4) + randomBetween(1400, 3200)) / 50) * 50;
+  const materialsValue = Math.round(totalValue * (0.55 + Math.random() * 0.05));
+  const underlaymentValue = Math.round(totalValue * (0.09 + Math.random() * 0.03));
+  const laborValue = totalValue - materialsValue - underlaymentValue;
+
+  return {
+    address,
+    city: city || address.split(",").slice(-2).join(",").trim() || "Canada",
+    confidence: randomBetween(92, 97),
+    roofArea: `${area.toLocaleString()} sq ft`,
+    pitch,
+    type,
+    materials: cadFormatter.format(materialsValue),
+    underlayment: cadFormatter.format(underlaymentValue),
+    labor: cadFormatter.format(laborValue),
+    total: cadFormatter.format(totalValue),
+  };
+}
 
 export interface TabItem {
   label: string;
@@ -788,16 +840,101 @@ export function RoofEstimatorSection() {
   const [address, setAddress] = useState("");
   const [isEstimating, setIsEstimating] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [isDemoClicking, setIsDemoClicking] = useState(false);
+  const [estimate, setEstimate] = useState<RoofEstimatePreview>(() =>
+    buildRoofEstimate(canadaDemoAddresses[0].address, canadaDemoAddresses[0].city),
+  );
+  const [autoDemoEnabled, setAutoDemoEnabled] = useState(true);
+  const demoTimersRef = useRef<number[]>([]);
 
-  const handleEstimate = () => {
-    if (!address.trim()) return;
+  const clearQueuedTimers = () => {
+    demoTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    demoTimersRef.current = [];
+  };
+
+  const queueTimer = (callback: () => void, delay: number) => {
+    const timer = window.setTimeout(callback, delay);
+    demoTimersRef.current.push(timer);
+    return timer;
+  };
+
+  const stopAutoDemo = () => {
+    setAutoDemoEnabled(false);
+    setIsDemoClicking(false);
+    clearQueuedTimers();
+  };
+
+  const handleEstimate = (
+    nextAddress = address.trim(),
+    nextEstimate?: RoofEstimatePreview,
+    options?: { clearQueue?: boolean },
+  ) => {
+    if (!nextAddress.trim()) return;
+    if (options?.clearQueue !== false) {
+      clearQueuedTimers();
+    }
     setIsEstimating(true);
     setShowResults(false);
-    window.setTimeout(() => {
+    setEstimate(nextEstimate ?? buildRoofEstimate(nextAddress));
+    queueTimer(() => {
       setIsEstimating(false);
       setShowResults(true);
     }, 2200);
   };
+
+  useEffect(() => {
+    if (!autoDemoEnabled) {
+      return undefined;
+    }
+
+    const playDemo = (index: number) => {
+      clearQueuedTimers();
+
+      const sample = canadaDemoAddresses[index % canadaDemoAddresses.length];
+      const sampleEstimate = buildRoofEstimate(sample.address, sample.city);
+      let typedAddress = "";
+
+      setAddress("");
+      setShowResults(false);
+      setIsEstimating(false);
+      setIsDemoClicking(false);
+      setEstimate(sampleEstimate);
+
+      sample.address.split("").forEach((character, characterIndex) => {
+        queueTimer(() => {
+          typedAddress += character;
+          setAddress(typedAddress);
+        }, characterIndex * 55);
+      });
+
+      const typingDuration = sample.address.length * 55;
+
+      queueTimer(() => {
+        setIsDemoClicking(true);
+      }, typingDuration + 350);
+
+      queueTimer(() => {
+        setIsDemoClicking(false);
+        handleEstimate(sample.address, sampleEstimate, { clearQueue: false });
+      }, typingDuration + 650);
+
+      queueTimer(() => {
+        playDemo(index + 1);
+      }, typingDuration + 7000);
+    };
+
+    playDemo(0);
+
+    return () => {
+      clearQueuedTimers();
+    };
+  }, [autoDemoEnabled]);
+
+  useEffect(() => {
+    return () => {
+      clearQueuedTimers();
+    };
+  }, []);
 
   return (
     <section className="bg-background py-16 md:py-24">
@@ -841,17 +978,34 @@ export function RoofEstimatorSection() {
                     <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       value={address}
-                      onChange={(event) => setAddress(event.target.value)}
+                      onChange={(event) => {
+                        stopAutoDemo();
+                        setAddress(event.target.value);
+                      }}
+                      onFocus={stopAutoDemo}
                       onKeyDown={(event) => {
                         if (event.key === "Enter") {
+                          stopAutoDemo();
                           handleEstimate();
                         }
                       }}
-                      placeholder="e.g. 142 Oak Street, Austin TX"
+                      placeholder="e.g. 2488 Yonge Street, Toronto, ON"
                       className="h-12 rounded-lg border-border bg-card pl-10 text-foreground"
                     />
                   </div>
-                  <Button className="h-12 whitespace-nowrap" disabled={isEstimating || !address.trim()} onClick={handleEstimate} size="lg" variant="accent">
+                  <Button
+                    className={cn(
+                      "h-12 whitespace-nowrap transition-transform duration-200",
+                      isDemoClicking && "scale-[0.98] shadow-[inset_0_2px_10px_rgba(15,23,42,0.16)]",
+                    )}
+                    disabled={isEstimating || !address.trim()}
+                    onClick={() => {
+                      stopAutoDemo();
+                      handleEstimate();
+                    }}
+                    size="lg"
+                    variant="accent"
+                  >
                     {isEstimating ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -864,6 +1018,14 @@ export function RoofEstimatorSection() {
                       </>
                     )}
                   </Button>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-brand-cyan/20 bg-brand-cyan/10 px-2.5 py-1 text-[11px] font-semibold text-brand-cyan">
+                    Live Canada Demo
+                  </span>
+                  <span className="text-[11px] text-section-dark-foreground/45">
+                    Auto-types a Canadian property and previews a CAD estimate.
+                  </span>
                 </div>
               </div>
 
@@ -901,14 +1063,31 @@ export function RoofEstimatorSection() {
                   <div className="mb-4 flex items-center justify-between">
                     <div className="text-sm font-semibold text-foreground">Roof Estimate</div>
                     <Badge className="rounded-full border-badge-green/20 bg-badge-green/10 px-3 py-1 text-xs font-semibold text-badge-green" variant="secondary">
-                      94% Confidence
+                      {estimate.confidence}% Confidence
                     </Badge>
+                  </div>
+                  <div className="mb-5 overflow-hidden rounded-xl border border-border bg-slate-50">
+                    <div className="relative h-36 overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.18),_transparent_55%),linear-gradient(180deg,_#eff6ff_0%,_#dbeafe_100%)]">
+                      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#bfdbfe] to-transparent" />
+                      <div className="absolute right-3 top-3 rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-[#0f172a] shadow-sm">
+                        Satellite roof preview
+                      </div>
+                      <div className="absolute left-1/2 top-[54%] h-16 w-24 -translate-x-1/2 -translate-y-1/2 rounded-b-md bg-white shadow-[0_10px_30px_rgba(15,23,42,0.12)]">
+                        <div className="absolute -top-5 left-1/2 h-10 w-10 -translate-x-1/2 rotate-45 rounded-[6px] bg-slate-700 shadow-[0_8px_16px_rgba(15,23,42,0.18)]" />
+                        <div className="absolute -top-3 left-3 h-5 w-8 rounded-t-full border-t-[3px] border-[#22c55e]" />
+                        <div className="absolute bottom-2 left-1/2 h-6 w-5 -translate-x-1/2 rounded-t-md bg-slate-200" />
+                      </div>
+                      <div className="absolute bottom-3 left-3 rounded-xl bg-white/85 px-3 py-2 shadow-sm backdrop-blur">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Property</div>
+                        <div className="mt-1 text-xs font-semibold text-slate-900">{estimate.city}</div>
+                      </div>
+                    </div>
                   </div>
                   <div className="mb-5 grid grid-cols-3 gap-4">
                     {[
-                      { label: "Roof Area", value: "2,450 sq ft" },
-                      { label: "Pitch", value: "6/12" },
-                      { label: "Type", value: "Gable" },
+                      { label: "Roof Area", value: estimate.roofArea },
+                      { label: "Pitch", value: estimate.pitch },
+                      { label: "Type", value: estimate.type },
                     ].map((item) => (
                       <div key={item.label}>
                         <div className="text-[11px] text-muted-foreground">{item.label}</div>
@@ -919,19 +1098,19 @@ export function RoofEstimatorSection() {
                   <div className="space-y-3 border-t border-border pt-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Materials (Asphalt Shingles)</span>
-                      <span className="font-medium text-foreground">$8,200</span>
+                      <span className="font-medium text-foreground">{estimate.materials}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Underlayment & Flashing</span>
-                      <span className="font-medium text-foreground">$1,450</span>
+                      <span className="font-medium text-foreground">{estimate.underlayment}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Labor</span>
-                      <span className="font-medium text-foreground">$5,350</span>
+                      <span className="font-medium text-foreground">{estimate.labor}</span>
                     </div>
                     <div className="flex justify-between border-t border-border pt-3 text-base font-bold">
-                      <span className="text-foreground">Estimated Total</span>
-                      <span className="text-xl text-accent">$15,000</span>
+                      <span className="text-foreground">Estimated Total (CAD)</span>
+                      <span className="text-xl text-accent">{estimate.total}</span>
                     </div>
                   </div>
                   <Button asChild className="mt-6 w-full" size="lg" variant="accent">

@@ -12,6 +12,7 @@ import useIsMobile from "@/hooks/useIsMobile";
 const HIDDEN_ROUTES = new Set([
     "/",
     "/login",
+    "/signin",
     "/signup",
     "/onboarding",
     "/product",

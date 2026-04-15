@@ -226,6 +226,7 @@ const resolveCreateRoute = (pathname: string): {
 const PUBLIC_SITE_PATHS = new Set([
   "/",
   "/login",
+  "/signin",
   "/signup",
   "/onboarding",
   "/product",
@@ -489,6 +490,7 @@ const AppRoutes = () => {
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signin" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/quote/:token" element={<PublicQuoteView />} />
         <Route path="/estimate/sign/:token" element={<PublicQuoteView />} />

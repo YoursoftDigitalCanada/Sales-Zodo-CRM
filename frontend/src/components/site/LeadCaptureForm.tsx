@@ -1,10 +1,7 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { PrimaryAction, T } from "@/components/site/site-system";
 
 const PUBLIC_SITE_DRAFT_KEY = "zodo-public-site-draft";
 
@@ -32,6 +29,12 @@ type LeadCaptureFormProps = {
   messagePlaceholder?: string;
   testIdPrefix?: string;
 };
+
+const inputClassName =
+  "h-12 w-full rounded-2xl border border-border/70 bg-white px-4 text-sm text-foreground outline-none transition-all duration-200 placeholder:text-muted-foreground focus:border-accent focus:ring-2 focus:ring-accent/15";
+
+const selectClassName =
+  "h-12 w-full rounded-2xl border border-border/70 bg-white px-4 text-sm text-foreground outline-none transition-all duration-200 focus:border-accent focus:ring-2 focus:ring-accent/15";
 
 export function LeadCaptureForm({
   title,
@@ -89,22 +92,18 @@ export function LeadCaptureForm({
 
   return (
     <div
-      className="rounded-[2rem] border bg-white p-6 shadow-[0_18px_50px_rgba(0,0,0,0.06)] md:p-8"
-      style={{ borderColor: T.border }}
+      className="overflow-hidden rounded-[2rem] border border-border/60 bg-white/96 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.10)] backdrop-blur md:p-8"
       data-testid={`${testIdPrefix}-wrapper`}
     >
       <div className="max-w-xl">
-        <p
-          className="text-xs font-bold uppercase tracking-[0.24em]"
-          style={{ color: T.primary }}
-          data-testid={`${testIdPrefix}-overline`}
-        >
+        <div className="inline-flex items-center gap-2 rounded-full border border-brand-cyan/20 bg-brand-cyan/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-cyan">
+          <Sparkles className="h-3.5 w-3.5" />
           Capture intent
-        </p>
-        <h3 className="mt-3 text-3xl font-semibold tracking-tight" style={{ color: T.textPrimary }} data-testid={`${testIdPrefix}-title`}>
+        </div>
+        <h3 className="mt-4 text-3xl font-semibold tracking-tight text-foreground" data-testid={`${testIdPrefix}-title`}>
           {title}
         </h3>
-        <p className="mt-3 text-sm leading-7" style={{ color: T.textSecondary }} data-testid={`${testIdPrefix}-description`}>
+        <p className="mt-3 text-sm leading-7 text-muted-foreground" data-testid={`${testIdPrefix}-description`}>
           {description}
         </p>
       </div>
@@ -112,30 +111,30 @@ export function LeadCaptureForm({
       <form className="mt-8 grid gap-5" onSubmit={handleSubmit} data-testid={`${testIdPrefix}-form`}>
         <div className="grid gap-5 md:grid-cols-2">
           <div className="grid gap-2">
-            <Label htmlFor={`${testIdPrefix}-name`} data-testid={`${testIdPrefix}-name-label`}>
+            <label className="text-sm font-medium text-foreground" htmlFor={`${testIdPrefix}-name`} data-testid={`${testIdPrefix}-name-label`}>
               Full name
-            </Label>
-            <Input
+            </label>
+            <input
               id={`${testIdPrefix}-name`}
               name="full_name"
               value={formData.full_name}
               onChange={handleChange}
-              className="border-zinc-200 text-zinc-900 placeholder:text-zinc-400"
+              className={inputClassName}
               placeholder="Your name"
               required
               data-testid={`${testIdPrefix}-name-input`}
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor={`${testIdPrefix}-company`} data-testid={`${testIdPrefix}-company-label`}>
+            <label className="text-sm font-medium text-foreground" htmlFor={`${testIdPrefix}-company`} data-testid={`${testIdPrefix}-company-label`}>
               Company
-            </Label>
-            <Input
+            </label>
+            <input
               id={`${testIdPrefix}-company`}
               name="company_name"
               value={formData.company_name}
               onChange={handleChange}
-              className="border-zinc-200 text-zinc-900 placeholder:text-zinc-400"
+              className={inputClassName}
               placeholder="Roofing company"
               required
               data-testid={`${testIdPrefix}-company-input`}
@@ -145,31 +144,31 @@ export function LeadCaptureForm({
 
         <div className="grid gap-5 md:grid-cols-2">
           <div className="grid gap-2">
-            <Label htmlFor={`${testIdPrefix}-email`} data-testid={`${testIdPrefix}-email-label`}>
+            <label className="text-sm font-medium text-foreground" htmlFor={`${testIdPrefix}-email`} data-testid={`${testIdPrefix}-email-label`}>
               Work email
-            </Label>
-            <Input
+            </label>
+            <input
               id={`${testIdPrefix}-email`}
               name="email"
               type="email"
               value={formData.email}
               onChange={handleChange}
-              className="border-zinc-200 text-zinc-900 placeholder:text-zinc-400"
+              className={inputClassName}
               placeholder="name@company.com"
               required
               data-testid={`${testIdPrefix}-email-input`}
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor={`${testIdPrefix}-phone`} data-testid={`${testIdPrefix}-phone-label`}>
+            <label className="text-sm font-medium text-foreground" htmlFor={`${testIdPrefix}-phone`} data-testid={`${testIdPrefix}-phone-label`}>
               Phone
-            </Label>
-            <Input
+            </label>
+            <input
               id={`${testIdPrefix}-phone`}
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              className="border-zinc-200 text-zinc-900 placeholder:text-zinc-400"
+              className={inputClassName}
               placeholder="(555) 123-4567"
               required
               data-testid={`${testIdPrefix}-phone-input`}
@@ -179,15 +178,15 @@ export function LeadCaptureForm({
 
         <div className={`grid gap-5 ${showRevenue || showAddress ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
           <div className="grid gap-2">
-            <Label htmlFor={`${testIdPrefix}-team-size`} data-testid={`${testIdPrefix}-team-size-label`}>
+            <label className="text-sm font-medium text-foreground" htmlFor={`${testIdPrefix}-team-size`} data-testid={`${testIdPrefix}-team-size-label`}>
               Team size
-            </Label>
+            </label>
             <select
               id={`${testIdPrefix}-team-size`}
               name="team_size"
               value={formData.team_size}
               onChange={handleChange}
-              className="h-11 rounded-xl border border-zinc-200 bg-white px-4 text-sm text-zinc-900 outline-none"
+              className={selectClassName}
               data-testid={`${testIdPrefix}-team-size-select`}
             >
               <option value="1-5">1-5 people</option>
@@ -199,15 +198,15 @@ export function LeadCaptureForm({
 
           {showRevenue ? (
             <div className="grid gap-2">
-              <Label htmlFor={`${testIdPrefix}-revenue`} data-testid={`${testIdPrefix}-revenue-label`}>
+              <label className="text-sm font-medium text-foreground" htmlFor={`${testIdPrefix}-revenue`} data-testid={`${testIdPrefix}-revenue-label`}>
                 Revenue volume
-              </Label>
+              </label>
               <select
                 id={`${testIdPrefix}-revenue`}
                 name="revenue_volume"
                 value={formData.revenue_volume}
                 onChange={handleChange}
-                className="h-11 rounded-xl border border-zinc-200 bg-white px-4 text-sm text-zinc-900 outline-none"
+                className={selectClassName}
                 data-testid={`${testIdPrefix}-revenue-select`}
               >
                 <option value="Under $1M">Under $1M</option>
@@ -220,15 +219,15 @@ export function LeadCaptureForm({
 
           {showAddress ? (
             <div className="grid gap-2 md:col-span-2">
-              <Label htmlFor={`${testIdPrefix}-address`} data-testid={`${testIdPrefix}-address-label`}>
+              <label className="text-sm font-medium text-foreground" htmlFor={`${testIdPrefix}-address`} data-testid={`${testIdPrefix}-address-label`}>
                 Property address
-              </Label>
-              <Input
+              </label>
+              <input
                 id={`${testIdPrefix}-address`}
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                className="border-zinc-200 text-zinc-900 placeholder:text-zinc-400"
+                className={inputClassName}
                 placeholder="123 Main Street, Dallas, TX"
                 required
                 data-testid={`${testIdPrefix}-address-input`}
@@ -238,15 +237,15 @@ export function LeadCaptureForm({
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor={`${testIdPrefix}-message`} data-testid={`${testIdPrefix}-message-label`}>
+          <label className="text-sm font-medium text-foreground" htmlFor={`${testIdPrefix}-message`} data-testid={`${testIdPrefix}-message-label`}>
             {messageLabel}
-          </Label>
-          <Textarea
+          </label>
+          <textarea
             id={`${testIdPrefix}-message`}
             name="message"
             value={formData.message}
             onChange={handleChange}
-            className="min-h-[140px] rounded-2xl border-zinc-200 text-zinc-900 placeholder:text-zinc-400"
+            className="min-h-[140px] w-full rounded-[1.5rem] border border-border/70 bg-white px-4 py-3 text-sm text-foreground outline-none transition-all duration-200 placeholder:text-muted-foreground focus:border-accent focus:ring-2 focus:ring-accent/15"
             placeholder={messagePlaceholder}
             required
             data-testid={`${testIdPrefix}-message-input`}
@@ -254,12 +253,16 @@ export function LeadCaptureForm({
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm" style={{ color: T.textSecondary }} data-testid={`${testIdPrefix}-footnote`}>
+          <p className="text-sm text-muted-foreground" data-testid={`${testIdPrefix}-footnote`}>
             ZODO is designed for roofing contractors, sales teams, and service businesses.
           </p>
-          <PrimaryAction type="submit" className="px-6 py-3.5">
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground shadow-[0_16px_34px_-18px_hsl(var(--accent)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-accent/92 disabled:cursor-not-allowed disabled:opacity-70"
+          >
             {isSubmitting ? "Continuing..." : submitLabel}
-          </PrimaryAction>
+            <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
       </form>
     </div>

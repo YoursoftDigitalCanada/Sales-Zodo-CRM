@@ -35,7 +35,8 @@ export function GlobalAiFloatingButton() {
     const isHiddenRoute =
         HIDDEN_ROUTES.has(location.pathname) ||
         location.pathname.startsWith("/compare/") ||
-        location.pathname.startsWith("/product/");
+        location.pathname.startsWith("/product/") ||
+        location.pathname.startsWith("/solutions/");
 
     // Stop the attention pulse after 8 seconds
     useEffect(() => {

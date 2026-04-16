@@ -188,7 +188,7 @@ const securityCards = [
 
 const footerSections = [
   { title: "PRODUCT", links: [{ label: "AI Roof Estimator", to: "/product/ai-roof-estimator" }, { label: "Job Management", to: "/product/job-management" }, { label: "Customer CRM", to: "/product/customer-crm" }, { label: "Proposals", to: "/product/proposals" }, { label: "Invoicing", to: "/product/invoicing" }, { label: "Mobile App", to: "/product/mobile-app" }] },
-  { title: "SOLUTIONS", links: [{ label: "Residential Roofers", to: "/solutions" }, { label: "Commercial Roofing", to: "/solutions" }, { label: "Storm Restoration", to: "/solutions" }, { label: "Multi-location", to: "/solutions" }] },
+  { title: "SOLUTIONS", links: [{ label: "Residential Roofers", to: "/solutions/residential-roofers" }, { label: "Commercial Roofing", to: "/solutions/commercial-roofing" }, { label: "Storm Restoration", to: "/solutions/storm-restoration" }, { label: "Multi-location", to: "/solutions/multi-location" }] },
   { title: "RESOURCES", links: [{ label: "Roofing Blog", to: "/contact" }, { label: "Estimating Guides", to: "/contact" }, { label: "Webinars", to: "/contact" }, { label: "Case Studies", to: "/contact" }, { label: "ROI Calculator", to: "/pricing" }] },
   { title: "COMPANY", links: [{ label: "About Us", to: "/contact" }, { label: "Careers", to: "/contact" }, { label: "Contact", to: "/contact" }, { label: "Press", to: "/contact" }, { label: "Affiliates", to: "/contact" }] },
   { title: "COMPARE", links: [{ label: "vs JobNimbus", to: "/compare/jobnimbus" }, { label: "vs AccuLynx", to: "/compare/acculynx" }, { label: "vs Roofr", to: "/compare/roofr" }, { label: "vs JobProgress", to: "/compare/jobprogress" }, { label: "vs Leap", to: "/compare/leap" }] },

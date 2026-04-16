@@ -51,6 +51,10 @@ import ProductProposalsPage from "./pages/ProductProposalsPage";
 import ProductInvoicingPage from "./pages/ProductInvoicingPage";
 import ProductMobileAppPage from "./pages/ProductMobileAppPage";
 import SolutionsPage from "./pages/SolutionsPage";
+import SolutionResidentialRoofersPage from "./pages/SolutionResidentialRoofersPage";
+import SolutionCommercialRoofingPage from "./pages/SolutionCommercialRoofingPage";
+import SolutionStormRestorationPage from "./pages/SolutionStormRestorationPage";
+import SolutionMultiLocationPage from "./pages/SolutionMultiLocationPage";
 import AIEstimatorPage from "./pages/AIEstimatorPage";
 import PricingPage from "./pages/PricingPage";
 import ContactPage from "./pages/ContactPage";
@@ -253,6 +257,9 @@ const isPublicPath = (pathname: string): boolean => {
     return true;
   }
   if (pathname.startsWith("/product/")) {
+    return true;
+  }
+  if (pathname.startsWith("/solutions/")) {
     return true;
   }
   if (pathname.startsWith("/compare/")) {
@@ -510,6 +517,10 @@ const AppRoutes = () => {
         <Route path="/product/invoicing" element={<ProductInvoicingPage />} />
         <Route path="/product/mobile-app" element={<ProductMobileAppPage />} />
         <Route path="/solutions" element={<SolutionsPage />} />
+        <Route path="/solutions/residential-roofers" element={<SolutionResidentialRoofersPage />} />
+        <Route path="/solutions/commercial-roofing" element={<SolutionCommercialRoofingPage />} />
+        <Route path="/solutions/storm-restoration" element={<SolutionStormRestorationPage />} />
+        <Route path="/solutions/multi-location" element={<SolutionMultiLocationPage />} />
         <Route path="/ai-estimator" element={<AIEstimatorPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/contact" element={<ContactPage />} />

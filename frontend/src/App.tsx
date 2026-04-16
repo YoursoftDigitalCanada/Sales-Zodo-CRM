@@ -44,6 +44,12 @@ import { AccessGuard } from "@/components/AccessGuard";
 // Page Imports
 import LandingPage from "./pages/LandingPage";
 import ProductPage from "./pages/ProductPage";
+import ProductAiRoofEstimatorPage from "./pages/ProductAiRoofEstimatorPage";
+import ProductJobManagementPage from "./pages/ProductJobManagementPage";
+import ProductCustomerCrmPage from "./pages/ProductCustomerCrmPage";
+import ProductProposalsPage from "./pages/ProductProposalsPage";
+import ProductInvoicingPage from "./pages/ProductInvoicingPage";
+import ProductMobileAppPage from "./pages/ProductMobileAppPage";
 import SolutionsPage from "./pages/SolutionsPage";
 import AIEstimatorPage from "./pages/AIEstimatorPage";
 import PricingPage from "./pages/PricingPage";
@@ -244,6 +250,9 @@ const PUBLIC_SITE_PATHS = new Set([
 
 const isPublicPath = (pathname: string): boolean => {
   if (PUBLIC_SITE_PATHS.has(pathname)) {
+    return true;
+  }
+  if (pathname.startsWith("/product/")) {
     return true;
   }
   if (pathname.startsWith("/compare/")) {
@@ -494,6 +503,12 @@ const AppRoutes = () => {
         {/* ========== PUBLIC ROUTES ========== */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/product" element={<ProductPage />} />
+        <Route path="/product/ai-roof-estimator" element={<ProductAiRoofEstimatorPage />} />
+        <Route path="/product/job-management" element={<ProductJobManagementPage />} />
+        <Route path="/product/customer-crm" element={<ProductCustomerCrmPage />} />
+        <Route path="/product/proposals" element={<ProductProposalsPage />} />
+        <Route path="/product/invoicing" element={<ProductInvoicingPage />} />
+        <Route path="/product/mobile-app" element={<ProductMobileAppPage />} />
         <Route path="/solutions" element={<SolutionsPage />} />
         <Route path="/ai-estimator" element={<AIEstimatorPage />} />
         <Route path="/pricing" element={<PricingPage />} />

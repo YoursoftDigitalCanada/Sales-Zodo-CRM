@@ -187,7 +187,7 @@ const securityCards = [
 ];
 
 const footerSections = [
-  { title: "PRODUCT", links: [{ label: "AI Roof Estimator", to: "/ai-estimator" }, { label: "Job Management", to: "/solutions" }, { label: "Customer CRM", to: "/product" }, { label: "Proposals", to: "/" }, { label: "Invoicing", to: "/pricing" }, { label: "Mobile App", to: "/contact" }] },
+  { title: "PRODUCT", links: [{ label: "AI Roof Estimator", to: "/product/ai-roof-estimator" }, { label: "Job Management", to: "/product/job-management" }, { label: "Customer CRM", to: "/product/customer-crm" }, { label: "Proposals", to: "/product/proposals" }, { label: "Invoicing", to: "/product/invoicing" }, { label: "Mobile App", to: "/product/mobile-app" }] },
   { title: "SOLUTIONS", links: [{ label: "Residential Roofers", to: "/solutions" }, { label: "Commercial Roofing", to: "/solutions" }, { label: "Storm Restoration", to: "/solutions" }, { label: "Multi-location", to: "/solutions" }] },
   { title: "RESOURCES", links: [{ label: "Roofing Blog", to: "/contact" }, { label: "Estimating Guides", to: "/contact" }, { label: "Webinars", to: "/contact" }, { label: "Case Studies", to: "/contact" }, { label: "ROI Calculator", to: "/pricing" }] },
   { title: "COMPANY", links: [{ label: "About Us", to: "/contact" }, { label: "Careers", to: "/contact" }, { label: "Contact", to: "/contact" }, { label: "Press", to: "/contact" }, { label: "Affiliates", to: "/contact" }] },

@@ -32,7 +32,10 @@ export function GlobalAiFloatingButton() {
     const isRoofEstimatorRoute = location.pathname.startsWith("/roof-estimator");
 
     // Hide on public routes
-    const isHiddenRoute = HIDDEN_ROUTES.has(location.pathname) || location.pathname.startsWith("/compare/");
+    const isHiddenRoute =
+        HIDDEN_ROUTES.has(location.pathname) ||
+        location.pathname.startsWith("/compare/") ||
+        location.pathname.startsWith("/product/");
 
     // Stop the attention pulse after 8 seconds
     useEffect(() => {

@@ -58,6 +58,9 @@ import SolutionMultiLocationPage from "./pages/SolutionMultiLocationPage";
 import AIEstimatorPage from "./pages/AIEstimatorPage";
 import PricingPage from "./pages/PricingPage";
 import ContactPage from "./pages/ContactPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsOfServicePage from "./pages/TermsOfServicePage";
+import SecurityInfoPage from "./pages/SecurityInfoPage";
 import CompareJobNimbusPage from "./pages/CompareJobNimbusPage";
 import CompareAccuLynxPage from "./pages/CompareAccuLynxPage";
 import CompareRoofrPage from "./pages/CompareRoofrPage";
@@ -249,6 +252,9 @@ const PUBLIC_SITE_PATHS = new Set([
   "/ai-estimator",
   "/pricing",
   "/contact",
+  "/privacy-policy",
+  "/terms-of-service",
+  "/security",
   "/compare",
 ]);
 
@@ -524,6 +530,9 @@ const AppRoutes = () => {
         <Route path="/ai-estimator" element={<AIEstimatorPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+        <Route path="/security" element={<SecurityInfoPage />} />
         <Route path="/compare" element={<Navigate to="/compare/jobnimbus" replace />} />
         <Route path="/compare/jobnimbus" element={<CompareJobNimbusPage />} />
         <Route path="/compare/acculynx" element={<CompareAccuLynxPage />} />

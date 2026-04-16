@@ -1567,9 +1567,9 @@ export function LandingFooter() {
 
             <div className="flex flex-wrap items-center gap-4">
               {[
-                { label: "Privacy Policy", to: "/contact" },
-                { label: "Terms of Service", to: "/contact" },
-                { label: "Security", to: "/contact" },
+                { label: "Privacy Policy", to: "/privacy-policy" },
+                { label: "Terms of Service", to: "/terms-of-service" },
+                { label: "Security", to: "/security" },
               ].map((item) => (
                 <Link key={item.label} className="text-xs text-section-dark-foreground/50 transition-colors hover:text-section-dark-foreground/80" to={item.to}>
                   {item.label}

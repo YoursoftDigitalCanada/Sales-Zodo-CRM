@@ -20,6 +20,9 @@ const HIDDEN_ROUTES = new Set([
     "/ai-estimator",
     "/pricing",
     "/contact",
+    "/privacy-policy",
+    "/terms-of-service",
+    "/security",
     "/compare",
 ]);
 

@@ -6,7 +6,9 @@ import {
   DEFAULT_GENERAL_SETTINGS,
   DEFAULT_NOTIFICATION_SETTINGS,
   DEFAULT_SECURITY_SETTINGS,
+  normalizeBillingCycle,
   normalizePlanKey,
+  type BillingCycle,
   type BillingPlanKey,
   type EmailEncryption,
   type EmailTemplateKey,
@@ -98,18 +100,36 @@ export interface BillingStorageMetricDto {
   remainingBytes: number | null;
 }
 
+export interface BillingPlanOptionDto {
+  key: BillingPlanKey;
+  name: string;
+  description: string;
+  monthlyRate: number;
+  yearlyRate: number;
+  features: string[];
+  limits: {
+    users: number | null;
+    contacts: number | null;
+    storageBytes: number | null;
+    apiCalls: number | null;
+  };
+}
+
 export interface BillingPlanResponseDto {
   key: BillingPlanKey;
   name: string;
   description: string;
-  billingCycle: string;
+  billingCycle: BillingCycle;
   status: string;
   monthlyRate: number;
   yearlyRate: number;
   currentRate: number;
   totalPaid: number;
   nextBillingDate: Date | null;
+  subscribedSince: Date | null;
+  cancelledAt: Date | null;
   features: string[];
+  availablePlans: BillingPlanOptionDto[];
   usage: {
     users: BillingUsageMetricDto;
     contacts: BillingUsageMetricDto;
@@ -143,6 +163,11 @@ export interface UpdateCompanyProfileDto extends Omit<Partial<CompanyProfileDto>
 export interface UpdateNotificationSettingsDto extends Partial<NotificationSettingsDto> {}
 
 export interface UpdateSecuritySettingsDto extends Partial<SecuritySettingsDto> {}
+
+export interface UpdateBillingPlanDto {
+  planType: BillingPlanKey;
+  billingCycle: BillingCycle;
+}
 
 export interface UpdateSmtpSettingsDto {
   host?: string;
@@ -354,6 +379,25 @@ function toStorageMetric(usedBytes: number, limitBytes: number | null): BillingS
   };
 }
 
+function toBillingPlanOptionDto(planKey: BillingPlanKey): BillingPlanOptionDto {
+  const plan = BILLING_PLANS[planKey];
+
+  return {
+    key: plan.key,
+    name: plan.name,
+    description: plan.description,
+    monthlyRate: plan.monthlyPrice,
+    yearlyRate: plan.yearlyPrice,
+    features: plan.features,
+    limits: {
+      users: plan.limits.users,
+      contacts: plan.limits.contacts,
+      storageBytes: plan.limits.storageBytes,
+      apiCalls: plan.limits.apiCalls,
+    },
+  };
+}
+
 export function toBillingResponseDto(args: {
   subscription: Subscription | null;
   usersCount: number;
@@ -363,7 +407,7 @@ export function toBillingResponseDto(args: {
 }): BillingPlanResponseDto {
   const planKey = normalizePlanKey(args.subscription?.planType);
   const plan = BILLING_PLANS[planKey];
-  const billingCycle = String(args.subscription?.billingCycle || 'MONTHLY').toUpperCase();
+  const billingCycle = normalizeBillingCycle(args.subscription?.billingCycle);
   const currentRate = billingCycle === 'YEARLY' ? plan.yearlyPrice : plan.monthlyPrice;
 
   return {
@@ -377,7 +421,10 @@ export function toBillingResponseDto(args: {
     currentRate,
     totalPaid: Number(args.subscription?.totalPaid || 0),
     nextBillingDate: args.subscription?.nextBillingDate || null,
+    subscribedSince: args.subscription?.startDate || null,
+    cancelledAt: args.subscription?.cancelledAt || null,
     features: plan.features,
+    availablePlans: (Object.keys(BILLING_PLANS) as BillingPlanKey[]).map((entry) => toBillingPlanOptionDto(entry)),
     usage: {
       users: toUsageMetric(args.usersCount, plan.limits.users),
       contacts: toUsageMetric(args.contactsCount, plan.limits.contacts),

@@ -7,6 +7,7 @@ import { settingsController } from './settings.controller';
 import { uploadCompanyLogo } from './settings-upload.middleware';
 import {
   sendTestEmailSchema,
+  updateBillingSchema,
   updateCompanySchema,
   updateEmailTemplatesSchema,
   updateGeneralSchema,
@@ -34,6 +35,9 @@ router.put('/company', requirePermission(PERMISSIONS.SETTINGS_UPDATE), validate(
 router.post('/company/logo', requirePermission(PERMISSIONS.SETTINGS_UPDATE), uploadCompanyLogo, settingsController.uploadCompanyLogo.bind(settingsController));
 
 router.get('/billing', requirePermission(PERMISSIONS.SETTINGS_VIEW), settingsController.getBilling.bind(settingsController));
+router.put('/billing', requirePermission(PERMISSIONS.SETTINGS_UPDATE), validate(updateBillingSchema), settingsController.updateBilling.bind(settingsController));
+router.post('/billing/cancel', requirePermission(PERMISSIONS.SETTINGS_UPDATE), settingsController.cancelBilling.bind(settingsController));
+router.post('/billing/reactivate', requirePermission(PERMISSIONS.SETTINGS_UPDATE), settingsController.reactivateBilling.bind(settingsController));
 router.get('/invoices', requirePermission(PERMISSIONS.SETTINGS_VIEW), settingsController.getBillingInvoices.bind(settingsController));
 
 router.get(

@@ -6,6 +6,8 @@ export type WorkspaceTheme = "light" | "dark";
 export type DateFormatValue = "YYYY-MM-DD" | "DD-MM-YYYY" | "MM-DD-YYYY" | "DD/MM/YYYY" | "MM/DD/YYYY";
 export type EmailEncryption = "SSL/TLS" | "STARTTLS" | "NONE";
 export type EmailTemplateId = "TEAM_INVITE" | "WELCOME" | "INVOICE_REMINDER";
+export type BillingPlanKey = "STARTER" | "PROFESSIONAL" | "ENTERPRISE";
+export type BillingCycle = "MONTHLY" | "YEARLY";
 
 export interface GeneralSettings {
   organizationName: string;
@@ -91,18 +93,36 @@ export interface StorageMetric {
   remainingBytes: number | null;
 }
 
-export interface BillingSettings {
-  key: string;
+export interface BillingPlanOption {
+  key: BillingPlanKey;
   name: string;
   description: string;
-  billingCycle: string;
+  monthlyRate: number;
+  yearlyRate: number;
+  features: string[];
+  limits: {
+    users: number | null;
+    contacts: number | null;
+    storageBytes: number | null;
+    apiCalls: number | null;
+  };
+}
+
+export interface BillingSettings {
+  key: BillingPlanKey;
+  name: string;
+  description: string;
+  billingCycle: BillingCycle;
   status: string;
   monthlyRate: number;
   yearlyRate: number;
   currentRate: number;
   totalPaid: number;
   nextBillingDate: string | null;
+  subscribedSince: string | null;
+  cancelledAt: string | null;
   features: string[];
+  availablePlans: BillingPlanOption[];
   usage: {
     users: BillingMetric;
     contacts: BillingMetric;
@@ -268,6 +288,24 @@ export async function getBillingSettings(): Promise<BillingSettings> {
 export async function getBillingInvoices(): Promise<BillingInvoice[]> {
   const response = await api.get("/settings/invoices");
   return extractApiArray<BillingInvoice>(response.data);
+}
+
+export async function updateBillingSettings(payload: {
+  planType: BillingPlanKey;
+  billingCycle: BillingCycle;
+}): Promise<BillingSettings> {
+  const response = await api.put("/settings/billing", payload);
+  return extractData<BillingSettings>(response.data);
+}
+
+export async function cancelBillingSubscription(): Promise<BillingSettings> {
+  const response = await api.post("/settings/billing/cancel");
+  return extractData<BillingSettings>(response.data);
+}
+
+export async function reactivateBillingSubscription(): Promise<BillingSettings> {
+  const response = await api.post("/settings/billing/reactivate");
+  return extractData<BillingSettings>(response.data);
 }
 
 export async function getEmailSettings(): Promise<EmailSettings> {

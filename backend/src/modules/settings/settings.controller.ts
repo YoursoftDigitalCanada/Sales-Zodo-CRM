@@ -108,6 +108,36 @@ export class SettingsController {
     }
   }
 
+  async updateBilling(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const billing = await settingsService.updateBilling(req.context.tenantId, sanitizeBody(req.body));
+      await auditService.logWithContext(req, AuditAction.UPDATE, 'settings', 'Updated workspace billing plan');
+      sendSuccess(res, billing, 'Billing plan updated');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async cancelBilling(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const billing = await settingsService.cancelBillingSubscription(req.context.tenantId);
+      await auditService.logWithContext(req, AuditAction.UPDATE, 'settings', 'Cancelled workspace subscription renewal');
+      sendSuccess(res, billing, 'Subscription renewal cancelled');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async reactivateBilling(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const billing = await settingsService.reactivateBillingSubscription(req.context.tenantId);
+      await auditService.logWithContext(req, AuditAction.UPDATE, 'settings', 'Reactivated workspace subscription renewal');
+      sendSuccess(res, billing, 'Subscription reactivated');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const emailSettings = await settingsService.getEmailSettings(req.context.tenantId, req.context.userId);

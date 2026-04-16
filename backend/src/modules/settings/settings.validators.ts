@@ -12,6 +12,8 @@ const themeSchema = z.enum(['light', 'dark']);
 const encryptionSchema = z.enum(['SSL/TLS', 'STARTTLS', 'NONE']);
 const currencySchema = z.enum(['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'INR', 'JPY', 'CNY']);
 const templateIdSchema = z.enum(['TEAM_INVITE', 'WELCOME', 'INVOICE_REMINDER']);
+const billingPlanSchema = z.enum(['STARTER', 'PROFESSIONAL', 'ENTERPRISE']);
+const billingCycleSchema = z.enum(['MONTHLY', 'YEARLY']);
 
 export const updateGeneralSchema = z.object({
   body: z.object({
@@ -42,6 +44,13 @@ export const updateNotificationSettingsSchema = z.object({
     desktopNotifications: z.boolean().optional(),
     weeklyDigest: z.boolean().optional(),
     productUpdates: z.boolean().optional(),
+  }),
+});
+
+export const updateBillingSchema = z.object({
+  body: z.object({
+    planType: billingPlanSchema,
+    billingCycle: billingCycleSchema,
   }),
 });
 

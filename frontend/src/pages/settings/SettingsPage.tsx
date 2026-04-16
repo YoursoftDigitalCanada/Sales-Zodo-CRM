@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 import { useToast } from "@/hooks/use-toast";
 import {
+  cancelBillingSubscription,
   exportAuditLogs,
   getAuditLogs,
   getBillingInvoices,
@@ -39,10 +40,12 @@ import {
   getSessions,
   getTeamMembers,
   inviteUser,
+  reactivateBillingSubscription,
   removeUser,
   revokeSession,
   sendTestEmail,
   updateCompanyProfile,
+  updateBillingSettings,
   updateEmailTemplates,
   updateGeneralSettings,
   updateImapSettings,
@@ -52,7 +55,10 @@ import {
   updateUserRole,
   uploadCompanyLogo,
   type AuditLogItem,
+  type BillingCycle,
   type BillingInvoice,
+  type BillingPlanKey,
+  type BillingPlanOption,
   type BillingSettings,
   type CompanyProfile,
   type DateFormatValue,
@@ -168,6 +174,19 @@ function formatDateTime(value?: string | null): string {
   return date.toLocaleString();
 }
 
+function formatPlanLimit(value: number | null, formatter?: (amount: number) => string): string {
+  if (value === null) return "Unlimited";
+  return formatter ? formatter(value) : String(value);
+}
+
+function formatBillingStatus(status: string): string {
+  const normalized = status.trim().toUpperCase();
+  if (normalized === "ACTIVE") return "Active";
+  if (normalized === "TRIAL") return "Trial";
+  if (normalized === "CANCELLED") return "Cancelled";
+  return normalized.replace(/_/g, " ");
+}
+
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="space-y-1.5">
@@ -281,6 +300,11 @@ function UsageBar({
   );
 }
 
+interface BillingDraftState {
+  planType: BillingPlanKey;
+  billingCycle: BillingCycle;
+}
+
 export default function SettingsPage() {
   const { isMobile } = useIsMobile();
   const location = useLocation();
@@ -296,6 +320,7 @@ export default function SettingsPage() {
   const [general, setGeneral] = useState<GeneralSettings | null>(null);
   const [company, setCompany] = useState<CompanyProfile | null>(null);
   const [billing, setBilling] = useState<BillingSettings | null>(null);
+  const [billingDraft, setBillingDraft] = useState<BillingDraftState | null>(null);
   const [billingInvoices, setBillingInvoices] = useState<BillingInvoice[]>([]);
   const [emailSettings, setEmailSettings] = useState<EmailSettings | null>(null);
   const [security, setSecurity] = useState<SecuritySettings | null>(null);
@@ -376,10 +401,35 @@ export default function SettingsPage() {
     [emailSettings, selectedTemplateId]
   );
 
+  const selectedBillingPlan = useMemo(
+    () => billing?.availablePlans.find((plan) => plan.key === (billingDraft?.planType || billing?.key)) || null,
+    [billing, billingDraft?.planType]
+  );
+  const billingIsDirty = Boolean(
+    billingDraft && billing && (billingDraft.planType !== billing.key || billingDraft.billingCycle !== billing.billingCycle)
+  );
+  const billingStatus = billing?.status.trim().toUpperCase() || "";
+  const billingIsCancelled = billingStatus === "CANCELLED";
+
   const availableTimezones = useMemo(
     () => Array.from(new Set([userLocalization.timezone, ...(general?.timezone ? [general.timezone] : []), ...timezones])).filter(Boolean),
     [general?.timezone, userLocalization.timezone],
   );
+
+  useEffect(() => {
+    if (!billing) return;
+    setBillingDraft({
+      planType: billing.key,
+      billingCycle: billing.billingCycle,
+    });
+  }, [billing]);
+
+  const refreshBillingData = useCallback(async () => {
+    const [billingResult, invoicesResult] = await Promise.all([getBillingSettings(), getBillingInvoices()]);
+    setBilling(billingResult);
+    setBillingInvoices(invoicesResult);
+    return billingResult;
+  }, []);
 
   const loadSettingsData = useCallback(async () => {
     setIsLoading(true);
@@ -500,6 +550,53 @@ export default function SettingsPage() {
     } catch (error) {
       replaceLogoPreview(null);
       toast({ title: "Upload failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleSaveBilling = async () => {
+    if (!billingDraft) return;
+    setSavingSection("billing");
+    try {
+      const next = await updateBillingSettings(billingDraft);
+      setBilling(next);
+      await refreshBillingData();
+      toast({ title: "Billing updated", description: "Your workspace plan and billing cycle were saved." });
+    } catch (error) {
+      toast({ title: "Billing update failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleCancelBilling = async () => {
+    if (!billing) return;
+    const confirmed = window.confirm("Cancel future subscription renewals for this workspace?");
+    if (!confirmed) return;
+
+    setSavingSection("billing-cancel");
+    try {
+      const next = await cancelBillingSubscription();
+      setBilling(next);
+      await refreshBillingData();
+      toast({ title: "Renewal cancelled", description: "Future billing renewals are now paused for this workspace." });
+    } catch (error) {
+      toast({ title: "Cancellation failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleReactivateBilling = async () => {
+    setSavingSection("billing-reactivate");
+    try {
+      const next = await reactivateBillingSubscription();
+      setBilling(next);
+      await refreshBillingData();
+      toast({ title: "Subscription reactivated", description: "Automatic renewals have been restored for this workspace." });
+    } catch (error) {
+      toast({ title: "Reactivation failed", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setSavingSection(null);
     }
@@ -995,13 +1092,155 @@ export default function SettingsPage() {
                 <div className={cardClass}>
                   <SectionHeader
                     title={`${billing.name} Plan`}
-                    description={billing.description}
+                    description="Manage your workspace subscription, switch billing cadence, and review usage against current plan limits."
                     badge={
                       <div className="rounded-full bg-[#0891B2]/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#0891B2]">
-                        {billing.status}
+                        {formatBillingStatus(billing.status)}
                       </div>
                     }
                   />
+                  <div className="mt-6 rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-5">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-[#0F172A]">Billing cycle</p>
+                        <p className="mt-1 text-sm text-[#64748B]">Choose how this workspace should renew going forward.</p>
+                      </div>
+                      <div className="inline-flex rounded-md border border-[rgba(15,23,42,0.08)] bg-white p-1">
+                        {(["MONTHLY", "YEARLY"] as BillingCycle[]).map((cycle) => (
+                          <button
+                            key={cycle}
+                            type="button"
+                            onClick={() => setBillingDraft((current) => current ? { ...current, billingCycle: cycle } : { planType: billing.key, billingCycle: cycle })}
+                            className={cn(
+                              "rounded-md px-4 py-2 text-sm font-medium transition",
+                              billingDraft?.billingCycle === cycle
+                                ? "bg-[#0891B2] text-white shadow-sm"
+                                : "text-[#475569] hover:bg-[#F8FAFC]"
+                            )}
+                          >
+                            {cycle === "YEARLY" ? "Yearly" : "Monthly"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-5 grid gap-4 xl:grid-cols-3">
+                      {billing.availablePlans.map((plan: BillingPlanOption) => {
+                        const selected = billingDraft?.planType === plan.key;
+                        const isCurrentPlan = billing.key === plan.key && billing.billingCycle === billingDraft?.billingCycle;
+                        const displayPrice = billingDraft?.billingCycle === "YEARLY" ? plan.yearlyRate : plan.monthlyRate;
+
+                        return (
+                          <button
+                            key={plan.key}
+                            type="button"
+                            onClick={() => setBillingDraft((current) => ({ planType: plan.key, billingCycle: current?.billingCycle || billing.billingCycle }))}
+                            className={cn(
+                              "rounded-md border p-5 text-left transition",
+                              selected
+                                ? "border-[#0891B2] bg-white shadow-md ring-4 ring-[#22D3EE]/20"
+                                : "border-[rgba(15,23,42,0.06)] bg-white hover:border-[#22D3EE]"
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <p className="text-base font-semibold text-[#0F172A]">{plan.name}</p>
+                                <p className="mt-1 text-sm text-[#64748B]">{plan.description}</p>
+                              </div>
+                              {isCurrentPlan ? (
+                                <span className="rounded-full bg-[#DCFCE7] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#166534]">
+                                  Current
+                                </span>
+                              ) : null}
+                            </div>
+
+                            <div className="mt-5 flex items-end gap-2">
+                              <span className="text-3xl font-semibold text-[#0F172A]">{formatMoney(displayPrice)}</span>
+                              <span className="pb-1 text-sm text-[#64748B]">{billingDraft?.billingCycle === "YEARLY" ? "/year" : "/month"}</span>
+                            </div>
+
+                            {billingDraft?.billingCycle === "YEARLY" ? (
+                              <p className="mt-2 text-xs font-medium text-[#0891B2]">
+                                {formatMoney(plan.monthlyRate)} monthly equivalent
+                              </p>
+                            ) : (
+                              <p className="mt-2 text-xs text-[#64748B]">
+                                {formatMoney(plan.yearlyRate)} if billed yearly
+                              </p>
+                            )}
+
+                            <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-[#475569]">
+                              <div className="rounded-md bg-[#F8FAFC] px-3 py-2">
+                                <p className="font-semibold text-[#0F172A]">Users</p>
+                                <p className="mt-1">{formatPlanLimit(plan.limits.users)}</p>
+                              </div>
+                              <div className="rounded-md bg-[#F8FAFC] px-3 py-2">
+                                <p className="font-semibold text-[#0F172A]">Contacts</p>
+                                <p className="mt-1">{formatPlanLimit(plan.limits.contacts)}</p>
+                              </div>
+                              <div className="rounded-md bg-[#F8FAFC] px-3 py-2">
+                                <p className="font-semibold text-[#0F172A]">Storage</p>
+                                <p className="mt-1">{formatPlanLimit(plan.limits.storageBytes, formatBytes)}</p>
+                              </div>
+                              <div className="rounded-md bg-[#F8FAFC] px-3 py-2">
+                                <p className="font-semibold text-[#0F172A]">API calls</p>
+                                <p className="mt-1">{formatPlanLimit(plan.limits.apiCalls)}</p>
+                              </div>
+                            </div>
+
+                            <div className="mt-4 space-y-2">
+                              {plan.features.map((feature) => (
+                                <div key={feature} className="flex items-start gap-2 text-sm text-[#334155]">
+                                  <CheckCircle2 size={15} className="mt-0.5 text-[#0891B2]" />
+                                  <span>{feature}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-5 flex flex-col gap-3 rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-[#0F172A]">
+                          {selectedBillingPlan ? `${selectedBillingPlan.name} ${billingDraft?.billingCycle === "YEARLY" ? "yearly" : "monthly"} plan selected` : "Select a plan"}
+                        </p>
+                        <p className="mt-1 text-sm text-[#64748B]">
+                          {billingIsCancelled
+                            ? "This workspace will not renew until you reactivate it."
+                            : billing.nextBillingDate
+                              ? `Next renewal scheduled for ${formatDateTime(billing.nextBillingDate)}.`
+                              : "No renewal is scheduled yet for this workspace."}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-3 sm:flex-row">
+                        {billingIsCancelled ? (
+                          <button
+                            type="button"
+                            onClick={handleReactivateBilling}
+                            disabled={savingSection === "billing-reactivate"}
+                            className="inline-flex items-center justify-center gap-2 rounded-md border border-[rgba(15,23,42,0.08)] bg-white px-4 py-2.5 text-sm font-medium text-[#0F172A] transition hover:border-[#0891B2] disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {savingSection === "billing-reactivate" ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                            {savingSection === "billing-reactivate" ? "Reactivating..." : "Reactivate"}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleCancelBilling}
+                            disabled={savingSection === "billing-cancel"}
+                            className="inline-flex items-center justify-center gap-2 rounded-md border border-[#FECACA] bg-[#FEF2F2] px-4 py-2.5 text-sm font-medium text-[#991B1B] transition hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {savingSection === "billing-cancel" ? <Loader2 size={15} className="animate-spin" /> : <AlertTriangle size={15} />}
+                            {savingSection === "billing-cancel" ? "Cancelling..." : "Cancel renewal"}
+                          </button>
+                        )}
+                        <SaveButton onClick={handleSaveBilling} loading={savingSection === "billing"} label={billingIsDirty ? "Save billing" : "Confirm plan"} />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="mt-6 grid gap-4 lg:grid-cols-4">
                     <div className="rounded-md bg-[#0F172A] p-5 text-white">
                       <p className="text-xs uppercase tracking-[0.18em] text-white/65">Current rate</p>
@@ -1014,13 +1253,19 @@ export default function SettingsPage() {
                       <p className="mt-2 text-sm text-[#64748B]">Lifetime subscription payments</p>
                     </div>
                     <div className="rounded-md bg-[#F8FAFC] p-5">
-                      <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">Monthly price</p>
-                      <p className="mt-3 text-3xl font-semibold text-[#0F172A]">{formatMoney(billing.monthlyRate)}</p>
-                      <p className="mt-2 text-sm text-[#64748B]">Per workspace monthly price</p>
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">Selected plan price</p>
+                      <p className="mt-3 text-3xl font-semibold text-[#0F172A]">
+                        {formatMoney(billingDraft?.billingCycle === "YEARLY" ? selectedBillingPlan?.yearlyRate || billing.yearlyRate : selectedBillingPlan?.monthlyRate || billing.monthlyRate)}
+                      </p>
+                      <p className="mt-2 text-sm text-[#64748B]">
+                        {billingDraft?.billingCycle === "YEARLY" ? "Yearly charge for the selected plan" : "Monthly charge for the selected plan"}
+                      </p>
                     </div>
                     <div className="rounded-md bg-[#F8FAFC] p-5">
-                      <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">Next billing date</p>
-                      <p className="mt-3 text-lg font-semibold text-[#0F172A]">{billing.nextBillingDate ? formatDateTime(billing.nextBillingDate) : "Not scheduled"}</p>
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#64748B]">{billingIsCancelled ? "Cancelled on" : "Next billing date"}</p>
+                      <p className="mt-3 text-lg font-semibold text-[#0F172A]">
+                        {billingIsCancelled ? formatDateTime(billing.cancelledAt) : billing.nextBillingDate ? formatDateTime(billing.nextBillingDate) : "Not scheduled"}
+                      </p>
                     </div>
                   </div>
                 </div>

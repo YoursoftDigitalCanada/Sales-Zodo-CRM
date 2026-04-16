@@ -1,16 +1,19 @@
 import { BadRequestError } from '../../common/errors/HttpErrors';
+import { prisma } from '../../config/database';
 import { mailerService } from '../../common/services/mailer.service';
 import { mailboxRepository } from '../emails/mailbox.repository';
 import { settingsManager } from './settings.manager';
 import { settingsRepository } from './settings.repository';
+import { BILLING_PLANS, normalizeBillingCycle, normalizePlanKey } from './settings.constants';
 import {
+  type BillingInvoiceDto,
   type EmailSettingsResponseDto,
+  type UpdateBillingPlanDto,
   toBillingResponseDto,
   toCompanyProfileDto,
   toEmailSettingsDto,
   toGeneralSettingsDto,
   toWorkspaceSettingsResponseDto,
-  type BillingInvoiceDto,
   type UpdateCompanyProfileDto,
   type UpdateGeneralSettingsDto,
   type UpdateImapSettingsDto,
@@ -21,6 +24,18 @@ import {
 } from './settings.dto';
 
 export class SettingsService {
+  private buildNextBillingDate(billingCycle: 'MONTHLY' | 'YEARLY', fromDate: Date = new Date()): Date {
+    const nextDate = new Date(fromDate);
+
+    if (billingCycle === 'YEARLY') {
+      nextDate.setFullYear(nextDate.getFullYear() + 1);
+      return nextDate;
+    }
+
+    nextDate.setMonth(nextDate.getMonth() + 1);
+    return nextDate;
+  }
+
   private async buildEmailSettingsResponse(tenantId: string, userId: string): Promise<EmailSettingsResponseDto> {
     const settings = await settingsRepository.ensure(tenantId);
     const workspaceEmail = toEmailSettingsDto(settings);
@@ -99,13 +114,13 @@ export class SettingsService {
       return [];
     }
 
-    const monthlyRate = Number(subscription.monthlyRate || 0);
+    const billing = toBillingResponseDto(context);
     const invoices: BillingInvoiceDto[] = [];
 
-    if (Number(subscription.totalPaid || 0) > 0 && monthlyRate > 0) {
+    if (Number(subscription.totalPaid || 0) > 0) {
       invoices.push({
         id: `${subscription.id}-latest-paid`,
-        label: `Subscription payment`,
+        label: `${billing.name} plan payments received`,
         amount: Number(subscription.totalPaid),
         status: 'PAID',
         billedAt: subscription.startDate,
@@ -113,11 +128,15 @@ export class SettingsService {
       });
     }
 
-    if (subscription.nextBillingDate && monthlyRate > 0) {
+    if (subscription.nextBillingDate && billing.currentRate > 0 && billing.status !== 'CANCELLED') {
       invoices.push({
         id: `${subscription.id}-upcoming`,
-        label: 'Upcoming renewal',
-        amount: monthlyRate,
+        label: billing.status === 'TRIAL'
+          ? 'Trial conversion'
+          : billing.billingCycle === 'YEARLY'
+            ? 'Upcoming yearly renewal'
+            : 'Upcoming monthly renewal',
+        amount: billing.currentRate,
         status: 'UPCOMING',
         billedAt: null,
         dueAt: subscription.nextBillingDate,
@@ -125,6 +144,115 @@ export class SettingsService {
     }
 
     return invoices;
+  }
+
+  async updateBilling(tenantId: string, data: UpdateBillingPlanDto) {
+    const planKey = normalizePlanKey(data.planType);
+    const billingCycle = normalizeBillingCycle(data.billingCycle);
+    const plan = BILLING_PLANS[planKey];
+    const now = new Date();
+    const nextBillingDate = this.buildNextBillingDate(billingCycle, now);
+    const currentSubscription = await prisma.subscription.findUnique({
+      where: { tenantId },
+      select: {
+        id: true,
+        startDate: true,
+        totalPaid: true,
+      },
+    });
+
+    await prisma.$transaction([
+      prisma.subscription.upsert({
+        where: { tenantId },
+        update: {
+          planType: planKey,
+          billingCycle,
+          monthlyRate: plan.monthlyPrice,
+          status: 'ACTIVE',
+          nextBillingDate,
+          cancelledAt: null,
+          startDate: currentSubscription?.startDate || now,
+        },
+        create: {
+          tenantId,
+          planType: planKey,
+          billingCycle,
+          monthlyRate: plan.monthlyPrice,
+          status: 'ACTIVE',
+          totalPaid: currentSubscription?.totalPaid || 0,
+          startDate: now,
+          nextBillingDate,
+        },
+      }),
+      prisma.tenant.update({
+        where: { id: tenantId },
+        data: {
+          subscriptionTier: planKey.toLowerCase(),
+        },
+      }),
+    ]);
+
+    return this.getBilling(tenantId);
+  }
+
+  async cancelBillingSubscription(tenantId: string) {
+    const existingSubscription = await prisma.subscription.findUnique({
+      where: { tenantId },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!existingSubscription) {
+      throw new BadRequestError('No billing subscription exists for this workspace yet');
+    }
+
+    await prisma.subscription.update({
+      where: { tenantId },
+      data: {
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+        nextBillingDate: null,
+      },
+    });
+
+    return this.getBilling(tenantId);
+  }
+
+  async reactivateBillingSubscription(tenantId: string) {
+    const existingSubscription = await prisma.subscription.findUnique({
+      where: { tenantId },
+    });
+
+    if (!existingSubscription) {
+      throw new BadRequestError('No billing subscription exists for this workspace yet');
+    }
+
+    const planKey = normalizePlanKey(existingSubscription.planType);
+    const billingCycle = normalizeBillingCycle(existingSubscription.billingCycle);
+    const plan = BILLING_PLANS[planKey];
+
+    await prisma.$transaction([
+      prisma.subscription.update({
+        where: { tenantId },
+        data: {
+          planType: planKey,
+          billingCycle,
+          monthlyRate: plan.monthlyPrice,
+          status: 'ACTIVE',
+          cancelledAt: null,
+          nextBillingDate: this.buildNextBillingDate(billingCycle),
+        },
+      }),
+      prisma.tenant.update({
+        where: { id: tenantId },
+        data: {
+          subscriptionTier: planKey.toLowerCase(),
+        },
+      }),
+    ]);
+
+    return this.getBilling(tenantId);
   }
 
   async getEmailSettings(tenantId: string, userId: string) {

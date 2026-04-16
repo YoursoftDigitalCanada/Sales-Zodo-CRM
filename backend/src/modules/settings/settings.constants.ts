@@ -7,6 +7,7 @@ export type WorkspaceDateFormat =
   | 'MM/DD/YYYY';
 export type EmailEncryption = 'SSL/TLS' | 'STARTTLS' | 'NONE';
 export type BillingPlanKey = 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
+export type BillingCycle = 'MONTHLY' | 'YEARLY';
 export type EmailTemplateKey = 'TEAM_INVITE' | 'WELCOME' | 'INVOICE_REMINDER';
 
 export interface PlanLimits {
@@ -141,4 +142,8 @@ export function normalizePlanKey(planType?: string | null): BillingPlanKey {
   if (normalized === 'PROFESSIONAL' || normalized === 'PRO') return 'PROFESSIONAL';
 
   return 'STARTER';
+}
+
+export function normalizeBillingCycle(billingCycle?: string | null): BillingCycle {
+  return String(billingCycle || '').trim().toUpperCase() === 'YEARLY' ? 'YEARLY' : 'MONTHLY';
 }

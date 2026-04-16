@@ -48,6 +48,11 @@ import SolutionsPage from "./pages/SolutionsPage";
 import AIEstimatorPage from "./pages/AIEstimatorPage";
 import PricingPage from "./pages/PricingPage";
 import ContactPage from "./pages/ContactPage";
+import CompareJobNimbusPage from "./pages/CompareJobNimbusPage";
+import CompareAccuLynxPage from "./pages/CompareAccuLynxPage";
+import CompareRoofrPage from "./pages/CompareRoofrPage";
+import CompareJobProgressPage from "./pages/CompareJobProgressPage";
+import CompareLeapPage from "./pages/CompareLeapPage";
 import PublicQuoteView from "./pages/PublicQuoteView";
 import Onboarding from "./pages/Onboarding";
 import TasksPage from "./pages/Tasks";
@@ -234,10 +239,14 @@ const PUBLIC_SITE_PATHS = new Set([
   "/ai-estimator",
   "/pricing",
   "/contact",
+  "/compare",
 ]);
 
 const isPublicPath = (pathname: string): boolean => {
   if (PUBLIC_SITE_PATHS.has(pathname)) {
+    return true;
+  }
+  if (pathname.startsWith("/compare/")) {
     return true;
   }
   if (pathname.startsWith("/quote/")) {
@@ -489,6 +498,12 @@ const AppRoutes = () => {
         <Route path="/ai-estimator" element={<AIEstimatorPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/compare" element={<Navigate to="/compare/jobnimbus" replace />} />
+        <Route path="/compare/jobnimbus" element={<CompareJobNimbusPage />} />
+        <Route path="/compare/acculynx" element={<CompareAccuLynxPage />} />
+        <Route path="/compare/roofr" element={<CompareRoofrPage />} />
+        <Route path="/compare/jobprogress" element={<CompareJobProgressPage />} />
+        <Route path="/compare/leap" element={<CompareLeapPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signin" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />

@@ -191,7 +191,7 @@ const footerSections = [
   { title: "SOLUTIONS", links: [{ label: "Residential Roofers", to: "/solutions" }, { label: "Commercial Roofing", to: "/solutions" }, { label: "Storm Restoration", to: "/solutions" }, { label: "Multi-location", to: "/solutions" }] },
   { title: "RESOURCES", links: [{ label: "Roofing Blog", to: "/contact" }, { label: "Estimating Guides", to: "/contact" }, { label: "Webinars", to: "/contact" }, { label: "Case Studies", to: "/contact" }, { label: "ROI Calculator", to: "/pricing" }] },
   { title: "COMPANY", links: [{ label: "About Us", to: "/contact" }, { label: "Careers", to: "/contact" }, { label: "Contact", to: "/contact" }, { label: "Press", to: "/contact" }, { label: "Affiliates", to: "/contact" }] },
-  { title: "COMPARE", links: [{ label: "vs JobNimbus", to: "/product" }, { label: "vs AccuLynx", to: "/product" }, { label: "vs Roofr", to: "/product" }, { label: "vs JobProgress", to: "/product" }, { label: "vs Leap", to: "/product" }] },
+  { title: "COMPARE", links: [{ label: "vs JobNimbus", to: "/compare/jobnimbus" }, { label: "vs AccuLynx", to: "/compare/acculynx" }, { label: "vs Roofr", to: "/compare/roofr" }, { label: "vs JobProgress", to: "/compare/jobprogress" }, { label: "vs Leap", to: "/compare/leap" }] },
 ];
 
 const canadaDemoAddresses = [

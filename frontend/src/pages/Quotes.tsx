@@ -1293,14 +1293,14 @@ const QuotesPage = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC]">
+    <div className="flex h-screen min-w-0 overflow-x-hidden bg-[#F8FAFC]">
       <div
-        className="flex-1 overflow-auto"
+        className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden"
         onTouchStart={isMobile ? handlers.onTouchStart : undefined}
         onTouchMove={isMobile ? handlers.onTouchMove : undefined}
         onTouchEnd={isMobile ? handlers.onTouchEnd : undefined}
       >
-        <div className={cn("max-w-[1600px] mx-auto p-6", isMobile && "px-4 pb-24 pt-4")}>
+        <div className={cn("mx-auto w-full max-w-[1600px] min-w-0 overflow-x-hidden p-6", isMobile && "px-4 pb-24 pt-4")}>
           <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />
 
           {isOffline && (
@@ -1314,19 +1314,19 @@ const QuotesPage = () => {
             </motion.div>
           )}
           {/* Header */}
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className={cn("mb-6 flex items-center justify-between", isMobile && "items-start gap-3")}>
-            <div>
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className={cn("mb-6 flex items-center justify-between gap-4", isMobile && "flex-wrap items-start")}>
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#0891B2]/10">
                   <FileStack size={20} className="text-[#0891B2]" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Quotes</h1>
-                  <p className="text-sm text-[#94A3B8]">{stats.totalCount} quotes · Pipeline value {formatCurrency(stats.totalValue)}</p>
+                  <p className="text-sm text-[#94A3B8] break-words">{stats.totalCount} quotes · Pipeline value {formatCurrency(stats.totalValue)}</p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className={cn("flex items-center gap-3", isMobile && "ml-auto shrink-0")}>
               <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => fetchQuotes()} disabled={loading}>
                 <RefreshCw size={16} className={`mr-2 ${loading ? "animate-spin" : ""}`} />Refresh
               </Button>
@@ -1394,18 +1394,18 @@ const QuotesPage = () => {
           {/* Stats Cards */}
           <div
             className={cn(
-              "mb-6",
+              "mb-6 w-full max-w-full",
               isMobile
-                ? "flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                ? "flex gap-3 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 : "grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6"
             )}
           >
-            <div className={cn(isMobile && "min-w-[220px]")}><StatCard title="Total Pipeline" value={formatCurrency(stats.totalValue)} subtitle={`${stats.totalCount} quotes`} icon={DollarSign} color="teal" trend={{ value: 12, positive: true }} delay={0} /></div>
-            <div className={cn(isMobile && "min-w-[220px]")}><StatCard title="Signed Value" value={formatCurrency(stats.acceptedValue)} subtitle="Contracts ready to convert" icon={CheckCircle2} color="green" trend={{ value: 8, positive: true }} delay={0.05} /></div>
-            <div className={cn(isMobile && "min-w-[220px]")}><StatCard title="Pending" value={formatCurrency(stats.pendingValue)} subtitle="Awaiting response" icon={Clock3} color="gold" delay={0.1} /></div>
-            <div className={cn(isMobile && "min-w-[220px]")}><StatCard title="Win Rate" value={`${stats.conversionRate}%`} subtitle="Conversion rate" icon={Target} color="purple" trend={{ value: 3, positive: true }} delay={0.15} /></div>
-            <div className={cn(isMobile && "min-w-[220px]")}><StatCard title="Avg. Value" value={formatCurrency(stats.avgValue)} subtitle="Per quote" icon={TrendingUp} color="blue" delay={0.2} /></div>
-            <div className={cn(isMobile && "min-w-[220px]")}><StatCard title="Expiring Soon" value={stats.expiringSoonCount} subtitle="Within 7 days" icon={AlertTriangle} color="red" delay={0.25} /></div>
+            <div className={cn(isMobile && "w-[calc(100vw-2rem)] max-w-[220px] shrink-0")}><StatCard title="Total Pipeline" value={formatCurrency(stats.totalValue)} subtitle={`${stats.totalCount} quotes`} icon={DollarSign} color="teal" trend={{ value: 12, positive: true }} delay={0} /></div>
+            <div className={cn(isMobile && "w-[calc(100vw-2rem)] max-w-[220px] shrink-0")}><StatCard title="Signed Value" value={formatCurrency(stats.acceptedValue)} subtitle="Contracts ready to convert" icon={CheckCircle2} color="green" trend={{ value: 8, positive: true }} delay={0.05} /></div>
+            <div className={cn(isMobile && "w-[calc(100vw-2rem)] max-w-[220px] shrink-0")}><StatCard title="Pending" value={formatCurrency(stats.pendingValue)} subtitle="Awaiting response" icon={Clock3} color="gold" delay={0.1} /></div>
+            <div className={cn(isMobile && "w-[calc(100vw-2rem)] max-w-[220px] shrink-0")}><StatCard title="Win Rate" value={`${stats.conversionRate}%`} subtitle="Conversion rate" icon={Target} color="purple" trend={{ value: 3, positive: true }} delay={0.15} /></div>
+            <div className={cn(isMobile && "w-[calc(100vw-2rem)] max-w-[220px] shrink-0")}><StatCard title="Avg. Value" value={formatCurrency(stats.avgValue)} subtitle="Per quote" icon={TrendingUp} color="blue" delay={0.2} /></div>
+            <div className={cn(isMobile && "w-[calc(100vw-2rem)] max-w-[220px] shrink-0")}><StatCard title="Expiring Soon" value={stats.expiringSoonCount} subtitle="Within 7 days" icon={AlertTriangle} color="red" delay={0.25} /></div>
           </div>
 
           {isMobile ? (
@@ -1427,7 +1427,7 @@ const QuotesPage = () => {
                 </div>
 
                 <div className="flex items-center justify-between gap-3">
-                  <div className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <div className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     <Tabs value={mobileStatusTab} onValueChange={(value) => setMobileStatusTab(value as (typeof mobileQuoteTabs)[number]["value"])}>
                       <TabsList className="inline-flex w-max rounded-2xl bg-[#F8FAFC] p-1">
                         {mobileQuoteTabs.map((tab) => (
@@ -1438,7 +1438,7 @@ const QuotesPage = () => {
                       </TabsList>
                     </Tabs>
                   </div>
-                  <Button type="button" variant="outline" onClick={() => setFiltersOpen(true)} className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] px-3">
+                  <Button type="button" variant="outline" onClick={() => setFiltersOpen(true)} className="h-10 shrink-0 rounded-xl border-[rgba(15,23,42,0.06)] px-3">
                     <Filter size={16} className="mr-2" />
                     Filter
                   </Button>

@@ -340,8 +340,8 @@ const ESTIMATE_SECTIONS: { id: SectionId; title: string; shortLabel: string; ico
   { id: "summary", title: "Estimate Summary", shortLabel: "Summary", icon: "📋", description: "Final review and generation." },
 ];
 
-const MOBILE_ACTION_BAR_OFFSET = "calc(env(safe-area-inset-bottom, 0px) + 8px)";
-const MOBILE_PAGE_BOTTOM_PADDING = 132;
+const MOBILE_ACTION_BAR_OFFSET = "calc(env(safe-area-inset-bottom, 0px) + var(--mobile-browser-bottom-offset, 0px) + 8px)";
+const MOBILE_PAGE_BOTTOM_PADDING = "calc(132px + var(--mobile-browser-bottom-offset, 0px))";
 
 /* ─── Styled Input ───────────────────────────────────────── */
 
@@ -1428,7 +1428,7 @@ export default function RoofEstimatorWizard() {
 
   return (
     <div style={{
-      padding: isMobile ? `12px 10px ${MOBILE_PAGE_BOTTOM_PADDING}px` : isTablet ? "20px 20px 40px" : "24px 24px 40px",
+      padding: isMobile ? `12px 10px ${MOBILE_PAGE_BOTTOM_PADDING}` : isTablet ? "20px 20px 40px" : "24px 24px 40px",
       width: "100%",
       maxWidth: "min(1440px, 100%)",
       margin: "0 auto",

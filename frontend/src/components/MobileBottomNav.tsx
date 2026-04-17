@@ -70,6 +70,7 @@ export function MobileBottomNav() {
   return (
     <nav
       className="mobile-bottom-nav fixed inset-x-0 bottom-0 z-[45] border-t border-[rgba(15,23,42,0.08)] bg-white/95 shadow-[0_-10px_30px_rgba(15,23,42,0.10)] backdrop-blur-xl md:hidden"
+      style={{ bottom: "var(--mobile-browser-bottom-offset, 0px)" }}
       aria-label="Primary mobile navigation"
     >
       <div

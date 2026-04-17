@@ -75,6 +75,7 @@
     /* Red #FF2E2D */
     --chart-5: 43 96% 56%;
     /* Yellow/Warning */
+    --mobile-browser-bottom-offset: 0px;
   }
 
   .dark {
@@ -973,13 +974,13 @@ html.dark textarea::placeholder {
 @media (max-width: 767px) {
   .main-content {
     padding-top: 56px;
-    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px) + var(--mobile-browser-bottom-offset, 0px));
     /* mobile navbar height */
     margin-left: 0 !important;
   }
 
   .mobile-create-fab {
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 176px) !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--mobile-browser-bottom-offset, 0px) + 176px) !important;
   }
 }
 

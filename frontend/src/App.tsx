@@ -299,6 +299,75 @@ const AppRoutes = () => {
   const companyName = branding?.companyName?.trim() || "ZODO CRM";
   const companyLogoUrl = branding?.logoUrl || null;
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const root = document.documentElement;
+    const userAgent = window.navigator.userAgent;
+    const isIosSafari =
+      /iP(ad|hone|od)/i.test(userAgent) &&
+      /WebKit/i.test(userAgent) &&
+      !/(CriOS|FxiOS|EdgiOS|OPiOS|OPT|DuckDuckGo|YaBrowser)/i.test(userAgent);
+
+    const resetBottomOffset = () => {
+      root.style.setProperty("--mobile-browser-bottom-offset", "0px");
+    };
+
+    if (!isIosSafari || !window.visualViewport) {
+      resetBottomOffset();
+      return;
+    }
+
+    let frameId = 0;
+
+    const updateBottomOffset = () => {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(() => {
+        const viewport = window.visualViewport;
+        if (!viewport) {
+          resetBottomOffset();
+          return;
+        }
+
+        const occludedBottom = Math.max(
+          0,
+          Math.round(window.innerHeight - viewport.height - viewport.offsetTop),
+        );
+        const activeElement = document.activeElement;
+        const editingField =
+          activeElement instanceof HTMLElement &&
+          (activeElement.tagName === "INPUT" ||
+            activeElement.tagName === "TEXTAREA" ||
+            activeElement.tagName === "SELECT" ||
+            activeElement.isContentEditable);
+        const bottomOffset =
+          occludedBottom > 120 && editingField
+            ? 0
+            : Math.min(80, occludedBottom);
+
+        root.style.setProperty("--mobile-browser-bottom-offset", `${bottomOffset}px`);
+      });
+    };
+
+    updateBottomOffset();
+
+    window.visualViewport.addEventListener("resize", updateBottomOffset);
+    window.visualViewport.addEventListener("scroll", updateBottomOffset);
+    window.addEventListener("resize", updateBottomOffset);
+    window.addEventListener("orientationchange", updateBottomOffset);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.visualViewport?.removeEventListener("resize", updateBottomOffset);
+      window.visualViewport?.removeEventListener("scroll", updateBottomOffset);
+      window.removeEventListener("resize", updateBottomOffset);
+      window.removeEventListener("orientationchange", updateBottomOffset);
+      resetBottomOffset();
+    };
+  }, []);
+
   const syncAccessContext = useCallback(async () => {
     if (!getAccessToken()) {
       return;

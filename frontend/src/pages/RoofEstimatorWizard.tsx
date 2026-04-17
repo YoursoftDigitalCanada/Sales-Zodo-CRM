@@ -1429,21 +1429,36 @@ export default function RoofEstimatorWizard() {
   return (
     <div style={{
       padding: isMobile ? `12px 10px ${MOBILE_PAGE_BOTTOM_PADDING}px` : isTablet ? "20px 20px 40px" : "24px 24px 40px",
-      maxWidth: 1440,
+      width: "100%",
+      maxWidth: "min(1440px, 100%)",
       margin: "0 auto",
       fontFamily: "'Inter',sans-serif",
+      boxSizing: "border-box",
+      overflowX: "hidden",
     }}>
       <style>{`
+        .roof-estimator-shell,
+        .roof-estimator-nav,
+        .roof-estimator-main,
+        .roof-estimator-preview {
+          min-width: 0;
+          max-width: 100%;
+        }
+
         .roof-estimator-shell {
           display: grid;
           grid-template-columns: minmax(210px, 230px) minmax(0, 1fr) minmax(300px, 340px);
           gap: 20px;
           align-items: start;
+          width: 100%;
+          overflow-x: hidden;
         }
 
         .roof-estimator-nav {
           position: sticky;
           top: 24px;
+          width: 100%;
+          overflow-x: hidden;
         }
 
         .roof-estimator-nav-list {
@@ -1454,11 +1469,25 @@ export default function RoofEstimatorWizard() {
 
         .roof-estimator-main {
           min-width: 0;
+          width: 100%;
+          overflow-x: hidden;
         }
 
         .roof-estimator-preview {
           position: sticky;
           top: 24px;
+          width: 100%;
+          overflow-x: hidden;
+        }
+
+        .roof-estimator-main > *,
+        .roof-estimator-preview > * {
+          min-width: 0;
+          max-width: 100%;
+        }
+
+        .roof-estimator-preview img {
+          max-width: 100%;
         }
 
         .roof-estimator-action-bar {
@@ -1466,6 +1495,10 @@ export default function RoofEstimatorWizard() {
           justify-content: flex-end;
           align-items: center;
           gap: 10px;
+          width: 100%;
+          max-width: 100%;
+          overflow-x: hidden;
+          box-sizing: border-box;
         }
 
         @media (max-width: 1280px) {
@@ -1551,7 +1584,7 @@ export default function RoofEstimatorWizard() {
         Back to Estimates
       </button>
 
-      <div style={{ display: "flex", justifyContent: "space-between", gap: isMobile ? 12 : 20, alignItems: "flex-start", flexWrap: "wrap", marginBottom: isMobile ? 14 : 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: isMobile ? 12 : 20, alignItems: "flex-start", flexWrap: "wrap", marginBottom: isMobile ? 14 : 24, width: "100%", minWidth: 0 }}>
         <div style={{ flex: 1, minWidth: 0, width: isCompact ? "100%" : undefined }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
             <span style={{
@@ -1705,7 +1738,7 @@ export default function RoofEstimatorWizard() {
               gap: isMobile ? 10 : 16,
               flexWrap: "wrap",
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 14, minWidth: 0, flex: 1 }}>
                 <div style={{
                   width: isMobile ? 36 : 48, height: isMobile ? 36 : 48, borderRadius: isMobile ? 10 : 16,
                   background: "linear-gradient(135deg,#6637F4,#4F46E5)",
@@ -1716,7 +1749,7 @@ export default function RoofEstimatorWizard() {
                 }}>
                   {activeSectionConfig.icon}
                 </div>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: isMobile ? 15 : 20, fontWeight: 900, color: "#0F172A", letterSpacing: "-0.02em" }}>
                     {activeSectionConfig.title}
                   </div>
@@ -1756,6 +1789,10 @@ export default function RoofEstimatorWizard() {
             borderRadius: isMobile ? 14 : undefined,
             boxShadow: isMobile ? "0 -8px 20px rgba(15,23,42,.08)" : "none",
             zIndex: isMobile ? 20 : "auto",
+            width: "100%",
+            maxWidth: "100%",
+            boxSizing: "border-box",
+            overflowX: "hidden",
           }}>
             {!currentSectionValidation.valid && (
               <div style={{

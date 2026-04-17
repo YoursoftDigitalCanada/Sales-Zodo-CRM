@@ -416,6 +416,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
   isOpen: boolean; onClose: () => void; quote: Quote | null;
   onSubmit: (data: Partial<Quote>) => void;
 }) => {
+  const { isMobile } = useIsMobile();
   const [formData, setFormData] = useState({
     title: "", clientId: "", clientName: "", clientEmail: "", clientCompany: "",
     leadId: "", leadName: "", projectName: "",
@@ -509,8 +510,8 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] p-0 rounded-md overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-[rgba(15,23,42,0.06)]">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-[700px] rounded-md p-0 overflow-hidden max-h-[92dvh] overflow-y-auto sm:max-w-[700px]">
+        <div className={cn("border-b border-[rgba(15,23,42,0.06)]", isMobile ? "p-4" : "p-6")}>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
               {quote ? "Edit Quote" : "Create New Quote"}
@@ -521,9 +522,9 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
           </DialogHeader>
         </div>
         <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-5">
+          <div className={cn("space-y-5", isMobile ? "p-4" : "p-6")}>
             {/* Client & Project Info */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div><Label className="text-xs text-[#475569]">Quote Title *</Label>
                 <Input value={formData.title} onChange={e => setFormData(p => ({ ...p, title: e.target.value }))}
                   placeholder="e.g. Asphalt Shingle Roof Replacement" className="mt-1 rounded-md" required />
@@ -537,7 +538,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
             {/* Recipient Type Toggle */}
             <div>
               <Label className="text-xs text-[#475569] mb-2 block">Send To *</Label>
-              <div className="flex gap-2 mb-3">
+              <div className="mb-3 flex flex-wrap gap-2">
                 <button type="button"
                   className={cn("px-4 py-1.5 rounded-full text-sm font-medium transition-all",
                     recipientType === "client"
@@ -558,7 +559,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
             </div>
 
             {/* Client / Lead Selector */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <Label className="text-xs text-[#475569]">
                   {recipientType === "client" ? "Client Name *" : "Lead Name *"}
@@ -579,7 +580,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                     required
                   />
                   {recipientSearch && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    <div className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
                       {recipientType === "client" ? (
                         <>
                           {clients
@@ -652,7 +653,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                   placeholder="homeowner@example.com" type="email" className="mt-1 rounded-md" />
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
               <div><Label className="text-xs text-[#475569]">Company</Label>
                 <Input value={formData.clientCompany} onChange={e => setFormData(p => ({ ...p, clientCompany: e.target.value }))}
                   placeholder="HOA, builder, or property company" className="mt-1 rounded-md" />
@@ -671,52 +672,110 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
 
             {/* Line Items */}
             <div>
-              <div className="flex items-center justify-between mb-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
                 <Label className="text-sm font-semibold text-[#0F172A]">Line Items</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addItem} className="rounded-md h-8 text-xs">
+                <Button type="button" variant="outline" size="sm" onClick={addItem} className="h-8 rounded-md text-xs shrink-0">
                   <Plus size={14} className="mr-1" />Add Item
                 </Button>
               </div>
-              <div className="border border-[rgba(15,23,42,0.06)] rounded-md overflow-x-auto">
-                <table className="w-full min-w-[640px] text-sm">
-                  <thead><tr className="bg-[#F8FAFC] text-[#475569]">
-                    <th className="text-left px-3 py-2 text-xs font-medium">Description</th>
-                    <th className="text-center px-3 py-2 text-xs font-medium w-20">Qty</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium w-32">Rate</th>
-                    <th className="text-right px-3 py-2 text-xs font-medium w-32">Amount</th>
-                    <th className="w-10"></th>
-                  </tr></thead>
-                  <tbody>
-                    {formData.items.map((item, idx) => (
-                      <tr key={item.id} className="border-t border-[rgba(15,23,42,0.06)]">
-                        <td className="px-3 py-2"><Input value={item.description} onChange={e => updateItem(idx, "description", e.target.value)}
-                          placeholder="Tear-off, underlayment, shingles, flashing, cleanup" className="h-8 rounded-md text-sm" /></td>
-                        <td className="px-3 py-2"><Input type="number" value={item.quantity} onChange={e => updateItem(idx, "quantity", Number(e.target.value))}
-                          className="h-8 rounded-md text-sm text-center" min={1} /></td>
-                        <td className="px-3 py-2"><Input type="number" value={item.rate} onChange={e => updateItem(idx, "rate", Number(e.target.value))}
-                          className="h-8 rounded-md text-sm text-right tabular-nums" min={0} /></td>
-                        <td className="px-3 py-2 text-right font-medium text-[#0F172A] whitespace-nowrap tabular-nums">{formatCurrency(item.amount)}</td>
-                        <td className="px-2 py-2">
-                          {formData.items.length > 1 && (
-                            <button type="button" onClick={() => removeItem(idx)} className="p-1 rounded hover:bg-red-50 text-[#94A3B8] hover:text-red-500"><X size={14} /></button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {isMobile ? (
+                <div className="space-y-3">
+                  {formData.items.map((item, idx) => (
+                    <div key={item.id} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#FCFDFE] p-3">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <Label className="text-xs font-medium text-[#475569]">Line Item {idx + 1}</Label>
+                        {formData.items.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeItem(idx)}
+                            className="rounded p-1 text-[#94A3B8] hover:bg-red-50 hover:text-red-500"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-xs text-[#475569]">Description</Label>
+                          <Input
+                            value={item.description}
+                            onChange={e => updateItem(idx, "description", e.target.value)}
+                            placeholder="Tear-off, underlayment, shingles, flashing, cleanup"
+                            className="mt-1 rounded-md text-sm"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs text-[#475569]">Qty</Label>
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={e => updateItem(idx, "quantity", Number(e.target.value))}
+                              className="mt-1 rounded-md text-center text-sm"
+                              min={1}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-[#475569]">Rate</Label>
+                            <Input
+                              type="number"
+                              value={item.rate}
+                              onChange={e => updateItem(idx, "rate", Number(e.target.value))}
+                              className="mt-1 rounded-md text-right text-sm tabular-nums"
+                              min={0}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between rounded-md bg-[#F8FAFC] px-3 py-2">
+                          <span className="text-xs font-medium text-[#475569]">Amount</span>
+                          <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-[#0F172A]">{formatCurrency(item.amount)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="border border-[rgba(15,23,42,0.06)] rounded-md overflow-x-auto">
+                  <table className="w-full min-w-[640px] text-sm">
+                    <thead><tr className="bg-[#F8FAFC] text-[#475569]">
+                      <th className="text-left px-3 py-2 text-xs font-medium">Description</th>
+                      <th className="text-center px-3 py-2 text-xs font-medium w-20">Qty</th>
+                      <th className="text-right px-3 py-2 text-xs font-medium w-32">Rate</th>
+                      <th className="text-right px-3 py-2 text-xs font-medium w-32">Amount</th>
+                      <th className="w-10"></th>
+                    </tr></thead>
+                    <tbody>
+                      {formData.items.map((item, idx) => (
+                        <tr key={item.id} className="border-t border-[rgba(15,23,42,0.06)]">
+                          <td className="px-3 py-2"><Input value={item.description} onChange={e => updateItem(idx, "description", e.target.value)}
+                            placeholder="Tear-off, underlayment, shingles, flashing, cleanup" className="h-8 rounded-md text-sm" /></td>
+                          <td className="px-3 py-2"><Input type="number" value={item.quantity} onChange={e => updateItem(idx, "quantity", Number(e.target.value))}
+                            className="h-8 rounded-md text-sm text-center" min={1} /></td>
+                          <td className="px-3 py-2"><Input type="number" value={item.rate} onChange={e => updateItem(idx, "rate", Number(e.target.value))}
+                            className="h-8 rounded-md text-sm text-right tabular-nums" min={0} /></td>
+                          <td className="px-3 py-2 text-right font-medium text-[#0F172A] whitespace-nowrap tabular-nums">{formatCurrency(item.amount)}</td>
+                          <td className="px-2 py-2">
+                            {formData.items.length > 1 && (
+                              <button type="button" onClick={() => removeItem(idx)} className="p-1 rounded hover:bg-red-50 text-[#94A3B8] hover:text-red-500"><X size={14} /></button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
               {/* Totals */}
               <div className="mt-3 flex justify-end">
-                <div className="w-64 space-y-2">
+                <div className="w-full space-y-2 sm:w-64">
                   <div className="flex justify-between text-sm"><span className="text-[#475569]">Subtotal</span><span className="font-medium">{formatCurrency(subtotal)}</span></div>
-                  <div className="flex justify-between text-sm items-center">
+                  <div className="flex items-center justify-between gap-3 text-sm">
                     <span className="text-[#475569]">Tax (%)</span>
                     <Input type="number" value={formData.tax} onChange={e => setFormData(p => ({ ...p, tax: Number(e.target.value) }))}
                       className="w-16 h-7 text-xs text-center rounded-md" min={0} max={100} />
                     <span className="font-medium w-20 text-right">{formatCurrency(taxAmount)}</span>
                   </div>
-                  <div className="flex justify-between text-sm items-center">
+                  <div className="flex items-center justify-between gap-3 text-sm">
                     <span className="text-[#475569]">Discount</span>
                     <Input type="number" value={formData.discount} onChange={e => setFormData(p => ({ ...p, discount: Number(e.target.value) }))}
                       className="w-20 h-7 text-xs text-center rounded-md" min={0} />
@@ -756,7 +815,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
             })()}
 
             {/* Notes & Terms */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div><Label className="text-xs text-[#475569]">Notes</Label>
                 <Textarea value={formData.notes} onChange={e => setFormData(p => ({ ...p, notes: e.target.value }))}
                   placeholder="Internal notes about access, steep pitch, insurance scope, or supplements..." className="mt-1 rounded-md h-20" />
@@ -767,10 +826,10 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
               </div>
             </div>
           </div>
-          <DialogFooter className="p-6 pt-0 gap-3 border-t border-[rgba(15,23,42,0.06)]">
-            <Button type="button" variant="outline" onClick={onClose} className="rounded-md">Cancel</Button>
+          <DialogFooter className={cn("gap-3 border-t border-[rgba(15,23,42,0.06)]", isMobile ? "p-4 pt-4 flex-col" : "p-6 pt-0")}>
+            <Button type="button" variant="outline" onClick={onClose} className={cn("rounded-md", isMobile && "w-full")}>Cancel</Button>
             <Button type="submit" disabled={!formData.title || !hasRecipient}
-              className="bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md">
+              className={cn("bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md", isMobile && "w-full")}>
               {quote ? <><CheckCircle2 size={16} className="mr-2" />Update Quote</> : <><Plus size={16} className="mr-2" />Create Quote</>}
             </Button>
           </DialogFooter>

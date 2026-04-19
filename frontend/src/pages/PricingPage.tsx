@@ -39,7 +39,7 @@ export default function PricingPage() {
               Premium pricing presentation that now matches the new ZODO public theme.
             </h1>
             <p className="mx-auto mt-5 max-w-3xl text-base leading-8 text-muted-foreground md:text-lg">
-              Clear plan separation, stronger CRM positioning, and a conversion path that feels consistent with the rest of the new `crm.zodo.ca` marketing experience.
+              Clear plan separation, stronger CRM positioning, and a conversion path that feels consistent with the rest of the new `roofing.zodo.ca` marketing experience.
             </p>
           </motion.div>
         </SectionShell>

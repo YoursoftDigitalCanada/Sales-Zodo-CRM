@@ -38,6 +38,7 @@ const getAllowedOrigins = (): string[] => {
   origins.push(
     'https://admin.zodo.ca',
     'https://crm.zodo.ca',
+    'https://roofing.zodo.ca',
     'https://crew.zodo.ca',
   );
 

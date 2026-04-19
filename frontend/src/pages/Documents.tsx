@@ -206,7 +206,7 @@ const DocumentsPage = () => {
   };
   const handleDownload = (doc: Document) => toast({ title: "Downloading", description: `${doc.name} download started.` });
   const handleCopyLink = (doc: Document) => {
-    navigator.clipboard?.writeText(`https://crm.zodo.ca/documents/${doc.id}`);
+    navigator.clipboard?.writeText(`${window.location.origin}/documents/${doc.id}`);
     toast({ title: "Link Copied" });
   };
 

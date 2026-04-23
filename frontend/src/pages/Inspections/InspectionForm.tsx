@@ -1,11 +1,15 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 import { ArrowLeft, ClipboardList } from "lucide-react";
 import InspectionEditor from "@/components/inspections/InspectionEditor";
+import { ensureInspectionReportFile } from "@/features/leads/utils/ensure-inspection-report-file";
+import { getCompanyProfile } from "@/features/settings/services/settings-service";
 
 const InspectionForm = () => {
     const navigate = useNavigate();
+    const { toast } = useToast();
 
     return (
         <div className="min-h-screen bg-[#F8FAFC]">
@@ -33,7 +37,22 @@ const InspectionForm = () => {
             <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8">
                 <div className="rounded-3xl border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm sm:p-6">
                     <InspectionEditor
-                        onSuccess={(inspection) => {
+                        onSuccess={async (inspection) => {
+                            try {
+                                const companyProfile = await getCompanyProfile();
+                                await ensureInspectionReportFile({
+                                    inspection,
+                                    companyProfile,
+                                    reuseExisting: true,
+                                });
+                            } catch {
+                                toast({
+                                    title: "Inspection saved",
+                                    description: "The inspection was saved, but the PDF report could not be generated yet.",
+                                    variant: "destructive",
+                                });
+                            }
+
                             navigate(`/inspections/${inspection.id}`);
                         }}
                         onCancel={() => navigate("/inspections")}

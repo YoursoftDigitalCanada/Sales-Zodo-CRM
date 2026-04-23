@@ -135,6 +135,10 @@ export class InspectionsService {
             clientId = createdClient.id;
         }
 
+        if (clientId && !leadId && !(await inspectionsRepository.supportsClientLink())) {
+            throw new BadRequestError('Client-linked inspections require the latest inspection database update.');
+        }
+
         return {
             ...data,
             leadId,

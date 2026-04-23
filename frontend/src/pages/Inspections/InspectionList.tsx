@@ -63,6 +63,7 @@ import {
     X,
     Loader2,
 } from "lucide-react";
+import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailSheet";
 import { getAllInspections, type InspectionEntity } from "@/features/leads/services/inspections-service";
 import type { CompanyProfile } from "@/features/settings/services/settings-service";
 import { getCompanyProfile } from "@/features/settings/services/settings-service";
@@ -94,6 +95,15 @@ interface Inspection {
     claimNumber: string | null;
     stormDamage: boolean;
     inspectionType: string;
+}
+
+interface EmailComposerState {
+    recipientEmail: string;
+    recipientName: string;
+    subject: string;
+    clientId?: string;
+    leadId?: string;
+    attachments: File[];
 }
 
 // ============================================
@@ -265,6 +275,15 @@ const InspectionList = () => {
     const [reportFileId, setReportFileId] = useState<string | null>(null);
     const [reportFileName, setReportFileName] = useState("inspection-report.pdf");
     const [reportSubtitle, setReportSubtitle] = useState("Inspection report");
+    const [emailSheetOpen, setEmailSheetOpen] = useState(false);
+    const [emailPrefillInProgress, setEmailPrefillInProgress] = useState(false);
+    const [emailPreparingId, setEmailPreparingId] = useState<string | null>(null);
+    const [emailComposerState, setEmailComposerState] = useState<EmailComposerState>({
+        recipientEmail: "",
+        recipientName: "",
+        subject: "",
+        attachments: [],
+    });
     const companyProfileRef = React.useRef<CompanyProfile | null>(null);
     const reportPreviewUrlRef = React.useRef<string | null>(null);
 
@@ -383,6 +402,93 @@ const InspectionList = () => {
             });
         } finally {
             setReportGeneratingId(null);
+        }
+    };
+
+    const handleEmailReport = async (inspection: Inspection) => {
+        const rawInspection = inspectionRecords.find((record) => record.id === inspection.id);
+        if (!rawInspection) {
+            toast({
+                title: "Inspection not found",
+                description: "We couldn't find the inspection details needed to prepare the email.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!inspection.customerEmail.trim()) {
+            toast({
+                title: "Customer email missing",
+                description: "Add a customer email address before sending the inspection report.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setEmailComposerState({
+            recipientEmail: inspection.customerEmail,
+            recipientName: inspection.customerName,
+            subject: `Inspection Report - ${inspection.customerName || "Customer"}`,
+            clientId: rawInspection.clientId || undefined,
+            leadId: rawInspection.leadId || undefined,
+            attachments: [],
+        });
+        setEmailSheetOpen(true);
+        setEmailPrefillInProgress(true);
+        setEmailPreparingId(inspection.id);
+
+        let previewUrlToCleanup: string | null = null;
+
+        try {
+            const companyProfile = await ensureCompanyProfile();
+            const result = await ensureInspectionReportFile({
+                inspection: rawInspection,
+                companyProfile,
+                reuseExisting: true,
+                snapshotOverrides: {
+                    customerName: inspection.customerName,
+                    customerEmail: inspection.customerEmail,
+                    customerPhone: inspection.customerPhone,
+                    propertyAddress: inspection.address,
+                    insuranceCompany: inspection.insuranceCompany,
+                    claimNumber: inspection.claimNumber,
+                },
+            });
+
+            previewUrlToCleanup = result.previewUrl;
+            const response = await fetch(result.previewUrl);
+            const reportBlob = await response.blob();
+            const reportAttachment = new File([reportBlob], result.fileName, {
+                type: "application/pdf",
+            });
+
+            setEmailComposerState({
+                recipientEmail: inspection.customerEmail,
+                recipientName: inspection.customerName,
+                subject: `Inspection Report - ${inspection.customerName || "Customer"}`,
+                clientId: rawInspection.clientId || undefined,
+                leadId: rawInspection.leadId || undefined,
+                attachments: [reportAttachment],
+            });
+
+            toast({
+                title: result.created ? "Inspection PDF attached" : "Inspection report attached",
+                description: result.created
+                    ? "The report was generated and attached to the email draft."
+                    : "The latest saved inspection report is attached to the email draft.",
+            });
+        } catch {
+            toast({
+                title: "Email draft incomplete",
+                description: "We opened the email panel, but couldn't attach the inspection PDF right now.",
+                variant: "destructive",
+            });
+        } finally {
+            if (previewUrlToCleanup) {
+                URL.revokeObjectURL(previewUrlToCleanup);
+            }
+            setEmailPrefillInProgress(false);
+            setEmailPreparingId(null);
         }
     };
 
@@ -794,8 +900,17 @@ const InspectionList = () => {
                                                                 <DropdownMenuItem className="rounded-lg" onClick={() => void handlePreviewReport(inspection)}>
                                                                     <Eye size={14} className="mr-2" /> View Report
                                                                 </DropdownMenuItem>
-                                                                <DropdownMenuItem className="rounded-lg">
-                                                                    <Mail size={14} className="mr-2" /> Email Report
+                                                                <DropdownMenuItem
+                                                                    className="rounded-lg"
+                                                                    onClick={() => void handleEmailReport(inspection)}
+                                                                    disabled={emailPreparingId === inspection.id}
+                                                                >
+                                                                    {emailPreparingId === inspection.id ? (
+                                                                        <Loader2 size={14} className="mr-2 animate-spin" />
+                                                                    ) : (
+                                                                        <Mail size={14} className="mr-2" />
+                                                                    )}
+                                                                    Email Report
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem className="rounded-lg text-red-600">
                                                                     <Trash2 size={14} className="mr-2" /> Delete
@@ -823,6 +938,22 @@ const InspectionList = () => {
                 subtitle={reportSubtitle}
                 loading={reportGeneratingId !== null}
                 onDownload={() => void handleDownloadReport()}
+            />
+
+            <ComposeEmailSheet
+                isOpen={emailSheetOpen}
+                onClose={() => {
+                    setEmailSheetOpen(false);
+                    setEmailPrefillInProgress(false);
+                }}
+                defaultRecipientEmail={emailComposerState.recipientEmail}
+                defaultRecipientName={emailComposerState.recipientName}
+                defaultSubject={emailComposerState.subject}
+                initialAttachments={emailComposerState.attachments}
+                prefillInProgress={emailPrefillInProgress}
+                prefillStatusText="Generating the latest inspection PDF and attaching it to this email."
+                clientId={emailComposerState.clientId}
+                leadId={emailComposerState.leadId}
             />
         </div>
     );

@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { getEmailConfigStatus, sendEmail as apiSendEmail } from "@/features/emails/services/emails-service";
-import { AlertTriangle, Bold, Italic, Link2, List, ListOrdered, Mail, Paperclip, Send, Settings, Smile, Underline, X } from "lucide-react";
+import { AlertTriangle, Bold, Italic, Link2, List, ListOrdered, Loader2, Mail, Paperclip, Send, Settings, Smile, Underline, X } from "lucide-react";
 
 function plainTextToHtml(value: string) {
   return value
@@ -32,6 +32,10 @@ export function ComposeEmailSheet({
   onClose,
   defaultRecipientEmail,
   defaultRecipientName,
+  defaultSubject,
+  initialAttachments,
+  prefillInProgress = false,
+  prefillStatusText,
   clientId,
   leadId,
   onSent,
@@ -40,6 +44,10 @@ export function ComposeEmailSheet({
   onClose: () => void;
   defaultRecipientEmail?: string | null;
   defaultRecipientName?: string | null;
+  defaultSubject?: string | null;
+  initialAttachments?: File[];
+  prefillInProgress?: boolean;
+  prefillStatusText?: string | null;
   clientId?: string | number;
   leadId?: string | number;
   onSent?: () => void;
@@ -48,6 +56,7 @@ export function ComposeEmailSheet({
   const navigate = useNavigate();
   const editorRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const openedRef = useRef(false);
 
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
@@ -67,14 +76,20 @@ export function ComposeEmailSheet({
   const [isCheckingMailbox, setIsCheckingMailbox] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      openedRef.current = false;
+      return;
+    }
+
+    if (openedRef.current) return;
+    openedRef.current = true;
 
     setTo(defaultRecipientEmail || "");
     setCc("");
     setBcc("");
-    setSubject(defaultRecipientName ? `Regarding ${defaultRecipientName}` : "");
+    setSubject(defaultSubject || (defaultRecipientName ? `Regarding ${defaultRecipientName}` : ""));
     setBodyHtml("");
-    setAttachments([]);
+    setAttachments(initialAttachments || []);
     setShowCc(false);
     setShowBcc(false);
     setIsEditorFocused(false);
@@ -84,7 +99,12 @@ export function ComposeEmailSheet({
         editorRef.current.innerHTML = "";
       }
     });
-  }, [defaultRecipientEmail, defaultRecipientName, isOpen]);
+  }, [defaultRecipientEmail, defaultRecipientName, defaultSubject, initialAttachments, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setAttachments(initialAttachments || []);
+  }, [initialAttachments, isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -252,6 +272,20 @@ export function ComposeEmailSheet({
                 <Settings size={14} className="mr-1" />
                 Open Settings
               </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {prefillInProgress ? (
+          <div className="mx-6 mt-4 rounded-md border border-[#BFDBFE] bg-[#EFF6FF] p-4">
+            <div className="flex items-start gap-3">
+              <Loader2 size={18} className="mt-0.5 animate-spin text-[#1D4ED8]" />
+              <div>
+                <p className="text-sm font-medium text-[#1E3A8A]">Preparing inspection email</p>
+                <p className="mt-1 text-sm text-[#1D4ED8]">
+                  {prefillStatusText || "Generating and attaching the latest inspection PDF report."}
+                </p>
+              </div>
             </div>
           </div>
         ) : null}
@@ -489,7 +523,11 @@ export function ComposeEmailSheet({
               type="button"
               className="bg-[#14B8A6] hover:bg-[#0D9488] text-white gap-2"
               onClick={handleSend}
-              disabled={isSending || (!isCheckingMailbox && Boolean(mailboxStatus) && !mailboxStatus.smtpConfigured)}
+              disabled={
+                isSending ||
+                prefillInProgress ||
+                (!isCheckingMailbox && Boolean(mailboxStatus) && !mailboxStatus.smtpConfigured)
+              }
             >
               <Send size={15} />
               {isSending ? "Sending..." : "Send Email"}

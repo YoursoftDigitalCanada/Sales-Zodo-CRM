@@ -95,6 +95,8 @@ const INSP_TABS = [
     { id: "scheduling", label: "Scheduling" },
 ] as const;
 
+type InspectionTabId = (typeof INSP_TABS)[number]["id"];
+
 const EMPTY_FORM: Record<string, any> = {
     sourceType: "lead",
     leadId: "",
@@ -207,8 +209,48 @@ const SELECT_OPTIONS = {
     estimatedDuration: ["1 Day", "2-3 Days", "1 Week", "2 Weeks", "3+ Weeks"],
 } as const;
 
+const TAB_REQUIRED_FIELDS: Record<InspectionTabId, Array<{ field: string; label: string }>> = {
+    general: [
+        { field: "inspectionDate", label: "Inspection Date" },
+        { field: "inspectorName", label: "Inspector Name" },
+        { field: "inspectionType", label: "Inspection Type" },
+        { field: "accessMethod", label: "Access Method" },
+    ],
+    roof: [
+        { field: "roofStyle", label: "Roof Style" },
+        { field: "roofPitch", label: "Roof Pitch" },
+        { field: "totalSquares", label: "Total Squares" },
+        { field: "numberOfLayers", label: "Number of Layers" },
+    ],
+    damage: [
+        { field: "overallDamageRating", label: "Overall Damage Rating" },
+    ],
+    materials: [
+        { field: "proposedMaterial", label: "Proposed Material" },
+        { field: "shingleBrand", label: "Shingle Brand" },
+        { field: "shingleColor", label: "Shingle Color" },
+    ],
+    estimate: [
+        { field: "totalEstimate", label: "Total Estimate" },
+        { field: "customerPrice", label: "Customer Price" },
+        { field: "paymentMethod", label: "Payment Method" },
+    ],
+    scheduling: [
+        { field: "tentativeStartDate", label: "Tentative Start Date" },
+        { field: "estimatedDuration", label: "Estimated Duration" },
+        { field: "crewSize", label: "Crew Size" },
+        { field: "crewLeadName", label: "Crew Lead Name" },
+    ],
+};
+
 function readText(value: unknown): string {
     return typeof value === "string" ? value.trim() : "";
+}
+
+function hasValue(value: unknown): boolean {
+    if (typeof value === "number") return !Number.isNaN(value);
+    if (typeof value === "string") return value.trim().length > 0;
+    return Boolean(value);
 }
 
 function buildLeadAddress(raw: Record<string, unknown>): string {
@@ -656,6 +698,39 @@ const InspectionEditor = ({
         return true;
     };
 
+    const getMissingFieldsForTab = (tabId: InspectionTabId) =>
+        TAB_REQUIRED_FIELDS[tabId]
+            .filter(({ field }) => !hasValue(form[field]))
+            .map(({ label }) => label);
+
+    const validateTab = (tabId: InspectionTabId) => {
+        const missingFields = getMissingFieldsForTab(tabId);
+        if (missingFields.length === 0) {
+            return true;
+        }
+
+        toast({
+            title: "Required fields missing",
+            description: `Please fill: ${missingFields.join(", ")}.`,
+            variant: "destructive",
+        });
+        return false;
+    };
+
+    const validateThroughTab = (tabId: InspectionTabId) => {
+        const endIndex = INSP_TABS.findIndex((tab) => tab.id === tabId);
+
+        for (let index = 0; index <= endIndex; index += 1) {
+            const currentTabId = INSP_TABS[index].id;
+            if (!validateTab(currentTabId)) {
+                setActiveTab(currentTabId);
+                return false;
+            }
+        }
+
+        return true;
+    };
+
     const syncPhotos = async (inspection: InspectionEntity) => {
         const uploaded = pendingPhotos.length > 0
             ? await Promise.all(
@@ -693,6 +768,7 @@ const InspectionEditor = ({
 
     const handleSubmit = async (isComplete: boolean) => {
         if (!validateCreateSource()) return;
+        if (isComplete && !validateThroughTab("scheduling")) return;
 
         setSaving(true);
         try {
@@ -735,10 +811,26 @@ const InspectionEditor = ({
     };
 
     const handleNextTab = () => {
+        if (!validateCreateSource()) return;
+        if (!validateTab(activeTab)) return;
+
         const nextTab = INSP_TABS[activeTabIndex + 1];
         if (nextTab) {
             setActiveTab(nextTab.id);
         }
+    };
+
+    const handleTabSelect = (tabId: InspectionTabId) => {
+        const targetIndex = INSP_TABS.findIndex((tab) => tab.id === tabId);
+        if (targetIndex <= activeTabIndex) {
+            setActiveTab(tabId);
+            return;
+        }
+
+        if (!validateCreateSource()) return;
+        if (!validateThroughTab(activeTab)) return;
+
+        setActiveTab(tabId);
     };
 
     const photoItems = [
@@ -938,7 +1030,7 @@ const InspectionEditor = ({
                         type="button"
                         variant={activeTab === tab.id ? "default" : "outline"}
                         size="sm"
-                        onClick={() => setActiveTab(tab.id)}
+                        onClick={() => handleTabSelect(tab.id)}
                         className={activeTab === tab.id ? "bg-[#0891B2] text-white hover:bg-[#0E7490]" : ""}
                     >
                         {tab.label}

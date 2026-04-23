@@ -60,6 +60,30 @@ interface InspectionEditorProps {
     onSuccess?: (inspection: InspectionEntity) => void | Promise<void>;
 }
 
+interface BasicFieldProps {
+    label: string;
+    field: string;
+    value: any;
+    onChange: (field: string, value: any) => void;
+    type?: string;
+    required?: boolean;
+}
+
+interface SelectFieldProps {
+    label: string;
+    field: string;
+    value: any;
+    options: readonly string[];
+    onChange: (field: string, value: any) => void;
+}
+
+interface BooleanFieldProps {
+    label: string;
+    field: string;
+    checked: boolean;
+    onChange: (field: string, value: any) => void;
+}
+
 const INSP_TABS = [
     { id: "general", label: "General" },
     { id: "roof", label: "Roof Assessment" },
@@ -379,6 +403,50 @@ function buildSubmitPayload(form: Record<string, any>, isComplete: boolean, isEd
     return payload;
 }
 
+const BasicField = ({ label, field, value, onChange, type = "text", required = false }: BasicFieldProps) => (
+    <div className="space-y-1">
+        <Label className="text-xs text-[#475569]">
+            {label}
+            {required ? " *" : ""}
+        </Label>
+        {type === "textarea" ? (
+            <Textarea
+                value={value || ""}
+                onChange={(e) => onChange(field, e.target.value)}
+                className="resize-none min-h-[72px] text-sm"
+            />
+        ) : (
+            <Input
+                type={type}
+                value={value ?? ""}
+                onChange={(e) => onChange(field, type === "number" ? (e.target.value ? Number(e.target.value) : undefined) : e.target.value)}
+                className="text-sm"
+            />
+        )}
+    </div>
+);
+
+const SelectField = ({ label, field, value, options, onChange }: SelectFieldProps) => (
+    <div className="space-y-1">
+        <Label className="text-xs text-[#475569]">{label}</Label>
+        <select
+            value={value || ""}
+            onChange={(e) => onChange(field, e.target.value || undefined)}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm"
+        >
+            <option value="">Select...</option>
+            {options.map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
+    </div>
+);
+
+const BooleanField = ({ label, field, checked, onChange }: BooleanFieldProps) => (
+    <div className="flex items-center justify-between rounded-lg border border-[rgba(15,23,42,0.06)] px-3 py-2">
+        <Label className="text-xs text-[#475569]">{label}</Label>
+        <Switch checked={checked} onCheckedChange={(value) => onChange(field, value)} />
+    </div>
+);
+
 const InspectionEditor = ({
     initialInspection = null,
     lockedLeadId,
@@ -666,50 +734,6 @@ const InspectionEditor = ({
         })),
     ];
 
-    const F = ({ label, field, type = "text", required = false }: { label: string; field: string; type?: string; required?: boolean }) => (
-        <div className="space-y-1">
-            <Label className="text-xs text-[#475569]">
-                {label}
-                {required ? " *" : ""}
-            </Label>
-            {type === "textarea" ? (
-                <Textarea
-                    value={form[field] || ""}
-                    onChange={(e) => setField(field, e.target.value)}
-                    className="resize-none min-h-[72px] text-sm"
-                />
-            ) : (
-                <Input
-                    type={type}
-                    value={form[field] ?? ""}
-                    onChange={(e) => setField(field, type === "number" ? (e.target.value ? Number(e.target.value) : undefined) : e.target.value)}
-                    className="text-sm"
-                />
-            )}
-        </div>
-    );
-
-    const Sel = ({ label, field, options }: { label: string; field: string; options: readonly string[] }) => (
-        <div className="space-y-1">
-            <Label className="text-xs text-[#475569]">{label}</Label>
-            <select
-                value={form[field] || ""}
-                onChange={(e) => setField(field, e.target.value || undefined)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm"
-            >
-                <option value="">Select...</option>
-                {options.map((option) => <option key={option} value={option}>{option}</option>)}
-            </select>
-        </div>
-    );
-
-    const Bool = ({ label, field }: { label: string; field: string }) => (
-        <div className="flex items-center justify-between rounded-lg border border-[rgba(15,23,42,0.06)] px-3 py-2">
-            <Label className="text-xs text-[#475569]">{label}</Label>
-            <Switch checked={Boolean(form[field])} onCheckedChange={(value) => setField(field, value)} />
-        </div>
-    );
-
     const renderSourceSection = () => {
         if (initialInspection) {
             return (
@@ -836,18 +860,18 @@ const InspectionEditor = ({
 
                 {sourceType === "manual" ? (
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <F label="Name" field="manualClientName" required />
-                        <F label="Email" field="manualClientEmail" type="email" required />
-                        <F label="Phone" field="manualClientPhone" required />
-                        <F label="Company" field="manualClientCompanyName" />
+                        <BasicField label="Name" field="manualClientName" value={form.manualClientName} onChange={setField} required />
+                        <BasicField label="Email" field="manualClientEmail" value={form.manualClientEmail} onChange={setField} type="email" required />
+                        <BasicField label="Phone" field="manualClientPhone" value={form.manualClientPhone} onChange={setField} required />
+                        <BasicField label="Company" field="manualClientCompanyName" value={form.manualClientCompanyName} onChange={setField} />
                         <div className="sm:col-span-2">
-                            <F label="Location / Address" field="manualClientAddress" required />
+                            <BasicField label="Location / Address" field="manualClientAddress" value={form.manualClientAddress} onChange={setField} required />
                         </div>
-                        <F label="City" field="manualClientCity" />
-                        <F label="Province / State" field="manualClientProvince" />
-                        <F label="Postal Code" field="manualClientPostalCode" />
+                        <BasicField label="City" field="manualClientCity" value={form.manualClientCity} onChange={setField} />
+                        <BasicField label="Province / State" field="manualClientProvince" value={form.manualClientProvince} onChange={setField} />
+                        <BasicField label="Postal Code" field="manualClientPostalCode" value={form.manualClientPostalCode} onChange={setField} />
                         <div className="sm:col-span-2">
-                            <F label="New Client Notes" field="manualClientInternalNotes" type="textarea" />
+                            <BasicField label="New Client Notes" field="manualClientInternalNotes" value={form.manualClientInternalNotes} onChange={setField} type="textarea" />
                         </div>
                     </div>
                 ) : null}
@@ -892,70 +916,70 @@ const InspectionEditor = ({
 
             {activeTab === "general" && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <F label="Inspection Date" field="inspectionDate" type="datetime-local" />
-                    <F label="Inspector Name" field="inspectorName" />
-                    <Sel label="Inspection Type" field="inspectionType" options={SELECT_OPTIONS.inspectionType} />
-                    <F label="Weather Conditions" field="weatherConditions" />
-                    <Sel label="Access Method" field="accessMethod" options={SELECT_OPTIONS.accessMethod} />
-                    <Sel label="Overall Condition" field="overallCondition" options={SELECT_OPTIONS.overallCondition} />
+                    <BasicField label="Inspection Date" field="inspectionDate" value={form.inspectionDate} onChange={setField} type="datetime-local" />
+                    <BasicField label="Inspector Name" field="inspectorName" value={form.inspectorName} onChange={setField} />
+                    <SelectField label="Inspection Type" field="inspectionType" value={form.inspectionType} options={SELECT_OPTIONS.inspectionType} onChange={setField} />
+                    <BasicField label="Weather Conditions" field="weatherConditions" value={form.weatherConditions} onChange={setField} />
+                    <SelectField label="Access Method" field="accessMethod" value={form.accessMethod} options={SELECT_OPTIONS.accessMethod} onChange={setField} />
+                    <SelectField label="Overall Condition" field="overallCondition" value={form.overallCondition} options={SELECT_OPTIONS.overallCondition} onChange={setField} />
                     <div className="sm:col-span-2">
-                        <F label="Inspector Notes" field="inspectorNotes" type="textarea" />
+                        <BasicField label="Inspector Notes" field="inspectorNotes" value={form.inspectorNotes} onChange={setField} type="textarea" />
                     </div>
                     <div className="sm:col-span-2">
-                        <F label="Customer Feedback" field="customerFeedback" type="textarea" />
+                        <BasicField label="Customer Feedback" field="customerFeedback" value={form.customerFeedback} onChange={setField} type="textarea" />
                     </div>
                     <div className="sm:col-span-2">
-                        <F label="Internal Notes" field="internalNotes" type="textarea" />
+                        <BasicField label="Internal Notes" field="internalNotes" value={form.internalNotes} onChange={setField} type="textarea" />
                     </div>
                 </div>
             )}
 
             {activeTab === "roof" && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <Sel label="Roof Style" field="roofStyle" options={SELECT_OPTIONS.roofStyle} />
-                    <Sel label="Roof Pitch" field="roofPitch" options={SELECT_OPTIONS.roofPitch} />
-                    <F label="Total Squares" field="totalSquares" type="number" />
-                    <F label="Ridge Length (ft)" field="ridgeLength" type="number" />
-                    <F label="Valley Length (ft)" field="valleyLength" type="number" />
-                    <F label="Eave Length (ft)" field="eaveLength" type="number" />
-                    <F label="Rake Length (ft)" field="rakeLength" type="number" />
-                    <F label="Number of Layers" field="numberOfLayers" type="number" />
-                    <Sel label="Decking Type" field="deckingType" options={SELECT_OPTIONS.deckingType} />
-                    <Sel label="Decking Condition" field="deckingCondition" options={SELECT_OPTIONS.deckingCondition} />
-                    <Sel label="Underlayment Type" field="underlaymentType" options={SELECT_OPTIONS.underlaymentType} />
-                    <Sel label="Ventilation Type" field="ventilationType" options={SELECT_OPTIONS.ventilationType} />
-                    <F label="Ventilation Count" field="ventilationCount" type="number" />
-                    <Sel label="Flashing Condition" field="flashingCondition" options={SELECT_OPTIONS.flashingCondition} />
-                    <Sel label="Gutter Condition" field="gutterCondition" options={SELECT_OPTIONS.gutterCondition} />
-                    <F label="Skylight Count" field="skylightCount" type="number" />
-                    <F label="Skylight Condition" field="skylightCondition" />
-                    <Bool label="Chimney Present" field="chimneyPresent" />
-                    <F label="Chimney Condition" field="chimneyCondition" />
-                    <Sel label="Soffit / Fascia Condition" field="soffitFasciaCondition" options={SELECT_OPTIONS.soffitFasciaCondition} />
-                    <Bool label="Drip Edge Present" field="dripEdgePresent" />
-                    <F label="Drip Edge Condition" field="dripEdgeCondition" />
-                    <Bool label="Ice / Water Shield Present" field="iceWaterShieldPresent" />
+                    <SelectField label="Roof Style" field="roofStyle" value={form.roofStyle} options={SELECT_OPTIONS.roofStyle} onChange={setField} />
+                    <SelectField label="Roof Pitch" field="roofPitch" value={form.roofPitch} options={SELECT_OPTIONS.roofPitch} onChange={setField} />
+                    <BasicField label="Total Squares" field="totalSquares" value={form.totalSquares} onChange={setField} type="number" />
+                    <BasicField label="Ridge Length (ft)" field="ridgeLength" value={form.ridgeLength} onChange={setField} type="number" />
+                    <BasicField label="Valley Length (ft)" field="valleyLength" value={form.valleyLength} onChange={setField} type="number" />
+                    <BasicField label="Eave Length (ft)" field="eaveLength" value={form.eaveLength} onChange={setField} type="number" />
+                    <BasicField label="Rake Length (ft)" field="rakeLength" value={form.rakeLength} onChange={setField} type="number" />
+                    <BasicField label="Number of Layers" field="numberOfLayers" value={form.numberOfLayers} onChange={setField} type="number" />
+                    <SelectField label="Decking Type" field="deckingType" value={form.deckingType} options={SELECT_OPTIONS.deckingType} onChange={setField} />
+                    <SelectField label="Decking Condition" field="deckingCondition" value={form.deckingCondition} options={SELECT_OPTIONS.deckingCondition} onChange={setField} />
+                    <SelectField label="Underlayment Type" field="underlaymentType" value={form.underlaymentType} options={SELECT_OPTIONS.underlaymentType} onChange={setField} />
+                    <SelectField label="Ventilation Type" field="ventilationType" value={form.ventilationType} options={SELECT_OPTIONS.ventilationType} onChange={setField} />
+                    <BasicField label="Ventilation Count" field="ventilationCount" value={form.ventilationCount} onChange={setField} type="number" />
+                    <SelectField label="Flashing Condition" field="flashingCondition" value={form.flashingCondition} options={SELECT_OPTIONS.flashingCondition} onChange={setField} />
+                    <SelectField label="Gutter Condition" field="gutterCondition" value={form.gutterCondition} options={SELECT_OPTIONS.gutterCondition} onChange={setField} />
+                    <BasicField label="Skylight Count" field="skylightCount" value={form.skylightCount} onChange={setField} type="number" />
+                    <BasicField label="Skylight Condition" field="skylightCondition" value={form.skylightCondition} onChange={setField} />
+                    <BooleanField label="Chimney Present" field="chimneyPresent" checked={Boolean(form.chimneyPresent)} onChange={setField} />
+                    <BasicField label="Chimney Condition" field="chimneyCondition" value={form.chimneyCondition} onChange={setField} />
+                    <SelectField label="Soffit / Fascia Condition" field="soffitFasciaCondition" value={form.soffitFasciaCondition} options={SELECT_OPTIONS.soffitFasciaCondition} onChange={setField} />
+                    <BooleanField label="Drip Edge Present" field="dripEdgePresent" checked={Boolean(form.dripEdgePresent)} onChange={setField} />
+                    <BasicField label="Drip Edge Condition" field="dripEdgeCondition" value={form.dripEdgeCondition} onChange={setField} />
+                    <BooleanField label="Ice / Water Shield Present" field="iceWaterShieldPresent" checked={Boolean(form.iceWaterShieldPresent)} onChange={setField} />
                 </div>
             )}
 
             {activeTab === "damage" && (
                 <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <Bool label="Storm Damage Found" field="stormDamageFound" />
-                        <Sel label="Hail Size Found" field="hailSizeFound" options={SELECT_OPTIONS.hailSizeFound} />
+                        <BooleanField label="Storm Damage Found" field="stormDamageFound" checked={Boolean(form.stormDamageFound)} onChange={setField} />
+                        <SelectField label="Hail Size Found" field="hailSizeFound" value={form.hailSizeFound} options={SELECT_OPTIONS.hailSizeFound} onChange={setField} />
                         <div className="sm:col-span-2">
-                            <F label="Wind Damage Details" field="windDamageDetails" type="textarea" />
+                            <BasicField label="Wind Damage Details" field="windDamageDetails" value={form.windDamageDetails} onChange={setField} type="textarea" />
                         </div>
                         <div className="sm:col-span-2">
-                            <F label="Hail Damage Details" field="hailDamageDetails" type="textarea" />
+                            <BasicField label="Hail Damage Details" field="hailDamageDetails" value={form.hailDamageDetails} onChange={setField} type="textarea" />
                         </div>
                         <div className="sm:col-span-2">
-                            <F label="Test Square Results" field="testSquareResults" type="textarea" />
+                            <BasicField label="Test Square Results" field="testSquareResults" value={form.testSquareResults} onChange={setField} type="textarea" />
                         </div>
-                        <Bool label="Interior Damage Found" field="interiorDamageFound" />
-                        <Sel label="Overall Damage Rating" field="overallDamageRating" options={SELECT_OPTIONS.overallDamageRating} />
+                        <BooleanField label="Interior Damage Found" field="interiorDamageFound" checked={Boolean(form.interiorDamageFound)} onChange={setField} />
+                        <SelectField label="Overall Damage Rating" field="overallDamageRating" value={form.overallDamageRating} options={SELECT_OPTIONS.overallDamageRating} onChange={setField} />
                         <div className="sm:col-span-2">
-                            <F label="Interior Damage Details" field="interiorDamageDetails" type="textarea" />
+                            <BasicField label="Interior Damage Details" field="interiorDamageDetails" value={form.interiorDamageDetails} onChange={setField} type="textarea" />
                         </div>
                     </div>
 
@@ -970,50 +994,50 @@ const InspectionEditor = ({
 
             {activeTab === "materials" && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <Sel label="Proposed Material" field="proposedMaterial" options={SELECT_OPTIONS.proposedMaterial} />
-                    <F label="Shingle Brand" field="shingleBrand" />
-                    <F label="Shingle Line" field="shingleLine" />
-                    <F label="Shingle Color" field="shingleColor" />
-                    <F label="Underlayment Choice" field="underlaymentChoice" />
-                    <F label="Ridge Cap Type" field="ridgeCapType" />
-                    <F label="Ventilation Plan" field="ventilationPlan" />
-                    <F label="Drip Edge Color" field="dripEdgeColor" />
-                    <Sel label="Warranty Type" field="warrantyType" options={SELECT_OPTIONS.warrantyType} />
-                    <F label="Warranty Years" field="warrantyYears" type="number" />
+                    <SelectField label="Proposed Material" field="proposedMaterial" value={form.proposedMaterial} options={SELECT_OPTIONS.proposedMaterial} onChange={setField} />
+                    <BasicField label="Shingle Brand" field="shingleBrand" value={form.shingleBrand} onChange={setField} />
+                    <BasicField label="Shingle Line" field="shingleLine" value={form.shingleLine} onChange={setField} />
+                    <BasicField label="Shingle Color" field="shingleColor" value={form.shingleColor} onChange={setField} />
+                    <BasicField label="Underlayment Choice" field="underlaymentChoice" value={form.underlaymentChoice} onChange={setField} />
+                    <BasicField label="Ridge Cap Type" field="ridgeCapType" value={form.ridgeCapType} onChange={setField} />
+                    <BasicField label="Ventilation Plan" field="ventilationPlan" value={form.ventilationPlan} onChange={setField} />
+                    <BasicField label="Drip Edge Color" field="dripEdgeColor" value={form.dripEdgeColor} onChange={setField} />
+                    <SelectField label="Warranty Type" field="warrantyType" value={form.warrantyType} options={SELECT_OPTIONS.warrantyType} onChange={setField} />
+                    <BasicField label="Warranty Years" field="warrantyYears" value={form.warrantyYears} onChange={setField} type="number" />
                 </div>
             )}
 
             {activeTab === "estimate" && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <F label="Material Cost ($)" field="materialCost" type="number" />
-                    <F label="Labor Cost ($)" field="laborCost" type="number" />
-                    <F label="Tear-Off Cost ($)" field="tearOffCost" type="number" />
-                    <F label="Permit Cost ($)" field="permitCost" type="number" />
-                    <F label="Dumpster Cost ($)" field="dumpsterCost" type="number" />
-                    <F label="Misc Cost ($)" field="miscCost" type="number" />
-                    <F label="Subtotal ($)" field="subtotal" type="number" />
-                    <F label="Overhead %" field="overheadPercent" type="number" />
-                    <F label="Profit %" field="profitPercent" type="number" />
-                    <F label="Total Estimate ($)" field="totalEstimate" type="number" />
-                    <F label="Customer Price ($)" field="customerPrice" type="number" />
-                    <F label="Deposit Required ($)" field="depositRequired" type="number" />
-                    <Bool label="Deposit Collected" field="depositCollected" />
-                    <Sel label="Payment Method" field="paymentMethod" options={SELECT_OPTIONS.paymentMethod} />
+                    <BasicField label="Material Cost ($)" field="materialCost" value={form.materialCost} onChange={setField} type="number" />
+                    <BasicField label="Labor Cost ($)" field="laborCost" value={form.laborCost} onChange={setField} type="number" />
+                    <BasicField label="Tear-Off Cost ($)" field="tearOffCost" value={form.tearOffCost} onChange={setField} type="number" />
+                    <BasicField label="Permit Cost ($)" field="permitCost" value={form.permitCost} onChange={setField} type="number" />
+                    <BasicField label="Dumpster Cost ($)" field="dumpsterCost" value={form.dumpsterCost} onChange={setField} type="number" />
+                    <BasicField label="Misc Cost ($)" field="miscCost" value={form.miscCost} onChange={setField} type="number" />
+                    <BasicField label="Subtotal ($)" field="subtotal" value={form.subtotal} onChange={setField} type="number" />
+                    <BasicField label="Overhead %" field="overheadPercent" value={form.overheadPercent} onChange={setField} type="number" />
+                    <BasicField label="Profit %" field="profitPercent" value={form.profitPercent} onChange={setField} type="number" />
+                    <BasicField label="Total Estimate ($)" field="totalEstimate" value={form.totalEstimate} onChange={setField} type="number" />
+                    <BasicField label="Customer Price ($)" field="customerPrice" value={form.customerPrice} onChange={setField} type="number" />
+                    <BasicField label="Deposit Required ($)" field="depositRequired" value={form.depositRequired} onChange={setField} type="number" />
+                    <BooleanField label="Deposit Collected" field="depositCollected" checked={Boolean(form.depositCollected)} onChange={setField} />
+                    <SelectField label="Payment Method" field="paymentMethod" value={form.paymentMethod} options={SELECT_OPTIONS.paymentMethod} onChange={setField} />
                 </div>
             )}
 
             {activeTab === "scheduling" && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <F label="Tentative Start Date" field="tentativeStartDate" type="date" />
-                    <Sel label="Estimated Duration" field="estimatedDuration" options={SELECT_OPTIONS.estimatedDuration} />
-                    <F label="Crew Size" field="crewSize" type="number" />
-                    <F label="Crew Lead Name" field="crewLeadName" />
-                    <Bool label="Materials Ordered" field="materialsOrdered" />
-                    <F label="Materials Delivery Date" field="materialsDeliveryDate" type="date" />
-                    <Bool label="Permit Pulled" field="permitPulled" />
-                    <F label="Permit Number" field="permitNumber" />
-                    <Bool label="Dumpster Ordered" field="dumpsterOrdered" />
-                    <F label="Dumpster Delivery Date" field="dumpsterDeliveryDate" type="date" />
+                    <BasicField label="Tentative Start Date" field="tentativeStartDate" value={form.tentativeStartDate} onChange={setField} type="date" />
+                    <SelectField label="Estimated Duration" field="estimatedDuration" value={form.estimatedDuration} options={SELECT_OPTIONS.estimatedDuration} onChange={setField} />
+                    <BasicField label="Crew Size" field="crewSize" value={form.crewSize} onChange={setField} type="number" />
+                    <BasicField label="Crew Lead Name" field="crewLeadName" value={form.crewLeadName} onChange={setField} />
+                    <BooleanField label="Materials Ordered" field="materialsOrdered" checked={Boolean(form.materialsOrdered)} onChange={setField} />
+                    <BasicField label="Materials Delivery Date" field="materialsDeliveryDate" value={form.materialsDeliveryDate} onChange={setField} type="date" />
+                    <BooleanField label="Permit Pulled" field="permitPulled" checked={Boolean(form.permitPulled)} onChange={setField} />
+                    <BasicField label="Permit Number" field="permitNumber" value={form.permitNumber} onChange={setField} />
+                    <BooleanField label="Dumpster Ordered" field="dumpsterOrdered" checked={Boolean(form.dumpsterOrdered)} onChange={setField} />
+                    <BasicField label="Dumpster Delivery Date" field="dumpsterDeliveryDate" value={form.dumpsterDeliveryDate} onChange={setField} type="date" />
                 </div>
             )}
 

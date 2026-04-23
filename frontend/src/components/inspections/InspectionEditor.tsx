@@ -58,6 +58,7 @@ interface ExistingInspectionPhoto {
 interface InspectionEditorProps {
     initialInspection?: InspectionEntity | null;
     lockedLeadId?: string;
+    lockedClientId?: string;
     onCancel?: () => void;
     onSuccess?: (inspection: InspectionEntity) => void | Promise<void>;
 }
@@ -311,12 +312,13 @@ function normalizeDateInput(value: string | null | undefined): string {
     return value ? value.slice(0, 10) : "";
 }
 
-function createInitialForm(inspection?: InspectionEntity | null, lockedLeadId?: string): Record<string, any> {
+function createInitialForm(inspection?: InspectionEntity | null, lockedLeadId?: string, lockedClientId?: string): Record<string, any> {
     if (!inspection) {
         return {
             ...EMPTY_FORM,
-            sourceType: lockedLeadId ? "lead" : "lead",
+            sourceType: lockedLeadId ? "lead" : lockedClientId ? "client" : "lead",
             leadId: lockedLeadId || "",
+            clientId: lockedClientId || "",
         };
     }
 
@@ -327,7 +329,7 @@ function createInitialForm(inspection?: InspectionEntity | null, lockedLeadId?: 
         ...inspection,
         sourceType,
         leadId: lockedLeadId || inspection.leadId || "",
-        clientId: inspection.clientId || "",
+        clientId: lockedClientId || inspection.clientId || "",
         manualClientName: inspection.client?.clientName || "",
         manualClientEmail: inspection.client?.primaryEmail || "",
         manualClientPhone: inspection.client?.primaryPhone || "",
@@ -344,7 +346,13 @@ function createInitialForm(inspection?: InspectionEntity | null, lockedLeadId?: 
     };
 }
 
-function buildSubmitPayload(form: Record<string, any>, isComplete: boolean, isEditing: boolean, lockedLeadId?: string) {
+function buildSubmitPayload(
+    form: Record<string, any>,
+    isComplete: boolean,
+    isEditing: boolean,
+    lockedLeadId?: string,
+    lockedClientId?: string,
+) {
     const payload: Record<string, unknown> = {
         inspectionDate: form.inspectionDate ? new Date(form.inspectionDate).toISOString() : undefined,
         inspectorName: readText(form.inspectorName) || undefined,
@@ -426,8 +434,8 @@ function buildSubmitPayload(form: Record<string, any>, isComplete: boolean, isEd
     if (!isEditing) {
         if ((lockedLeadId || form.sourceType === "lead") && (lockedLeadId || form.leadId)) {
             payload.leadId = lockedLeadId || form.leadId;
-        } else if (form.sourceType === "client" && form.clientId) {
-            payload.clientId = form.clientId;
+        } else if ((lockedClientId || form.sourceType === "client") && (lockedClientId || form.clientId)) {
+            payload.clientId = lockedClientId || form.clientId;
         } else if (form.sourceType === "manual") {
             payload.manualClient = {
                 clientName: readText(form.manualClientName),
@@ -494,6 +502,7 @@ const BooleanField = ({ label, field, checked, onChange }: BooleanFieldProps) =>
 const InspectionEditor = ({
     initialInspection = null,
     lockedLeadId,
+    lockedClientId,
     onCancel,
     onSuccess,
 }: InspectionEditorProps) => {
@@ -507,17 +516,17 @@ const InspectionEditor = ({
     const [clientSearch, setClientSearch] = useState("");
     const [leadOptions, setLeadOptions] = useState<LeadOption[]>([]);
     const [clientOptions, setClientOptions] = useState<ClientOption[]>([]);
-    const [form, setForm] = useState<Record<string, any>>(() => createInitialForm(initialInspection, lockedLeadId));
+    const [form, setForm] = useState<Record<string, any>>(() => createInitialForm(initialInspection, lockedLeadId, lockedClientId));
     const [existingPhotos, setExistingPhotos] = useState<ExistingInspectionPhoto[]>([]);
     const [removedExistingPhotoIds, setRemovedExistingPhotoIds] = useState<string[]>([]);
     const [pendingPhotos, setPendingPhotos] = useState<PendingInspectionPhoto[]>([]);
 
     useEffect(() => {
-        setForm(createInitialForm(initialInspection, lockedLeadId));
-    }, [initialInspection, lockedLeadId]);
+        setForm(createInitialForm(initialInspection, lockedLeadId, lockedClientId));
+    }, [initialInspection, lockedLeadId, lockedClientId]);
 
     useEffect(() => {
-        if (lockedLeadId) {
+        if (lockedLeadId || lockedClientId) {
             return;
         }
 
@@ -559,7 +568,7 @@ const InspectionEditor = ({
         return () => {
             cancelled = true;
         };
-    }, [lockedLeadId, toast]);
+    }, [lockedLeadId, lockedClientId, toast]);
 
     useEffect(() => {
         let cancelled = false;
@@ -642,7 +651,7 @@ const InspectionEditor = ({
     }, [clientOptions, clientSearch]);
 
     const selectedLead = leadOptions.find((lead) => lead.id === (lockedLeadId || form.leadId));
-    const selectedClient = clientOptions.find((client) => client.id === form.clientId);
+    const selectedClient = clientOptions.find((client) => client.id === (lockedClientId || form.clientId));
     const activeTabIndex = INSP_TABS.findIndex((tab) => tab.id === activeTab);
     const isSchedulingTab = activeTab === "scheduling";
 
@@ -676,12 +685,12 @@ const InspectionEditor = ({
     const validateCreateSource = () => {
         if (initialInspection) return true;
 
-        const sourceType = lockedLeadId ? "lead" : form.sourceType;
+        const sourceType = lockedLeadId ? "lead" : lockedClientId ? "client" : form.sourceType;
         if (sourceType === "lead" && !(lockedLeadId || form.leadId)) {
             toast({ title: "Lead required", description: "Select a lead for this inspection.", variant: "destructive" });
             return false;
         }
-        if (sourceType === "client" && !form.clientId) {
+        if (sourceType === "client" && !(lockedClientId || form.clientId)) {
             toast({ title: "Client required", description: "Select a client for this inspection.", variant: "destructive" });
             return false;
         }
@@ -772,7 +781,7 @@ const InspectionEditor = ({
 
         setSaving(true);
         try {
-            const payload = buildSubmitPayload(form, isComplete, Boolean(initialInspection), lockedLeadId);
+            const payload = buildSubmitPayload(form, isComplete, Boolean(initialInspection), lockedLeadId, lockedClientId);
             let savedInspection = initialInspection
                 ? await updateInspection(initialInspection.id, payload)
                 : await createInspection(payload);
@@ -863,7 +872,7 @@ const InspectionEditor = ({
             );
         }
 
-        const sourceType = lockedLeadId ? "lead" : (form.sourceType as SourceType);
+        const sourceType = lockedLeadId ? "lead" : lockedClientId ? "client" : (form.sourceType as SourceType);
 
         return (
             <div className="space-y-4 rounded-xl border border-[rgba(15,23,42,0.08)] bg-white p-4">
@@ -875,6 +884,10 @@ const InspectionEditor = ({
                 {lockedLeadId ? (
                     <div className="rounded-lg border border-cyan-100 bg-cyan-50 px-3 py-3 text-sm text-cyan-900">
                         This inspection is locked to the current lead and will be saved into the global inspections module automatically.
+                    </div>
+                ) : lockedClientId ? (
+                    <div className="rounded-lg border border-cyan-100 bg-cyan-50 px-3 py-3 text-sm text-cyan-900">
+                        This inspection is locked to the current client and will be saved into the global inspections module automatically.
                     </div>
                 ) : (
                     <div className="grid gap-2 sm:grid-cols-3">
@@ -902,7 +915,7 @@ const InspectionEditor = ({
                     </div>
                 )}
 
-                {selectorLoading && !lockedLeadId ? (
+                {selectorLoading && !lockedLeadId && !lockedClientId ? (
                     <div className="flex items-center gap-2 text-sm text-[#64748B]">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Loading leads and clients...
@@ -940,7 +953,7 @@ const InspectionEditor = ({
                     </div>
                 ) : null}
 
-                {sourceType === "client" ? (
+                {sourceType === "client" && !lockedClientId ? (
                     <div className="space-y-3">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
@@ -1005,12 +1018,17 @@ const InspectionEditor = ({
                         {selectedLead.name} {selectedLead.address ? `- ${selectedLead.address}` : ""}
                     </div>
                 ) : null}
+                {lockedClientId && selectedClient ? (
+                    <div className="rounded-lg border border-cyan-100 bg-cyan-50 px-3 py-3 text-sm text-cyan-900">
+                        {selectedClient.name} {selectedClient.address ? `- ${selectedClient.address}` : ""}
+                    </div>
+                ) : null}
                 {!lockedLeadId && sourceType === "lead" && selectedLead ? (
                     <div className="rounded-lg border border-cyan-100 bg-cyan-50 px-3 py-3 text-sm text-cyan-900">
                         {selectedLead.name} {selectedLead.address ? `- ${selectedLead.address}` : ""}
                     </div>
                 ) : null}
-                {sourceType === "client" && selectedClient ? (
+                {!lockedClientId && sourceType === "client" && selectedClient ? (
                     <div className="rounded-lg border border-cyan-100 bg-cyan-50 px-3 py-3 text-sm text-cyan-900">
                         {selectedClient.name} {selectedClient.address ? `- ${selectedClient.address}` : ""}
                     </div>

@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, Search, UserRound, Building2, UserPlus, Save, CheckCircle2 } from "lucide-react";
+import { Loader2, Search, UserRound, Building2, UserPlus, Save, CheckCircle2, ArrowRight } from "lucide-react";
+import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 import { getLeads } from "@/features/leads/services/leads-service";
 import { getClients } from "@/features/clients/services/clients-service";
 import {
@@ -20,6 +21,7 @@ import {
     uploadFile,
 } from "@/features/files/services/files-service";
 import InspectionPhotoSection from "@/pages/Inspections/InspectionPhotoSection";
+import type { PlaceDetailsResult } from "@/features/roof-estimator/services/roof-estimator-service";
 
 type SourceType = "lead" | "client" | "manual";
 
@@ -599,6 +601,8 @@ const InspectionEditor = ({
 
     const selectedLead = leadOptions.find((lead) => lead.id === (lockedLeadId || form.leadId));
     const selectedClient = clientOptions.find((client) => client.id === form.clientId);
+    const activeTabIndex = INSP_TABS.findIndex((tab) => tab.id === activeTab);
+    const isSchedulingTab = activeTab === "scheduling";
 
     const handleAddPhotos = async (files: File[]) => {
         const nextPhotos = files
@@ -717,6 +721,23 @@ const InspectionEditor = ({
             });
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleManualAddressSelect = (details: PlaceDetailsResult) => {
+        setForm((prev) => ({
+            ...prev,
+            manualClientAddress: readText(details.addressLine1) || readText(details.formattedAddress) || prev.manualClientAddress,
+            manualClientCity: readText(details.city) || prev.manualClientCity,
+            manualClientProvince: readText(details.state) || prev.manualClientProvince,
+            manualClientPostalCode: readText(details.postalCode) || prev.manualClientPostalCode,
+        }));
+    };
+
+    const handleNextTab = () => {
+        const nextTab = INSP_TABS[activeTabIndex + 1];
+        if (nextTab) {
+            setActiveTab(nextTab.id);
         }
     };
 
@@ -865,7 +886,18 @@ const InspectionEditor = ({
                         <BasicField label="Phone" field="manualClientPhone" value={form.manualClientPhone} onChange={setField} required />
                         <BasicField label="Company" field="manualClientCompanyName" value={form.manualClientCompanyName} onChange={setField} />
                         <div className="sm:col-span-2">
-                            <BasicField label="Location / Address" field="manualClientAddress" value={form.manualClientAddress} onChange={setField} required />
+                            <div className="space-y-1">
+                                <Label className="text-xs text-[#475569]">
+                                    Location / Address *
+                                </Label>
+                                <AddressAutocompleteInput
+                                    value={form.manualClientAddress || ""}
+                                    onValueChange={(value) => setField("manualClientAddress", value)}
+                                    onSelectAddress={handleManualAddressSelect}
+                                    placeholder="Start typing an address"
+                                    className="text-sm"
+                                />
+                            </div>
                         </div>
                         <BasicField label="City" field="manualClientCity" value={form.manualClientCity} onChange={setField} />
                         <BasicField label="Province / State" field="manualClientProvince" value={form.manualClientProvince} onChange={setField} />
@@ -1051,10 +1083,17 @@ const InspectionEditor = ({
                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     Save Draft
                 </Button>
-                <Button type="button" onClick={() => void handleSubmit(true)} disabled={saving} className="gap-2 bg-[#0891B2] text-white hover:bg-[#0E7490]">
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                    Save & Complete
-                </Button>
+                {isSchedulingTab ? (
+                    <Button type="button" onClick={() => void handleSubmit(true)} disabled={saving} className="gap-2 bg-[#0891B2] text-white hover:bg-[#0E7490]">
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                        Save & Complete
+                    </Button>
+                ) : (
+                    <Button type="button" onClick={handleNextTab} disabled={saving || activeTabIndex === INSP_TABS.length - 1} className="gap-2 bg-[#0891B2] text-white hover:bg-[#0E7490]">
+                        Next
+                        <ArrowRight className="h-4 w-4" />
+                    </Button>
+                )}
             </div>
         </div>
     );

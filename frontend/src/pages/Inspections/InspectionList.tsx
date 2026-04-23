@@ -146,6 +146,27 @@ function formatTime(dateStr: string): string {
     }
 }
 
+function isSameLocalDay(dateStr: string, compareDate: Date): boolean {
+    const date = new Date(dateStr);
+    return (
+        date.getFullYear() === compareDate.getFullYear() &&
+        date.getMonth() === compareDate.getMonth() &&
+        date.getDate() === compareDate.getDate()
+    );
+}
+
+function isWithinCurrentWeek(dateStr: string, now: Date): boolean {
+    const date = new Date(dateStr);
+    const weekStart = new Date(now);
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(now.getDate() - now.getDay());
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+
+    return date >= weekStart && date < weekEnd;
+}
+
 function mapInspectionStatus(raw: InspectionEntity): InspectionStatus {
     const est = (raw.estimateStatus || "").toLowerCase();
     if (est === "completed" || est === "done") return "completed";
@@ -499,10 +520,11 @@ const InspectionList = () => {
     }, [inspections]);
 
     const stats = useMemo(() => {
-        const today = new Date().toDateString();
+        const now = new Date();
         return {
             total: inspections.length,
-            todayScheduled: inspections.filter((i) => new Date(i.date).toDateString() === today && i.status === "scheduled").length,
+            todayScheduled: inspections.filter((i) => isSameLocalDay(i.date, now)).length,
+            thisWeek: inspections.filter((i) => isWithinCurrentWeek(i.date, now)).length,
             pendingReport: inspections.filter((i) => i.status === "pending_report").length,
             completed: inspections.filter((i) => i.status === "completed").length,
             followUp: inspections.filter((i) => i.status === "follow_up").length,
@@ -514,18 +536,11 @@ const InspectionList = () => {
 
         // Tab filter
         if (activeTab === "today") {
-            const today = new Date().toDateString();
-            list = list.filter((i) => new Date(i.date).toDateString() === today);
+            const now = new Date();
+            list = list.filter((i) => isSameLocalDay(i.date, now));
         } else if (activeTab === "this_week") {
             const now = new Date();
-            const weekStart = new Date(now);
-            weekStart.setDate(now.getDate() - now.getDay());
-            const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekStart.getDate() + 7);
-            list = list.filter((i) => {
-                const d = new Date(i.date);
-                return d >= weekStart && d < weekEnd;
-            });
+            list = list.filter((i) => isWithinCurrentWeek(i.date, now));
         } else if (activeTab === "pending_report") {
             list = list.filter((i) => i.status === "pending_report");
         } else if (activeTab === "completed") {
@@ -576,7 +591,7 @@ const InspectionList = () => {
     const tabs = [
         { id: "all", label: "All", count: stats.total },
         { id: "today", label: "Today", count: stats.todayScheduled },
-        { id: "this_week", label: "This Week", count: null },
+        { id: "this_week", label: "This Week", count: stats.thisWeek },
         { id: "pending_report", label: "Pending Report", count: stats.pendingReport },
         { id: "completed", label: "Completed", count: stats.completed },
     ];
@@ -632,7 +647,7 @@ const InspectionList = () => {
                 {/* Stats Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 mb-6">
                     <StatCard title="Total Inspections" value={stats.total} icon={ClipboardList} color="#3B82F6" />
-                    <StatCard title="Today Scheduled" value={stats.todayScheduled} icon={CalendarDays} color="#F59E0B" delay={0.1} />
+                    <StatCard title="Today" value={stats.todayScheduled} icon={CalendarDays} color="#F59E0B" delay={0.1} />
                     <StatCard title="Pending Report" value={stats.pendingReport} icon={FileText} color="#F97316" delay={0.2} />
                     <StatCard title="Completed" value={stats.completed} icon={CheckCircle2} color="#10B981" delay={0.3} />
                     <StatCard title="Follow Up" value={stats.followUp} icon={AlertCircle} color="#EF4444" delay={0.4} />

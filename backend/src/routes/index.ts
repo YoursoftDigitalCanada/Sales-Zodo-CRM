@@ -11,6 +11,7 @@ import authRoutes from '../modules/auth/auth.routes';
 import leadsRoutes from '../modules/leads/leads.routes';
 import leadSourcesRoutes from '../modules/lead-sources/lead-sources.routes';
 import leadSourceWebhooksRoutes from '../modules/lead-sources/lead-source-webhooks.routes';
+import inspectionsRoutes from '../modules/inspections/inspections.routes';
 import tagsRoutes from '../modules/tags/tags.routes';
 import notificationsRoutes from '../modules/notifications/notifications.routes';
 import dashboardRoutes from '../modules/dashboard/dashboard.routes';
@@ -149,6 +150,7 @@ export function registerRoutes(app: Application): void {
   // CRM - Leads
   protectedRouter.use('/dashboard', dashboardRoutes);
   protectedRouter.use('/leads', leadsRoutes);
+  protectedRouter.use('/inspections', inspectionsRoutes);
   protectedRouter.use('/lead-sources', leadSourcesRoutes);
 
   // CRM - Clients & Contacts
@@ -252,6 +254,7 @@ export function registerRoutes(app: Application): void {
         // Core
         auth: `${apiPrefix}/auth`,
         leads: `${apiPrefix}/leads`,
+        inspections: `${apiPrefix}/inspections`,
         leadSources: `${apiPrefix}/lead-sources`,
         // CRM
         clients: `${apiPrefix}/clients`,

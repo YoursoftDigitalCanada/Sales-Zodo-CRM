@@ -1,4 +1,8 @@
-import { buildLeadAccessWhere, type DataAccessContext } from '../../common/access/data-access';
+import {
+  buildClientAccessWhere,
+  buildLeadAccessWhere,
+  type DataAccessContext,
+} from '../../common/access/data-access';
 import { PERMISSIONS } from '../../common/constants/permissions';
 import { logger } from '../../common/utils/logger';
 import { prisma } from '../../config/database';
@@ -21,7 +25,8 @@ interface InspectionItem {
   inspectionDate: Date | null;
   inspectionType?: string | null;
   totalEstimate?: number | null;
-  leadId: string;
+  leadId: string | null;
+  clientId?: string | null;
   lead?: {
     id: string;
     firstName?: string;
@@ -31,6 +36,17 @@ interface InspectionItem {
     city?: string | null;
     state?: string | null;
     zipCode?: string | null;
+  } | null;
+  client?: {
+    id: string;
+    clientName?: string | null;
+    companyName?: string | null;
+    primaryEmail?: string | null;
+    primaryPhone?: string | null;
+    streetAddress?: string | null;
+    city?: string | null;
+    province?: string | null;
+    postalCode?: string | null;
   } | null;
 }
 
@@ -149,11 +165,21 @@ export class DashboardService {
 
   private async getRecentInspections(tenantId: string, dataAccess?: DataAccessContext): Promise<InspectionItem[]> {
     const leadAccessWhere = buildLeadAccessWhere(dataAccess);
+    const clientAccessWhere = buildClientAccessWhere(dataAccess);
     const inspections = await prisma.leadInspection.findMany({
       where: {
         tenantId,
         inspectionDate: { not: null },
-        ...(Object.keys(leadAccessWhere).length > 0 ? { lead: leadAccessWhere } : {}),
+        ...(
+          dataAccess?.hasFullAccess
+            ? {}
+            : {
+                OR: [
+                  ...(Object.keys(leadAccessWhere).length > 0 ? [{ lead: leadAccessWhere }] : []),
+                  ...(Object.keys(clientAccessWhere).length > 0 ? [{ client: clientAccessWhere }] : []),
+                ],
+              }
+        ),
       },
       include: {
         lead: {
@@ -168,6 +194,19 @@ export class DashboardService {
             zipCode: true,
           },
         },
+        client: {
+          select: {
+            id: true,
+            clientName: true,
+            companyName: true,
+            primaryEmail: true,
+            primaryPhone: true,
+            streetAddress: true,
+            city: true,
+            province: true,
+            postalCode: true,
+          },
+        },
       },
       orderBy: [{ inspectionDate: 'asc' }, { createdAt: 'desc' }],
       take: 20,
@@ -179,6 +218,7 @@ export class DashboardService {
       inspectionType: inspection.inspectionType,
       totalEstimate: inspection.totalEstimate ? Number(inspection.totalEstimate) : null,
       leadId: inspection.leadId,
+      clientId: inspection.clientId,
       lead: inspection.lead
         ? {
             id: inspection.lead.id,
@@ -189,6 +229,19 @@ export class DashboardService {
             city: inspection.lead.city,
             state: inspection.lead.state,
             zipCode: inspection.lead.zipCode,
+          }
+        : null,
+      client: inspection.client
+        ? {
+            id: inspection.client.id,
+            clientName: inspection.client.clientName,
+            companyName: inspection.client.companyName,
+            primaryEmail: inspection.client.primaryEmail,
+            primaryPhone: inspection.client.primaryPhone,
+            streetAddress: inspection.client.streetAddress,
+            city: inspection.client.city,
+            province: inspection.client.province,
+            postalCode: inspection.client.postalCode,
           }
         : null,
     }));

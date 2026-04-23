@@ -9,17 +9,20 @@ import { CreateLeadInspectionDto, UpdateLeadInspectionDto } from './inspections.
 import { sanitizeBody } from '../../common/utils/sanitize-body';
 
 export class InspectionsController {
-    /**
-     * POST /leads/:leadId/inspections
-     */
     async create(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const tenantId = req.context.tenantId;
             const employeeId = req.user?.employeeId;
-            const { leadId } = req.params;
+            const userId = req.user?.userId;
             const data = sanitizeBody<CreateLeadInspectionDto>(req.body);
 
-            const inspection = await inspectionsService.create(leadId, tenantId, data, employeeId);
+            const inspection = await inspectionsService.create(
+                tenantId,
+                data,
+                employeeId,
+                userId,
+                req.dataAccess,
+            );
 
             sendCreated(res, inspection, 'Inspection created successfully');
         } catch (error) {
@@ -27,28 +30,49 @@ export class InspectionsController {
         }
     }
 
-    /**
-     * GET /leads/inspections/all
-     */
+    async createForLead(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.context.tenantId;
+            const employeeId = req.user?.employeeId;
+            const userId = req.user?.userId;
+            const { leadId } = req.params;
+            const data = sanitizeBody<CreateLeadInspectionDto>({
+                ...req.body,
+                leadId,
+            });
+
+            const inspection = await inspectionsService.create(
+                tenantId,
+                data,
+                employeeId,
+                userId,
+                req.dataAccess,
+            );
+
+            sendCreated(res, inspection, 'Inspection created successfully');
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const tenantId = req.context.tenantId;
-            const inspections = await inspectionsService.getAll(tenantId, req.dataAccess);
+            const leadId = typeof req.query.leadId === 'string' ? req.query.leadId : undefined;
+            const clientId = typeof req.query.clientId === 'string' ? req.query.clientId : undefined;
+            const inspections = await inspectionsService.getAll(tenantId, req.dataAccess, { leadId, clientId });
             sendSuccess(res, inspections);
         } catch (error) {
             next(error);
         }
     }
 
-    /**
-     * GET /leads/:leadId/inspections
-     */
     async getByLeadId(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const tenantId = req.context.tenantId;
             const { leadId } = req.params;
 
-            const inspections = await inspectionsService.getByLeadId(leadId, tenantId);
+            const inspections = await inspectionsService.getByLeadId(leadId, tenantId, req.dataAccess);
 
             sendSuccess(res, inspections);
         } catch (error) {
@@ -56,15 +80,12 @@ export class InspectionsController {
         }
     }
 
-    /**
-     * GET /leads/:leadId/inspections/:inspectionId
-     */
     async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const tenantId = req.context.tenantId;
             const { inspectionId } = req.params;
 
-            const inspection = await inspectionsService.getById(inspectionId, tenantId);
+            const inspection = await inspectionsService.getById(inspectionId, tenantId, req.dataAccess);
 
             sendSuccess(res, inspection);
         } catch (error) {
@@ -72,16 +93,13 @@ export class InspectionsController {
         }
     }
 
-    /**
-     * PUT /leads/:leadId/inspections/:inspectionId
-     */
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const tenantId = req.context.tenantId;
             const { inspectionId } = req.params;
             const data = sanitizeBody<UpdateLeadInspectionDto>(req.body);
 
-            const inspection = await inspectionsService.update(inspectionId, tenantId, data);
+            const inspection = await inspectionsService.update(inspectionId, tenantId, data, req.dataAccess);
 
             sendSuccess(res, inspection, 'Inspection updated successfully');
         } catch (error) {
@@ -89,15 +107,12 @@ export class InspectionsController {
         }
     }
 
-    /**
-     * DELETE /leads/:leadId/inspections/:inspectionId
-     */
     async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const tenantId = req.context.tenantId;
             const { inspectionId } = req.params;
 
-            await inspectionsService.delete(inspectionId, tenantId);
+            await inspectionsService.delete(inspectionId, tenantId, req.dataAccess);
 
             sendNoContent(res);
         } catch (error) {

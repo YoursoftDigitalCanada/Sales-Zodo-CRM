@@ -34,7 +34,7 @@ import {
     uploadFile,
 } from "@/features/files/services/files-service";
 import {
-    getAllInspections,
+    getInspectionById,
     updateInspection,
     type InspectionEntity,
 } from "@/features/leads/services/inspections-service";
@@ -116,6 +116,26 @@ const SectionCard = ({
 
 function getInitials(name: string): string {
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+}
+
+function getInspectionCustomerProfile(inspection: InspectionEntity | null) {
+    const lead = inspection?.lead;
+    const client = inspection?.client;
+    const name = lead
+        ? `${lead.firstName || ""} ${lead.lastName || ""}`.trim() || lead.companyName || "Unknown"
+        : client?.clientName || client?.companyName || "Unknown";
+    const address = lead
+        ? [lead.propertyAddress, lead.city, lead.state, lead.zipCode].filter(Boolean).join(", ")
+        : [client?.streetAddress, client?.city, client?.province, client?.postalCode].filter(Boolean).join(", ");
+
+    return {
+        name,
+        phone: lead?.phone || client?.primaryPhone || "",
+        email: lead?.email || client?.primaryEmail || "",
+        address,
+        insurance: lead?.insuranceCompanyName || client?.insuranceCompanyName || "",
+        claimNumber: lead?.claimNumber || "",
+    };
 }
 
 function getSeverityFromRating(rating: string | null): { label: string; color: string; bgColor: string; score: number } {
@@ -228,17 +248,12 @@ const InspectionDetail = () => {
             if (!id) return;
             try {
                 setLoading(true);
-                const allInspections = await getAllInspections();
-                const found = allInspections.find(i => i.id === id);
-                if (!found) {
-                    toast({ title: "Not Found", description: "Inspection not found.", variant: "destructive" });
-                    navigate("/inspections");
-                    return;
-                }
+                const found = await getInspectionById(id);
                 setInspection(found);
                 populateForm(found);
             } catch (err) {
                 toast({ title: "Error", description: "Failed to load inspection.", variant: "destructive" });
+                navigate("/inspections");
             } finally {
                 setLoading(false);
             }
@@ -322,25 +337,22 @@ const InspectionDetail = () => {
                 ...current,
                 ...updated,
                 lead: current.lead || updated.lead,
+                client: current.client || updated.client,
             };
         });
     };
 
     const populateForm = (data: InspectionEntity) => {
-        const lead = data.lead;
-        const customerName = lead ? `${lead.firstName} ${lead.lastName}` : "Unknown";
-        const address = lead
-            ? [lead.propertyAddress, lead.city, lead.state, lead.zipCode].filter(Boolean).join(", ")
-            : "";
+        const customerProfile = getInspectionCustomerProfile(data);
 
         setCustomer({
-            name: customerName,
-            initials: getInitials(customerName),
-            phone: lead?.phone || "",
-            email: lead?.email || "",
-            address,
-            insurance: lead?.insuranceCompanyName || "",
-            claimNumber: lead?.claimNumber || "",
+            name: customerProfile.name,
+            initials: getInitials(customerProfile.name),
+            phone: customerProfile.phone,
+            email: customerProfile.email,
+            address: customerProfile.address,
+            insurance: customerProfile.insurance,
+            claimNumber: customerProfile.claimNumber,
         });
 
         const inspDate = data.inspectionDate ? new Date(data.inspectionDate) : null;
@@ -444,7 +456,7 @@ const InspectionDetail = () => {
                 estimateStatus: isComplete ? "completed" : "pending",
             };
 
-            const updated = await updateInspection(inspection.leadId, inspection.id, payload);
+            const updated = await updateInspection(inspection.id, payload);
             applyInspectionUpdate(updated);
             toast({
                 title: isComplete ? "Report Completed" : "Report Saved",
@@ -473,13 +485,16 @@ const InspectionDetail = () => {
         setPhotoMutating(true);
         try {
             const uploadedPhotos = await Promise.all(
-                imageFiles.map((file) => uploadFile(file, { leadId: inspection.leadId })),
+                imageFiles.map((file) => uploadFile(file, {
+                    leadId: inspection.leadId || undefined,
+                    clientId: inspection.clientId || undefined,
+                })),
             );
             const nextPhotoIds = [
                 ...(inspection.photoFileIds || []),
                 ...uploadedPhotos.map((file) => file.id),
             ];
-            const updated = await updateInspection(inspection.leadId, inspection.id, {
+            const updated = await updateInspection(inspection.id, {
                 photoFileIds: nextPhotoIds,
                 photosTakenCount: nextPhotoIds.length,
             });
@@ -505,7 +520,7 @@ const InspectionDetail = () => {
         setPhotoMutating(true);
         try {
             const nextPhotoIds = (inspection.photoFileIds || []).filter((id) => id !== photoId);
-            const updated = await updateInspection(inspection.leadId, inspection.id, {
+            const updated = await updateInspection(inspection.id, {
                 photoFileIds: nextPhotoIds,
                 photosTakenCount: nextPhotoIds.length,
             });

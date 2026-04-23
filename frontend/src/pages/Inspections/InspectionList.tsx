@@ -77,7 +77,8 @@ type InspectionStatus = "scheduled" | "in_progress" | "pending_report" | "comple
 
 interface Inspection {
     id: string;
-    leadId: string;
+    leadId: string | null;
+    clientId: string | null;
     customerName: string;
     customerEmail: string;
     customerPhone: string;
@@ -152,17 +153,21 @@ function mapInspectionStatus(raw: InspectionEntity): InspectionStatus {
 
 function mapApiInspection(raw: InspectionEntity): Inspection {
     const lead = raw.lead;
-    const customerName = lead ? `${lead.firstName} ${lead.lastName}` : "Unknown";
+    const client = raw.client;
+    const customerName = lead
+        ? `${lead.firstName || ""} ${lead.lastName || ""}`.trim() || lead.companyName || "Unknown"
+        : client?.clientName || client?.companyName || "Unknown";
     const address = lead
         ? [lead.propertyAddress, lead.city, lead.state, lead.zipCode].filter(Boolean).join(", ")
-        : "";
+        : [client?.streetAddress, client?.city, client?.province, client?.postalCode].filter(Boolean).join(", ");
 
     return {
         id: raw.id,
         leadId: raw.leadId,
+        clientId: raw.clientId,
         customerName,
-        customerEmail: lead?.email || "",
-        customerPhone: lead?.phone || "",
+        customerEmail: lead?.email || client?.primaryEmail || "",
+        customerPhone: lead?.phone || client?.primaryPhone || "",
         address,
         inspectorName: raw.inspectorName || "Unassigned",
         date: raw.inspectionDate || raw.createdAt,
@@ -171,7 +176,7 @@ function mapApiInspection(raw: InspectionEntity): Inspection {
         damageRating: raw.overallDamageRating,
         estimateStatus: raw.estimateStatus,
         totalEstimate: raw.totalEstimate,
-        insuranceCompany: lead?.insuranceCompanyName || null,
+        insuranceCompany: lead?.insuranceCompanyName || client?.insuranceCompanyName || null,
         claimNumber: lead?.claimNumber || null,
         stormDamage: raw.stormDamageFound || false,
         inspectionType: raw.inspectionType || "Initial",

@@ -241,12 +241,13 @@ export function buildInspectionReportSnapshot(
   overrides: Partial<InspectionReportSnapshot> = {},
 ): InspectionReportSnapshot {
   const lead = inspection.lead;
+  const client = inspection.client;
   const customerName = lead
-    ? `${lead.firstName || ""} ${lead.lastName || ""}`.trim()
-    : "Unknown Customer";
+    ? `${lead.firstName || ""} ${lead.lastName || ""}`.trim() || lead.companyName || "Unknown Customer"
+    : client?.clientName || client?.companyName || "Unknown Customer";
   const propertyAddress = lead
     ? [lead.propertyAddress, lead.city, lead.state, lead.zipCode].filter(Boolean).join(", ")
-    : "";
+    : [client?.streetAddress, client?.city, client?.province, client?.postalCode].filter(Boolean).join(", ");
   const estimateStatus = overrides.estimateStatus ?? inspection.estimateStatus ?? null;
   const normalizedEstimateStatus = (estimateStatus || "").toLowerCase();
 
@@ -264,11 +265,11 @@ export function buildInspectionReportSnapshot(
     estimateStatus,
     totalEstimate: overrides.totalEstimate ?? inspection.totalEstimate,
     customerName: overrides.customerName ?? customerName,
-    customerEmail: overrides.customerEmail ?? lead?.email ?? null,
-    customerPhone: overrides.customerPhone ?? lead?.phone ?? null,
-    customerCompany: overrides.customerCompany ?? lead?.companyName ?? null,
+    customerEmail: overrides.customerEmail ?? lead?.email ?? client?.primaryEmail ?? null,
+    customerPhone: overrides.customerPhone ?? lead?.phone ?? client?.primaryPhone ?? null,
+    customerCompany: overrides.customerCompany ?? lead?.companyName ?? client?.companyName ?? null,
     propertyAddress: overrides.propertyAddress ?? propertyAddress,
-    insuranceCompany: overrides.insuranceCompany ?? lead?.insuranceCompanyName ?? null,
+    insuranceCompany: overrides.insuranceCompany ?? lead?.insuranceCompanyName ?? client?.insuranceCompanyName ?? null,
     claimNumber: overrides.claimNumber ?? lead?.claimNumber ?? null,
     measurementSource: overrides.measurementSource ?? "manual",
     recommendation:

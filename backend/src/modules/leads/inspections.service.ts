@@ -1,71 +1,146 @@
+import { ClientType } from '@prisma/client';
 import { inspectionsRepository } from './inspections.repository';
 import { CreateLeadInspectionDto, UpdateLeadInspectionDto, toLeadInspectionResponseDto } from './inspections.dto';
-import { NotFoundError } from '../../common/errors/HttpErrors';
+import { BadRequestError, NotFoundError } from '../../common/errors/HttpErrors';
+import { clientsService } from '../clients/clients.service';
+import { prisma } from '../../config/database';
 import type { DataAccessContext } from '../../common/access/data-access';
+import {
+    buildClientAccessWhere,
+    buildLeadAccessWhere,
+    mergeWhereWithAccess,
+} from '../../common/access/data-access';
+
+interface InspectionListFilters {
+    leadId?: string;
+    clientId?: string;
+}
 
 export class InspectionsService {
-    /**
-     * Create a new inspection for a lead
-     */
-    async create(leadId: string, tenantId: string, data: CreateLeadInspectionDto, createdById?: string) {
-        const inspection = await inspectionsRepository.create(leadId, tenantId, data, createdById);
+    async create(
+        tenantId: string,
+        data: CreateLeadInspectionDto,
+        createdByEmployeeId?: string,
+        createdByUserId?: string,
+        dataAccess?: DataAccessContext,
+    ) {
+        const normalizedData = await this.normalizeCreateData(
+            tenantId,
+            data,
+            createdByUserId,
+            dataAccess,
+        );
+
+        const inspection = await inspectionsRepository.create(tenantId, normalizedData, createdByEmployeeId);
         return toLeadInspectionResponseDto(inspection);
     }
 
-    /**
-     * Get all inspections across all leads for a tenant
-     */
-    async getAll(tenantId: string, dataAccess?: DataAccessContext) {
-        const inspections = await inspectionsRepository.findAll(tenantId, dataAccess);
-        return inspections.map((i: any) => ({
-            ...toLeadInspectionResponseDto(i),
-            lead: i.lead || null,
-        }));
-    }
-
-    /**
-     * Get all inspections for a lead
-     */
-    async getByLeadId(leadId: string, tenantId: string) {
-        const inspections = await inspectionsRepository.findByLeadId(leadId, tenantId);
+    async getAll(tenantId: string, dataAccess?: DataAccessContext, filters: InspectionListFilters = {}) {
+        const inspections = await inspectionsRepository.findAll(tenantId, dataAccess, filters);
         return inspections.map(toLeadInspectionResponseDto);
     }
 
-    /**
-     * Get a specific inspection by ID
-     */
-    async getById(inspectionId: string, tenantId: string) {
-        const inspection = await inspectionsRepository.findById(inspectionId, tenantId);
+    async getByLeadId(leadId: string, tenantId: string, dataAccess?: DataAccessContext) {
+        const inspections = await inspectionsRepository.findByLeadId(leadId, tenantId, dataAccess);
+        return inspections.map(toLeadInspectionResponseDto);
+    }
+
+    async getById(inspectionId: string, tenantId: string, dataAccess?: DataAccessContext) {
+        const inspection = await inspectionsRepository.findById(inspectionId, tenantId, dataAccess);
         if (!inspection) {
             throw new NotFoundError('Inspection not found');
         }
         return toLeadInspectionResponseDto(inspection);
     }
 
-    /**
-     * Update an inspection
-     */
-    async update(inspectionId: string, tenantId: string, data: UpdateLeadInspectionDto) {
-        // Verify exists
-        const existing = await inspectionsRepository.findById(inspectionId, tenantId);
-        if (!existing) {
-            throw new NotFoundError('Inspection not found');
-        }
-
-        const updated = await inspectionsRepository.update(inspectionId, tenantId, data);
+    async update(inspectionId: string, tenantId: string, data: UpdateLeadInspectionDto, dataAccess?: DataAccessContext) {
+        const updated = await inspectionsRepository.update(inspectionId, tenantId, data, dataAccess);
         return toLeadInspectionResponseDto(updated);
     }
 
-    /**
-     * Delete an inspection
-     */
-    async delete(inspectionId: string, tenantId: string) {
-        const existing = await inspectionsRepository.findById(inspectionId, tenantId);
+    async delete(inspectionId: string, tenantId: string, dataAccess?: DataAccessContext) {
+        const existing = await inspectionsRepository.findById(inspectionId, tenantId, dataAccess);
         if (!existing) {
             throw new NotFoundError('Inspection not found');
         }
 
-        await inspectionsRepository.delete(inspectionId, tenantId);
+        await inspectionsRepository.delete(inspectionId, tenantId, dataAccess);
+    }
+
+    private async normalizeCreateData(
+        tenantId: string,
+        data: CreateLeadInspectionDto,
+        createdByUserId?: string,
+        dataAccess?: DataAccessContext,
+    ): Promise<CreateLeadInspectionDto> {
+        const sourceCount = [data.leadId, data.clientId, data.manualClient].filter(Boolean).length;
+        if (sourceCount !== 1) {
+            throw new BadRequestError('Inspection must be linked to exactly one source.');
+        }
+
+        let leadId = data.leadId;
+        let clientId = data.clientId;
+
+        if (leadId) {
+            const lead = await prisma.lead.findFirst({
+                where: mergeWhereWithAccess(
+                    { id: leadId, tenantId },
+                    buildLeadAccessWhere(dataAccess),
+                ),
+                select: {
+                    id: true,
+                    convertedToClientId: true,
+                },
+            });
+
+            if (!lead) {
+                throw new NotFoundError('Lead not found');
+            }
+
+            clientId = lead.convertedToClientId || undefined;
+        }
+
+        if (clientId && !leadId) {
+            const client = await prisma.client.findFirst({
+                where: mergeWhereWithAccess(
+                    { id: clientId, tenantId },
+                    buildClientAccessWhere(dataAccess),
+                ),
+                select: { id: true },
+            });
+
+            if (!client) {
+                throw new NotFoundError('Client not found');
+            }
+        }
+
+        if (data.manualClient) {
+            const createdClient = await clientsService.create(tenantId, {
+                clientName: data.manualClient.clientName,
+                companyName: data.manualClient.companyName || null,
+                clientType: data.manualClient.companyName ? ClientType.BUSINESS : ClientType.INDIVIDUAL,
+                primaryEmail: data.manualClient.primaryEmail,
+                primaryPhone: data.manualClient.primaryPhone,
+                streetAddress: data.manualClient.streetAddress,
+                city: data.manualClient.city || null,
+                province: data.manualClient.province || null,
+                postalCode: data.manualClient.postalCode || null,
+                country: 'Canada',
+                contactName: data.manualClient.clientName,
+                directPhone: data.manualClient.primaryPhone,
+                serviceType: data.manualClient.inspectionPurpose || data.inspectionType || null,
+                internalNotes: data.manualClient.internalNotes || data.internalNotes || null,
+            }, createdByUserId);
+
+            clientId = createdClient.id;
+        }
+
+        return {
+            ...data,
+            leadId,
+            clientId,
+            manualClient: undefined,
+        };
     }
 }
 

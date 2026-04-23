@@ -17,7 +17,7 @@ import {
 } from "@/features/leads/utils/generate-inspection-report-pdf";
 
 interface LinkedInspectionRecords {
-  leadId: string;
+  leadId?: string;
   clientId?: string;
   projectId?: string;
 }
@@ -62,9 +62,10 @@ function matchesInspectionReportFile(file: FileResponse, fileName: string): bool
   return file.name === fileName || file.originalName === fileName;
 }
 
-async function findInspectionReportFiles(leadId: string, fileName: string): Promise<FileResponse[]> {
+async function findInspectionReportFiles(linkedRecords: LinkedInspectionRecords, fileName: string): Promise<FileResponse[]> {
   const files = await getFiles({
-    leadId,
+    ...(linkedRecords.leadId ? { leadId: linkedRecords.leadId } : {}),
+    ...(linkedRecords.clientId ? { clientId: linkedRecords.clientId } : {}),
     limit: 100,
     search: fileName,
     sortBy: "createdAt",
@@ -75,10 +76,10 @@ async function findInspectionReportFiles(leadId: string, fileName: string): Prom
 }
 
 async function openExistingInspectionReport(
-  leadId: string,
+  linkedRecords: LinkedInspectionRecords,
   fileName: string,
 ): Promise<{ file: FileResponse; previewUrl: string } | null> {
-  const existingFiles = await findInspectionReportFiles(leadId, fileName);
+  const existingFiles = await findInspectionReportFiles(linkedRecords, fileName);
 
   for (const file of existingFiles) {
     try {
@@ -95,21 +96,28 @@ async function openExistingInspectionReport(
 async function resolveLinkedInspectionRecords(
   inspection: InspectionEntity,
 ): Promise<LinkedInspectionRecords> {
-  const linkedRecords: LinkedInspectionRecords = { leadId: inspection.leadId };
+  const linkedRecords: LinkedInspectionRecords = {
+    leadId: inspection.leadId || undefined,
+    clientId: inspection.clientId || undefined,
+  };
 
-  try {
+  if (inspection.leadId) {
+    try {
     const lead = await getLeadById(inspection.leadId) as LeadWithConversion;
     const clientId = readOptionalString(lead.convertedToClientId);
     if (clientId) {
       linkedRecords.clientId = clientId;
     }
-  } catch {
+    } catch {
     // The report can still be saved against the lead if client lookup fails.
+    }
   }
 
   try {
-    const leadProjects = await getProjects({ leadId: inspection.leadId, limit: 100 });
-    linkedRecords.projectId = pickPrimaryProject(leadProjects);
+    if (inspection.leadId) {
+      const leadProjects = await getProjects({ leadId: inspection.leadId, limit: 100 });
+      linkedRecords.projectId = pickPrimaryProject(leadProjects);
+    }
   } catch {
     // Fall back to client-level project lookup below if needed.
   }
@@ -131,23 +139,23 @@ export async function ensureInspectionReportFile(
 ): Promise<EnsureInspectionReportFileResult> {
   const snapshot = buildInspectionReportSnapshot(options.inspection, options.snapshotOverrides);
   const fileName = getInspectionReportFileName(snapshot);
+  const linkedRecords = await resolveLinkedInspectionRecords(options.inspection);
 
   if (options.reuseExisting) {
-    const existingReport = await openExistingInspectionReport(options.inspection.leadId, fileName);
+    const existingReport = await openExistingInspectionReport(linkedRecords, fileName);
     if (existingReport) {
       return {
         created: false,
         fileId: existingReport.file.id,
         fileName,
         previewUrl: existingReport.previewUrl,
-        linkedRecords: { leadId: options.inspection.leadId },
+        linkedRecords,
       };
     }
   }
 
-  const [linkedRecords, previousFiles, pdfResult] = await Promise.all([
-    resolveLinkedInspectionRecords(options.inspection),
-    findInspectionReportFiles(options.inspection.leadId, fileName).catch(() => []),
+  const [previousFiles, pdfResult] = await Promise.all([
+    findInspectionReportFiles(linkedRecords, fileName).catch(() => []),
     generateInspectionReportPdf(snapshot, { companyProfile: options.companyProfile }),
   ]);
 

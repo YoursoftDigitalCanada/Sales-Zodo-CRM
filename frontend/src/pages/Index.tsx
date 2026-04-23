@@ -673,18 +673,29 @@ function mapQuote(quote: DashboardQuote): EstimateItem {
 }
 
 function mapInspection(inspection: DashboardInspection): SiteVisitItem {
-  return {
-    id: inspection.id,
-    leadId: inspection.leadId,
-    clientName: inspection.lead
-      ? `${readText(inspection.lead.firstName)} ${readText(inspection.lead.lastName)}`.trim() || readText(inspection.lead.companyName) || "Client"
-      : "Client",
-    address: buildAddress([
+  const customerName = inspection.lead
+    ? `${readText(inspection.lead.firstName)} ${readText(inspection.lead.lastName)}`.trim() || readText(inspection.lead.companyName) || "Client"
+    : readText(inspection.client?.clientName) || readText(inspection.client?.companyName) || "Client";
+
+  const address = inspection.lead
+    ? buildAddress([
       inspection.lead?.propertyAddress,
       inspection.lead?.city,
       inspection.lead?.state,
       inspection.lead?.zipCode,
-    ]) || "Address pending",
+    ])
+    : buildAddress([
+      inspection.client?.streetAddress,
+      inspection.client?.city,
+      inspection.client?.province,
+      inspection.client?.postalCode,
+    ]);
+
+  return {
+    id: inspection.id,
+    leadId: inspection.leadId,
+    clientName: customerName,
+    address: address || "Address pending",
     inspectionType: readText(inspection.inspectionType) || "Inspection",
     scheduledAt: inspection.inspectionDate ? new Date(inspection.inspectionDate) : null,
     estimateValue: Number(inspection.totalEstimate || 0),

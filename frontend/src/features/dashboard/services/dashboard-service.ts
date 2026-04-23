@@ -69,7 +69,8 @@ export interface DashboardInspection {
   inspectionDate: string | null;
   inspectionType?: string | null;
   totalEstimate?: number | null;
-  leadId: string;
+  leadId: string | null;
+  clientId?: string | null;
   lead?: {
     id: string;
     firstName?: string;
@@ -79,6 +80,17 @@ export interface DashboardInspection {
     city?: string | null;
     state?: string | null;
     zipCode?: string | null;
+  } | null;
+  client?: {
+    id: string;
+    clientName?: string | null;
+    companyName?: string | null;
+    primaryEmail?: string | null;
+    primaryPhone?: string | null;
+    streetAddress?: string | null;
+    city?: string | null;
+    province?: string | null;
+    postalCode?: string | null;
   } | null;
 }
 

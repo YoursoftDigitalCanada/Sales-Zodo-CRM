@@ -1,7 +1,24 @@
 import { Decimal } from '@prisma/client/runtime/library';
 
+export interface ManualInspectionClientDto {
+    clientName: string;
+    primaryEmail: string;
+    primaryPhone: string;
+    streetAddress: string;
+    city?: string | null;
+    province?: string | null;
+    postalCode?: string | null;
+    companyName?: string | null;
+    inspectionPurpose?: string | null;
+    internalNotes?: string | null;
+}
+
 // ── Create DTO ────────────────────────────────────────────────────
 export interface CreateLeadInspectionDto {
+    leadId?: string;
+    clientId?: string;
+    manualClient?: ManualInspectionClientDto;
+
     // General
     inspectionDate?: string | Date;
     inspectorName?: string;
@@ -95,12 +112,42 @@ export interface CreateLeadInspectionDto {
 }
 
 // ── Update DTO ────────────────────────────────────────────────────
-export type UpdateLeadInspectionDto = Partial<CreateLeadInspectionDto>;
+export type UpdateLeadInspectionDto = Partial<Omit<CreateLeadInspectionDto, 'leadId' | 'clientId' | 'manualClient'>>;
+
+export interface InspectionLeadResponseDto {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    phone: string | null;
+    propertyAddress: string | null;
+    city: string | null;
+    state: string | null;
+    zipCode: string | null;
+    companyName: string | null;
+    isInsuranceClaim: string | null;
+    insuranceCompanyName: string | null;
+    claimNumber: string | null;
+}
+
+export interface InspectionClientResponseDto {
+    id: string;
+    clientName: string;
+    companyName: string | null;
+    primaryEmail: string | null;
+    primaryPhone: string | null;
+    streetAddress: string | null;
+    city: string | null;
+    province: string | null;
+    postalCode: string | null;
+    insuranceCompanyName: string | null;
+}
 
 // ── Response DTO ──────────────────────────────────────────────────
 export interface LeadInspectionResponseDto {
     id: string;
-    leadId: string;
+    leadId: string | null;
+    clientId: string | null;
     tenantId: string;
 
     inspectionDate: string | null;
@@ -190,108 +237,144 @@ export interface LeadInspectionResponseDto {
     createdById: string | null;
     createdAt: string;
     updatedAt: string;
+    lead?: InspectionLeadResponseDto | null;
+    client?: InspectionClientResponseDto | null;
 }
 
-// ── Mapper ────────────────────────────────────────────────────────
+const decimalToNum = (value: Decimal | null | undefined): number | null =>
+    value != null ? Number(value) : null;
 
-const decimalToNum = (v: Decimal | null | undefined): number | null =>
-    v != null ? Number(v) : null;
+const dateToStr = (value: Date | null | undefined): string | null =>
+    value ? value.toISOString() : null;
 
-const dateToStr = (v: Date | null | undefined): string | null =>
-    v ? v.toISOString() : null;
-
-export function toLeadInspectionResponseDto(i: any): LeadInspectionResponseDto {
+function toInspectionLeadResponseDto(lead: any): InspectionLeadResponseDto {
     return {
-        id: i.id,
-        leadId: i.leadId,
-        tenantId: i.tenantId,
+        id: lead.id,
+        firstName: lead.firstName ?? null,
+        lastName: lead.lastName ?? null,
+        email: lead.email ?? null,
+        phone: lead.phone ?? null,
+        propertyAddress: lead.propertyAddress ?? null,
+        city: lead.city ?? null,
+        state: lead.state ?? null,
+        zipCode: lead.zipCode ?? null,
+        companyName: lead.companyName ?? null,
+        isInsuranceClaim: lead.isInsuranceClaim ?? null,
+        insuranceCompanyName: lead.insuranceCompanyName ?? null,
+        claimNumber: lead.claimNumber ?? null,
+    };
+}
 
-        inspectionDate: dateToStr(i.inspectionDate),
-        inspectorName: i.inspectorName ?? null,
-        inspectionType: i.inspectionType ?? null,
-        weatherConditions: i.weatherConditions ?? null,
-        accessMethod: i.accessMethod ?? null,
-        overallCondition: i.overallCondition ?? null,
+function toInspectionClientResponseDto(client: any): InspectionClientResponseDto {
+    return {
+        id: client.id,
+        clientName: client.clientName,
+        companyName: client.companyName ?? null,
+        primaryEmail: client.primaryEmail ?? null,
+        primaryPhone: client.primaryPhone ?? null,
+        streetAddress: client.streetAddress ?? null,
+        city: client.city ?? null,
+        province: client.province ?? null,
+        postalCode: client.postalCode ?? null,
+        insuranceCompanyName: client.insuranceCompanyName ?? null,
+    };
+}
 
-        roofStyle: i.roofStyle ?? null,
-        roofPitch: i.roofPitch ?? null,
-        totalSquares: decimalToNum(i.totalSquares),
-        ridgeLength: decimalToNum(i.ridgeLength),
-        valleyLength: decimalToNum(i.valleyLength),
-        eaveLength: decimalToNum(i.eaveLength),
-        rakeLength: decimalToNum(i.rakeLength),
-        numberOfLayers: i.numberOfLayers ?? null,
-        deckingType: i.deckingType ?? null,
-        deckingCondition: i.deckingCondition ?? null,
-        underlaymentType: i.underlaymentType ?? null,
-        ventilationType: i.ventilationType ?? null,
-        ventilationCount: i.ventilationCount ?? null,
-        flashingCondition: i.flashingCondition ?? null,
-        gutterCondition: i.gutterCondition ?? null,
-        skylightCount: i.skylightCount ?? null,
-        skylightCondition: i.skylightCondition ?? null,
-        chimneyPresent: i.chimneyPresent ?? null,
-        chimneyCondition: i.chimneyCondition ?? null,
-        soffitFasciaCondition: i.soffitFasciaCondition ?? null,
-        dripEdgePresent: i.dripEdgePresent ?? null,
-        dripEdgeCondition: i.dripEdgeCondition ?? null,
-        iceWaterShieldPresent: i.iceWaterShieldPresent ?? null,
+export function toLeadInspectionResponseDto(inspection: any): LeadInspectionResponseDto {
+    return {
+        id: inspection.id,
+        leadId: inspection.leadId ?? null,
+        clientId: inspection.clientId ?? null,
+        tenantId: inspection.tenantId,
 
-        stormDamageFound: i.stormDamageFound ?? null,
-        windDamageDetails: i.windDamageDetails ?? null,
-        hailDamageDetails: i.hailDamageDetails ?? null,
-        hailSizeFound: i.hailSizeFound ?? null,
-        testSquareResults: i.testSquareResults ?? null,
-        interiorDamageFound: i.interiorDamageFound ?? null,
-        interiorDamageDetails: i.interiorDamageDetails ?? null,
-        photosTakenCount: i.photosTakenCount ?? null,
-        photoFileIds: Array.isArray(i.photoFileIds) ? i.photoFileIds : [],
-        overallDamageRating: i.overallDamageRating ?? null,
+        inspectionDate: dateToStr(inspection.inspectionDate),
+        inspectorName: inspection.inspectorName ?? null,
+        inspectionType: inspection.inspectionType ?? null,
+        weatherConditions: inspection.weatherConditions ?? null,
+        accessMethod: inspection.accessMethod ?? null,
+        overallCondition: inspection.overallCondition ?? null,
 
-        proposedMaterial: i.proposedMaterial ?? null,
-        shingleBrand: i.shingleBrand ?? null,
-        shingleLine: i.shingleLine ?? null,
-        shingleColor: i.shingleColor ?? null,
-        underlaymentChoice: i.underlaymentChoice ?? null,
-        ridgeCapType: i.ridgeCapType ?? null,
-        ventilationPlan: i.ventilationPlan ?? null,
-        dripEdgeColor: i.dripEdgeColor ?? null,
-        warrantyType: i.warrantyType ?? null,
-        warrantyYears: i.warrantyYears ?? null,
+        roofStyle: inspection.roofStyle ?? null,
+        roofPitch: inspection.roofPitch ?? null,
+        totalSquares: decimalToNum(inspection.totalSquares),
+        ridgeLength: decimalToNum(inspection.ridgeLength),
+        valleyLength: decimalToNum(inspection.valleyLength),
+        eaveLength: decimalToNum(inspection.eaveLength),
+        rakeLength: decimalToNum(inspection.rakeLength),
+        numberOfLayers: inspection.numberOfLayers ?? null,
+        deckingType: inspection.deckingType ?? null,
+        deckingCondition: inspection.deckingCondition ?? null,
+        underlaymentType: inspection.underlaymentType ?? null,
+        ventilationType: inspection.ventilationType ?? null,
+        ventilationCount: inspection.ventilationCount ?? null,
+        flashingCondition: inspection.flashingCondition ?? null,
+        gutterCondition: inspection.gutterCondition ?? null,
+        skylightCount: inspection.skylightCount ?? null,
+        skylightCondition: inspection.skylightCondition ?? null,
+        chimneyPresent: inspection.chimneyPresent ?? null,
+        chimneyCondition: inspection.chimneyCondition ?? null,
+        soffitFasciaCondition: inspection.soffitFasciaCondition ?? null,
+        dripEdgePresent: inspection.dripEdgePresent ?? null,
+        dripEdgeCondition: inspection.dripEdgeCondition ?? null,
+        iceWaterShieldPresent: inspection.iceWaterShieldPresent ?? null,
 
-        materialCost: decimalToNum(i.materialCost),
-        laborCost: decimalToNum(i.laborCost),
-        tearOffCost: decimalToNum(i.tearOffCost),
-        permitCost: decimalToNum(i.permitCost),
-        dumpsterCost: decimalToNum(i.dumpsterCost),
-        miscCost: decimalToNum(i.miscCost),
-        subtotal: decimalToNum(i.subtotal),
-        overheadPercent: decimalToNum(i.overheadPercent),
-        profitPercent: decimalToNum(i.profitPercent),
-        totalEstimate: decimalToNum(i.totalEstimate),
-        customerPrice: decimalToNum(i.customerPrice),
-        depositRequired: decimalToNum(i.depositRequired),
-        depositCollected: i.depositCollected ?? null,
-        paymentMethod: i.paymentMethod ?? null,
-        estimateStatus: i.estimateStatus ?? null,
+        stormDamageFound: inspection.stormDamageFound ?? null,
+        windDamageDetails: inspection.windDamageDetails ?? null,
+        hailDamageDetails: inspection.hailDamageDetails ?? null,
+        hailSizeFound: inspection.hailSizeFound ?? null,
+        testSquareResults: inspection.testSquareResults ?? null,
+        interiorDamageFound: inspection.interiorDamageFound ?? null,
+        interiorDamageDetails: inspection.interiorDamageDetails ?? null,
+        photosTakenCount: inspection.photosTakenCount ?? null,
+        photoFileIds: Array.isArray(inspection.photoFileIds) ? inspection.photoFileIds : [],
+        overallDamageRating: inspection.overallDamageRating ?? null,
 
-        tentativeStartDate: dateToStr(i.tentativeStartDate),
-        estimatedDuration: i.estimatedDuration ?? null,
-        crewSize: i.crewSize ?? null,
-        crewLeadName: i.crewLeadName ?? null,
-        materialsOrdered: i.materialsOrdered ?? null,
-        materialsDeliveryDate: dateToStr(i.materialsDeliveryDate),
-        permitPulled: i.permitPulled ?? null,
-        permitNumber: i.permitNumber ?? null,
-        dumpsterOrdered: i.dumpsterOrdered ?? null,
-        dumpsterDeliveryDate: dateToStr(i.dumpsterDeliveryDate),
+        proposedMaterial: inspection.proposedMaterial ?? null,
+        shingleBrand: inspection.shingleBrand ?? null,
+        shingleLine: inspection.shingleLine ?? null,
+        shingleColor: inspection.shingleColor ?? null,
+        underlaymentChoice: inspection.underlaymentChoice ?? null,
+        ridgeCapType: inspection.ridgeCapType ?? null,
+        ventilationPlan: inspection.ventilationPlan ?? null,
+        dripEdgeColor: inspection.dripEdgeColor ?? null,
+        warrantyType: inspection.warrantyType ?? null,
+        warrantyYears: inspection.warrantyYears ?? null,
 
-        inspectorNotes: i.inspectorNotes ?? null,
-        customerFeedback: i.customerFeedback ?? null,
-        internalNotes: i.internalNotes ?? null,
+        materialCost: decimalToNum(inspection.materialCost),
+        laborCost: decimalToNum(inspection.laborCost),
+        tearOffCost: decimalToNum(inspection.tearOffCost),
+        permitCost: decimalToNum(inspection.permitCost),
+        dumpsterCost: decimalToNum(inspection.dumpsterCost),
+        miscCost: decimalToNum(inspection.miscCost),
+        subtotal: decimalToNum(inspection.subtotal),
+        overheadPercent: decimalToNum(inspection.overheadPercent),
+        profitPercent: decimalToNum(inspection.profitPercent),
+        totalEstimate: decimalToNum(inspection.totalEstimate),
+        customerPrice: decimalToNum(inspection.customerPrice),
+        depositRequired: decimalToNum(inspection.depositRequired),
+        depositCollected: inspection.depositCollected ?? null,
+        paymentMethod: inspection.paymentMethod ?? null,
+        estimateStatus: inspection.estimateStatus ?? null,
 
-        createdById: i.createdById ?? null,
-        createdAt: i.createdAt.toISOString(),
-        updatedAt: i.updatedAt.toISOString(),
+        tentativeStartDate: dateToStr(inspection.tentativeStartDate),
+        estimatedDuration: inspection.estimatedDuration ?? null,
+        crewSize: inspection.crewSize ?? null,
+        crewLeadName: inspection.crewLeadName ?? null,
+        materialsOrdered: inspection.materialsOrdered ?? null,
+        materialsDeliveryDate: dateToStr(inspection.materialsDeliveryDate),
+        permitPulled: inspection.permitPulled ?? null,
+        permitNumber: inspection.permitNumber ?? null,
+        dumpsterOrdered: inspection.dumpsterOrdered ?? null,
+        dumpsterDeliveryDate: dateToStr(inspection.dumpsterDeliveryDate),
+
+        inspectorNotes: inspection.inspectorNotes ?? null,
+        customerFeedback: inspection.customerFeedback ?? null,
+        internalNotes: inspection.internalNotes ?? null,
+
+        createdById: inspection.createdById ?? null,
+        createdAt: dateToStr(inspection.createdAt) ?? new Date().toISOString(),
+        updatedAt: dateToStr(inspection.updatedAt) ?? new Date().toISOString(),
+        lead: inspection.lead ? toInspectionLeadResponseDto(inspection.lead) : null,
+        client: inspection.client ? toInspectionClientResponseDto(inspection.client) : null,
     };
 }

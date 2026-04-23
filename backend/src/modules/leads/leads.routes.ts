@@ -27,10 +27,10 @@ import {
 } from './leads.validators';
 import { inspectionsController } from './inspections.controller';
 import {
-  createInspectionSchema,
-  updateInspectionSchema,
-  inspectionIdSchema,
-  inspectionListSchema,
+  createInspectionForLeadSchema,
+  updateInspectionForLeadSchema,
+  inspectionIdForLeadSchema,
+  inspectionListForLeadSchema,
 } from './inspections.validators';
 import { insuranceClaimsController } from './insurance-claims.controller';
 import {
@@ -431,7 +431,7 @@ router.get(
 router.get(
   '/:leadId/inspections',
   requirePermission(PERMISSIONS.LEADS_VIEW),
-  validate(inspectionListSchema),
+  validate(inspectionListForLeadSchema),
   requireAccessibleLead('leadId'),
   inspectionsController.getByLeadId.bind(inspectionsController)
 );
@@ -443,9 +443,9 @@ router.get(
 router.post(
   '/:leadId/inspections',
   requirePermission(PERMISSIONS.LEADS_UPDATE),
-  validate(createInspectionSchema),
+  validate(createInspectionForLeadSchema),
   requireAccessibleLead('leadId'),
-  inspectionsController.create.bind(inspectionsController)
+  inspectionsController.createForLead.bind(inspectionsController)
 );
 
 /**
@@ -455,7 +455,7 @@ router.post(
 router.get(
   '/:leadId/inspections/:inspectionId',
   requirePermission(PERMISSIONS.LEADS_VIEW),
-  validate(inspectionIdSchema),
+  validate(inspectionIdForLeadSchema),
   requireAccessibleLead('leadId'),
   inspectionsController.getById.bind(inspectionsController)
 );
@@ -467,7 +467,7 @@ router.get(
 router.put(
   '/:leadId/inspections/:inspectionId',
   requirePermission(PERMISSIONS.LEADS_UPDATE),
-  validate(updateInspectionSchema),
+  validate(updateInspectionForLeadSchema),
   requireAccessibleLead('leadId'),
   inspectionsController.update.bind(inspectionsController)
 );
@@ -479,7 +479,7 @@ router.put(
 router.delete(
   '/:leadId/inspections/:inspectionId',
   requirePermission(PERMISSIONS.LEADS_DELETE),
-  validate(inspectionIdSchema),
+  validate(inspectionIdForLeadSchema),
   requireAccessibleLead('leadId'),
   inspectionsController.delete.bind(inspectionsController)
 );

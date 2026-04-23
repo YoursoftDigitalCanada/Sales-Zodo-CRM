@@ -1342,8 +1342,10 @@ model LeadContactedDetails {
 
 model LeadInspection {
   id                    String   @id @default(uuid())
-  leadId                String
-  lead                  Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId                String?
+  lead                  Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  clientId              String?
+  client                Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
   tenantId              String
   tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -1444,6 +1446,7 @@ model LeadInspection {
   updatedAt             DateTime  @updatedAt
 
   @@index([leadId])
+  @@index([clientId])
   @@unique([id, tenantId])
   @@index([tenantId])
   @@index([inspectionDate])
@@ -1629,6 +1632,7 @@ model Client {
   emails                  Email[]
   payments                InvoicePayment[]
   roofEstimates           RoofEstimate[]
+  inspections             LeadInspection[]
   roofData                RoofData[]
   calendarEvents          CalendarEvent[]
   contracts               Contract[]

@@ -14,11 +14,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
+import InspectionEditor from "@/components/inspections/InspectionEditor";
 import {
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { getLeadById, updateLead, convertLead, getInspectionsByLeadId, createInspection, updateInspection, deleteInspection, getInsuranceClaimsByLeadId, createInsuranceClaim, updateInsuranceClaim, deleteInsuranceClaim } from "@/features/leads";
+import { getLeadById, updateLead, convertLead, getInspectionsByLeadId, deleteInspection, getInsuranceClaimsByLeadId, createInsuranceClaim, updateInsuranceClaim, deleteInsuranceClaim } from "@/features/leads";
 import { getFiles, getDownloadUrl } from "@/features/files/services/files-service";
 import { getProjects } from "@/features/projects/services/projects-service";
 import { getTasks } from "@/features/tasks/services/tasks-service";
@@ -565,23 +566,6 @@ const LeadDetailPage = () => {
     }, [id]);
 
     useEffect(() => { fetchInspections(); }, [fetchInspections]);
-
-    const handleSaveInspection = async (data: Record<string, unknown>) => {
-        try {
-            if (editingInspection) {
-                await updateInspection(id!, editingInspection.id, data);
-                toast({ title: "Inspection updated" });
-            } else {
-                await createInspection(id!, data);
-                toast({ title: "Inspection created" });
-            }
-            setShowInspectionDialog(false);
-            setEditingInspection(null);
-            fetchInspections();
-        } catch {
-            toast({ title: "Error", description: "Failed to save inspection.", variant: "destructive" });
-        }
-    };
 
     const handleDeleteInspection = async (inspectionId: string) => {
         if (!confirm("Delete this inspection?")) return;
@@ -1257,7 +1241,37 @@ const LeadDetailPage = () => {
 
             {/* Inspection Form Dialog */}
             {showInspectionDialog && (
-                <InspectionFormDialog open={showInspectionDialog} onClose={() => { setShowInspectionDialog(false); setEditingInspection(null); }} onSave={handleSaveInspection} inspection={editingInspection} />
+                <Dialog
+                    open={showInspectionDialog}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setShowInspectionDialog(false);
+                            setEditingInspection(null);
+                        }
+                    }}
+                >
+                    <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
+                        <DialogHeader>
+                            <DialogTitle>{editingInspection ? "Edit Inspection" : "New Inspection"}</DialogTitle>
+                            <DialogDescription>
+                                Use the same inspection workflow as the standalone inspections module.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <InspectionEditor
+                            initialInspection={editingInspection}
+                            lockedLeadId={editingInspection ? undefined : id}
+                            onCancel={() => {
+                                setShowInspectionDialog(false);
+                                setEditingInspection(null);
+                            }}
+                            onSuccess={() => {
+                                setShowInspectionDialog(false);
+                                setEditingInspection(null);
+                                fetchInspections();
+                            }}
+                        />
+                    </DialogContent>
+                </Dialog>
             )}
 
             {/* Insurance Claim Form Dialog */}

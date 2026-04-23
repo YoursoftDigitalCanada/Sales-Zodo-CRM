@@ -154,6 +154,198 @@ function getSeverityFromRating(rating: string | null): { label: string; color: s
     return { label: rating, color: "#6B7280", bgColor: "#F3F4F6", score: 0 };
 }
 
+const SAVED_FIELD_LABELS: Record<string, string> = {
+    inspectionDate: "Inspection Date",
+    inspectorName: "Inspector Name",
+    inspectionType: "Inspection Type",
+    weatherConditions: "Weather Conditions",
+    accessMethod: "Access Method",
+    overallCondition: "Overall Condition",
+    overallDamageRating: "Overall Damage Rating",
+    estimateStatus: "Estimate Status",
+    roofStyle: "Roof Style",
+    roofPitch: "Roof Pitch",
+    totalSquares: "Total Squares",
+    ridgeLength: "Ridge Length",
+    valleyLength: "Valley Length",
+    eaveLength: "Eave Length",
+    rakeLength: "Rake Length",
+    numberOfLayers: "Number Of Layers",
+    deckingType: "Decking Type",
+    deckingCondition: "Decking Condition",
+    underlaymentType: "Underlayment Type",
+    ventilationType: "Ventilation Type",
+    ventilationCount: "Ventilation Count",
+    flashingCondition: "Flashing Condition",
+    gutterCondition: "Gutter Condition",
+    skylightCount: "Skylight Count",
+    skylightCondition: "Skylight Condition",
+    chimneyCondition: "Chimney Condition",
+    soffitFasciaCondition: "Soffit / Fascia Condition",
+    dripEdgeCondition: "Drip Edge Condition",
+    stormDamageFound: "Storm Damage Found",
+    windDamageDetails: "Wind Damage Details",
+    hailDamageDetails: "Hail Damage Details",
+    hailSizeFound: "Hail Size Found",
+    testSquareResults: "Test Square Results",
+    interiorDamageFound: "Interior Damage Found",
+    interiorDamageDetails: "Interior Damage Details",
+    photosTakenCount: "Photos Taken",
+    proposedMaterial: "Proposed Material",
+    shingleBrand: "Shingle Brand",
+    shingleLine: "Shingle Line",
+    shingleColor: "Shingle Color",
+    underlaymentChoice: "Underlayment Choice",
+    ridgeCapType: "Ridge Cap Type",
+    ventilationPlan: "Ventilation Plan",
+    dripEdgeColor: "Drip Edge Color",
+    warrantyType: "Warranty Type",
+    warrantyYears: "Warranty Years",
+    materialCost: "Material Cost",
+    laborCost: "Labor Cost",
+    tearOffCost: "Tear-Off Cost",
+    permitCost: "Permit Cost",
+    dumpsterCost: "Dumpster Cost",
+    miscCost: "Misc Cost",
+    subtotal: "Subtotal",
+    overheadPercent: "Overhead Percent",
+    profitPercent: "Profit Percent",
+    totalEstimate: "Total Estimate",
+    customerPrice: "Customer Price",
+    depositRequired: "Deposit Required",
+    depositCollected: "Deposit Collected",
+    paymentMethod: "Payment Method",
+    tentativeStartDate: "Tentative Start Date",
+    estimatedDuration: "Estimated Duration",
+    crewSize: "Crew Size",
+    crewLeadName: "Crew Lead Name",
+    materialsOrdered: "Materials Ordered",
+    materialsDeliveryDate: "Materials Delivery Date",
+    permitPulled: "Permit Pulled",
+    permitNumber: "Permit Number",
+    dumpsterOrdered: "Dumpster Ordered",
+    dumpsterDeliveryDate: "Dumpster Delivery Date",
+};
+
+const SAVED_TEXTAREA_FIELDS = new Set([
+    "inspectorNotes",
+    "customerFeedback",
+    "internalNotes",
+]);
+
+const SAVED_FIELD_KEYS = [
+    "inspectionDate",
+    "inspectorName",
+    "inspectionType",
+    "weatherConditions",
+    "accessMethod",
+    "overallCondition",
+    "overallDamageRating",
+    "estimateStatus",
+    "roofStyle",
+    "roofPitch",
+    "totalSquares",
+    "ridgeLength",
+    "valleyLength",
+    "eaveLength",
+    "rakeLength",
+    "numberOfLayers",
+    "deckingType",
+    "deckingCondition",
+    "underlaymentType",
+    "ventilationType",
+    "ventilationCount",
+    "flashingCondition",
+    "gutterCondition",
+    "skylightCount",
+    "skylightCondition",
+    "chimneyPresent",
+    "chimneyCondition",
+    "soffitFasciaCondition",
+    "dripEdgePresent",
+    "dripEdgeCondition",
+    "iceWaterShieldPresent",
+    "stormDamageFound",
+    "windDamageDetails",
+    "hailDamageDetails",
+    "hailSizeFound",
+    "testSquareResults",
+    "interiorDamageFound",
+    "interiorDamageDetails",
+    "photosTakenCount",
+    "proposedMaterial",
+    "shingleBrand",
+    "shingleLine",
+    "shingleColor",
+    "underlaymentChoice",
+    "ridgeCapType",
+    "ventilationPlan",
+    "dripEdgeColor",
+    "warrantyType",
+    "warrantyYears",
+    "materialCost",
+    "laborCost",
+    "tearOffCost",
+    "permitCost",
+    "dumpsterCost",
+    "miscCost",
+    "subtotal",
+    "overheadPercent",
+    "profitPercent",
+    "totalEstimate",
+    "customerPrice",
+    "depositRequired",
+    "depositCollected",
+    "paymentMethod",
+    "tentativeStartDate",
+    "estimatedDuration",
+    "crewSize",
+    "crewLeadName",
+    "materialsOrdered",
+    "materialsDeliveryDate",
+    "permitPulled",
+    "permitNumber",
+    "dumpsterOrdered",
+    "dumpsterDeliveryDate",
+    "inspectorNotes",
+    "customerFeedback",
+    "internalNotes",
+] as const;
+
+function formatSavedFieldValue(key: string, value: unknown): string {
+    if (value == null) return "";
+
+    if (typeof value === "boolean") {
+        return value ? "Yes" : "No";
+    }
+
+    if (typeof value === "number") {
+        return Number.isFinite(value) ? String(value) : "";
+    }
+
+    if (typeof value !== "string") {
+        return "";
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+
+    if (key.toLowerCase().includes("date")) {
+        const parsed = new Date(trimmed);
+        if (!Number.isNaN(parsed.getTime())) {
+            return parsed.toLocaleString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                hour: trimmed.includes("T") ? "numeric" : undefined,
+                minute: trimmed.includes("T") ? "2-digit" : undefined,
+            });
+        }
+    }
+
+    return trimmed;
+}
+
 interface StoredInspectionPhoto {
     id: string;
     name: string;
@@ -340,6 +532,7 @@ const InspectionDetail = () => {
                 client: current.client || updated.client,
             };
         });
+        populateForm(updated);
     };
 
     const populateForm = (data: InspectionEntity) => {
@@ -649,6 +842,15 @@ const InspectionDetail = () => {
     }
 
     const severity = getSeverityFromRating(inspection.overallDamageRating);
+    const savedFieldEntries = SAVED_FIELD_KEYS
+        .map((key) => ({
+            key,
+            label: SAVED_FIELD_LABELS[key] || key,
+            value: formatSavedFieldValue(key, inspection[key]),
+        }))
+        .filter((entry) => entry.value);
+    const savedSummaryFields = savedFieldEntries.filter((entry) => !SAVED_TEXTAREA_FIELDS.has(entry.key));
+    const savedNoteFields = savedFieldEntries.filter((entry) => SAVED_TEXTAREA_FIELDS.has(entry.key));
 
     return (
         <div className="min-h-screen bg-[#F9FAFB]">
@@ -1037,6 +1239,49 @@ const InspectionDetail = () => {
                     uploading={photoMutating}
                     disabled={saving || photoMutating}
                 />
+
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm mb-6"
+                >
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                        <div>
+                            <h3 className="font-semibold text-gray-900">Saved Inspection Data</h3>
+                            <p className="text-sm text-gray-500">This is the data currently stored for this inspection and used for the PDF.</p>
+                        </div>
+                        <Badge variant="outline" className="rounded-lg border-gray-200 text-gray-600">
+                            {savedFieldEntries.length} field{savedFieldEntries.length === 1 ? "" : "s"} saved
+                        </Badge>
+                    </div>
+
+                    {savedSummaryFields.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                            {savedSummaryFields.map((field) => (
+                                <div key={field.key} className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+                                    <p className="text-xs text-gray-400 mb-1">{field.label}</p>
+                                    <p className="text-sm font-medium text-gray-900 break-words">{field.value}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-sm text-gray-500">
+                            No inspection fields have been saved yet.
+                        </div>
+                    )}
+
+                    {savedNoteFields.length > 0 ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mt-4">
+                            {savedNoteFields.map((field) => (
+                                <div key={field.key} className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+                                    <p className="text-xs text-gray-400 mb-1">{field.label}</p>
+                                    <p className="text-sm text-gray-900 whitespace-pre-wrap break-words">{field.value}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : null}
+                </motion.div>
 
                 {/* INSPECTOR NOTES */}
                 <motion.div

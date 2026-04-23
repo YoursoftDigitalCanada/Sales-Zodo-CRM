@@ -84,6 +84,70 @@ export interface InspectionReportSnapshot {
   measurementSource?: string | null;
   recommendation?: string | null;
   inspectorNotes?: string | null;
+  customerFeedback?: string | null;
+  internalNotes?: string | null;
+  roofStyle?: string | null;
+  ridgeLength?: number | null;
+  valleyLength?: number | null;
+  eaveLength?: number | null;
+  rakeLength?: number | null;
+  numberOfLayers?: number | null;
+  deckingType?: string | null;
+  deckingCondition?: string | null;
+  underlaymentType?: string | null;
+  ventilationType?: string | null;
+  ventilationCount?: number | null;
+  flashingCondition?: string | null;
+  gutterCondition?: string | null;
+  skylightCount?: number | null;
+  skylightCondition?: string | null;
+  chimneyPresent?: boolean | null;
+  chimneyCondition?: string | null;
+  soffitFasciaCondition?: string | null;
+  dripEdgePresent?: boolean | null;
+  dripEdgeCondition?: string | null;
+  iceWaterShieldPresent?: boolean | null;
+  stormDamageFound?: boolean | null;
+  windDamageDetails?: string | null;
+  hailDamageDetails?: string | null;
+  hailSizeFound?: string | null;
+  testSquareResults?: string | null;
+  interiorDamageFound?: boolean | null;
+  interiorDamageDetails?: string | null;
+  photosTakenCount?: number | null;
+  proposedMaterial?: string | null;
+  shingleBrand?: string | null;
+  shingleLine?: string | null;
+  shingleColor?: string | null;
+  underlaymentChoice?: string | null;
+  ridgeCapType?: string | null;
+  ventilationPlan?: string | null;
+  dripEdgeColor?: string | null;
+  warrantyType?: string | null;
+  warrantyYears?: number | null;
+  materialCost?: number | null;
+  laborCost?: number | null;
+  tearOffCost?: number | null;
+  permitCost?: number | null;
+  dumpsterCost?: number | null;
+  miscCost?: number | null;
+  subtotal?: number | null;
+  overheadPercent?: number | null;
+  profitPercent?: number | null;
+  customerPrice?: number | null;
+  depositRequired?: number | null;
+  depositCollected?: boolean | null;
+  paymentMethod?: string | null;
+  tentativeStartDate?: string | null;
+  estimatedDuration?: string | null;
+  crewSize?: number | null;
+  crewLeadName?: string | null;
+  materialsOrdered?: boolean | null;
+  materialsDeliveryDate?: string | null;
+  permitPulled?: boolean | null;
+  permitNumber?: string | null;
+  dumpsterOrdered?: boolean | null;
+  dumpsterDeliveryDate?: string | null;
   measurements: InspectionReportMeasurements;
   damageChecks: InspectionReportDamageChecks;
   roofField: InspectionReportRoofField;
@@ -280,6 +344,70 @@ export function buildInspectionReportSnapshot(
           ? "partial_repair"
           : "no_action"),
     inspectorNotes: overrides.inspectorNotes ?? inspection.inspectorNotes,
+    customerFeedback: overrides.customerFeedback ?? inspection.customerFeedback,
+    internalNotes: overrides.internalNotes ?? inspection.internalNotes,
+    roofStyle: overrides.roofStyle ?? inspection.roofStyle,
+    ridgeLength: overrides.ridgeLength ?? inspection.ridgeLength,
+    valleyLength: overrides.valleyLength ?? inspection.valleyLength,
+    eaveLength: overrides.eaveLength ?? inspection.eaveLength,
+    rakeLength: overrides.rakeLength ?? inspection.rakeLength,
+    numberOfLayers: overrides.numberOfLayers ?? inspection.numberOfLayers,
+    deckingType: overrides.deckingType ?? inspection.deckingType,
+    deckingCondition: overrides.deckingCondition ?? inspection.deckingCondition,
+    underlaymentType: overrides.underlaymentType ?? inspection.underlaymentType,
+    ventilationType: overrides.ventilationType ?? inspection.ventilationType,
+    ventilationCount: overrides.ventilationCount ?? inspection.ventilationCount,
+    flashingCondition: overrides.flashingCondition ?? inspection.flashingCondition,
+    gutterCondition: overrides.gutterCondition ?? inspection.gutterCondition,
+    skylightCount: overrides.skylightCount ?? inspection.skylightCount,
+    skylightCondition: overrides.skylightCondition ?? inspection.skylightCondition,
+    chimneyPresent: overrides.chimneyPresent ?? inspection.chimneyPresent,
+    chimneyCondition: overrides.chimneyCondition ?? inspection.chimneyCondition,
+    soffitFasciaCondition: overrides.soffitFasciaCondition ?? inspection.soffitFasciaCondition,
+    dripEdgePresent: overrides.dripEdgePresent ?? inspection.dripEdgePresent,
+    dripEdgeCondition: overrides.dripEdgeCondition ?? inspection.dripEdgeCondition,
+    iceWaterShieldPresent: overrides.iceWaterShieldPresent ?? inspection.iceWaterShieldPresent,
+    stormDamageFound: overrides.stormDamageFound ?? inspection.stormDamageFound,
+    windDamageDetails: overrides.windDamageDetails ?? inspection.windDamageDetails,
+    hailDamageDetails: overrides.hailDamageDetails ?? inspection.hailDamageDetails,
+    hailSizeFound: overrides.hailSizeFound ?? inspection.hailSizeFound,
+    testSquareResults: overrides.testSquareResults ?? inspection.testSquareResults,
+    interiorDamageFound: overrides.interiorDamageFound ?? inspection.interiorDamageFound,
+    interiorDamageDetails: overrides.interiorDamageDetails ?? inspection.interiorDamageDetails,
+    photosTakenCount: overrides.photosTakenCount ?? inspection.photosTakenCount,
+    proposedMaterial: overrides.proposedMaterial ?? inspection.proposedMaterial,
+    shingleBrand: overrides.shingleBrand ?? inspection.shingleBrand,
+    shingleLine: overrides.shingleLine ?? inspection.shingleLine,
+    shingleColor: overrides.shingleColor ?? inspection.shingleColor,
+    underlaymentChoice: overrides.underlaymentChoice ?? inspection.underlaymentChoice,
+    ridgeCapType: overrides.ridgeCapType ?? inspection.ridgeCapType,
+    ventilationPlan: overrides.ventilationPlan ?? inspection.ventilationPlan,
+    dripEdgeColor: overrides.dripEdgeColor ?? inspection.dripEdgeColor,
+    warrantyType: overrides.warrantyType ?? inspection.warrantyType,
+    warrantyYears: overrides.warrantyYears ?? inspection.warrantyYears,
+    materialCost: overrides.materialCost ?? inspection.materialCost,
+    laborCost: overrides.laborCost ?? inspection.laborCost,
+    tearOffCost: overrides.tearOffCost ?? inspection.tearOffCost,
+    permitCost: overrides.permitCost ?? inspection.permitCost,
+    dumpsterCost: overrides.dumpsterCost ?? inspection.dumpsterCost,
+    miscCost: overrides.miscCost ?? inspection.miscCost,
+    subtotal: overrides.subtotal ?? inspection.subtotal,
+    overheadPercent: overrides.overheadPercent ?? inspection.overheadPercent,
+    profitPercent: overrides.profitPercent ?? inspection.profitPercent,
+    customerPrice: overrides.customerPrice ?? inspection.customerPrice,
+    depositRequired: overrides.depositRequired ?? inspection.depositRequired,
+    depositCollected: overrides.depositCollected ?? inspection.depositCollected,
+    paymentMethod: overrides.paymentMethod ?? inspection.paymentMethod,
+    tentativeStartDate: overrides.tentativeStartDate ?? inspection.tentativeStartDate,
+    estimatedDuration: overrides.estimatedDuration ?? inspection.estimatedDuration,
+    crewSize: overrides.crewSize ?? inspection.crewSize,
+    crewLeadName: overrides.crewLeadName ?? inspection.crewLeadName,
+    materialsOrdered: overrides.materialsOrdered ?? inspection.materialsOrdered,
+    materialsDeliveryDate: overrides.materialsDeliveryDate ?? inspection.materialsDeliveryDate,
+    permitPulled: overrides.permitPulled ?? inspection.permitPulled,
+    permitNumber: overrides.permitNumber ?? inspection.permitNumber,
+    dumpsterOrdered: overrides.dumpsterOrdered ?? inspection.dumpsterOrdered,
+    dumpsterDeliveryDate: overrides.dumpsterDeliveryDate ?? inspection.dumpsterDeliveryDate,
     measurements: overrides.measurements ?? {
       totalSquares: inspection.totalSquares?.toString() || "",
       pitch: inspection.roofPitch || "",
@@ -520,6 +648,20 @@ export async function generateInspectionReportPdf(
       ["Gutters", formatValue(snapshot.measurements.gutters), "Last Updated", formatDateTime(snapshot.updatedAt)],
     ]);
 
+    drawKeyValueTable("Roof Assessment Details", [
+      ["Roof Style", formatValue(snapshot.roofStyle), "Layers", formatValue(snapshot.numberOfLayers)],
+      ["Ridge Length", formatValue(snapshot.ridgeLength), "Valley Length", formatValue(snapshot.valleyLength)],
+      ["Eave Length", formatValue(snapshot.eaveLength), "Rake Length", formatValue(snapshot.rakeLength)],
+      ["Decking Type", formatValue(snapshot.deckingType), "Decking Condition", formatValue(snapshot.deckingCondition)],
+      ["Underlayment Type", formatValue(snapshot.underlaymentType), "Underlayment Choice", formatValue(snapshot.underlaymentChoice)],
+      ["Ventilation Type", formatValue(snapshot.ventilationType), "Vent Count", formatValue(snapshot.ventilationCount)],
+      ["Flashing Condition", formatValue(snapshot.flashingCondition), "Gutter Condition", formatValue(snapshot.gutterCondition)],
+      ["Skylight Count", formatValue(snapshot.skylightCount), "Skylight Condition", formatValue(snapshot.skylightCondition)],
+      ["Chimney Present", formatBoolean(Boolean(snapshot.chimneyPresent)), "Chimney Condition", formatValue(snapshot.chimneyCondition)],
+      ["Soffit/Fascia", formatValue(snapshot.soffitFasciaCondition), "Drip Edge Present", formatBoolean(Boolean(snapshot.dripEdgePresent))],
+      ["Drip Edge Condition", formatValue(snapshot.dripEdgeCondition), "Ice/Water Shield", formatBoolean(Boolean(snapshot.iceWaterShieldPresent))],
+    ]);
+
     drawKeyValueTable("Damage Assessment", [
       ["Roof Field", formatValue(snapshot.roofField.condition), "Hail Size", formatValue(snapshot.roofField.hailSize)],
       ["Hit Count / Severity", formatValue(snapshot.roofField.hitCount), "Hail Damage Found", formatBoolean(snapshot.damageChecks.hail)],
@@ -537,7 +679,42 @@ export async function generateInspectionReportPdf(
       ["Ventilation Recommendation", formatValue(snapshot.ventilation.recommendation), "Created", formatDateTime(snapshot.createdAt)],
     ]);
 
+    drawKeyValueTable("Materials And Warranty", [
+      ["Proposed Material", formatValue(snapshot.proposedMaterial), "Shingle Brand", formatValue(snapshot.shingleBrand)],
+      ["Shingle Line", formatValue(snapshot.shingleLine), "Shingle Color", formatValue(snapshot.shingleColor)],
+      ["Ridge Cap", formatValue(snapshot.ridgeCapType), "Drip Edge Color", formatValue(snapshot.dripEdgeColor)],
+      ["Ventilation Plan", formatValue(snapshot.ventilationPlan), "Warranty Type", formatValue(snapshot.warrantyType)],
+      ["Warranty Years", formatValue(snapshot.warrantyYears), "Photos Attached", formatValue(snapshot.photosTakenCount ?? photoIds.length)],
+    ]);
+
+    drawKeyValueTable("Estimate And Pricing", [
+      ["Material Cost", formatCurrency(snapshot.materialCost), "Labor Cost", formatCurrency(snapshot.laborCost)],
+      ["Tear-Off Cost", formatCurrency(snapshot.tearOffCost), "Permit Cost", formatCurrency(snapshot.permitCost)],
+      ["Dumpster Cost", formatCurrency(snapshot.dumpsterCost), "Misc Cost", formatCurrency(snapshot.miscCost)],
+      ["Subtotal", formatCurrency(snapshot.subtotal), "Overhead %", formatValue(snapshot.overheadPercent)],
+      ["Profit %", formatValue(snapshot.profitPercent), "Customer Price", formatCurrency(snapshot.customerPrice)],
+      ["Deposit Required", formatCurrency(snapshot.depositRequired), "Deposit Collected", formatBoolean(Boolean(snapshot.depositCollected))],
+      ["Payment Method", formatValue(snapshot.paymentMethod), "Estimate Status", formatValue(snapshot.estimateStatus)],
+    ]);
+
+    drawKeyValueTable("Scheduling And Logistics", [
+      ["Tentative Start", formatDate(snapshot.tentativeStartDate), "Duration", formatValue(snapshot.estimatedDuration)],
+      ["Crew Size", formatValue(snapshot.crewSize), "Crew Lead", formatValue(snapshot.crewLeadName)],
+      ["Materials Ordered", formatBoolean(Boolean(snapshot.materialsOrdered)), "Delivery Date", formatDate(snapshot.materialsDeliveryDate)],
+      ["Permit Pulled", formatBoolean(Boolean(snapshot.permitPulled)), "Permit Number", formatValue(snapshot.permitNumber)],
+      ["Dumpster Ordered", formatBoolean(Boolean(snapshot.dumpsterOrdered)), "Dumpster Delivery", formatDate(snapshot.dumpsterDeliveryDate)],
+    ]);
+
+    drawKeyValueTable("Detailed Damage Notes", [
+      ["Storm Damage", formatBoolean(Boolean(snapshot.stormDamageFound)), "Interior Damage", formatBoolean(Boolean(snapshot.interiorDamageFound))],
+      ["Hail Size", formatValue(snapshot.hailSizeFound), "Test Square", formatValue(snapshot.testSquareResults)],
+      ["Wind Notes", formatValue(snapshot.windDamageDetails), "Hail Notes", formatValue(snapshot.hailDamageDetails)],
+      ["Interior Damage Details", formatValue(snapshot.interiorDamageDetails), "Updated", formatDateTime(snapshot.updatedAt)],
+    ]);
+
     drawMultilineBlock("Inspector Notes", snapshot.inspectorNotes);
+    drawMultilineBlock("Customer Feedback", snapshot.customerFeedback);
+    drawMultilineBlock("Internal Notes", snapshot.internalNotes);
 
     drawSectionTitle("Inspection Photos");
 

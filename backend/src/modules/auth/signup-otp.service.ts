@@ -44,6 +44,16 @@ function generateOtp(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+const SIGNUP_OTP_SUBJECTS = [
+  'Your verification code for Zodo CRM',
+  'Verify your email address for Zodo CRM',
+  'Complete your Zodo CRM email verification',
+] as const;
+
+function getSignupOtpSubject(sendCount: number): string {
+  return SIGNUP_OTP_SUBJECTS[Math.max(0, (sendCount - 1) % SIGNUP_OTP_SUBJECTS.length)];
+}
+
 class SignupOtpService {
   private readonly records = new Map<string, SignupOtpRecord>();
 
@@ -90,7 +100,7 @@ class SignupOtpService {
     this.records.set(key, record);
     const delivery = await tenantMailerService.sendSignupEmail({
       to: email,
-      subject: 'Your Zodo CRM verification code',
+      subject: getSignupOtpSubject(record.sendCount),
       html: this.buildEmailTemplate(otp),
       text: `Your Zodo CRM verification code is ${otp}. It expires in 5 minutes.`,
     });

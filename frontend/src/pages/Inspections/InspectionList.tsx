@@ -69,6 +69,8 @@ import type { CompanyProfile } from "@/features/settings/services/settings-servi
 import { getCompanyProfile } from "@/features/settings/services/settings-service";
 import InspectionReportPreviewDialog from "@/components/inspections/InspectionReportPreviewDialog";
 import { ensureInspectionReportFile } from "@/features/leads/utils/ensure-inspection-report-file";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { cn } from "@/lib/utils";
 
 // ============================================
 // TYPES
@@ -240,7 +242,7 @@ const StatCard = ({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay }}
         whileHover={{ y: -4 }}
-        className="relative bg-white rounded-lg p-5 border border-gray-100 hover:border-cyan-200 hover:shadow-lg transition-all overflow-hidden group"
+        className="relative min-w-[220px] sm:min-w-0 bg-white rounded-lg p-5 border border-gray-100 hover:border-cyan-200 hover:shadow-lg transition-all overflow-hidden group"
     >
         <div
             className="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-10 group-hover:opacity-20 transition-all"
@@ -280,6 +282,7 @@ const StatCard = ({
 const InspectionList = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { isMobile, isTablet } = useIsMobile();
 
     // State
     const [inspectionRecords, setInspectionRecords] = useState<InspectionEntity[]>([]);
@@ -596,6 +599,83 @@ const InspectionList = () => {
         { id: "completed", label: "Completed", count: stats.completed },
     ];
 
+    const renderInspectionActions = (inspection: Inspection, compact = false) => (
+        <div className={cn("flex items-center", compact ? "gap-1.5" : "gap-1")}>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                                "rounded-lg hover:bg-blue-50 hover:text-[#1E40AF]",
+                                compact ? "h-8 w-8" : "h-7 w-7"
+                            )}
+                            onClick={() => void handlePreviewReport(inspection)}
+                            disabled={reportGeneratingId === inspection.id}
+                        >
+                            {reportGeneratingId === inspection.id ? (
+                                <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                                <Eye size={14} />
+                            )}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>View PDF</TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                                "rounded-lg hover:bg-blue-50 hover:text-[#1E40AF]",
+                                compact ? "h-8 w-8" : "h-7 w-7"
+                            )}
+                            onClick={() => navigate(`/inspections/${inspection.id}`)}
+                        >
+                            <Pencil size={14} />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Edit</TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn("rounded-lg", compact ? "h-8 w-8" : "h-7 w-7")}
+                    >
+                        <MoreHorizontal size={14} />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-lg w-44">
+                    <DropdownMenuItem className="rounded-lg" onClick={() => void handlePreviewReport(inspection)}>
+                        <Eye size={14} className="mr-2" /> View Report
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                        className="rounded-lg"
+                        onClick={() => void handleEmailReport(inspection)}
+                        disabled={emailPreparingId === inspection.id}
+                    >
+                        {emailPreparingId === inspection.id ? (
+                            <Loader2 size={14} className="mr-2 animate-spin" />
+                        ) : (
+                            <Mail size={14} className="mr-2" />
+                        )}
+                        Email Report
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="rounded-lg text-red-600">
+                        <Trash2 size={14} className="mr-2" /> Delete
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+    );
+
     return (
         <div className="min-h-screen bg-[#F9FAFB]">
             {/* Header */}
@@ -645,7 +725,14 @@ const InspectionList = () => {
 
             <div className="p-4 sm:p-6 lg:p-8">
                 {/* Stats Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 mb-6">
+                <div
+                    className={cn(
+                        "mb-6 gap-3 sm:gap-4 lg:gap-6",
+                        isMobile
+                            ? "flex overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none]"
+                            : "grid grid-cols-2 xl:grid-cols-5"
+                    )}
+                >
                     <StatCard title="Total Inspections" value={stats.total} icon={ClipboardList} color="#3B82F6" />
                     <StatCard title="Today" value={stats.todayScheduled} icon={CalendarDays} color="#F59E0B" delay={0.1} />
                     <StatCard title="Pending Report" value={stats.pendingReport} icon={FileText} color="#F97316" delay={0.2} />
@@ -687,8 +774,8 @@ const InspectionList = () => {
 
                     {/* Search & Filters */}
                     <div className="p-4 border-b border-gray-50">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                            <div className="relative flex-1 sm:max-w-md">
+                        <div className={cn("gap-3", isMobile ? "space-y-3" : "flex flex-col xl:flex-row xl:items-center")}>
+                            <div className={cn("relative", isMobile ? "w-full" : "flex-1 xl:max-w-md")}>
                                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                 <Input
                                     value={searchQuery}
@@ -697,9 +784,9 @@ const InspectionList = () => {
                                     className="pl-9 h-10 rounded-lg border-gray-200"
                                 />
                             </div>
-                            <div className="flex items-center gap-2 overflow-x-auto">
+                            <div className={cn("gap-2", isMobile ? "grid grid-cols-1" : "flex flex-wrap items-center")}>
                                 <Select value={filterInspector} onValueChange={setFilterInspector}>
-                                    <SelectTrigger className="w-[150px] h-10 rounded-lg border-gray-200 text-sm">
+                                    <SelectTrigger className={cn("h-10 rounded-lg border-gray-200 text-sm", isMobile ? "w-full" : "w-[160px]")}>
                                         <SelectValue placeholder="Inspector" />
                                     </SelectTrigger>
                                     <SelectContent className="rounded-lg">
@@ -710,7 +797,7 @@ const InspectionList = () => {
                                     </SelectContent>
                                 </Select>
                                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                                    <SelectTrigger className="w-[140px] h-10 rounded-lg border-gray-200 text-sm">
+                                    <SelectTrigger className={cn("h-10 rounded-lg border-gray-200 text-sm", isMobile ? "w-full" : "w-[150px]")}>
                                         <SelectValue placeholder="Status" />
                                     </SelectTrigger>
                                     <SelectContent className="rounded-lg">
@@ -726,7 +813,7 @@ const InspectionList = () => {
                                     </SelectContent>
                                 </Select>
                                 <Select value={filterDamageType} onValueChange={setFilterDamageType}>
-                                    <SelectTrigger className="w-[150px] h-10 rounded-lg border-gray-200 text-sm">
+                                    <SelectTrigger className={cn("h-10 rounded-lg border-gray-200 text-sm", isMobile ? "w-full" : "w-[170px]")}>
                                         <SelectValue placeholder="Damage Type" />
                                     </SelectTrigger>
                                     <SelectContent className="rounded-lg">
@@ -749,7 +836,7 @@ const InspectionList = () => {
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: "auto", opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
-                                className="px-4 py-2 bg-blue-50 border-b border-blue-100 flex items-center gap-3"
+                                className="px-4 py-3 bg-blue-50 border-b border-blue-100 flex flex-wrap items-center gap-2 sm:gap-3"
                             >
                                 <span className="text-sm font-medium text-[#1E40AF]">
                                     {selectedRows.size} selected
@@ -765,8 +852,136 @@ const InspectionList = () => {
                         )}
                     </AnimatePresence>
 
-                    {/* Data Table */}
-                    <div className="overflow-x-auto">
+                    {/* Mobile / Tablet Cards */}
+                    {(isMobile || isTablet) && (
+                        <div className="p-4 space-y-3 lg:hidden">
+                            <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 bg-gray-50/70 px-3 py-2">
+                                <div className="text-sm font-medium text-gray-600">
+                                    {filteredInspections.length} inspection{filteredInspections.length === 1 ? "" : "s"}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Checkbox
+                                        checked={selectedRows.size === filteredInspections.length && filteredInspections.length > 0}
+                                        onCheckedChange={toggleSelectAll}
+                                        className="data-[state=checked]:bg-[#1E40AF] data-[state=checked]:border-[#1E40AF]"
+                                    />
+                                    <span className="text-xs text-gray-500">Select all</span>
+                                </div>
+                            </div>
+
+                            {loading ? (
+                                <div className="flex flex-col items-center rounded-xl border border-dashed border-gray-200 px-4 py-16 text-center">
+                                    <div className="mb-3 h-8 w-8 animate-spin rounded-full border-2 border-[#1E40AF] border-t-transparent" />
+                                    <p className="text-gray-400">Loading inspections...</p>
+                                </div>
+                            ) : filteredInspections.length === 0 ? (
+                                <div className="flex flex-col items-center rounded-xl border border-dashed border-gray-200 px-4 py-16 text-center">
+                                    <ClipboardList size={48} className="mb-3 text-gray-300" />
+                                    <p className="font-medium text-gray-400">No inspections found</p>
+                                    <p className="text-sm text-gray-400">Try adjusting your filters</p>
+                                </div>
+                            ) : (
+                                filteredInspections.map((inspection) => {
+                                    const status = statusConfig[inspection.status];
+                                    const StatusIcon = status.icon;
+
+                                    return (
+                                        <motion.div
+                                            key={inspection.id}
+                                            whileHover={isMobile ? undefined : { y: -2 }}
+                                            className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <div onClick={(e) => e.stopPropagation()} className="pt-1">
+                                                    <Checkbox
+                                                        checked={selectedRows.has(inspection.id)}
+                                                        onCheckedChange={() => toggleSelectRow(inspection.id)}
+                                                        className="data-[state=checked]:bg-[#1E40AF] data-[state=checked]:border-[#1E40AF]"
+                                                    />
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="flex-1 text-left"
+                                                    onClick={() => navigate(`/inspections/${inspection.id}`)}
+                                                >
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex items-center gap-3">
+                                                                <Avatar className="h-10 w-10">
+                                                                    <AvatarFallback className="bg-blue-50 text-[#1E40AF] font-medium text-xs">
+                                                                        {getInitials(inspection.customerName)}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="min-w-0">
+                                                                    <p className="truncate font-medium text-gray-900">
+                                                                        {inspection.customerName}
+                                                                    </p>
+                                                                    <p className="truncate text-xs text-gray-400">
+                                                                        {inspection.customerPhone || inspection.customerEmail || "No contact info"}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <span
+                                                            className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium"
+                                                            style={{ backgroundColor: status.bgColor, color: status.color }}
+                                                        >
+                                                            <StatusIcon size={12} />
+                                                            {status.label}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                                        <div className="flex items-start gap-2">
+                                                            <MapPin size={14} className="mt-0.5 flex-shrink-0 text-gray-400" />
+                                                            <span className="text-sm text-gray-600">{inspection.address || "No address added"}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <UserCheck size={14} className="flex-shrink-0 text-gray-400" />
+                                                            <span className="text-sm text-gray-600">{inspection.inspectorName}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <Calendar size={14} className="flex-shrink-0 text-gray-400" />
+                                                            <span className="text-sm text-gray-600">{formatDate(inspection.date)}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <Clock size={14} className="flex-shrink-0 text-gray-400" />
+                                                            <span className="text-sm text-gray-600">{formatTime(inspection.time) || "Time pending"}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                                                        <Badge variant="secondary" className="rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-100">
+                                                            {inspection.inspectionType}
+                                                        </Badge>
+                                                        {inspection.stormDamage && (
+                                                            <Badge variant="secondary" className="rounded-lg bg-red-50 text-red-600 hover:bg-red-50">
+                                                                Storm Damage
+                                                            </Badge>
+                                                        )}
+                                                        {inspection.insuranceCompany && (
+                                                            <Badge variant="secondary" className="rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-50">
+                                                                Insurance
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            </div>
+
+                                            <div className="mt-4 flex items-center justify-end border-t border-gray-100 pt-3">
+                                                <div onClick={(e) => e.stopPropagation()}>
+                                                    {renderInspectionActions(inspection, true)}
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    )}
+
+                    {/* Desktop Table */}
+                    <div className={cn("overflow-x-auto", (isMobile || isTablet) && "hidden lg:block")}>
                         <Table>
                             <TableHeader>
                                 <TableRow className="hover:bg-transparent bg-gray-50/50">
@@ -869,70 +1084,7 @@ const InspectionList = () => {
                                                     </span>
                                                 </TableCell>
                                                 <TableCell onClick={(e) => e.stopPropagation()}>
-                                                    <div className="flex items-center gap-1">
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-7 w-7 rounded-lg hover:bg-blue-50 hover:text-[#1E40AF]"
-                                                                        onClick={() => void handlePreviewReport(inspection)}
-                                                                        disabled={reportGeneratingId === inspection.id}
-                                                                    >
-                                                                        {reportGeneratingId === inspection.id ? (
-                                                                            <Loader2 size={14} className="animate-spin" />
-                                                                        ) : (
-                                                                            <Eye size={14} />
-                                                                        )}
-                                                                    </Button>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>View PDF</TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-7 w-7 rounded-lg hover:bg-blue-50 hover:text-[#1E40AF]"
-                                                                        onClick={() => navigate(`/inspections/${inspection.id}`)}
-                                                                    >
-                                                                        <Pencil size={14} />
-                                                                    </Button>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>Edit</TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg">
-                                                                    <MoreHorizontal size={14} />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end" className="rounded-lg w-44">
-                                                                <DropdownMenuItem className="rounded-lg" onClick={() => void handlePreviewReport(inspection)}>
-                                                                    <Eye size={14} className="mr-2" /> View Report
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    className="rounded-lg"
-                                                                    onClick={() => void handleEmailReport(inspection)}
-                                                                    disabled={emailPreparingId === inspection.id}
-                                                                >
-                                                                    {emailPreparingId === inspection.id ? (
-                                                                        <Loader2 size={14} className="mr-2 animate-spin" />
-                                                                    ) : (
-                                                                        <Mail size={14} className="mr-2" />
-                                                                    )}
-                                                                    Email Report
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem className="rounded-lg text-red-600">
-                                                                    <Trash2 size={14} className="mr-2" /> Delete
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </div>
+                                                    {renderInspectionActions(inspection)}
                                                 </TableCell>
                                             </TableRow>
                                         );

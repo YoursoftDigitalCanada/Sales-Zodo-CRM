@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getTenants, suspendTenant, activateTenant, deleteTenant } from './api';
-import { Search, Loader2, Ban, CheckCircle, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Loader2, Ban, CheckCircle, Trash2, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+
+interface TenantUserPreview {
+    id: string;
+    email: string;
+    fullName: string;
+    status: string;
+    emailVerified: boolean;
+    lastLoginAt: string | null;
+}
 
 interface Tenant {
     id: string;
@@ -9,6 +19,16 @@ interface Tenant {
     status: string;
     subscriptionTier: string;
     userCount: number;
+    company: {
+        companyName: string;
+        email: string;
+        phone: string;
+        address: string;
+        taxId: string;
+        domain: string;
+        logoUrl: string | null;
+    };
+    users: TenantUserPreview[];
     subscription: {
         planType: string;
         billingCycle: string;
@@ -22,6 +42,7 @@ interface Tenant {
 }
 
 export default function TenantsPage() {
+    const navigate = useNavigate();
     const [tenants, setTenants] = useState<Tenant[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -68,11 +89,10 @@ export default function TenantsPage() {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">Tenant Management</h1>
-                    <p className="page-subtitle">Manage all platform tenants</p>
+                    <p className="page-subtitle">Manage all platform tenants and inspect account usage</p>
                 </div>
             </div>
 
-            {/* Filters */}
             <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
                 <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
                     <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
@@ -94,7 +114,6 @@ export default function TenantsPage() {
                 <button className="btn btn-primary" onClick={handleSearch}>Search</button>
             </div>
 
-            {/* Table */}
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 {loading ? (
                     <div style={{ padding: '3rem', textAlign: 'center' }}>
@@ -106,6 +125,8 @@ export default function TenantsPage() {
                             <thead>
                                 <tr>
                                     <th>Company</th>
+                                    <th>Tenant Email</th>
+                                    <th>Tenant Users</th>
                                     <th>Status</th>
                                     <th>Plan</th>
                                     <th>Billing</th>
@@ -117,35 +138,58 @@ export default function TenantsPage() {
                             </thead>
                             <tbody>
                                 {tenants.length === 0 ? (
-                                    <tr><td colSpan={8} style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>No tenants found</td></tr>
-                                ) : tenants.map((t) => (
-                                    <tr key={t.id}>
+                                    <tr><td colSpan={10} style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>No tenants found</td></tr>
+                                ) : tenants.map((tenant) => (
+                                    <tr key={tenant.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/tenants/${tenant.id}`)}>
                                         <td>
-                                            <div style={{ fontWeight: 600 }}>{t.name}</div>
-                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t.slug}</div>
+                                            <div style={{ fontWeight: 600 }}>{tenant.name}</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{tenant.slug}</div>
                                         </td>
-                                        <td>{statusBadge(t.status)}</td>
+                                        <td>
+                                            <div style={{ fontSize: '0.85rem' }}>{tenant.company?.email || '—'}</div>
+                                            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{tenant.company?.domain || 'No domain'}</div>
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                                                {tenant.users.length > 0 ? tenant.users.slice(0, 3).map((user) => (
+                                                    <span key={user.id} style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>
+                                                        {user.email}
+                                                    </span>
+                                                )) : (
+                                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>No users</span>
+                                                )}
+                                                {tenant.userCount > 3 && (
+                                                    <span style={{ fontSize: '0.72rem', color: '#06b6d4' }}>
+                                                        +{tenant.userCount - 3} more
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td>{statusBadge(tenant.status)}</td>
                                         <td>
                                             <span style={{ color: '#06b6d4', fontWeight: 500 }}>
-                                                {t.subscription?.planType || t.subscriptionTier || 'Free'}
+                                                {tenant.subscription?.planType || tenant.subscriptionTier || 'Free'}
                                             </span>
                                         </td>
-                                        <td style={{ fontSize: '0.8rem' }}>{t.subscription?.billingCycle || '—'}</td>
-                                        <td>{t.userCount}</td>
-                                        <td style={{ fontWeight: 500 }}>${(t.subscription?.totalPaid || 0).toLocaleString()}</td>
-                                        <td style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{new Date(t.createdAt).toLocaleDateString()}</td>
+                                        <td style={{ fontSize: '0.8rem' }}>{tenant.subscription?.billingCycle || '—'}</td>
+                                        <td>{tenant.userCount}</td>
+                                        <td style={{ fontWeight: 500 }}>${(tenant.subscription?.totalPaid || 0).toLocaleString()}</td>
+                                        <td style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{new Date(tenant.createdAt).toLocaleDateString()}</td>
                                         <td>
-                                            <div style={{ display: 'flex', gap: '4px' }}>
-                                                {t.status === 'ACTIVE' || t.status === 'TRIAL' ? (
-                                                    <button className="btn btn-ghost" title="Suspend" onClick={() => handleAction(t.id, 'suspend')} style={{ padding: '4px 8px' }}>
+                                            <div style={{ display: 'flex', gap: '4px' }} onClick={(e) => e.stopPropagation()}>
+                                                <button className="btn btn-ghost" title="View details" onClick={() => navigate(`/tenants/${tenant.id}`)} style={{ padding: '4px 8px' }}>
+                                                    <Eye size={14} />
+                                                </button>
+                                                {tenant.status === 'ACTIVE' || tenant.status === 'TRIAL' ? (
+                                                    <button className="btn btn-ghost" title="Suspend" onClick={() => handleAction(tenant.id, 'suspend')} style={{ padding: '4px 8px' }}>
                                                         <Ban size={14} />
                                                     </button>
                                                 ) : (
-                                                    <button className="btn btn-ghost" title="Activate" onClick={() => handleAction(t.id, 'activate')} style={{ padding: '4px 8px' }}>
+                                                    <button className="btn btn-ghost" title="Activate" onClick={() => handleAction(tenant.id, 'activate')} style={{ padding: '4px 8px' }}>
                                                         <CheckCircle size={14} style={{ color: '#10b981' }} />
                                                     </button>
                                                 )}
-                                                <button className="btn btn-ghost" title="Delete" onClick={() => handleAction(t.id, 'delete')} style={{ padding: '4px 8px' }}>
+                                                <button className="btn btn-ghost" title="Delete" onClick={() => handleAction(tenant.id, 'delete')} style={{ padding: '4px 8px' }}>
                                                     <Trash2 size={14} style={{ color: '#ef4444' }} />
                                                 </button>
                                             </div>
@@ -157,7 +201,6 @@ export default function TenantsPage() {
                     </div>
                 )}
 
-                {/* Pagination */}
                 {totalPages > 1 && (
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', padding: '1rem', borderTop: '1px solid #334155' }}>
                         <button className="btn btn-ghost" disabled={page <= 1} onClick={() => setPage(page - 1)} style={{ padding: '6px 10px' }}>

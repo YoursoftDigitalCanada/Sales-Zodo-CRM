@@ -9,6 +9,7 @@ import './index.css';
 import LoginPage from './Login';
 import Dashboard from './Dashboard';
 import TenantsPage from './Tenants';
+import TenantDetailPage from './TenantDetail';
 import RevenuePage from './Revenue';
 import SubscriptionsPage from './Subscriptions';
 import SystemHealthPage from './SystemHealth';
@@ -131,6 +132,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
         <Route path="/tenants" element={<ProtectedRoute><Layout><TenantsPage /></Layout></ProtectedRoute>} />
+        <Route path="/tenants/:id" element={<ProtectedRoute><Layout><TenantDetailPage /></Layout></ProtectedRoute>} />
         <Route path="/revenue" element={<ProtectedRoute><Layout><RevenuePage /></Layout></ProtectedRoute>} />
         <Route path="/subscriptions" element={<ProtectedRoute><Layout><SubscriptionsPage /></Layout></ProtectedRoute>} />
         <Route path="/support-tickets" element={<ProtectedRoute><Layout><SupportTicketsPage /></Layout></ProtectedRoute>} />

@@ -232,13 +232,14 @@ export class SettingsRepository {
   async getSmtpConfig(tenantId: string) {
     const settings = await this.ensure(tenantId);
     const integrations = toObject(settings.integrations);
+    const defaultSenderName = String(integrations.companyName ?? settings.tenant?.name ?? '').trim();
     const normalized = normalizeSmtpTransportConfig({
       host: String(integrations.smtpHost ?? ''),
       port: Number(integrations.smtpPort ?? 587),
       user: decryptSecret(String(integrations.smtpUser ?? '')),
       pass: decryptSecret(String(integrations.smtpPass ?? '')),
       encryption: String(integrations.smtpEncryption ?? 'STARTTLS') as EmailEncryption,
-      senderName: String(integrations.senderName ?? ''),
+      senderName: String(integrations.senderName ?? defaultSenderName),
       senderEmail: String(integrations.senderEmail ?? ''),
     });
 

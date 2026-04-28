@@ -77,8 +77,16 @@ type MailboxUserRecord = {
   tenantId: string | null;
   firstName: string;
   lastName: string;
+  tenant?: {
+    name: string;
+  } | null;
   preferences: Prisma.JsonValue;
 };
+
+function getDefaultSenderName(user: Pick<MailboxUserRecord, 'firstName' | 'lastName' | 'tenant'>): string {
+  return user.tenant?.name?.trim()
+    || [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+}
 
 function toRuntimeConfig(user: MailboxUserRecord): MailboxRuntimeConfig | null {
   if (!user.tenantId) {
@@ -88,7 +96,7 @@ function toRuntimeConfig(user: MailboxUserRecord): MailboxRuntimeConfig | null {
   const mailbox = getMailboxConfig(user.preferences);
   const smtp = toObject(mailbox.smtp);
   const imap = toObject(mailbox.imap);
-  const senderName = String(smtp.senderName ?? [user.firstName, user.lastName].filter(Boolean).join(' ').trim());
+  const senderName = String(smtp.senderName ?? getDefaultSenderName(user));
   const normalizedSmtp = normalizeSmtpTransportConfig({
     host: String(smtp.host ?? ''),
     port: Number(smtp.port ?? 587),
@@ -145,6 +153,11 @@ export class MailboxRepository {
       select: {
         firstName: true,
         lastName: true,
+        tenant: {
+          select: {
+            name: true,
+          },
+        },
         preferences: true,
       },
     });
@@ -152,7 +165,7 @@ export class MailboxRepository {
     const mailbox = getMailboxConfig(user?.preferences);
     const smtp = toObject(mailbox.smtp);
     const imap = toObject(mailbox.imap);
-    const defaultSenderName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
+    const defaultSenderName = user ? getDefaultSenderName(user) : '';
 
     const smtpUser = decryptSecret(String(smtp.username ?? ''));
     const smtpPass = decryptSecret(String(smtp.password ?? ''));
@@ -284,6 +297,11 @@ export class MailboxRepository {
         tenantId: true,
         firstName: true,
         lastName: true,
+        tenant: {
+          select: {
+            name: true,
+          },
+        },
         preferences: true,
       },
     });
@@ -313,6 +331,11 @@ export class MailboxRepository {
         tenantId: true,
         firstName: true,
         lastName: true,
+        tenant: {
+          select: {
+            name: true,
+          },
+        },
         preferences: true,
       },
     });
@@ -338,6 +361,11 @@ export class MailboxRepository {
         tenantId: true,
         firstName: true,
         lastName: true,
+        tenant: {
+          select: {
+            name: true,
+          },
+        },
         preferences: true,
       },
     });
@@ -359,7 +387,7 @@ export class MailboxRepository {
         user: decryptSecret(String(smtp.username ?? '')),
         pass: decryptSecret(String(smtp.password ?? '')),
         encryption: String(smtp.encryption ?? 'STARTTLS') as EmailEncryption,
-        senderName: String(smtp.senderName ?? [user.firstName, user.lastName].filter(Boolean).join(' ').trim()),
+        senderName: String(smtp.senderName ?? getDefaultSenderName(user)),
         senderEmail: String(smtp.senderEmail ?? ''),
       });
       const normalizedImap = normalizeImapTransportConfig({

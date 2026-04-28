@@ -370,11 +370,13 @@ export function buildInspectionReportSnapshot(
     measurementSource: overrides.measurementSource ?? "manual",
     recommendation:
       overrides.recommendation ??
-      (normalizedEstimateStatus.includes("replace")
-        ? "full_replacement"
-        : normalizedEstimateStatus.includes("repair")
-          ? "partial_repair"
-          : "no_action"),
+      (typeof inspection.recommendation === "string" && inspection.recommendation.trim().length > 0
+        ? inspection.recommendation
+        : (normalizedEstimateStatus.includes("replace")
+            ? "full_replacement"
+            : normalizedEstimateStatus.includes("repair")
+              ? "partial_repair"
+              : "no_action")),
     inspectorNotes: overrides.inspectorNotes ?? inspection.inspectorNotes,
     customerFeedback: overrides.customerFeedback ?? inspection.customerFeedback,
     internalNotes: overrides.internalNotes ?? inspection.internalNotes,

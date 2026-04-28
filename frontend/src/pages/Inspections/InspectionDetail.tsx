@@ -383,7 +383,7 @@ const InspectionDetail = () => {
         totalSquares: "", pitch: "", stories: "", predominant: "",
         hipRidge: "", valley: "", eavesRakes: "", flashing: "", gutters: "",
     });
-    const [recommendation, setRecommendation] = useState("full_replacement");
+    const [recommendation, setRecommendation] = useState("no_action");
     const [inspectorNotes, setInspectorNotes] = useState("");
 
     // Damage assessment state
@@ -614,10 +614,11 @@ const InspectionDetail = () => {
             replacementSq: "0",
         });
 
-        // Recommendation
-        const est = (data.estimateStatus || "").toLowerCase();
-        if (est.includes("replace")) setRecommendation("full_replacement");
-        else if (est.includes("repair")) setRecommendation("partial_repair");
+        setRecommendation(
+            data.recommendation === "full_replacement" || data.recommendation === "partial_repair" || data.recommendation === "no_action"
+                ? data.recommendation
+                : "no_action"
+        );
     };
 
     // ---------- Save ----------
@@ -646,6 +647,7 @@ const InspectionDetail = () => {
                     ventilation.soffitVent ? "soffit" : null,
                     ventilation.boxVents ? "box" : null,
                 ].filter(Boolean).join(", ") || null,
+                recommendation,
                 estimateStatus: isComplete ? "completed" : "pending",
             };
 

@@ -105,6 +105,7 @@ const baseInspectionSelect = {
     depositCollected: true,
     paymentMethod: true,
     estimateStatus: true,
+    recommendation: true,
     tentativeStartDate: true,
     estimatedDuration: true,
     crewSize: true,

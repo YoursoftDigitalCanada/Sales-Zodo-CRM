@@ -92,6 +92,7 @@ export interface CreateLeadInspectionDto {
     depositCollected?: boolean;
     paymentMethod?: string;
     estimateStatus?: string;
+    recommendation?: string;
 
     // Scheduling & Logistics
     tentativeStartDate?: string | Date;
@@ -218,6 +219,7 @@ export interface LeadInspectionResponseDto {
     depositCollected: boolean | null;
     paymentMethod: string | null;
     estimateStatus: string | null;
+    recommendation: string | null;
 
     tentativeStartDate: string | null;
     estimatedDuration: string | null;
@@ -355,6 +357,7 @@ export function toLeadInspectionResponseDto(inspection: any): LeadInspectionResp
         depositCollected: inspection.depositCollected ?? null,
         paymentMethod: inspection.paymentMethod ?? null,
         estimateStatus: inspection.estimateStatus ?? null,
+        recommendation: inspection.recommendation ?? null,
 
         tentativeStartDate: dateToStr(inspection.tentativeStartDate),
         estimatedDuration: inspection.estimatedDuration ?? null,

@@ -62,6 +62,7 @@ export interface InspectionEntity {
     overallCondition: string | null;
     overallDamageRating: string | null;
     estimateStatus: string | null;
+    recommendation: string | null;
     totalSquares: number | null;
     roofPitch: string | null;
     ridgeLength: number | null;

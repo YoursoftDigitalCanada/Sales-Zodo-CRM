@@ -1422,6 +1422,7 @@ model LeadInspection {
   depositCollected      Boolean?  @default(false)
   paymentMethod         String?          // Cash, Check, Card, Financing, Insurance
   estimateStatus        String?          // Draft, Sent, Accepted, Rejected, Revised
+  recommendation        String?          // full_replacement, partial_repair, no_action
 
   // ── Scheduling & Logistics (~10) ────────────────────────────
   tentativeStartDate    DateTime?

@@ -82,6 +82,7 @@ const inspectionFields = {
     depositCollected: z.boolean().optional(),
     paymentMethod: z.string().max(50).optional(),
     estimateStatus: z.string().max(50).optional(),
+    recommendation: z.string().max(50).optional(),
 
     // Scheduling & Logistics
     tentativeStartDate: z.string().optional(),

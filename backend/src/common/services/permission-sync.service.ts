@@ -1,5 +1,6 @@
 import { prisma } from '../../config/database';
 import { PERMISSION_DEFINITIONS } from '../constants/permissions';
+import { ROLE_DEFINITIONS, SYSTEM_ROLES } from '../constants/roles';
 import { logger } from '../utils/logger';
 
 interface PermissionBackfillRule {
@@ -79,7 +80,7 @@ export class PermissionSyncService {
     const permissionIdByCode = new Map(allPermissions.map((permission) => [permission.code, permission.id]));
 
     const roles = await prisma.role.findMany({
-      select: { id: true },
+      select: { id: true, name: true, tenantId: true, isDefault: true },
     });
     const roleIds = roles.map((role) => role.id);
 
@@ -151,10 +152,52 @@ export class PermissionSyncService {
       backfilledAssignments += rowsToInsert.length;
     }
 
+    const permissionCodesByRoleName = new Map<string, string[]>(
+      ROLE_DEFINITIONS.map((definition) => [definition.name, definition.permissions]),
+    );
+    permissionCodesByRoleName.set('Staff', permissionCodesByRoleName.get(SYSTEM_ROLES.EMPLOYEE) || []);
+
+    let baselineAssignments = 0;
+
+    for (const role of roles) {
+      const expectedCodes = permissionCodesByRoleName.get(role.name);
+      if (!expectedCodes || expectedCodes.length === 0) {
+        continue;
+      }
+
+      const currentCodes = permissionCodesByRoleId.get(role.id) || new Set<string>();
+      const missingPermissionIds = expectedCodes
+        .filter((code) => !currentCodes.has(code))
+        .map((code) => permissionIdByCode.get(code))
+        .filter((permissionId): permissionId is string => Boolean(permissionId));
+
+      if (missingPermissionIds.length === 0) {
+        continue;
+      }
+
+      await prisma.rolePermission.createMany({
+        data: missingPermissionIds.map((permissionId) => ({
+          roleId: role.id,
+          permissionId,
+        })),
+        skipDuplicates: true,
+      });
+
+      missingPermissionIds.forEach((permissionId) => {
+        const permissionCode = allPermissions.find((permission) => permission.id === permissionId)?.code;
+        if (permissionCode) {
+          currentCodes.add(permissionCode);
+        }
+      });
+      permissionCodesByRoleId.set(role.id, currentCodes);
+      baselineAssignments += missingPermissionIds.length;
+    }
+
     logger.info('[PermissionSync] Permission catalog synchronized', {
       definitions: PERMISSION_DEFINITIONS.length,
       createdPermissions: missingPermissions.length,
       backfilledAssignments,
+      baselineAssignments,
     });
   }
 }

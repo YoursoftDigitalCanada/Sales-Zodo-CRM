@@ -93,8 +93,8 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
     key: 'STARTER',
     name: 'Starter',
     description: 'For small teams getting started with the CRM.',
-    monthlyPrice: 29,
-    yearlyPrice: 290,
+    monthlyPrice: 149,
+    yearlyPrice: 1609,
     limits: {
       users: 10,
       contacts: 1000,
@@ -107,8 +107,8 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
     key: 'PROFESSIONAL',
     name: 'Professional',
     description: 'For growing sales and operations teams.',
-    monthlyPrice: 79,
-    yearlyPrice: 790,
+    monthlyPrice: 249,
+    yearlyPrice: 2689,
     limits: {
       users: 50,
       contacts: 25000,
@@ -121,8 +121,8 @@ export const BILLING_PLANS: Record<BillingPlanKey, BillingPlanDefinition> = {
     key: 'ENTERPRISE',
     name: 'Enterprise',
     description: 'For complex multi-team deployments with unlimited scale.',
-    monthlyPrice: 149,
-    yearlyPrice: 1490,
+    monthlyPrice: 399,
+    yearlyPrice: 4309,
     limits: {
       users: null,
       contacts: null,

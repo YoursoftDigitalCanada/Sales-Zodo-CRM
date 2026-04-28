@@ -1145,6 +1145,7 @@ export default function SettingsPage() {
                         const selected = billingDraft?.planType === plan.key;
                         const isCurrentPlan = billing.key === plan.key && billing.billingCycle === billingDraft?.billingCycle;
                         const displayPrice = billingDraft?.billingCycle === "YEARLY" ? plan.yearlyRate : plan.monthlyRate;
+                        const originalYearlyPrice = plan.monthlyRate * 12;
 
                         return (
                           <button
@@ -1170,14 +1171,31 @@ export default function SettingsPage() {
                               ) : null}
                             </div>
 
-                            <div className="mt-5 flex items-end gap-2">
-                              <span className="text-3xl font-semibold text-[#0F172A]">{formatMoney(displayPrice)}</span>
-                              <span className="pb-1 text-sm text-[#64748B]">{billingDraft?.billingCycle === "YEARLY" ? "/year" : "/month"}</span>
+                            <div className="mt-5">
+                              {billingDraft?.billingCycle === "YEARLY" ? (
+                                <div className="space-y-2">
+                                  <div className="flex items-end gap-2">
+                                    <span className="text-lg font-medium text-[#94A3B8] line-through">{formatMoney(originalYearlyPrice)}</span>
+                                    <span className="rounded-full bg-[#DCFCE7] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#166534]">
+                                      10% off
+                                    </span>
+                                  </div>
+                                  <div className="flex items-end gap-2">
+                                    <span className="text-3xl font-semibold text-[#0F172A]">{formatMoney(displayPrice)}</span>
+                                    <span className="pb-1 text-sm text-[#64748B]">/year</span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-end gap-2">
+                                  <span className="text-3xl font-semibold text-[#0F172A]">{formatMoney(displayPrice)}</span>
+                                  <span className="pb-1 text-sm text-[#64748B]">/month</span>
+                                </div>
+                              )}
                             </div>
 
                             {billingDraft?.billingCycle === "YEARLY" ? (
                               <p className="mt-2 text-xs font-medium text-[#0891B2]">
-                                {formatMoney(plan.monthlyRate)} monthly equivalent
+                                {formatMoney(plan.monthlyRate)} per month when billed yearly
                               </p>
                             ) : (
                               <p className="mt-2 text-xs text-[#64748B]">

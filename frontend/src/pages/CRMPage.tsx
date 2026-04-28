@@ -795,8 +795,9 @@ export default function CRMPage() {
       {
         name: "Starter",
         description: "Perfect for freelancers and solo entrepreneurs",
-        monthlyPrice: "$29",
-        yearlyPrice: "$24",
+        monthlyPrice: "$149",
+        yearlyPrice: "$1609",
+        yearlyOriginalPrice: "$1788",
         features: [
           "Up to 100 clients",
           "Unlimited projects",
@@ -810,8 +811,9 @@ export default function CRMPage() {
       {
         name: "Professional",
         description: "Ideal for growing agencies and teams",
-        monthlyPrice: "$79",
-        yearlyPrice: "$66",
+        monthlyPrice: "$249",
+        yearlyPrice: "$2689",
+        yearlyOriginalPrice: "$2988",
         features: [
           "Unlimited clients",
           "Unlimited projects",
@@ -827,8 +829,9 @@ export default function CRMPage() {
       {
         name: "Enterprise",
         description: "For large organizations with custom needs",
-        monthlyPrice: "Custom",
-        yearlyPrice: "Custom",
+        monthlyPrice: "$399",
+        yearlyPrice: "$4309",
+        yearlyOriginalPrice: "$4788",
         features: [
           "Everything in Professional",
           "Unlimited team members",
@@ -862,7 +865,7 @@ export default function CRMPage() {
           </button>
           <span className={`font-medium ${billingCycle === 'yearly' ? 'text-gray-900' : 'text-gray-500'}`}>
             Yearly
-            <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">Save 20%</span>
+            <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">Save 10%</span>
           </span>
         </div>
         
@@ -892,11 +895,30 @@ export default function CRMPage() {
               </p>
               
               <div className="mb-6">
-                <span className={`text-5xl font-bold ${plan.popular ? 'text-white' : 'text-gray-900'}`}>
-                  {billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice}
-                </span>
-                {plan.monthlyPrice !== 'Custom' && (
-                  <span className={plan.popular ? 'text-red-200' : 'text-gray-500'}>/month</span>
+                {billingCycle === 'yearly' ? (
+                  <div className="space-y-2">
+                    <div className="flex items-end gap-2">
+                      <span className={`text-lg font-medium line-through ${plan.popular ? 'text-red-200/80' : 'text-gray-400'}`}>
+                        {plan.yearlyOriginalPrice}
+                      </span>
+                      <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${plan.popular ? 'bg-white/15 text-white' : 'bg-green-100 text-green-700'}`}>
+                        10% OFF
+                      </span>
+                    </div>
+                    <div>
+                      <span className={`text-5xl font-bold ${plan.popular ? 'text-white' : 'text-gray-900'}`}>
+                        {plan.yearlyPrice}
+                      </span>
+                      <span className={plan.popular ? 'text-red-200' : 'text-gray-500'}>/year</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <span className={`text-5xl font-bold ${plan.popular ? 'text-white' : 'text-gray-900'}`}>
+                      {plan.monthlyPrice}
+                    </span>
+                    <span className={plan.popular ? 'text-red-200' : 'text-gray-500'}>/month</span>
+                  </div>
                 )}
               </div>
               

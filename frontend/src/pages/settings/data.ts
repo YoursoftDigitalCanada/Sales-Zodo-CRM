@@ -87,7 +87,7 @@ export const languages = ["English", "French", "Spanish", "German", "Portuguese"
 
 export const billingPlans: BillingPlan[] = [
     {
-        id: "starter", name: "Starter", price: "$29", period: "/user/month", description: "For small teams getting started",
+        id: "starter", name: "Starter", price: "$149", period: "/user/month", description: "For small teams getting started",
         features: [
             { name: "Up to 10 users", included: true }, { name: "1,000 contacts", included: true },
             { name: "Basic pipeline", included: true }, { name: "Email integration", included: true },
@@ -96,7 +96,7 @@ export const billingPlans: BillingPlan[] = [
         ],
     },
     {
-        id: "professional", name: "Professional", price: "$79", period: "/user/month", description: "For growing businesses",
+        id: "professional", name: "Professional", price: "$249", period: "/user/month", description: "For growing businesses",
         current: true, popular: true,
         features: [
             { name: "Up to 50 users", included: true }, { name: "25,000 contacts", included: true },
@@ -106,7 +106,7 @@ export const billingPlans: BillingPlan[] = [
         ],
     },
     {
-        id: "enterprise", name: "Enterprise", price: "$149", period: "/user/month", description: "For large organizations",
+        id: "enterprise", name: "Enterprise", price: "$399", period: "/user/month", description: "For large organizations",
         features: [
             { name: "Unlimited users", included: true }, { name: "Unlimited contacts", included: true },
             { name: "Advanced pipeline", included: true }, { name: "Email integration", included: true },

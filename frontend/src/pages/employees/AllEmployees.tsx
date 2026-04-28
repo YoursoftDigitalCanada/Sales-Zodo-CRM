@@ -44,6 +44,7 @@ import {
 import { getStoredEmployee, isStoredEmployeeAdmin } from '@/features/auth/lib/auth-storage';
 import { getDepartments, getEmployees } from '@/features/users';
 import api from '@/lib/axios';
+import { API_ORIGIN } from '@/services/api/config';
 import {
   normalizeCanadianPostalCode,
   normalizeEmailAddress,
@@ -175,6 +176,18 @@ const parseSkills = (value?: string) =>
     .map((entry) => entry.trim())
     .filter(Boolean);
 
+const normalizeEmployeeAvatar = (value?: string | null) => {
+  if (!value) {
+    return undefined;
+  }
+
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  return `${API_ORIGIN}${value.startsWith('/') ? value : `/${value}`}`;
+};
+
 const buildEmployeePayload = (data: EmployeeFormPayload, departmentName?: string) => ({
   firstName: normalizeWhitespace(data.firstName),
   lastName: normalizeWhitespace(data.lastName),
@@ -255,7 +268,7 @@ const mapEmployeeData = (data: ApiEmployee[], departments: Department[]): Employ
       lastName: employee.user?.lastName || '',
       email: employee.user?.email || '',
       phone: employee.phone || '',
-      avatar: employee.user?.avatar || undefined,
+      avatar: normalizeEmployeeAvatar(employee.user?.avatar),
       position: employee.jobTitle || employee.position || '',
       departmentId: matchedDepartment?.id || employee.departmentId || '',
       departmentName,

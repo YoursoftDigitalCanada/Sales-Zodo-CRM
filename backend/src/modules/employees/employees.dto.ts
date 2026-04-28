@@ -150,6 +150,7 @@ export interface UpdateEmployeeDto extends Partial<Omit<CreateEmployeeDto, 'user
     firstName?: string;
     lastName?: string;
     email?: string;
+    avatar?: string | null;
 }
 
 export interface EmployeeQueryDto {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,7 +17,8 @@ import {
   Lock,
   Eye,
   EyeOff,
-  Globe
+  Globe,
+  Loader2
 } from 'lucide-react';
 import {
   Dialog,
@@ -47,7 +48,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import api from '@/lib/axios';
+import { API_ORIGIN } from '@/services/api/config';
 import { Department, Employee, EmploymentType, EmployeeStatus } from './types';
+import { toast } from 'sonner';
 import {
   CANADIAN_PHONE_VALIDATION_MESSAGE,
   CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE,
@@ -125,6 +129,9 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
   const { isMobile } = useIsMobile();
   const [showPortalPassword, setShowPortalPassword] = useState(false);
   const [activeStep, setActiveStep] = useState<EmployeeFormStep>('basic');
+  const [avatarPreview, setAvatarPreview] = useState(editingEmployee?.avatar || '');
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const formSteps = editingEmployee ? EDIT_EMPLOYEE_FORM_STEPS : EMPLOYEE_FORM_STEPS;
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeFormSchema),
@@ -182,7 +189,55 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
       portalPassword: '',
     });
     setActiveStep('basic');
+    setAvatarPreview(editingEmployee?.avatar || '');
   }, [editingEmployee, form, open]);
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!editingEmployee) {
+      toast.error('Save the employee first before uploading a photo.');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Please upload an employee photo smaller than 2MB.');
+      event.target.value = '';
+      return;
+    }
+
+    setIsAvatarUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const response = await api.post(`/employees/${editingEmployee.id}/avatar`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const avatarUrl = response.data?.data?.avatarUrl || response.data?.avatarUrl;
+      const normalizedAvatarUrl = typeof avatarUrl === 'string' && avatarUrl
+        ? `${API_ORIGIN}${avatarUrl}`
+        : '';
+
+      if (normalizedAvatarUrl) {
+        setAvatarPreview(normalizedAvatarUrl);
+      }
+
+      toast.success('Employee photo uploaded successfully');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Failed to upload employee photo';
+      toast.error(message);
+    } finally {
+      setIsAvatarUploading(false);
+      event.target.value = '';
+    }
+  };
 
   const handleSubmit = async (data: EmployeeFormValues) => {
     if (!editingEmployee) {
@@ -315,21 +370,35 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                 <div className="flex justify-center">
                   <div className="relative">
                     <Avatar className="w-24 h-24 border-4 border-[rgba(15,23,42,0.06)]">
-                      <AvatarImage src="" />
+                      <AvatarImage src={avatarPreview || editingEmployee?.avatar || ''} />
                       <AvatarFallback className="bg-[#0891B2]/10 text-[#0891B2] text-2xl">
-                        <User className="w-10 h-10" />
+                        {form.getValues('firstName') || form.getValues('lastName')
+                          ? `${(form.getValues('firstName') || '').charAt(0)}${(form.getValues('lastName') || '').charAt(0)}`.toUpperCase()
+                          : <User className="w-10 h-10" />}
                       </AvatarFallback>
                     </Avatar>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                    />
                     <Button
                       type="button"
                       size="icon"
                       variant="outline"
+                      disabled={!editingEmployee || isAvatarUploading}
+                      onClick={() => fileInputRef.current?.click()}
                       className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
                     >
-                      <Upload className="w-4 h-4" />
+                      {isAvatarUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                     </Button>
                   </div>
                 </div>
+                <p className="text-center text-xs text-[#64748B]">
+                  {editingEmployee ? 'PNG, JPG, WEBP, or SVG. Maximum 2MB.' : 'Employee photo can be uploaded after the employee record is created.'}
+                </p>
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField

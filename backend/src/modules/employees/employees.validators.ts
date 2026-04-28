@@ -51,6 +51,7 @@ export const updateEmployeeSchema = z.object({
         firstName: z.string().trim().min(1).max(100).refine(isValidPersonName, `First name ${PERSON_NAME_VALIDATION_MESSAGE}`).optional(),
         lastName: z.string().trim().min(1).max(100).refine(isValidPersonName, `Last name ${PERSON_NAME_VALIDATION_MESSAGE}`).optional(),
         email: z.string().trim().refine(isValidEmailAddress, EMAIL_VALIDATION_MESSAGE).optional(),
+        avatar: z.string().url().optional().nullable(),
         phone: z.string().trim().max(50).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
         roleId: z.string().uuid().optional(),
         employeeCode: z.string().max(50).optional(),

@@ -49,6 +49,19 @@ export class EmployeesController {
         } catch (e) { next(e); }
     }
 
+    async uploadAvatar(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const file = (req as Request & { file?: Express.Multer.File }).file;
+            if (!file) {
+                throw new BadRequestError('Employee photo is required', ErrorCodes.INVALID_INPUT);
+            }
+
+            const publicPath = `/uploads/${req.context.tenantId}/employees/${file.filename}`;
+            const employee = await employeesService.updateAvatar(req.params.id, req.context.tenantId, publicPath);
+            sendSuccess(res, { employee, avatarUrl: publicPath }, 'Employee photo uploaded');
+        } catch (e) { next(e); }
+    }
+
     async updateMe(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const employeeId = req.context.employeeId || req.user?.employeeId;

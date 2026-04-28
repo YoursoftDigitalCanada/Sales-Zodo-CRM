@@ -820,6 +820,10 @@ export class EmployeesService {
         return dto;
     }
 
+    async updateAvatar(id: string, tenantId: string, avatar: string) {
+        return this.update(id, tenantId, { avatar });
+    }
+
     async delete(id: string, tenantId: string) {
         const existing = await employeesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Employee not found', ErrorCodes.EMPLOYEE_NOT_FOUND);

@@ -132,6 +132,7 @@ export class EmployeesRepository {
                     data.firstName !== undefined
                     || data.lastName !== undefined
                     || data.email !== undefined
+                    || data.avatar !== undefined
                     || data.phone !== undefined
                         ? {
                             user: {
@@ -139,6 +140,7 @@ export class EmployeesRepository {
                                     ...(data.firstName !== undefined ? { firstName: data.firstName } : {}),
                                     ...(data.lastName !== undefined ? { lastName: data.lastName } : {}),
                                     ...(data.email !== undefined ? { email: data.email.toLowerCase() } : {}),
+                                    ...(data.avatar !== undefined ? { avatar: data.avatar || null } : {}),
                                     ...(data.phone !== undefined ? { phone: data.phone || null } : {}),
                                 },
                             },

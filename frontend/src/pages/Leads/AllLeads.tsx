@@ -2571,10 +2571,10 @@ export const LeadFormDialog = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">Follow-Up Date</Label>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1.35fr)_90px_90px_84px]">
+                  <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(180px,1.55fr)_90px_90px_84px]">
                     <Input
                       type="date"
                       value={followUpDateTimeParts.date}
@@ -2630,7 +2630,7 @@ export const LeadFormDialog = ({
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">Inspection Date</Label>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1.35fr)_90px_90px_84px]">
+                  <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(180px,1.55fr)_90px_90px_84px]">
                     <Input
                       type="date"
                       value={inspectionDateTimeParts.date}

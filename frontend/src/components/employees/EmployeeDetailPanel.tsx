@@ -1,7 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
 import {
   X,
   Mail,
@@ -21,6 +20,9 @@ import {
   Shield,
   Upload,
   Loader2,
+  Video,
+  Check,
+  RefreshCw,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -28,8 +30,15 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
+import { ComposeEmailSheet } from '@/features/emails/components/ComposeEmailSheet';
+import { createCalendarEvent } from '@/features/calendar/services/calendar-service';
 import { Employee } from './types';
 import {
   getEmployeeStatusConfig,
@@ -55,13 +64,24 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
   onDelete,
   onRefresh,
 }) => {
-  const navigate = useNavigate();
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const [isDocumentUploading, setIsDocumentUploading] = useState(false);
+  const [showComposeEmail, setShowComposeEmail] = useState(false);
+  const [showMeetingDialog, setShowMeetingDialog] = useState(false);
+  const [meetingSubmitting, setMeetingSubmitting] = useState(false);
+  const [meetingTitle, setMeetingTitle] = useState('');
+  const [meetingType, setMeetingType] = useState<'online' | 'offline'>('online');
+  const [meetingDate, setMeetingDate] = useState('');
+  const [meetingTime, setMeetingTime] = useState('10:00');
+  const [meetingDuration, setMeetingDuration] = useState('30');
+  const [meetingLocation, setMeetingLocation] = useState('');
+  const [meetingLink, setMeetingLink] = useState('');
+  const [meetingNotes, setMeetingNotes] = useState('');
   if (!employee) return null;
 
   const statusConfig = getEmployeeStatusConfig(employee.status);
   const employmentConfig = getEmploymentTypeConfig(employee.employmentType);
+  const employeeName = `${employee.firstName} ${employee.lastName}`.trim();
 
   const handleSendEmail = () => {
     if (!employee.email) {
@@ -69,12 +89,53 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
       return;
     }
 
-    window.location.href = `mailto:${employee.email}`;
+    setShowComposeEmail(true);
   };
 
-  const handleScheduleMeeting = () => {
-    navigate(`/calendar?employeeId=${employee.id}&employeeName=${encodeURIComponent(`${employee.firstName} ${employee.lastName}`)}&email=${encodeURIComponent(employee.email || '')}`);
-    onClose();
+  const openMeetingDialog = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    setMeetingDate(tomorrow.toISOString().split('T')[0]);
+    setMeetingTime('10:00');
+    setMeetingDuration('30');
+    setMeetingType('online');
+    setMeetingLocation('');
+    setMeetingLink('');
+    setMeetingNotes('');
+    setMeetingTitle(`Meeting with ${employeeName}`);
+    setShowMeetingDialog(true);
+  };
+
+  const handleScheduleMeeting = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!meetingDate || !meetingTime) {
+      return;
+    }
+
+    setMeetingSubmitting(true);
+    try {
+      const startTime = new Date(`${meetingDate}T${meetingTime}:00`);
+      const endTime = new Date(startTime.getTime() + Number(meetingDuration || 30) * 60000);
+
+      await createCalendarEvent({
+        title: meetingTitle || `Meeting with ${employeeName}`,
+        description: `Meeting with employee ${employeeName}.${meetingNotes ? `\n\nNotes: ${meetingNotes}` : ''}`,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        eventType: 'MEETING',
+        category: 'internal',
+        location: meetingType === 'offline' ? meetingLocation : undefined,
+        meetingLink: meetingType === 'online' ? (meetingLink || 'https://meet.google.com/new') : undefined,
+        priority: 'MEDIUM',
+      });
+
+      toast.success(`Meeting scheduled with ${employeeName}.`);
+      setShowMeetingDialog(false);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to schedule meeting.');
+    } finally {
+      setMeetingSubmitting(false);
+    }
   };
 
   const handleUploadDocument = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -447,6 +508,198 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
               </div>
             </div>
           </motion.div>
+          <ComposeEmailSheet
+            isOpen={showComposeEmail}
+            onClose={() => setShowComposeEmail(false)}
+            defaultRecipientEmail={employee.email}
+            defaultRecipientName={employeeName}
+            defaultSubject={`Regarding ${employeeName}`}
+          />
+          <Dialog open={showMeetingDialog} onOpenChange={setShowMeetingDialog}>
+            <DialogContent className="sm:max-w-[520px] rounded-xl p-0 overflow-hidden">
+              <div className="bg-gradient-to-r from-[#0891B2] to-[#1a1a2e] p-6 text-white">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+                    <Calendar size={22} />
+                    Schedule Meeting
+                  </DialogTitle>
+                  <DialogDescription className="text-white/80 mt-1">
+                    Schedule a meeting with <span className="font-semibold text-white">{employeeName}</span>.
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+
+              <form onSubmit={handleScheduleMeeting} className="p-6 space-y-5">
+                <div>
+                  <Label className="text-sm font-semibold text-[#0F172A] mb-3 block">Meeting Type</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setMeetingType('online')}
+                      className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${meetingType === 'online'
+                        ? 'border-[#0891B2] bg-[#0891B2]/5 shadow-sm'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                    >
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${meetingType === 'online' ? 'bg-[#0891B2]/10' : 'bg-gray-100'}`}>
+                        <Video size={24} className={meetingType === 'online' ? 'text-[#0891B2]' : 'text-gray-400'} />
+                      </div>
+                      <span className={`font-semibold text-sm ${meetingType === 'online' ? 'text-[#0891B2]' : 'text-gray-600'}`}>Online Meeting</span>
+                      <span className="text-xs text-gray-400">Video call / Google Meet</span>
+                      {meetingType === 'online' && (
+                        <div className="absolute top-2 right-2">
+                          <Check size={16} className="text-[#0891B2]" />
+                        </div>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setMeetingType('offline')}
+                      className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${meetingType === 'offline'
+                        ? 'border-[#F59E0B] bg-[#F59E0B]/5 shadow-sm'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                    >
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${meetingType === 'offline' ? 'bg-[#F59E0B]/10' : 'bg-gray-100'}`}>
+                        <MapPin size={24} className={meetingType === 'offline' ? 'text-[#F59E0B]' : 'text-gray-400'} />
+                      </div>
+                      <span className={`font-semibold text-sm ${meetingType === 'offline' ? 'text-[#F59E0B]' : 'text-gray-600'}`}>Offline Meeting</span>
+                      <span className="text-xs text-gray-400">In-person meeting</span>
+                      {meetingType === 'offline' && (
+                        <div className="absolute top-2 right-2">
+                          <Check size={16} className="text-[#F59E0B]" />
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="employeeMeetingTitle" className="text-sm font-medium text-[#475569]">Meeting Title</Label>
+                  <Input
+                    id="employeeMeetingTitle"
+                    value={meetingTitle}
+                    onChange={(e) => setMeetingTitle(e.target.value)}
+                    placeholder="e.g. Weekly Check-in"
+                    className="mt-1.5 rounded-lg"
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label htmlFor="employeeMeetingDate" className="text-sm font-medium text-[#475569]">Date</Label>
+                    <Input
+                      id="employeeMeetingDate"
+                      type="date"
+                      value={meetingDate}
+                      onChange={(e) => setMeetingDate(e.target.value)}
+                      className="mt-1.5 rounded-lg"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="employeeMeetingTime" className="text-sm font-medium text-[#475569]">Time</Label>
+                    <Input
+                      id="employeeMeetingTime"
+                      type="time"
+                      value={meetingTime}
+                      onChange={(e) => setMeetingTime(e.target.value)}
+                      className="mt-1.5 rounded-lg"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="employeeMeetingDuration" className="text-sm font-medium text-[#475569]">Duration</Label>
+                    <Select value={meetingDuration} onValueChange={setMeetingDuration}>
+                      <SelectTrigger id="employeeMeetingDuration" className="mt-1.5 rounded-lg">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-lg">
+                        <SelectItem value="15">15 min</SelectItem>
+                        <SelectItem value="30">30 min</SelectItem>
+                        <SelectItem value="45">45 min</SelectItem>
+                        <SelectItem value="60">1 hour</SelectItem>
+                        <SelectItem value="90">1.5 hours</SelectItem>
+                        <SelectItem value="120">2 hours</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {meetingType === 'online' ? (
+                  <div>
+                    <Label htmlFor="employeeMeetingLink" className="text-sm font-medium text-[#475569]">Meeting Link</Label>
+                    <div className="relative mt-1.5">
+                      <Video size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0891B2]" />
+                      <Input
+                        id="employeeMeetingLink"
+                        value={meetingLink}
+                        onChange={(e) => setMeetingLink(e.target.value)}
+                        placeholder="https://meet.google.com/... (auto-generated if empty)"
+                        className="pl-9 rounded-lg"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="employeeMeetingLocation" className="text-sm font-medium text-[#475569]">Location</Label>
+                    <div className="relative mt-1.5">
+                      <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#F59E0B]" />
+                      <Input
+                        id="employeeMeetingLocation"
+                        value={meetingLocation}
+                        onChange={(e) => setMeetingLocation(e.target.value)}
+                        placeholder="Meeting room / site address"
+                        className="pl-9 rounded-lg"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="employeeMeetingNotes" className="text-sm font-medium text-[#475569]">Notes (optional)</Label>
+                  <Textarea
+                    id="employeeMeetingNotes"
+                    value={meetingNotes}
+                    onChange={(e) => setMeetingNotes(e.target.value)}
+                    placeholder="Agenda, topics to discuss..."
+                    rows={2}
+                    className="mt-1.5 rounded-lg resize-none"
+                  />
+                </div>
+
+                <DialogFooter className="gap-2 pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setShowMeetingDialog(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={meetingSubmitting}
+                    className={`rounded-lg gap-2 text-white ${meetingType === 'online'
+                      ? 'bg-[#0891B2] hover:bg-[#0891B2]/90'
+                      : 'bg-[#F59E0B] hover:bg-[#F59E0B]/90'
+                      }`}
+                  >
+                    {meetingSubmitting ? (
+                      <RefreshCw size={16} className="animate-spin" />
+                    ) : meetingType === 'online' ? (
+                      <Video size={16} />
+                    ) : (
+                      <MapPin size={16} />
+                    )}
+                    {meetingSubmitting ? 'Scheduling...' : 'Schedule Meeting'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </AnimatePresence>

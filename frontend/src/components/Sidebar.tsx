@@ -340,7 +340,7 @@ const navigationItems: NavigationItem[] = [
   // ===== COMMUNICATION =====
   { title: "Communication", isHeader: true },
   {
-    title: "Letter Box",
+    title: "Zodo Mail",
     icon: Mail,
     path: "/letterbox",
     featureId: "letterbox",

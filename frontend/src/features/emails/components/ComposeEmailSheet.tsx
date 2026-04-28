@@ -150,7 +150,7 @@ export function ComposeEmailSheet({
     if (mailboxStatus && !mailboxStatus.smtpConfigured) {
       toast({
         title: "Mailbox Not Configured",
-        description: "Set up your personal mailbox in Settings > Email before sending from lead, client, or Letter Box screens.",
+        description: "Set up your personal mailbox in Settings > Email before sending from lead, client, or Zodo Mail screens.",
         variant: "destructive",
       });
       return;
@@ -255,7 +255,7 @@ export function ComposeEmailSheet({
                 <div>
                   <p className="text-sm font-medium text-[#991B1B]">Your personal mailbox is not configured</p>
                   <p className="mt-1 text-sm text-[#B91C1C]">
-                    Letter Box, lead/client quick-send, and manual email composer all use the same personal mailbox settings.
+                    Zodo Mail, lead/client quick-send, and manual email composer all use the same personal mailbox settings.
                   </p>
                 </div>
               </div>

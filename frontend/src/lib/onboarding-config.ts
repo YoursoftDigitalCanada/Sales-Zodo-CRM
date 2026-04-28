@@ -20,7 +20,7 @@ export const ONBOARDING_MODULES = {
     featureIds: ["finance"],
   },
   letterbox: {
-    label: "Letter Box",
+    label: "Zodo Mail",
     description: "Shared inbox and customer communication history.",
     plans: ["basic"],
     featureIds: ["letterbox"],
@@ -39,7 +39,7 @@ export const ONBOARDING_MODULES = {
   },
   communication: {
     label: "Communication",
-    description: "Chat plus Letter Box collaboration.",
+    description: "Chat plus Zodo Mail collaboration.",
     plans: ["standard", "premium"],
     featureIds: ["chat", "letterbox"],
   },

@@ -127,7 +127,7 @@ export const PLAN_CARDS: PlanCard[] = [
       "Invoices",
       "Quotes",
       "Payments",
-      "Letter Box",
+      "Zodo Mail",
       "Support System",
     ],
   },

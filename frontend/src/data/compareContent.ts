@@ -88,7 +88,7 @@ const platformGroups: Omit<CompareFeatureGroup, "competitorStatus" | "competitor
     title: "Communication",
     description: "Keep conversations, follow-up, and support visible inside the platform.",
     modules: [
-      { label: "Letter Box" },
+      { label: "Zodo Mail" },
       { label: "Chats" },
       { label: "Support" },
       { label: "Notifications" },
@@ -154,7 +154,7 @@ export const comparePages: Record<ComparePageContent["slug"], ComparePageContent
     ],
     zodoSnapshot: [
       "ZODO leads with an AI roof estimator and keeps the estimate, inspection, CRM, and billing flow connected.",
-      "Letter Box, Chats, Support, and Notifications live inside the same system instead of being a side layer.",
+      "Zodo Mail, Chats, Support, and Notifications live inside the same system instead of being a side layer.",
       "Employees, Users, Roles, Integrations, and Help Center are surfaced as first-class workspace controls.",
     ],
     competitorBestFor:
@@ -238,7 +238,7 @@ export const comparePages: Record<ComparePageContent["slug"], ComparePageContent
     zodoSnapshot: [
       "ZODO keeps the roof estimate, CRM, inspections, communication, and workspace controls in one calmer experience.",
       "The AI Roof Estimator is front-and-center instead of a secondary workflow.",
-      "ZODO pairs field workflows with Letter Box, Chats, Support, Users, Roles, Integrations, and Help Center in the same navigation model.",
+      "ZODO pairs field workflows with Zodo Mail, Chats, Support, Users, Roles, Integrations, and Help Center in the same navigation model.",
     ],
     competitorBestFor:
       "Roofing companies that want a mature, process-heavy roofing management platform with extensive operational workflows.",
@@ -321,7 +321,7 @@ export const comparePages: Record<ComparePageContent["slug"], ComparePageContent
     zodoSnapshot: [
       "ZODO keeps the estimator story but extends it deeper into CRM, inspections, file workflows, team control, and communication.",
       "It gives roofers a single system for the sales motion and the back-office/field motion.",
-      "ZODO exposes Help Center, Integrations, Users, Roles, Employees, Support, and Letter Box as part of the same product surface.",
+      "ZODO exposes Help Center, Integrations, Users, Roles, Employees, Support, and Zodo Mail as part of the same product surface.",
     ],
     competitorBestFor:
       "Sales-led roofing teams that want fast measurements, quick proposals, and simple monetization tools.",
@@ -338,7 +338,7 @@ export const comparePages: Record<ComparePageContent["slug"], ComparePageContent
       },
       {
         title: "Better communication depth",
-        description: "Letter Box, Chats, Support, and Notifications are native parts of the platform instead of a narrower sales-follow-up story.",
+        description: "Zodo Mail, Chats, Support, and Notifications are native parts of the platform instead of a narrower sales-follow-up story.",
         tone: "green",
       },
       {
@@ -404,7 +404,7 @@ export const comparePages: Record<ComparePageContent["slug"], ComparePageContent
     zodoSnapshot: [
       "ZODO combines roofing CRM, AI estimating, inspections, communication, and team controls in one newer product shell.",
       "The user experience is organized around how roofing companies actually move from lead to job to payment.",
-      "File Manager, Letter Box, Chats, Support, Roles, Integrations, and Help Center give teams more operational continuity inside one workspace.",
+      "File Manager, Zodo Mail, Chats, Support, Roles, Integrations, and Help Center give teams more operational continuity inside one workspace.",
     ],
     competitorBestFor:
       "Contractors familiar with legacy field-office workflow tools and collaboration patterns around proposals, files, and scheduling.",

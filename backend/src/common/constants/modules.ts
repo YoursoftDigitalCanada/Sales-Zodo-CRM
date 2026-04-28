@@ -245,7 +245,7 @@ export const SIDEBAR_MODULES: SidebarModule[] = [
     children: [
       {
         id: 'emails',
-        name: 'Letter Box',
+        name: 'Zodo Mail',
         icon: 'mail',
         path: '/communication/emails',
         requiredPermissions: [PERMISSIONS.EMAILS_VIEW],

@@ -51,7 +51,7 @@ export const PLAN_FEATURES: Record<SignupPlan, SignupPlanDefinition> = {
       'Invoices',
       'Quotes',
       'Payments',
-      'Letter Box',
+      'Zodo Mail',
       'Support System',
     ],
   },

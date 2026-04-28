@@ -176,7 +176,7 @@ export const productFeaturePages: ProductFeatureContent[] = [
     secondaryCta: "See CRM walkthrough",
     featureBullets: [
       "Leads and Clients in one connected model",
-      "Letter Box and Chats inside the workspace",
+      "Zodo Mail and Chats inside the workspace",
       "Job and invoice context tied to customers",
       "Less follow-up leakage across the pipeline",
     ],
@@ -196,7 +196,7 @@ export const productFeaturePages: ProductFeatureContent[] = [
         description:
           "Inbox, chat, support, and notification context help teams understand what is happening without bouncing between tools.",
         points: [
-          "Letter Box",
+          "Zodo Mail",
           "Chats and alerts",
           "Customer communication context",
         ],

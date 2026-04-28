@@ -342,7 +342,7 @@ class ImapService {
                     message: subjectLabel,
                     type: 'INFO',
                     actionUrl: '/letterbox',
-                    actionLabel: 'Open Letter Box',
+                    actionLabel: 'Open Zodo Mail',
                     metadata: { emailFrom: fromAddr?.address, emailSubject: subjectLabel },
                 });
             } catch (notifErr: any) {

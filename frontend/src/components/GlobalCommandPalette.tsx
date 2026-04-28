@@ -135,10 +135,10 @@ export function GlobalCommandPalette({
       },
       {
         id: "nav-letterbox",
-        label: "Go to Letter Box",
+        label: "Go to Zodo Mail",
         icon: Mail,
         section: "Navigate",
-        keywords: ["email mailbox letter box"],
+        keywords: ["email mailbox zodo mail letter box"],
         action: () => navigate("/letterbox"),
       },
       {

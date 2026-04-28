@@ -1087,7 +1087,7 @@ const LeadDetailPage = () => {
                     <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 760ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
                             <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#EFF6FF] flex items-center justify-center"><Mail size={14} className="text-[#2563EB]" /></div><h3 className="text-sm font-semibold text-[#111827]">Emails</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{emails.length}</span></div>
-                            <button onClick={() => navigate('/letterbox')} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">Open Letter Box →</button>
+                            <button onClick={() => navigate('/letterbox')} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">Open Zodo Mail →</button>
                         </div>
                         {loadingEmails ? <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div> :
                             emails.length === 0 ? <div className="text-center py-8"><Mail size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No mailbox emails linked to this lead yet</p></div> :

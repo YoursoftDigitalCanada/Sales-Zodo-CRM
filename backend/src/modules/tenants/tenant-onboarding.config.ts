@@ -56,7 +56,7 @@ export const ONBOARDING_MODULE_GROUPS = {
         featureIds: ['finance'],
     },
     letterbox: {
-        label: 'Letter Box',
+        label: 'Zodo Mail',
         description: 'Shared inbox and customer communication history.',
         plans: ['basic'],
         moduleSlugs: ['letterbox'],
@@ -78,7 +78,7 @@ export const ONBOARDING_MODULE_GROUPS = {
     },
     communication: {
         label: 'Communication',
-        description: 'Chat plus Letter Box collaboration.',
+        description: 'Chat plus Zodo Mail collaboration.',
         plans: ['standard', 'premium'],
         moduleSlugs: ['chat', 'letterbox'],
         featureIds: ['chat', 'letterbox'],

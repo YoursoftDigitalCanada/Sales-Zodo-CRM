@@ -1821,7 +1821,7 @@ const MailboxSettingsDialog = ({
       <DialogHeader>
         <DialogTitle>My Mailbox</DialogTitle>
         <DialogDescription>
-          Configure the mailbox this employee will use inside Letter Box.
+          Configure the mailbox this employee will use inside Zodo Mail.
         </DialogDescription>
       </DialogHeader>
       <div className="grid gap-6 py-2 md:grid-cols-2">
@@ -2094,7 +2094,7 @@ const LetterBoxPage = () => {
 
         toast({
           title: "Mailbox Synced",
-          description: `${result.fetched} email(s) imported into Letter Box.`,
+          description: `${result.fetched} email(s) imported into Zodo Mail.`,
         });
       } catch (err) {
         console.error("Initial mailbox sync failed:", err);
@@ -2664,7 +2664,7 @@ const LetterBoxPage = () => {
         name: created.name,
         color: created.color || color,
       }]);
-      toast({ title: "Label Created", description: `${created.name} is now available in Letter Box.` });
+      toast({ title: "Label Created", description: `${created.name} is now available in Zodo Mail.` });
     } catch {
       toast({ title: "Label Creation Failed", description: "Could not create the label.", variant: "destructive" });
     }
@@ -2803,7 +2803,7 @@ const LetterBoxPage = () => {
       }
       toast({
         title: "Mailbox Connected",
-        description: "Your personal Letter Box settings were saved successfully.",
+        description: "Your personal Zodo Mail settings were saved successfully.",
       });
       await loadEmails(true);
     } catch (err: any) {
@@ -2832,7 +2832,7 @@ const LetterBoxPage = () => {
             </div>
             <h2 className="text-xl font-bold text-[#0F172A] mb-2">Set Up Your Mailbox</h2>
             <p className="text-[#64748B] text-sm mb-6">
-              Each employee uses their own mailbox in Letter Box. Connect your personal SMTP and IMAP settings here to send and receive only your own email.
+              Each employee uses their own mailbox in Zodo Mail. Connect your personal SMTP and IMAP settings here to send and receive only your own email.
             </p>
             <div className="space-y-3 text-left mb-6">
               <div className="flex items-center gap-3 px-4 py-3 bg-[#FF7B36]/5 rounded-lg border border-[#FF7B36]/20 text-sm text-[#FF7B36]">
@@ -2883,9 +2883,9 @@ const LetterBoxPage = () => {
                 <div className="crm-toolbar-breadcrumb hidden sm:flex mb-1">
                   <span>Dashboard</span>
                   <ChevronRight size={14} />
-                  <span className="crm-toolbar-breadcrumb-current">Letter Box</span>
+                  <span className="crm-toolbar-breadcrumb-current">Zodo Mail</span>
                 </div>
-                <h1 className="crm-toolbar-title">Letter Box</h1>
+                <h1 className="crm-toolbar-title">Zodo Mail</h1>
               </div>
 
               {/* Header Actions */}

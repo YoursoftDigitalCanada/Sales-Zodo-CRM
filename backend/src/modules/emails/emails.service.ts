@@ -124,7 +124,7 @@ export class EmailsService {
         if (!smtpConfigured) {
             await this.cleanupUploadedFiles(files);
             throw new BadRequestError(
-                'Letter Box outgoing mail requires your personal SMTP settings. Open Settings > Email or Letter Box > My Mailbox to send from your own email.',
+                'Zodo Mail outgoing mail requires your personal SMTP settings. Open Settings > Email or Zodo Mail > My Mailbox to send from your own email.',
             );
         }
 
@@ -186,12 +186,12 @@ export class EmailsService {
                 || normalizedError.includes('password')
             ) {
                 throw new BadRequestError(
-                    `Your personal SMTP delivery failed because the configured mailbox credentials were rejected. Letter Box and quick-send both use the same mailbox configuration from Settings > Email / Letter Box > My Mailbox. ${errorMessage}`,
+                    `Your personal SMTP delivery failed because the configured mailbox credentials were rejected. Zodo Mail and quick-send both use the same mailbox configuration from Settings > Email / Zodo Mail > My Mailbox. ${errorMessage}`,
                 );
             }
 
             throw new ServiceUnavailableError(
-                `Your personal SMTP delivery failed. Letter Box and quick-send both use the same mailbox configuration from Settings > Email / Letter Box > My Mailbox. ${errorMessage}`,
+                `Your personal SMTP delivery failed. Zodo Mail and quick-send both use the same mailbox configuration from Settings > Email / Zodo Mail > My Mailbox. ${errorMessage}`,
             );
         }
 

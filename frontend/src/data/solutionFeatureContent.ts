@@ -57,7 +57,7 @@ export const solutionFeaturePages: SolutionFeatureContent[] = [
       "AI Roof Estimator for faster first response",
       "Lead and client CRM tied to real jobs",
       "Proposal, invoice, and payment continuity",
-      "Letter Box, Chats, and alerts in one workspace",
+      "Zodo Mail, Chats, and alerts in one workspace",
     ],
     sections: [
       {

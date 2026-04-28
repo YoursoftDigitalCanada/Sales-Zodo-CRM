@@ -1362,7 +1362,7 @@ export default function SettingsPage() {
                     <div className="space-y-1">
                       <p className="font-medium text-[#0F172A]">Your personal mailbox powers all email actions</p>
                       <p className="text-sm text-[#64748B]">
-                        The SMTP and IMAP settings below are tied to your user account. Letter Box, lead/client quick-send, and test email all use this same mailbox.
+                        The SMTP and IMAP settings below are tied to your user account. Zodo Mail, lead/client quick-send, and test email all use this same mailbox.
                       </p>
                       <p className="text-xs text-[#64748B]">
                         {emailSettings.mailboxAddress
@@ -1374,7 +1374,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className={cardClass}>
-                  <SectionHeader title="Personal SMTP Configuration" description="Use your own mailbox for Letter Box sends, lead/client quick-send, and test email delivery." />
+                  <SectionHeader title="Personal SMTP Configuration" description="Use your own mailbox for Zodo Mail sends, lead/client quick-send, and test email delivery." />
                   <div className="mt-6 grid gap-5 lg:grid-cols-2">
                     <Field label="SMTP host">
                       <input className={fieldClass} value={emailSettings.smtp.host} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, host: event.target.value } })} />
@@ -1417,7 +1417,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className={cardClass}>
-                  <SectionHeader title="Personal IMAP Configuration" description="Connect your mailbox for Letter Box inbox sync. Each user must connect their own mailbox." />
+                  <SectionHeader title="Personal IMAP Configuration" description="Connect your mailbox for Zodo Mail inbox sync. Each user must connect their own mailbox." />
                   <div className="mt-6 grid gap-5 lg:grid-cols-2">
                     <Field label="IMAP host">
                       <input className={fieldClass} value={emailSettings.imap.host} onChange={(event) => setEmailSettings({ ...emailSettings, imap: { ...emailSettings.imap, host: event.target.value } })} />

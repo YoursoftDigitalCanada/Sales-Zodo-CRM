@@ -62,6 +62,25 @@ export class EmployeesController {
         } catch (e) { next(e); }
     }
 
+    async uploadDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const file = (req as Request & { file?: Express.Multer.File }).file;
+            if (!file) {
+                throw new BadRequestError('Employee document is required', ErrorCodes.INVALID_INPUT);
+            }
+
+            const publicPath = `/uploads/${req.context.tenantId}/employees/documents/${file.filename}`;
+            const document = await employeesService.uploadDocument(req.params.id, req.context.tenantId, {
+                name: String(req.body?.name || file.originalname).trim() || file.originalname,
+                type: req.body?.type,
+                expiryDate: req.body?.expiryDate || null,
+                fileUrl: publicPath,
+            });
+
+            sendSuccess(res, { document, fileUrl: publicPath }, 'Employee document uploaded');
+        } catch (e) { next(e); }
+    }
+
     async updateMe(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const employeeId = req.context.employeeId || req.user?.employeeId;

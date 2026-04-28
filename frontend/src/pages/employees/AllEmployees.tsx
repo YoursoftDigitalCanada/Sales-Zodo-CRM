@@ -295,6 +295,7 @@ const mapEmployeeData = (data: ApiEmployee[], departments: Department[]): Employ
         id: document.id,
         name: document.name || 'Document',
         type: document.type || 'file',
+        fileUrl: document.fileUrl ? normalizeEmployeeAvatar(document.fileUrl) : undefined,
         uploadedAt: new Date(document.uploadedAt || Date.now()),
       })),
       performance: { rating: 0, lastReviewDate: new Date(), nextReviewDate: new Date() },
@@ -488,6 +489,12 @@ const AllEmployeesPage: React.FC = () => {
   const handleViewEmployee = (employee: Employee) => {
     setSelectedEmployee(employee);
     setIsDetailPanelOpen(true);
+  };
+
+  const handleEmployeeUpdated = (employee: Employee) => {
+    setEmployees((current) => current.map((entry) => (entry.id === employee.id ? employee : entry)));
+    setEditingEmployee(employee);
+    setSelectedEmployee((current) => (current?.id === employee.id ? employee : current));
   };
 
   const handleEditEmployee = (employee: Employee) => {
@@ -873,6 +880,7 @@ const AllEmployeesPage: React.FC = () => {
         departments={departments}
         onSubmit={handleAddEmployee}
         editingEmployee={editingEmployee}
+        onEmployeeUpdated={handleEmployeeUpdated}
       />
 
       <EmployeeDetailPanel
@@ -884,6 +892,13 @@ const AllEmployeesPage: React.FC = () => {
         }}
         onEdit={handleEditEmployee}
         onDelete={handleDeleteEmployee}
+        onRefresh={async () => {
+          const refreshed = await refreshData();
+          if (selectedEmployee) {
+            const updatedEmployee = refreshed?.mappedEmployees.find((employee) => employee.id === selectedEmployee.id) || null;
+            setSelectedEmployee(updatedEmployee);
+          }
+        }}
       />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

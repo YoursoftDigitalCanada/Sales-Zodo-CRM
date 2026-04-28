@@ -24,7 +24,7 @@ import {
     leaveRequestIdSchema,
     reviewLeaveRequestSchema,
 } from './employees.validators';
-import { uploadEmployeeAvatar } from './employees-upload.middleware';
+import { uploadEmployeeAvatar, uploadEmployeeDocument } from './employees-upload.middleware';
 
 const router = Router();
 router.use(authenticate);
@@ -112,6 +112,7 @@ router.post('/create-portal-access', requirePermission(PERMISSIONS.EMPLOYEES_CRE
 
 router.get('/:id', requirePermission(PERMISSIONS.EMPLOYEES_VIEW), validate(employeeIdSchema), employeesController.getById.bind(employeesController));
 router.post('/:id/avatar', requirePermission(PERMISSIONS.EMPLOYEES_UPDATE), validate(employeeIdSchema), uploadEmployeeAvatar, employeesController.uploadAvatar.bind(employeesController));
+router.post('/:id/documents', requirePermission(PERMISSIONS.EMPLOYEES_UPDATE), validate(employeeIdSchema), uploadEmployeeDocument, employeesController.uploadDocument.bind(employeesController));
 router.put('/:id', requirePermission(PERMISSIONS.EMPLOYEES_UPDATE), validate(employeeIdSchema), validate(updateEmployeeSchema), employeesController.update.bind(employeesController));
 router.delete('/:id', requirePermission(PERMISSIONS.EMPLOYEES_DELETE), validate(employeeIdSchema), employeesController.delete.bind(employeesController));
 

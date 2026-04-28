@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import {
   X,
   Mail,
@@ -18,6 +19,8 @@ import {
   DollarSign,
   User,
   Shield,
+  Upload,
+  Loader2,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -25,6 +28,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import api from '@/lib/axios';
+import { toast } from 'sonner';
 import { Employee } from './types';
 import {
   getEmployeeStatusConfig,
@@ -39,6 +44,7 @@ interface EmployeeDetailPanelProps {
   onClose: () => void;
   onEdit?: (employee: Employee) => void;
   onDelete?: (employee: Employee) => void;
+  onRefresh?: () => Promise<void> | void;
 }
 
 export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
@@ -47,11 +53,65 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
   onClose,
   onEdit,
   onDelete,
+  onRefresh,
 }) => {
+  const navigate = useNavigate();
+  const documentInputRef = useRef<HTMLInputElement | null>(null);
+  const [isDocumentUploading, setIsDocumentUploading] = useState(false);
   if (!employee) return null;
 
   const statusConfig = getEmployeeStatusConfig(employee.status);
   const employmentConfig = getEmploymentTypeConfig(employee.employmentType);
+
+  const handleSendEmail = () => {
+    if (!employee.email) {
+      toast.error('This employee does not have an email address.');
+      return;
+    }
+
+    window.location.href = `mailto:${employee.email}`;
+  };
+
+  const handleScheduleMeeting = () => {
+    navigate(`/calendar?employeeId=${employee.id}&employeeName=${encodeURIComponent(`${employee.firstName} ${employee.lastName}`)}&email=${encodeURIComponent(employee.email || '')}`);
+    onClose();
+  };
+
+  const handleUploadDocument = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setIsDocumentUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('name', file.name);
+
+      await api.post(`/employees/${employee.id}/documents`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      await onRefresh?.();
+      toast.success('Employee document uploaded successfully');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to upload employee document');
+    } finally {
+      setIsDocumentUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleDownloadDocument = (fileUrl?: string) => {
+    if (!fileUrl) {
+      toast.error('This document is missing a file link.');
+      return;
+    }
+
+    window.open(fileUrl, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <AnimatePresence>
@@ -312,6 +372,24 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                   </TabsContent>
 
                   <TabsContent value="documents" className="space-y-4">
+                    <input
+                      ref={documentInputRef}
+                      type="file"
+                      className="hidden"
+                      onChange={handleUploadDocument}
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="gap-2"
+                        disabled={isDocumentUploading}
+                        onClick={() => documentInputRef.current?.click()}
+                      >
+                        {isDocumentUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        Upload Document
+                      </Button>
+                    </div>
                     {employee.documents.length > 0 ? (
                       employee.documents.map((doc) => (
                         <div
@@ -329,7 +407,7 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                               </p>
                             </div>
                           </div>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={() => handleDownloadDocument(doc.fileUrl)}>
                             <Download className="w-4 h-4" />
                           </Button>
                         </div>
@@ -338,6 +416,16 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                       <div className="text-center py-8">
                         <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-[#475569]">No documents uploaded</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="mt-4 gap-2"
+                          disabled={isDocumentUploading}
+                          onClick={() => documentInputRef.current?.click()}
+                        >
+                          {isDocumentUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                          Upload Document
+                        </Button>
                       </div>
                     )}
                   </TabsContent>
@@ -347,11 +435,11 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
               {/* Footer Actions */}
               <div className="border-t p-4 bg-white/5">
                 <div className="flex gap-3">
-                  <Button variant="outline" className="flex-1 gap-2">
+                  <Button variant="outline" className="flex-1 gap-2" onClick={handleSendEmail}>
                     <Mail className="w-4 h-4" />
                     Send Email
                   </Button>
-                  <Button className="flex-1 gap-2 bg-[#0891B2] hover:bg-[#0891B2]/90">
+                  <Button className="flex-1 gap-2 bg-[#0891B2] hover:bg-[#0891B2]/90" onClick={handleScheduleMeeting}>
                     <Calendar className="w-4 h-4" />
                     Schedule Meeting
                   </Button>

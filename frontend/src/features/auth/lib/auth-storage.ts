@@ -1,10 +1,14 @@
 interface AuthUser {
   firstName?: string;
+  lastName?: string;
+  email?: string;
+  avatar?: string | null;
   [key: string]: unknown;
 }
 
 interface AuthEmployee {
   id?: string;
+  avatar?: string | null;
   role?: {
     name?: string;
     [key: string]: unknown;

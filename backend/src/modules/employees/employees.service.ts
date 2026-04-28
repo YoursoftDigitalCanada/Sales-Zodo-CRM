@@ -824,6 +824,36 @@ export class EmployeesService {
         return this.update(id, tenantId, { avatar });
     }
 
+    async uploadDocument(id: string, tenantId: string, data: {
+        name: string;
+        type?: 'CERT' | 'LICENSE' | 'TRAINING' | 'POLICY' | 'PAYSLIP';
+        fileUrl: string;
+        expiryDate?: string | null;
+    }) {
+        const existing = await employeesRepository.findById(id, tenantId);
+        if (!existing) throw new NotFoundError('Employee not found', ErrorCodes.EMPLOYEE_NOT_FOUND);
+
+        const document = await prisma.employeeDocument.create({
+            data: {
+                employeeId: id,
+                tenantId,
+                name: data.name,
+                type: data.type || 'CERT',
+                fileUrl: data.fileUrl,
+                expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
+            },
+        });
+
+        activityLogger.log({
+            tenantId, entityType: 'Employee', entityId: id,
+            action: 'UPDATE', module: 'employees',
+            description: `Uploaded employee document "${data.name}"`,
+            metadata: { documentId: document.id, type: document.type },
+        });
+
+        return document;
+    }
+
     async delete(id: string, tenantId: string) {
         const existing = await employeesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Employee not found', ErrorCodes.EMPLOYEE_NOT_FOUND);

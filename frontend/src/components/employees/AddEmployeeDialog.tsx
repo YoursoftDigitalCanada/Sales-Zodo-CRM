@@ -52,6 +52,7 @@ import api from '@/lib/axios';
 import { API_ORIGIN } from '@/services/api/config';
 import { Department, Employee, EmploymentType, EmployeeStatus } from './types';
 import { toast } from 'sonner';
+import { getStoredEmployee, updateStoredAccessContext } from '@/features/auth/lib/auth-storage';
 import {
   CANADIAN_PHONE_VALIDATION_MESSAGE,
   CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE,
@@ -117,6 +118,7 @@ interface AddEmployeeDialogProps {
   departments: Department[];
   onSubmit: (data: EmployeeFormValues) => boolean | Promise<boolean>;
   editingEmployee?: EditableEmployee;
+  onEmployeeUpdated?: (employee: EditableEmployee) => void;
 }
 
 export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
@@ -125,6 +127,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
   departments,
   onSubmit,
   editingEmployee,
+  onEmployeeUpdated,
 }) => {
   const { isMobile } = useIsMobile();
   const [showPortalPassword, setShowPortalPassword] = useState(false);
@@ -132,6 +135,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
   const [avatarPreview, setAvatarPreview] = useState(editingEmployee?.avatar || '');
   const [isAvatarUploading, setIsAvatarUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const submitIntentRef = useRef(false);
   const formSteps = editingEmployee ? EDIT_EMPLOYEE_FORM_STEPS : EMPLOYEE_FORM_STEPS;
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeFormSchema),
@@ -224,9 +228,34 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
       const normalizedAvatarUrl = typeof avatarUrl === 'string' && avatarUrl
         ? `${API_ORIGIN}${avatarUrl}`
         : '';
+      const updatedEmployee = response.data?.data?.employee || response.data?.employee;
 
       if (normalizedAvatarUrl) {
         setAvatarPreview(normalizedAvatarUrl);
+      }
+
+      if (updatedEmployee && editingEmployee) {
+        const nextEmployee = {
+          ...editingEmployee,
+          avatar: normalizedAvatarUrl || editingEmployee.avatar,
+        };
+        onEmployeeUpdated?.(nextEmployee);
+      }
+
+      const currentUserRaw = localStorage.getItem('user');
+      let currentUser = null;
+      try {
+        currentUser = currentUserRaw ? JSON.parse(currentUserRaw) : null;
+      } catch {
+        currentUser = null;
+      }
+
+      const currentEmployee = getStoredEmployee();
+      if (currentEmployee?.id && editingEmployee?.id && currentEmployee.id === editingEmployee.id) {
+        updateStoredAccessContext({
+          user: currentUser ? { ...currentUser, avatar: normalizedAvatarUrl || currentUser.avatar || null } : currentUser,
+          employee: { ...currentEmployee, avatar: normalizedAvatarUrl || null },
+        });
       }
 
       toast.success('Employee photo uploaded successfully');
@@ -240,6 +269,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
   };
 
   const handleSubmit = async (data: EmployeeFormValues) => {
+    submitIntentRef.current = false;
     if (!editingEmployee) {
       let hasPortalErrors = false;
 
@@ -346,6 +376,11 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
         <Form {...form}>
           <form
             onSubmit={(event) => {
+              if (!submitIntentRef.current) {
+                event.preventDefault();
+                return;
+              }
+
               if (!isLastStep) {
                 event.preventDefault();
                 void handleNextStep();
@@ -868,6 +903,9 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                 <Button
                   type="submit"
                   className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"
+                  onClick={() => {
+                    submitIntentRef.current = true;
+                  }}
                 >
                   {editingEmployee ? 'Update Employee' : 'Add Employee'}
                 </Button>

@@ -38,6 +38,7 @@ export interface Employee {
     id: string;
     name: string;
     type: string;
+    fileUrl?: string;
     uploadedAt: Date;
   }[];
   performance: {

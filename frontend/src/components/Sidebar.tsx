@@ -854,7 +854,11 @@ export function Sidebar({
     };
     loadUser();
     window.addEventListener("storage", loadUser);
-    return () => window.removeEventListener("storage", loadUser);
+    window.addEventListener(AUTH_ACCESS_UPDATED_EVENT, loadUser);
+    return () => {
+      window.removeEventListener("storage", loadUser);
+      window.removeEventListener(AUTH_ACCESS_UPDATED_EVENT, loadUser);
+    };
   }, []);
 
   const toggleSubmenu = (title: string) => {
@@ -864,6 +868,7 @@ export function Sidebar({
   const getInitials = () => (user ? (user.firstName[0] + user.lastName[0]).toUpperCase() : "GU");
   const getFullName = () => (user ? `${user.firstName} ${user.lastName}` : "Guest User");
   const getEmail = () => user?.email || "guest@yoursoft.ca";
+  const getAvatar = () => (user?.avatar && typeof user.avatar === "string" ? user.avatar : "");
 
   // Check if path is active (exact match or starts with for nested routes)
   const isActive = (path: string) => {
@@ -1310,9 +1315,17 @@ export function Sidebar({
                   className="w-full flex items-center gap-3 p-3 rounded-md bg-white hover:bg-[#F1F5F9] transition-colors group"
                 >
                   <div className="relative">
-                    <div className="h-9 w-9 rounded-md bg-[#6637F4] flex items-center justify-center text-white font-bold text-sm">
-                      {getInitials()}
-                    </div>
+                    {getAvatar() ? (
+                      <img
+                        src={getAvatar()}
+                        alt={getFullName()}
+                        className="h-9 w-9 rounded-md object-cover"
+                      />
+                    ) : (
+                      <div className="h-9 w-9 rounded-md bg-[#6637F4] flex items-center justify-center text-white font-bold text-sm">
+                        {getInitials()}
+                      </div>
+                    )}
                     <motion.div
                       animate={{ scale: [1, 1.2, 1] }}
                       transition={{ repeat: Infinity, duration: 2, delay: 1 }}
@@ -1397,9 +1410,17 @@ export function Sidebar({
                   className="relative cursor-pointer group"
                   onClick={() => setCollapsed(false)}
                 >
-                  <div className="h-9 w-9 rounded-md bg-[#6637F4] flex items-center justify-center text-white font-bold text-sm">
-                    {getInitials()}
-                  </div>
+                  {getAvatar() ? (
+                    <img
+                      src={getAvatar()}
+                      alt={getFullName()}
+                      className="h-9 w-9 rounded-md object-cover"
+                    />
+                  ) : (
+                    <div className="h-9 w-9 rounded-md bg-[#6637F4] flex items-center justify-center text-white font-bold text-sm">
+                      {getInitials()}
+                    </div>
+                  )}
                   <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#01C44A] rounded-full border-2 border-[#F7F7FB]" />
 
                   {/* Tooltip */}

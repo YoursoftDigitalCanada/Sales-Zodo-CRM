@@ -73,6 +73,7 @@ import {
   type WorkspaceTheme,
 } from "@/features/settings/services/settings-service";
 import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
+import { writeStoredNotificationPreferences } from "@/features/settings/lib/notification-preferences";
 import { getUserLocalizationSnapshot } from "@/lib/user-localization";
 import { syncLegacyThemeStorage } from "@/lib/workspace-theme";
 import useIsMobile from "@/hooks/useIsMobile";
@@ -474,7 +475,10 @@ export default function SettingsPage() {
       setTestEmailAddress(emailResult.value.smtp.senderEmail || emailResult.value.smtp.username || emailResult.value.mailboxAddress || "");
     }
     if (securityResult.status === "fulfilled") setSecurity(securityResult.value);
-    if (notificationResult.status === "fulfilled") setNotifications(notificationResult.value);
+    if (notificationResult.status === "fulfilled") {
+      setNotifications(notificationResult.value);
+      writeStoredNotificationPreferences(notificationResult.value);
+    }
     if (sessionsResult.status === "fulfilled") setSessions(sessionsResult.value);
     if (auditResult.status === "fulfilled") setAuditLogs(auditResult.value);
     if (teamResult.status === "fulfilled") setTeamMembers(teamResult.value);
@@ -622,8 +626,28 @@ export default function SettingsPage() {
     if (!notifications) return;
     setSavingSection("notifications");
     try {
+      if (
+        notifications.desktopNotifications
+        && typeof window !== "undefined"
+        && "Notification" in window
+        && Notification.permission === "default"
+      ) {
+        const permission = await Notification.requestPermission();
+
+        if (permission !== "granted") {
+          setNotifications((current) => (current ? { ...current, desktopNotifications: false } : current));
+          toast({
+            title: "Desktop notifications blocked",
+            description: "Allow browser notifications to keep desktop alerts enabled.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       const next = await updateNotificationSettings(notifications);
       setNotifications(next);
+      writeStoredNotificationPreferences(next);
       toast({ title: "Notifications updated", description: "Your workspace notification preferences were saved." });
     } catch (error) {
       toast({ title: "Save failed", description: getErrorMessage(error), variant: "destructive" });
@@ -1679,12 +1703,31 @@ export default function SettingsPage() {
                       </div>
                       <Toggle
                         checked={notifications[item.key as keyof NotificationSettings]}
-                        onChange={(next) =>
+                        onChange={async (next) => {
+                          if (
+                            item.key === "desktopNotifications"
+                            && next
+                            && typeof window !== "undefined"
+                            && "Notification" in window
+                            && Notification.permission === "default"
+                          ) {
+                            const permission = await Notification.requestPermission();
+
+                            if (permission !== "granted") {
+                              toast({
+                                title: "Desktop notifications blocked",
+                                description: "Allow browser notifications to enable this setting.",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
+                          }
+
                           setNotifications({
                             ...notifications,
                             [item.key]: next,
-                          })
-                        }
+                          });
+                        }}
                       />
                     </div>
                   ))}

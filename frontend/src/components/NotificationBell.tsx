@@ -22,6 +22,15 @@ import {
   type NotificationEntity,
 } from "@/features/notifications";
 import { resolveNotificationTarget } from "@/features/notifications/utils/notification-navigation";
+import {
+  NOTIFICATION_PREFERENCES_UPDATED_EVENT,
+  readStoredNotificationPreferences,
+  writeStoredNotificationPreferences,
+} from "@/features/settings/lib/notification-preferences";
+import {
+  getNotificationSettings,
+  type NotificationSettings,
+} from "@/features/settings/services/settings-service";
 import { cn } from "@/lib/utils";
 
 interface NotificationBellProps {
@@ -149,45 +158,51 @@ export function NotificationBell({
   const navigate = useNavigate();
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const hasLoadedRef = useRef(false);
+  const announcedIdsRef = useRef<Set<string>>(new Set());
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [notifications, setNotifications] = useState<BellNotification[]>([]);
-
-  const loadNotifications = useCallback(
-    async (silent = false) => {
-      if (!silent) {
-        setIsLoading(true);
-      }
-
-      try {
-        const data = await getNotifications({ limit: 10 });
-        setNotifications(data.map(normalizeNotification));
-      } catch (error) {
-        if (!silent) {
-          toast({
-            title: "Notifications unavailable",
-            description: "Could not load notifications right now.",
-            variant: "destructive",
-          });
-        }
-      } finally {
-        if (!silent) {
-          setIsLoading(false);
-        }
-      }
-    },
-    [toast],
-  );
+  const [preferences, setPreferences] = useState<NotificationSettings>(() => readStoredNotificationPreferences());
 
   useEffect(() => {
-    void loadNotifications(true);
+    let isActive = true;
 
-    const intervalId = window.setInterval(() => {
-      void loadNotifications(true);
-    }, 60000);
+    const loadPreferences = async () => {
+      try {
+        const nextPreferences = await getNotificationSettings();
 
-    return () => window.clearInterval(intervalId);
-  }, [loadNotifications]);
+        if (!isActive) {
+          return;
+        }
+
+        const stored = writeStoredNotificationPreferences(nextPreferences);
+        setPreferences(stored);
+      } catch {
+        // Some users may not have permission to read workspace notification settings directly.
+      }
+    };
+
+    void loadPreferences();
+
+    const handlePreferencesUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<NotificationSettings>).detail;
+
+      if (detail) {
+        setPreferences(detail);
+        return;
+      }
+
+      setPreferences(readStoredNotificationPreferences());
+    };
+
+    window.addEventListener(NOTIFICATION_PREFERENCES_UPDATED_EVENT, handlePreferencesUpdate as EventListener);
+
+    return () => {
+      isActive = false;
+      window.removeEventListener(NOTIFICATION_PREFERENCES_UPDATED_EVENT, handlePreferencesUpdate as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOpen) {
@@ -225,6 +240,80 @@ export function NotificationBell({
     },
     [navigate],
   );
+
+  const maybeShowDesktopNotifications = useCallback((items: BellNotification[]) => {
+    if (
+      typeof window === "undefined"
+      || !("Notification" in window)
+      || Notification.permission !== "granted"
+      || !preferences.desktopNotifications
+    ) {
+      return;
+    }
+
+    for (const item of items) {
+      if (item.read || announcedIdsRef.current.has(item.id)) {
+        continue;
+      }
+
+      announcedIdsRef.current.add(item.id);
+
+      const browserNotification = new Notification(item.title, {
+        body: item.message,
+        tag: item.id,
+      });
+
+      browserNotification.onclick = () => {
+        window.focus();
+        openTarget(item.target);
+        browserNotification.close();
+      };
+    }
+  }, [openTarget, preferences.desktopNotifications]);
+
+  const loadNotifications = useCallback(
+    async (silent = false) => {
+      if (!silent) {
+        setIsLoading(true);
+      }
+
+      try {
+        const data = await getNotifications({ limit: 10 });
+        const nextNotifications = data.map(normalizeNotification);
+        setNotifications(nextNotifications);
+
+        if (hasLoadedRef.current) {
+          maybeShowDesktopNotifications(nextNotifications);
+        } else {
+          nextNotifications.forEach((item) => announcedIdsRef.current.add(item.id));
+          hasLoadedRef.current = true;
+        }
+      } catch (error) {
+        if (!silent) {
+          toast({
+            title: "Notifications unavailable",
+            description: "Could not load notifications right now.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (!silent) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [maybeShowDesktopNotifications, toast],
+  );
+
+  useEffect(() => {
+    void loadNotifications(true);
+
+    const intervalId = window.setInterval(() => {
+      void loadNotifications(true);
+    }, 60000);
+
+    return () => window.clearInterval(intervalId);
+  }, [loadNotifications]);
 
   const handleNotificationClick = useCallback(
     async (notification: BellNotification) => {

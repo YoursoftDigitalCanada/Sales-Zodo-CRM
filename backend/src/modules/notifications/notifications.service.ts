@@ -10,6 +10,8 @@ import { NotFoundError } from '../../common/errors/HttpErrors';
 import { logger } from '../../common/utils/logger';
 import { PushPayload, PushProvider } from './push.types';
 import { WebPushProvider } from './web-push.provider';
+import { prisma } from '../../config/database';
+import { DEFAULT_NOTIFICATION_SETTINGS } from '../settings/settings.constants';
 
 export class NotificationsService {
   private readonly pushProviders: PushProvider[];
@@ -171,6 +173,22 @@ export class NotificationsService {
     message: string,
     data?: Record<string, unknown>
   ): Promise<void> {
+    const tenantId = typeof data?.tenantId === 'string' && data.tenantId.trim()
+      ? data.tenantId.trim()
+      : await this.resolveTenantIdForUser(userId);
+
+    if (tenantId) {
+      const settings = await this.getTenantNotificationSettings(tenantId);
+
+      if (!settings.pushNotifications) {
+        logger.debug('[Notifications] Push skipped because workspace push notifications are disabled', {
+          userId,
+          tenantId,
+        });
+        return;
+      }
+    }
+
     const payload: PushPayload = { title, message, data };
 
     if (!this.pushProviders.length) {
@@ -209,6 +227,47 @@ export class NotificationsService {
       readAt: notification.readAt || undefined,
       createdAt: notification.createdAt,
       expiresAt: notification.expiresAt || undefined,
+    };
+  }
+
+  private async resolveTenantIdForUser(userId: string): Promise<string | null> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        tenantId: true,
+        employees: {
+          where: { isActive: true },
+          select: { tenantId: true },
+          take: 1,
+        },
+      },
+    });
+
+    if (user?.tenantId) {
+      return user.tenantId;
+    }
+
+    return user?.employees[0]?.tenantId ?? null;
+  }
+
+  private async getTenantNotificationSettings(tenantId: string): Promise<{
+    pushNotifications: boolean;
+  }> {
+    const settingsRecord = await prisma.tenantSettings.findUnique({
+      where: { tenantId },
+      select: { notificationSettings: true },
+    });
+
+    const rawSettings = typeof settingsRecord?.notificationSettings === 'object' && settingsRecord.notificationSettings
+      ? (settingsRecord.notificationSettings as Record<string, unknown>)
+      : {};
+
+    return {
+      pushNotifications: Boolean(
+        rawSettings.pushNotifications
+        ?? rawSettings.push
+        ?? DEFAULT_NOTIFICATION_SETTINGS.pushNotifications,
+      ),
     };
   }
 }

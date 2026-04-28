@@ -78,6 +78,10 @@ interface SelectFieldProps {
     value: any;
     options: readonly string[];
     onChange: (field: string, value: any) => void;
+    allowOther?: boolean;
+    otherMode?: boolean;
+    onOtherModeChange?: (field: string, enabled: boolean) => void;
+    otherPlaceholder?: string;
 }
 
 interface BooleanFieldProps {
@@ -190,59 +194,45 @@ const EMPTY_FORM: Record<string, any> = {
 };
 
 const SELECT_OPTIONS = {
-    inspectionType: ["Initial", "Follow-up", "Re-inspect", "Insurance", "Final", "Storm Damage", "Maintenance"],
-    accessMethod: ["Ladder", "Drone", "Walk-on", "Binoculars"],
-    overallCondition: ["Poor", "Fair", "Good", "Excellent"],
-    roofStyle: ["Gable", "Hip", "Flat", "Mansard", "Gambrel", "Shed"],
-    roofPitch: ["Low (2-4)", "Medium (5-7)", "Steep (8-12)"],
-    deckingType: ["Plywood", "OSB", "1x6", "Skip"],
-    deckingCondition: ["Good", "Needs Repair", "Needs Replace"],
-    underlaymentType: ["Felt", "Synthetic", "Ice & Water"],
-    ventilationType: ["Ridge", "Box", "Turbine", "Power", "Soffit"],
-    flashingCondition: ["Good", "Repair", "Replace"],
-    gutterCondition: ["Good", "Repair", "Replace", "None"],
-    soffitFasciaCondition: ["Good", "Repair", "Replace"],
-    hailSizeFound: ["Pea", "Marble", "Quarter", "Golf Ball", "Baseball"],
-    overallDamageRating: ["None", "Minor", "Moderate", "Severe", "Total Loss"],
-    proposedMaterial: ["Asphalt", "Metal", "Tile", "Flat", "Wood", "Slate"],
-    warrantyType: ["Manufacturer", "Workmanship", "Extended"],
-    paymentMethod: ["Cash", "Check", "Card", "Financing", "Insurance"],
+    inspectionType: ["Initial", "Follow-up", "Re-inspect", "Insurance", "Final", "Storm Damage", "Maintenance", "Other"],
+    accessMethod: ["Ladder", "Drone", "Walk-on", "Binoculars", "Other"],
+    overallCondition: ["Poor", "Fair", "Good", "Excellent", "Other"],
+    roofStyle: ["Gable", "Hip", "Flat", "Mansard", "Gambrel", "Shed", "Other"],
+    roofPitch: ["Low (2-4)", "Medium (5-7)", "Steep (8-12)", "Other"],
+    deckingType: ["Plywood", "OSB", "1x6", "Skip", "Other"],
+    deckingCondition: ["Good", "Needs Repair", "Needs Replace", "Other"],
+    underlaymentType: ["Felt", "Synthetic", "Ice & Water", "Other"],
+    ventilationType: ["Ridge", "Box", "Turbine", "Power", "Soffit", "Other"],
+    flashingCondition: ["Good", "Repair", "Replace", "Other"],
+    gutterCondition: ["Good", "Repair", "Replace", "None", "Other"],
+    soffitFasciaCondition: ["Good", "Repair", "Replace", "Other"],
+    hailSizeFound: ["Pea", "Marble", "Quarter", "Golf Ball", "Baseball", "Other"],
+    overallDamageRating: ["None", "Minor", "Moderate", "Severe", "Total Loss", "Other"],
+    proposedMaterial: ["Asphalt", "Metal", "Tile", "Flat", "Wood", "Slate", "Other"],
+    warrantyType: ["Manufacturer", "Workmanship", "Extended", "Other"],
+    paymentMethod: ["Cash", "Check", "Card", "Financing", "Insurance", "Other"],
     estimatedDuration: ["1 Day", "2-3 Days", "1 Week", "2 Weeks", "3+ Weeks"],
 } as const;
 
-const TAB_REQUIRED_FIELDS: Record<InspectionTabId, Array<{ field: string; label: string }>> = {
-    general: [
-        { field: "inspectionDate", label: "Inspection Date" },
-        { field: "inspectorName", label: "Inspector Name" },
-        { field: "inspectionType", label: "Inspection Type" },
-        { field: "accessMethod", label: "Access Method" },
-    ],
-    roof: [
-        { field: "roofStyle", label: "Roof Style" },
-        { field: "roofPitch", label: "Roof Pitch" },
-        { field: "totalSquares", label: "Total Squares" },
-        { field: "numberOfLayers", label: "Number of Layers" },
-    ],
-    damage: [
-        { field: "overallDamageRating", label: "Overall Damage Rating" },
-    ],
-    materials: [
-        { field: "proposedMaterial", label: "Proposed Material" },
-        { field: "shingleBrand", label: "Shingle Brand" },
-        { field: "shingleColor", label: "Shingle Color" },
-    ],
-    estimate: [
-        { field: "totalEstimate", label: "Total Estimate" },
-        { field: "customerPrice", label: "Customer Price" },
-        { field: "paymentMethod", label: "Payment Method" },
-    ],
-    scheduling: [
-        { field: "tentativeStartDate", label: "Tentative Start Date" },
-        { field: "estimatedDuration", label: "Estimated Duration" },
-        { field: "crewSize", label: "Crew Size" },
-        { field: "crewLeadName", label: "Crew Lead Name" },
-    ],
-};
+const OTHER_ENABLED_FIELDS = new Set([
+    "inspectionType",
+    "accessMethod",
+    "overallCondition",
+    "roofStyle",
+    "roofPitch",
+    "deckingType",
+    "deckingCondition",
+    "underlaymentType",
+    "ventilationType",
+    "flashingCondition",
+    "gutterCondition",
+    "soffitFasciaCondition",
+    "hailSizeFound",
+    "overallDamageRating",
+    "proposedMaterial",
+    "warrantyType",
+    "paymentMethod",
+]);
 
 function readText(value: unknown): string {
     return typeof value === "string" ? value.trim() : "";
@@ -478,19 +468,60 @@ const BasicField = ({ label, field, value, onChange, type = "text", required = f
     </div>
 );
 
-const SelectField = ({ label, field, value, options, onChange }: SelectFieldProps) => (
-    <div className="space-y-1">
-        <Label className="text-xs text-[#475569]">{label}</Label>
-        <select
-            value={value || ""}
-            onChange={(e) => onChange(field, e.target.value || undefined)}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm"
-        >
-            <option value="">Select...</option>
-            {options.map((option) => <option key={option} value={option}>{option}</option>)}
-        </select>
-    </div>
-);
+const SelectField = ({
+    label,
+    field,
+    value,
+    options,
+    onChange,
+    allowOther = false,
+    otherMode = false,
+    onOtherModeChange,
+    otherPlaceholder,
+}: SelectFieldProps) => {
+    const normalizedValue = readText(value);
+    const standardOptions = allowOther ? options.filter((option) => option !== "Other") : options;
+    const isStandardValue = standardOptions.includes(normalizedValue);
+    const selectValue = otherMode ? "__other__" : (isStandardValue ? normalizedValue : "");
+
+    return (
+        <div className="space-y-1">
+            <Label className="text-xs text-[#475569]">{label}</Label>
+            <div className="space-y-2">
+                <select
+                    value={selectValue}
+                    onChange={(e) => {
+                        const nextValue = e.target.value;
+                        if (allowOther && nextValue === "__other__") {
+                            onOtherModeChange?.(field, true);
+                            if (isStandardValue) {
+                                onChange(field, "");
+                            }
+                            return;
+                        }
+
+                        onOtherModeChange?.(field, false);
+                        onChange(field, nextValue || undefined);
+                    }}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm"
+                >
+                    <option value="">Select...</option>
+                    {standardOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                    {allowOther ? <option value="__other__">Other</option> : null}
+                </select>
+
+                {allowOther && otherMode ? (
+                    <Input
+                        value={normalizedValue}
+                        onChange={(e) => onChange(field, e.target.value)}
+                        placeholder={otherPlaceholder || `Enter ${label.toLowerCase()}`}
+                        className="text-sm"
+                    />
+                ) : null}
+            </div>
+        </div>
+    );
+};
 
 const BooleanField = ({ label, field, checked, onChange }: BooleanFieldProps) => (
     <div className="flex items-center justify-between rounded-lg border border-[rgba(15,23,42,0.06)] px-3 py-2">
@@ -517,12 +548,25 @@ const InspectionEditor = ({
     const [leadOptions, setLeadOptions] = useState<LeadOption[]>([]);
     const [clientOptions, setClientOptions] = useState<ClientOption[]>([]);
     const [form, setForm] = useState<Record<string, any>>(() => createInitialForm(initialInspection, lockedLeadId, lockedClientId));
+    const [otherFieldModes, setOtherFieldModes] = useState<Record<string, boolean>>({});
     const [existingPhotos, setExistingPhotos] = useState<ExistingInspectionPhoto[]>([]);
     const [removedExistingPhotoIds, setRemovedExistingPhotoIds] = useState<string[]>([]);
     const [pendingPhotos, setPendingPhotos] = useState<PendingInspectionPhoto[]>([]);
 
     useEffect(() => {
         setForm(createInitialForm(initialInspection, lockedLeadId, lockedClientId));
+    }, [initialInspection, lockedLeadId, lockedClientId]);
+
+    useEffect(() => {
+        const nextForm = createInitialForm(initialInspection, lockedLeadId, lockedClientId);
+        const nextModes = Array.from(OTHER_ENABLED_FIELDS).reduce<Record<string, boolean>>((acc, field) => {
+            const value = readText(nextForm[field]);
+            const options = (SELECT_OPTIONS as Record<string, readonly string[]>)[field] || [];
+            const standardOptions = options.filter((option) => option !== "Other");
+            acc[field] = value.length > 0 && !standardOptions.includes(value);
+            return acc;
+        }, {});
+        setOtherFieldModes(nextModes);
     }, [initialInspection, lockedLeadId, lockedClientId]);
 
     useEffect(() => {
@@ -633,6 +677,63 @@ const InspectionEditor = ({
     }, [initialInspection, toast]);
 
     const setField = (field: string, value: any) => setForm((prev) => ({ ...prev, [field]: value }));
+    const setOtherFieldMode = (field: string, enabled: boolean) =>
+        setOtherFieldModes((prev) => ({ ...prev, [field]: enabled }));
+
+    useEffect(() => {
+        const baseCosts = [
+            form.materialCost,
+            form.laborCost,
+            form.tearOffCost,
+            form.permitCost,
+            form.dumpsterCost,
+            form.miscCost,
+        ];
+
+        const hasEstimateInput = baseCosts.some((value) => typeof value === "number" && !Number.isNaN(value))
+            || (typeof form.overheadPercent === "number" && !Number.isNaN(form.overheadPercent))
+            || (typeof form.profitPercent === "number" && !Number.isNaN(form.profitPercent));
+
+        if (!hasEstimateInput) {
+            setForm((prev) => {
+                if (prev.subtotal == null && prev.totalEstimate == null) {
+                    return prev;
+                }
+                return {
+                    ...prev,
+                    subtotal: undefined,
+                    totalEstimate: undefined,
+                };
+            });
+            return;
+        }
+
+        const subtotal = baseCosts.reduce((sum, value) => sum + (typeof value === "number" && !Number.isNaN(value) ? value : 0), 0);
+        const overheadPercent = typeof form.overheadPercent === "number" && !Number.isNaN(form.overheadPercent) ? form.overheadPercent : 0;
+        const profitPercent = typeof form.profitPercent === "number" && !Number.isNaN(form.profitPercent) ? form.profitPercent : 0;
+        const totalEstimate = subtotal + (subtotal * overheadPercent / 100) + (subtotal * profitPercent / 100);
+
+        setForm((prev) => {
+            if (prev.subtotal === subtotal && prev.totalEstimate === totalEstimate) {
+                return prev;
+            }
+
+            return {
+                ...prev,
+                subtotal,
+                totalEstimate,
+            };
+        });
+    }, [
+        form.materialCost,
+        form.laborCost,
+        form.tearOffCost,
+        form.permitCost,
+        form.dumpsterCost,
+        form.miscCost,
+        form.overheadPercent,
+        form.profitPercent,
+    ]);
 
     const filteredLeads = useMemo(() => {
         const query = leadSearch.trim().toLowerCase();
@@ -707,39 +808,6 @@ const InspectionEditor = ({
         return true;
     };
 
-    const getMissingFieldsForTab = (tabId: InspectionTabId) =>
-        TAB_REQUIRED_FIELDS[tabId]
-            .filter(({ field }) => !hasValue(form[field]))
-            .map(({ label }) => label);
-
-    const validateTab = (tabId: InspectionTabId) => {
-        const missingFields = getMissingFieldsForTab(tabId);
-        if (missingFields.length === 0) {
-            return true;
-        }
-
-        toast({
-            title: "Required fields missing",
-            description: `Please fill: ${missingFields.join(", ")}.`,
-            variant: "destructive",
-        });
-        return false;
-    };
-
-    const validateThroughTab = (tabId: InspectionTabId) => {
-        const endIndex = INSP_TABS.findIndex((tab) => tab.id === tabId);
-
-        for (let index = 0; index <= endIndex; index += 1) {
-            const currentTabId = INSP_TABS[index].id;
-            if (!validateTab(currentTabId)) {
-                setActiveTab(currentTabId);
-                return false;
-            }
-        }
-
-        return true;
-    };
-
     const syncPhotos = async (inspection: InspectionEntity) => {
         const uploaded = pendingPhotos.length > 0
             ? await Promise.all(
@@ -777,7 +845,6 @@ const InspectionEditor = ({
 
     const handleSubmit = async (isComplete: boolean) => {
         if (!validateCreateSource()) return;
-        if (isComplete && !validateThroughTab("scheduling")) return;
 
         setSaving(true);
         try {
@@ -821,7 +888,6 @@ const InspectionEditor = ({
 
     const handleNextTab = () => {
         if (!validateCreateSource()) return;
-        if (!validateTab(activeTab)) return;
 
         const nextTab = INSP_TABS[activeTabIndex + 1];
         if (nextTab) {
@@ -837,7 +903,6 @@ const InspectionEditor = ({
         }
 
         if (!validateCreateSource()) return;
-        if (!validateThroughTab(activeTab)) return;
 
         setActiveTab(tabId);
     };
@@ -1060,10 +1125,10 @@ const InspectionEditor = ({
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <BasicField label="Inspection Date" field="inspectionDate" value={form.inspectionDate} onChange={setField} type="datetime-local" />
                     <BasicField label="Inspector Name" field="inspectorName" value={form.inspectorName} onChange={setField} />
-                    <SelectField label="Inspection Type" field="inspectionType" value={form.inspectionType} options={SELECT_OPTIONS.inspectionType} onChange={setField} />
+                    <SelectField label="Inspection Type" field="inspectionType" value={form.inspectionType} options={SELECT_OPTIONS.inspectionType} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.inspectionType)} onOtherModeChange={setOtherFieldMode} />
                     <BasicField label="Weather Conditions" field="weatherConditions" value={form.weatherConditions} onChange={setField} />
-                    <SelectField label="Access Method" field="accessMethod" value={form.accessMethod} options={SELECT_OPTIONS.accessMethod} onChange={setField} />
-                    <SelectField label="Overall Condition" field="overallCondition" value={form.overallCondition} options={SELECT_OPTIONS.overallCondition} onChange={setField} />
+                    <SelectField label="Access Method" field="accessMethod" value={form.accessMethod} options={SELECT_OPTIONS.accessMethod} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.accessMethod)} onOtherModeChange={setOtherFieldMode} />
+                    <SelectField label="Overall Condition" field="overallCondition" value={form.overallCondition} options={SELECT_OPTIONS.overallCondition} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.overallCondition)} onOtherModeChange={setOtherFieldMode} />
                     <div className="sm:col-span-2">
                         <BasicField label="Inspector Notes" field="inspectorNotes" value={form.inspectorNotes} onChange={setField} type="textarea" />
                     </div>
@@ -1078,26 +1143,26 @@ const InspectionEditor = ({
 
             {activeTab === "roof" && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <SelectField label="Roof Style" field="roofStyle" value={form.roofStyle} options={SELECT_OPTIONS.roofStyle} onChange={setField} />
-                    <SelectField label="Roof Pitch" field="roofPitch" value={form.roofPitch} options={SELECT_OPTIONS.roofPitch} onChange={setField} />
+                    <SelectField label="Roof Style" field="roofStyle" value={form.roofStyle} options={SELECT_OPTIONS.roofStyle} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.roofStyle)} onOtherModeChange={setOtherFieldMode} />
+                    <SelectField label="Roof Pitch" field="roofPitch" value={form.roofPitch} options={SELECT_OPTIONS.roofPitch} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.roofPitch)} onOtherModeChange={setOtherFieldMode} />
                     <BasicField label="Total Squares" field="totalSquares" value={form.totalSquares} onChange={setField} type="number" />
                     <BasicField label="Ridge Length (ft)" field="ridgeLength" value={form.ridgeLength} onChange={setField} type="number" />
                     <BasicField label="Valley Length (ft)" field="valleyLength" value={form.valleyLength} onChange={setField} type="number" />
                     <BasicField label="Eave Length (ft)" field="eaveLength" value={form.eaveLength} onChange={setField} type="number" />
                     <BasicField label="Rake Length (ft)" field="rakeLength" value={form.rakeLength} onChange={setField} type="number" />
                     <BasicField label="Number of Layers" field="numberOfLayers" value={form.numberOfLayers} onChange={setField} type="number" />
-                    <SelectField label="Decking Type" field="deckingType" value={form.deckingType} options={SELECT_OPTIONS.deckingType} onChange={setField} />
-                    <SelectField label="Decking Condition" field="deckingCondition" value={form.deckingCondition} options={SELECT_OPTIONS.deckingCondition} onChange={setField} />
-                    <SelectField label="Underlayment Type" field="underlaymentType" value={form.underlaymentType} options={SELECT_OPTIONS.underlaymentType} onChange={setField} />
-                    <SelectField label="Ventilation Type" field="ventilationType" value={form.ventilationType} options={SELECT_OPTIONS.ventilationType} onChange={setField} />
+                    <SelectField label="Decking Type" field="deckingType" value={form.deckingType} options={SELECT_OPTIONS.deckingType} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.deckingType)} onOtherModeChange={setOtherFieldMode} />
+                    <SelectField label="Decking Condition" field="deckingCondition" value={form.deckingCondition} options={SELECT_OPTIONS.deckingCondition} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.deckingCondition)} onOtherModeChange={setOtherFieldMode} />
+                    <SelectField label="Underlayment Type" field="underlaymentType" value={form.underlaymentType} options={SELECT_OPTIONS.underlaymentType} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.underlaymentType)} onOtherModeChange={setOtherFieldMode} />
+                    <SelectField label="Ventilation Type" field="ventilationType" value={form.ventilationType} options={SELECT_OPTIONS.ventilationType} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.ventilationType)} onOtherModeChange={setOtherFieldMode} />
                     <BasicField label="Ventilation Count" field="ventilationCount" value={form.ventilationCount} onChange={setField} type="number" />
-                    <SelectField label="Flashing Condition" field="flashingCondition" value={form.flashingCondition} options={SELECT_OPTIONS.flashingCondition} onChange={setField} />
-                    <SelectField label="Gutter Condition" field="gutterCondition" value={form.gutterCondition} options={SELECT_OPTIONS.gutterCondition} onChange={setField} />
+                    <SelectField label="Flashing Condition" field="flashingCondition" value={form.flashingCondition} options={SELECT_OPTIONS.flashingCondition} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.flashingCondition)} onOtherModeChange={setOtherFieldMode} />
+                    <SelectField label="Gutter Condition" field="gutterCondition" value={form.gutterCondition} options={SELECT_OPTIONS.gutterCondition} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.gutterCondition)} onOtherModeChange={setOtherFieldMode} />
                     <BasicField label="Skylight Count" field="skylightCount" value={form.skylightCount} onChange={setField} type="number" />
                     <BasicField label="Skylight Condition" field="skylightCondition" value={form.skylightCondition} onChange={setField} />
                     <BooleanField label="Chimney Present" field="chimneyPresent" checked={Boolean(form.chimneyPresent)} onChange={setField} />
                     <BasicField label="Chimney Condition" field="chimneyCondition" value={form.chimneyCondition} onChange={setField} />
-                    <SelectField label="Soffit / Fascia Condition" field="soffitFasciaCondition" value={form.soffitFasciaCondition} options={SELECT_OPTIONS.soffitFasciaCondition} onChange={setField} />
+                    <SelectField label="Soffit / Fascia Condition" field="soffitFasciaCondition" value={form.soffitFasciaCondition} options={SELECT_OPTIONS.soffitFasciaCondition} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.soffitFasciaCondition)} onOtherModeChange={setOtherFieldMode} />
                     <BooleanField label="Drip Edge Present" field="dripEdgePresent" checked={Boolean(form.dripEdgePresent)} onChange={setField} />
                     <BasicField label="Drip Edge Condition" field="dripEdgeCondition" value={form.dripEdgeCondition} onChange={setField} />
                     <BooleanField label="Ice / Water Shield Present" field="iceWaterShieldPresent" checked={Boolean(form.iceWaterShieldPresent)} onChange={setField} />
@@ -1108,7 +1173,7 @@ const InspectionEditor = ({
                 <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <BooleanField label="Storm Damage Found" field="stormDamageFound" checked={Boolean(form.stormDamageFound)} onChange={setField} />
-                        <SelectField label="Hail Size Found" field="hailSizeFound" value={form.hailSizeFound} options={SELECT_OPTIONS.hailSizeFound} onChange={setField} />
+                        <SelectField label="Hail Size Found" field="hailSizeFound" value={form.hailSizeFound} options={SELECT_OPTIONS.hailSizeFound} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.hailSizeFound)} onOtherModeChange={setOtherFieldMode} />
                         <div className="sm:col-span-2">
                             <BasicField label="Wind Damage Details" field="windDamageDetails" value={form.windDamageDetails} onChange={setField} type="textarea" />
                         </div>
@@ -1119,7 +1184,7 @@ const InspectionEditor = ({
                             <BasicField label="Test Square Results" field="testSquareResults" value={form.testSquareResults} onChange={setField} type="textarea" />
                         </div>
                         <BooleanField label="Interior Damage Found" field="interiorDamageFound" checked={Boolean(form.interiorDamageFound)} onChange={setField} />
-                        <SelectField label="Overall Damage Rating" field="overallDamageRating" value={form.overallDamageRating} options={SELECT_OPTIONS.overallDamageRating} onChange={setField} />
+                        <SelectField label="Overall Damage Rating" field="overallDamageRating" value={form.overallDamageRating} options={SELECT_OPTIONS.overallDamageRating} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.overallDamageRating)} onOtherModeChange={setOtherFieldMode} />
                         <div className="sm:col-span-2">
                             <BasicField label="Interior Damage Details" field="interiorDamageDetails" value={form.interiorDamageDetails} onChange={setField} type="textarea" />
                         </div>
@@ -1136,7 +1201,7 @@ const InspectionEditor = ({
 
             {activeTab === "materials" && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <SelectField label="Proposed Material" field="proposedMaterial" value={form.proposedMaterial} options={SELECT_OPTIONS.proposedMaterial} onChange={setField} />
+                    <SelectField label="Proposed Material" field="proposedMaterial" value={form.proposedMaterial} options={SELECT_OPTIONS.proposedMaterial} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.proposedMaterial)} onOtherModeChange={setOtherFieldMode} />
                     <BasicField label="Shingle Brand" field="shingleBrand" value={form.shingleBrand} onChange={setField} />
                     <BasicField label="Shingle Line" field="shingleLine" value={form.shingleLine} onChange={setField} />
                     <BasicField label="Shingle Color" field="shingleColor" value={form.shingleColor} onChange={setField} />
@@ -1144,7 +1209,7 @@ const InspectionEditor = ({
                     <BasicField label="Ridge Cap Type" field="ridgeCapType" value={form.ridgeCapType} onChange={setField} />
                     <BasicField label="Ventilation Plan" field="ventilationPlan" value={form.ventilationPlan} onChange={setField} />
                     <BasicField label="Drip Edge Color" field="dripEdgeColor" value={form.dripEdgeColor} onChange={setField} />
-                    <SelectField label="Warranty Type" field="warrantyType" value={form.warrantyType} options={SELECT_OPTIONS.warrantyType} onChange={setField} />
+                    <SelectField label="Warranty Type" field="warrantyType" value={form.warrantyType} options={SELECT_OPTIONS.warrantyType} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.warrantyType)} onOtherModeChange={setOtherFieldMode} />
                     <BasicField label="Warranty Years" field="warrantyYears" value={form.warrantyYears} onChange={setField} type="number" />
                 </div>
             )}
@@ -1164,7 +1229,7 @@ const InspectionEditor = ({
                     <BasicField label="Customer Price ($)" field="customerPrice" value={form.customerPrice} onChange={setField} type="number" />
                     <BasicField label="Deposit Required ($)" field="depositRequired" value={form.depositRequired} onChange={setField} type="number" />
                     <BooleanField label="Deposit Collected" field="depositCollected" checked={Boolean(form.depositCollected)} onChange={setField} />
-                    <SelectField label="Payment Method" field="paymentMethod" value={form.paymentMethod} options={SELECT_OPTIONS.paymentMethod} onChange={setField} />
+                    <SelectField label="Payment Method" field="paymentMethod" value={form.paymentMethod} options={SELECT_OPTIONS.paymentMethod} onChange={setField} allowOther otherMode={Boolean(otherFieldModes.paymentMethod)} onOtherModeChange={setOtherFieldMode} />
                 </div>
             )}
 

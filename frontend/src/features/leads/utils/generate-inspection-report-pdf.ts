@@ -209,7 +209,7 @@ function formatValue(value?: string | number | null): string {
 }
 
 function formatBoolean(value: boolean): string {
-  return value ? "Yes" : "No";
+  return value ? "Yes" : FALLBACK_TEXT;
 }
 
 function formatRecommendation(value?: string | null): string {
@@ -251,6 +251,38 @@ async function loadImageAsDataUrl(url: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+function hasReportValue(value?: string | null): boolean {
+  if (value == null) return false;
+  const normalized = value.trim();
+  return normalized.length > 0 && normalized !== FALLBACK_TEXT;
+}
+
+function compactKeyValueRows(
+  rows: Array<[string, string, string, string]>,
+): Array<[string, string, string, string]> {
+  return rows.flatMap(([leftLabel, leftValue, rightLabel, rightValue]) => {
+    const normalized: Array<[string, string]> = [];
+
+    if (hasReportValue(leftValue)) {
+      normalized.push([leftLabel, leftValue]);
+    }
+
+    if (hasReportValue(rightValue)) {
+      normalized.push([rightLabel, rightValue]);
+    }
+
+    if (normalized.length === 2) {
+      return [[normalized[0][0], normalized[0][1], normalized[1][0], normalized[1][1]]];
+    }
+
+    if (normalized.length === 1) {
+      return [[normalized[0][0], normalized[0][1], "", ""]];
+    }
+
+    return [];
+  });
 }
 
 function getImageFormat(dataUrl: string): "JPEG" | "PNG" | "WEBP" {
@@ -527,11 +559,16 @@ export async function generateInspectionReportPdf(
     title: string,
     rows: Array<[string, string, string, string]>,
   ) => {
+    const compactRows = compactKeyValueRows(rows);
+    if (compactRows.length === 0) {
+      return;
+    }
+
     drawSectionTitle(title);
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
-      body: rows,
+      body: compactRows,
       theme: "grid",
       styles: {
         fontSize: 8.5,
@@ -554,6 +591,10 @@ export async function generateInspectionReportPdf(
   };
 
   const drawMultilineBlock = (title: string, value?: string | null) => {
+    if (!hasReportValue(value || "")) {
+      return;
+    }
+
     drawSectionTitle(title);
     const text = formatValue(value);
     const lines = doc.splitTextToSize(text, contentWidth - 8);

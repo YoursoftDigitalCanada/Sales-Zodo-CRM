@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 import { getCalendarEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from "@/features/calendar";
 import { getEmployees } from "@/features/users";
 import {
@@ -1552,15 +1553,19 @@ const EventFormDialog = ({
           {/* Location */}
           <div className="space-y-2">
             <Label className="text-sm font-medium text-[#475569]">Location</Label>
-            <div className="relative">
-              <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-              <Input
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="Add location"
-                className="h-11 pl-10 rounded-md"
-              />
-            </div>
+            <AddressAutocompleteInput
+              value={formData.location}
+              onValueChange={(value) => setFormData({ ...formData, location: value })}
+              onSelectAddress={(details) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  location: details.formattedAddress || details.addressLine1 || prev.location,
+                }))
+              }
+              placeholder="Add location"
+              className="h-11 rounded-md"
+              iconClassName="text-[#475569]"
+            />
           </div>
 
           {/* Meeting Link */}

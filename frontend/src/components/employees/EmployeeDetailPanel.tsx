@@ -500,7 +500,11 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                     <Mail className="w-4 h-4" />
                     Send Email
                   </Button>
-                  <Button className="flex-1 gap-2 bg-[#0891B2] hover:bg-[#0891B2]/90" onClick={handleScheduleMeeting}>
+                  <Button
+                    type="button"
+                    className="flex-1 gap-2 bg-[#0891B2] hover:bg-[#0891B2]/90"
+                    onClick={openMeetingDialog}
+                  >
                     <Calendar className="w-4 h-4" />
                     Schedule Meeting
                   </Button>

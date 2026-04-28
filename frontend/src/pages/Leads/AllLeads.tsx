@@ -308,6 +308,13 @@ interface TagOption {
   color?: string | null;
 }
 
+type DateTimeFieldParts = {
+  date: string;
+  hour: string;
+  minute: string;
+  period: "AM" | "PM";
+};
+
 // ============================================
 // CONSTANTS & DATA
 // ============================================
@@ -396,6 +403,49 @@ const normalizeLeadTemperatureValue = (value?: string | null): LeadTemperature =
   if (normalized === LeadTemperature.HOT) return LeadTemperature.HOT;
   if (normalized === LeadTemperature.COLD) return LeadTemperature.COLD;
   return LeadTemperature.WARM;
+};
+
+const padTwoDigits = (value: number): string => String(value).padStart(2, "0");
+
+const getDateTimeFieldParts = (value?: string | null): DateTimeFieldParts => {
+  if (!value) {
+    return { date: "", hour: "09", minute: "00", period: "AM" };
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return { date: "", hour: "09", minute: "00", period: "AM" };
+  }
+
+  const hours = parsed.getHours();
+  const normalizedHour = hours % 12 || 12;
+
+  return {
+    date: `${parsed.getFullYear()}-${padTwoDigits(parsed.getMonth() + 1)}-${padTwoDigits(parsed.getDate())}`,
+    hour: padTwoDigits(normalizedHour),
+    minute: padTwoDigits(parsed.getMinutes()),
+    period: hours >= 12 ? "PM" : "AM",
+  };
+};
+
+const buildDateTimeIsoValue = (parts: DateTimeFieldParts): string => {
+  if (!parts.date) {
+    return "";
+  }
+
+  const hourNumber = Number(parts.hour);
+  const minuteNumber = Number(parts.minute);
+  const normalizedHour = Number.isNaN(hourNumber) ? 9 : hourNumber;
+  const normalizedMinute = Number.isNaN(minuteNumber) ? 0 : minuteNumber;
+
+  let hour24 = normalizedHour % 12;
+  if (parts.period === "PM") {
+    hour24 += 12;
+  }
+
+  const next = new Date(`${parts.date}T00:00:00`);
+  next.setHours(hour24, normalizedMinute, 0, 0);
+  return next.toISOString();
 };
 
 const parseCsvText = (content: string): string[][] => {
@@ -1362,6 +1412,30 @@ export const LeadFormDialog = ({
       return next;
     });
   }, []);
+
+  const updateDateTimeField = useCallback(
+    (field: "followUpDateTime" | "inspectionAppointmentDate", patch: Partial<DateTimeFieldParts>) => {
+      setFormData((prev) => {
+        const currentParts = getDateTimeFieldParts(prev[field]);
+        const nextParts = { ...currentParts, ...patch };
+
+        return {
+          ...prev,
+          [field]: nextParts.date ? buildDateTimeIsoValue(nextParts) : "",
+        };
+      });
+    },
+    []
+  );
+
+  const followUpDateTimeParts = useMemo(
+    () => getDateTimeFieldParts(formData.followUpDateTime),
+    [formData.followUpDateTime]
+  );
+  const inspectionDateTimeParts = useMemo(
+    () => getDateTimeFieldParts(formData.inspectionAppointmentDate),
+    [formData.inspectionAppointmentDate]
+  );
 
   const getFieldErrorClass = useCallback(
     (field: string) => (errors[field] ? "border-red-500 focus-visible:ring-red-500 focus:ring-red-500" : ""),
@@ -2500,21 +2574,115 @@ export const LeadFormDialog = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">Follow-Up Date</Label>
-                  <Input
-                    type="datetime-local"
-                    value={formData.followUpDateTime ? formData.followUpDateTime.slice(0, 16) : ""}
-                    onChange={(e) => setFormData({ ...formData, followUpDateTime: e.target.value ? new Date(e.target.value).toISOString() : "" })}
-                    className="h-11 rounded-md"
-                  />
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1.35fr)_90px_90px_84px]">
+                    <Input
+                      type="date"
+                      value={followUpDateTimeParts.date}
+                      onChange={(e) => updateDateTimeField("followUpDateTime", { date: e.target.value })}
+                      className="h-11 rounded-md"
+                    />
+                    <Select
+                      value={followUpDateTimeParts.hour}
+                      onValueChange={(value) => updateDateTimeField("followUpDateTime", { hour: value })}
+                      disabled={!followUpDateTimeParts.date}
+                    >
+                      <SelectTrigger className="h-11 rounded-md">
+                        <SelectValue placeholder="Hour" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {Array.from({ length: 12 }, (_, index) => padTwoDigits(index + 1)).map((hour) => (
+                          <SelectItem key={hour} value={hour} className="rounded-md">
+                            {hour}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={followUpDateTimeParts.minute}
+                      onValueChange={(value) => updateDateTimeField("followUpDateTime", { minute: value })}
+                      disabled={!followUpDateTimeParts.date}
+                    >
+                      <SelectTrigger className="h-11 rounded-md">
+                        <SelectValue placeholder="Min" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map((minute) => (
+                          <SelectItem key={minute} value={minute} className="rounded-md">
+                            {minute}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={followUpDateTimeParts.period}
+                      onValueChange={(value) => updateDateTimeField("followUpDateTime", { period: value as "AM" | "PM" })}
+                      disabled={!followUpDateTimeParts.date}
+                    >
+                      <SelectTrigger className="h-11 rounded-md">
+                        <SelectValue placeholder="AM/PM" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        <SelectItem value="AM" className="rounded-md">AM</SelectItem>
+                        <SelectItem value="PM" className="rounded-md">PM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">Inspection Date</Label>
-                  <Input
-                    type="datetime-local"
-                    value={formData.inspectionAppointmentDate ? formData.inspectionAppointmentDate.slice(0, 16) : ""}
-                    onChange={(e) => setFormData({ ...formData, inspectionAppointmentDate: e.target.value ? new Date(e.target.value).toISOString() : "" })}
-                    className="h-11 rounded-md"
-                  />
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1.35fr)_90px_90px_84px]">
+                    <Input
+                      type="date"
+                      value={inspectionDateTimeParts.date}
+                      onChange={(e) => updateDateTimeField("inspectionAppointmentDate", { date: e.target.value })}
+                      className="h-11 rounded-md"
+                    />
+                    <Select
+                      value={inspectionDateTimeParts.hour}
+                      onValueChange={(value) => updateDateTimeField("inspectionAppointmentDate", { hour: value })}
+                      disabled={!inspectionDateTimeParts.date}
+                    >
+                      <SelectTrigger className="h-11 rounded-md">
+                        <SelectValue placeholder="Hour" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {Array.from({ length: 12 }, (_, index) => padTwoDigits(index + 1)).map((hour) => (
+                          <SelectItem key={hour} value={hour} className="rounded-md">
+                            {hour}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={inspectionDateTimeParts.minute}
+                      onValueChange={(value) => updateDateTimeField("inspectionAppointmentDate", { minute: value })}
+                      disabled={!inspectionDateTimeParts.date}
+                    >
+                      <SelectTrigger className="h-11 rounded-md">
+                        <SelectValue placeholder="Min" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map((minute) => (
+                          <SelectItem key={minute} value={minute} className="rounded-md">
+                            {minute}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={inspectionDateTimeParts.period}
+                      onValueChange={(value) => updateDateTimeField("inspectionAppointmentDate", { period: value as "AM" | "PM" })}
+                      disabled={!inspectionDateTimeParts.date}
+                    >
+                      <SelectTrigger className="h-11 rounded-md">
+                        <SelectValue placeholder="AM/PM" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        <SelectItem value="AM" className="rounded-md">AM</SelectItem>
+                        <SelectItem value="PM" className="rounded-md">PM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 

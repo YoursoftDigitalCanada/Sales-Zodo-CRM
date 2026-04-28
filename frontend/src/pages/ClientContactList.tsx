@@ -1306,7 +1306,7 @@ const ClientContactListPage = () => {
         id: String(c.id),
         type: c.type || "Client",
         clientName: c.company?.clientName || "",
-        clientId: c.companyId ? String(c.companyId) : undefined,
+        clientId: c.company?.id ? String(c.company.id) : c.companyId ? String(c.companyId) : undefined,
         contactPerson: c.contactName || "",
         designation: c.jobTitle || "",
         department: c.department || "",
@@ -1556,6 +1556,19 @@ const ClientContactListPage = () => {
 
   const handleCall = (contact: Contact) => {
     window.location.href = `tel:${contact.contactNo}`;
+  };
+
+  const openContactClientDetail = (contact: Contact) => {
+    if (!contact.clientId) {
+      toast({
+        title: "Client not linked",
+        description: "This contact is not linked to a client record yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    navigate(`/client-list/${contact.clientId}`);
   };
 
   const openAddDialog = () => {
@@ -1991,7 +2004,7 @@ const ClientContactListPage = () => {
                       contact={contact}
                       isSelected={selectedContacts.includes(contact.id)}
                       onSelect={(checked) => handleSelectContact(contact.id, checked)}
-                      onView={() => navigate(`/client-list/${contact.clientId || contact.id}`)}
+                      onView={() => openContactClientDetail(contact)}
                       onDelete={() => {
                         setContactToDelete(contact);
                         setDeleteDialogOpen(true);
@@ -2069,7 +2082,7 @@ const ClientContactListPage = () => {
                           contact={contact}
                           isSelected={selectedContacts.includes(contact.id)}
                           onSelect={(checked) => handleSelectContact(contact.id, checked)}
-                          onView={() => navigate(`/client-list/${contact.clientId || contact.id}`)}
+                          onView={() => openContactClientDetail(contact)}
                           onEdit={() => openEditDialog(contact)}
                           onDelete={() => {
                             setContactToDelete(contact);
@@ -2096,7 +2109,7 @@ const ClientContactListPage = () => {
                         contact={contact}
                         isSelected={selectedContacts.includes(contact.id)}
                         onSelect={(checked) => handleSelectContact(contact.id, checked)}
-                        onView={() => navigate(`/client-list/${contact.clientId || contact.id}`)}
+                        onView={() => openContactClientDetail(contact)}
                         onEdit={() => openEditDialog(contact)}
                         onDelete={() => {
                           setContactToDelete(contact);

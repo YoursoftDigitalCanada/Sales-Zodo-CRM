@@ -132,7 +132,7 @@ export default function AddressAutocompleteInput({
         onChange={(event) => handleInputChange(event.target.value)}
         autoComplete={autoComplete || "off"}
         disabled={disabled}
-        className={cn("pl-10", className)}
+        className={cn(className, "pl-10 pr-10")}
       />
 
       {isOpen && suggestions.length > 0 ? (

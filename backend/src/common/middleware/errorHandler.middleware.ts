@@ -3,6 +3,7 @@ import { AppError } from '../errors/AppError';
 import { logger } from '../utils/logger';
 import { config } from '../../config';
 import { Prisma } from '@prisma/client';
+import multer from 'multer';
 
 /**
  * Global error handler middleware
@@ -85,6 +86,24 @@ export function errorHandler(
       success: false,
       message: 'Invalid JSON in request body',
       code: 'INVALID_JSON',
+    });
+    return;
+  }
+
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      res.status(400).json({
+        success: false,
+        message: 'Please upload a logo image smaller than 2MB.',
+        code: 'FILE_TOO_LARGE',
+      });
+      return;
+    }
+
+    res.status(400).json({
+      success: false,
+      message: error.message || 'File upload failed',
+      code: 'UPLOAD_ERROR',
     });
     return;
   }

@@ -140,6 +140,7 @@ const languages = [
 const currencies = ["CAD", "USD", "EUR", "GBP", "INR"];
 const dateFormats: DateFormatValue[] = ["YYYY-MM-DD", "DD-MM-YYYY", "MM-DD-YYYY", "DD/MM/YYYY", "MM/DD/YYYY"];
 const emailEncryptions = ["SSL/TLS", "STARTTLS", "NONE"] as const;
+const MAX_COMPANY_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
 
 const fieldClass =
   "w-full rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none transition focus:border-[#0891B2] focus:ring-4 focus:ring-[#22D3EE]/30";
@@ -539,18 +540,33 @@ export default function SettingsPage() {
   };
 
   const handleUploadLogo = async (file: File) => {
+    if (file.size > MAX_COMPANY_LOGO_SIZE_BYTES) {
+      toast({
+        title: "Upload failed",
+        description: "Please upload a logo image smaller than 2MB.",
+        variant: "destructive",
+      });
+      if (logoInputRef.current) {
+        logoInputRef.current.value = "";
+      }
+      return;
+    }
+
     const localPreviewUrl = URL.createObjectURL(file);
     replaceLogoPreview(localPreviewUrl);
     setSavingSection("logo");
     try {
       const next = await uploadCompanyLogo(file);
-      setCompany(next);
+      setCompany((current) => (current ? { ...current, logoUrl: next.logoUrl } : next));
       updateBranding(next);
       toast({ title: "Logo uploaded", description: "Your workspace logo was updated." });
     } catch (error) {
       replaceLogoPreview(null);
       toast({ title: "Upload failed", description: getErrorMessage(error), variant: "destructive" });
     } finally {
+      if (logoInputRef.current) {
+        logoInputRef.current.value = "";
+      }
       setSavingSection(null);
     }
   };

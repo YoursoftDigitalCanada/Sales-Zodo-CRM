@@ -5,13 +5,12 @@
 // POST   /copilot/ask      — Main copilot chat endpoint
 // DELETE /copilot/history   — Clear session conversation history
 //
-// Protected by: authenticate + tenantContext + ANALYTICS_VIEW permission
+// Protected by: authenticate + tenantContext + ai-assistant module enablement
+// Context-specific data access is enforced by CopilotPermissionGuard.
 // ============================================================================
 
 import { Router } from 'express';
 import { loadEmployee } from '../../common/middleware/auth.middleware';
-import { requirePermission } from '../../common/middleware/permission.middleware';
-import { PERMISSIONS } from '../../common/constants/permissions';
 import { copilotController } from './copilot.controller';
 
 const router = Router();
@@ -21,13 +20,11 @@ router.use(loadEmployee);
 
 // ── Main copilot endpoint ───────────────────────────────────────────────
 router.post('/ask',
-    requirePermission(PERMISSIONS.ANALYTICS_VIEW),
     copilotController.ask.bind(copilotController),
 );
 
 // ── Clear session history ───────────────────────────────────────────────
 router.delete('/history',
-    requirePermission(PERMISSIONS.ANALYTICS_VIEW),
     copilotController.clearHistory.bind(copilotController),
 );
 

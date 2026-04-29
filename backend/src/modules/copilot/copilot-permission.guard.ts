@@ -43,8 +43,8 @@ class CopilotPermissionGuard {
      * @param module      - The copilot context module (e.g., 'leads', 'clients')
      *
      * If no specific permission is mapped (e.g., 'general' context),
-     * the guard allows access — the route-level ANALYTICS_VIEW check
-     * already provides baseline authorization.
+     * the guard allows access and the response falls back to high-level
+     * assistant behavior without forcing unrelated module permissions.
      */
     validateModuleAccess(permissions: string[], module?: string): void {
         if (!module) return; // No specific module → general context, allowed

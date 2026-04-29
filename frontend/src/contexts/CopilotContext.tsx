@@ -44,6 +44,7 @@ const ROUTE_PATTERNS: RoutePattern[] = [
     // Leads
     { match: /^\/leads\/pipeline$/, module: "leads", page: "pipeline", label: "Pipeline" },
     { match: /^\/leads\/sources$/, module: "leads", page: "sources", label: "Lead Sources" },
+    { match: /^\/leads\/([a-f0-9-]+)$/, module: "leads", page: "detail", label: "Lead Detail", entityGroup: 1 },
     { match: /^\/leads$/, module: "leads", page: "list", label: "Leads" },
 
     // Clients
@@ -57,6 +58,8 @@ const ROUTE_PATTERNS: RoutePattern[] = [
 
     // Projects
     { match: /^\/projects\/add$/, module: "projects", page: "add", label: "New Project" },
+    { match: /^\/projects\/([a-f0-9-]+)\/edit$/, module: "projects", page: "edit", label: "Project Edit", entityGroup: 1 },
+    { match: /^\/projects\/([a-f0-9-]+)$/, module: "projects", page: "detail", label: "Project Detail", entityGroup: 1 },
     { match: /^\/projects$/, module: "projects", page: "list", label: "Projects" },
     { match: /^\/kanban$/, module: "projects", page: "kanban", label: "Kanban" },
 

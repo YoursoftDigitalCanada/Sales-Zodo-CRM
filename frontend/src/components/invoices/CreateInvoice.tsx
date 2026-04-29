@@ -103,6 +103,7 @@ import { createInvoice, downloadInvoicePdf, getInvoiceById, sendInvoice, updateI
 import { printInvoiceDocument } from "@/features/invoices/utils/invoice-print";
 import { getClients } from "@/features/clients/services/clients-service";
 import { getProjectById, type ProjectEntity } from "@/features/projects/services/projects-service";
+import { getCompanyProfile, type CompanyProfile } from "@/features/settings/services/settings-service";
 import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
 import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 
@@ -143,6 +144,14 @@ interface AppUser {
   province?: string;
   postalCode?: string;
   gstNumber?: string;
+}
+
+interface ParsedCompanyAddress {
+  address: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  country: string;
 }
 
 interface LineItem {
@@ -321,6 +330,45 @@ const getProvinceCode = (value: unknown) => {
   if (canadianProvinces.some((province) => province.code === text)) return text;
   const province = canadianProvinces.find((entry) => entry.name.toUpperCase() === text);
   return province?.code || "ON";
+};
+
+const parseCompanyAddress = (value: unknown): ParsedCompanyAddress => {
+  const text = readText(value);
+
+  if (!text) {
+    return {
+      address: "",
+      city: "",
+      province: "ON",
+      postalCode: "",
+      country: "Canada",
+    };
+  }
+
+  const segments = text
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  const firstSegment = segments[0] || text;
+  const lastSegment = segments[segments.length - 1] || "";
+  const postalMatch = text.match(/\b([A-Z]\d[A-Z]\s?\d[A-Z]\d)\b/i);
+  const provinceMatch = text.match(/\b(AB|BC|MB|NB|NL|NS|NT|NU|ON|PE|QC|SK|YT|Alberta|British Columbia|Manitoba|New Brunswick|Newfoundland and Labrador|Nova Scotia|Northwest Territories|Nunavut|Ontario|Prince Edward Island|Quebec|Saskatchewan|Yukon)\b/i);
+
+  let city = "";
+  if (segments.length >= 3) {
+    city = segments[1];
+  } else if (segments.length === 2 && !provinceMatch) {
+    city = segments[1];
+  }
+
+  return {
+    address: firstSegment,
+    city,
+    province: getProvinceCode(provinceMatch?.[1] || ""),
+    postalCode: postalMatch?.[1]?.toUpperCase() || "",
+    country: /canada/i.test(lastSegment) ? "Canada" : "Canada",
+  };
 };
 
 const getProjectInvoice = (project: ProjectEntity, invoiceId?: string | null) => {
@@ -1167,6 +1215,7 @@ const CreateInvoicePage = () => {
 
   // State
   const [user, setUser] = useState<AppUser | null>(null);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingLinkedInvoice, setIsLoadingLinkedInvoice] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -1279,13 +1328,50 @@ const CreateInvoicePage = () => {
 
   // Effects
   useEffect(() => {
+    let cancelled = false;
+
+    getCompanyProfile()
+      .then((profile) => {
+        if (!cancelled) {
+          setCompanyProfile(profile);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load company profile:", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!companyProfile || isEditMode) {
+      return;
+    }
+
+    const parsedAddress = parseCompanyAddress(companyProfile.address);
+    const currentValues = getValues("billedBy");
+
+    setValue("billedBy.businessName", companyProfile.companyName || currentValues.businessName || "");
+    setValue("billedBy.email", companyProfile.email || currentValues.email || "");
+    setValue("billedBy.phone", companyProfile.phone || currentValues.phone || "");
+    setValue("billedBy.address", parsedAddress.address || currentValues.address || "");
+    setValue("billedBy.city", parsedAddress.city || currentValues.city || "");
+    setValue("billedBy.province", parsedAddress.province || currentValues.province || "ON");
+    setValue("billedBy.postalCode", parsedAddress.postalCode || currentValues.postalCode || "");
+    setValue("billedBy.country", parsedAddress.country || currentValues.country || "Canada");
+    setValue("billedBy.gstNumber", companyProfile.taxId || currentValues.gstNumber || "");
+  }, [companyProfile, getValues, isEditMode, setValue]);
+
+  useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
         setUser(parsed);
-        // Pre-fill business details
-        if (parsed.businessName) {
+        // Legacy fallback for older workspaces without company profile data yet.
+        if (parsed.businessName && !companyProfile && !isEditMode) {
           setValue("billedBy.businessName", parsed.businessName);
           setValue("billedBy.email", parsed.email || "");
           setValue("billedBy.phone", parsed.phone || "");
@@ -1299,7 +1385,7 @@ const CreateInvoicePage = () => {
         console.error("Failed to parse user data");
       }
     }
-  }, [setValue]);
+  }, [companyProfile, isEditMode, setValue]);
 
   useEffect(() => {
     if (!linkedProjectId) return;
@@ -1677,8 +1763,8 @@ const CreateInvoicePage = () => {
         currency: formValues.currency,
         amountDue: totals.total,
         amountDueLabel: "Amount Due",
-        brandLogoUrl: workspaceBranding?.logoUrl || null,
-        brandName: workspaceBranding?.companyName || formValues.billedBy.businessName,
+        brandLogoUrl: companyProfile?.logoUrl || workspaceBranding?.logoUrl || null,
+        brandName: companyProfile?.companyName || workspaceBranding?.companyName || formValues.billedBy.businessName,
         billedBy: formValues.billedBy,
         billedTo: formValues.billedTo,
         items: formValues.items.map((item) => ({
@@ -2327,13 +2413,13 @@ const CreateInvoicePage = () => {
                         </div>
                       </div>
                       <div className="max-h-[calc(100vh-200px)] overflow-y-auto rounded-md">
-                        <InvoicePreview
-                          data={getValues()}
-                          totals={totals}
-                          taxRates={taxRates}
-                          brandLogoUrl={workspaceBranding?.logoUrl || null}
-                          brandName={workspaceBranding?.companyName || getValues().billedBy.businessName}
-                        />
+                          <InvoicePreview
+                            data={getValues()}
+                            totals={totals}
+                            taxRates={taxRates}
+                            brandLogoUrl={companyProfile?.logoUrl || workspaceBranding?.logoUrl || null}
+                            brandName={companyProfile?.companyName || workspaceBranding?.companyName || getValues().billedBy.businessName}
+                          />
                       </div>
                     </div>
                   </motion.div>

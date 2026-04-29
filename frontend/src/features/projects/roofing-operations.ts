@@ -443,6 +443,18 @@ export function getCrewSummary(project: ProjectEntity): string {
     return `${members.length} team member${members.length === 1 ? "" : "s"}`;
   }
 
+  const customFields = projectRecord.customFields && typeof projectRecord.customFields === "object"
+    ? (projectRecord.customFields as Record<string, unknown>)
+    : {};
+  const savedCrewName = readText(customFields.crewName);
+  const savedCrewId = readText(customFields.crewId);
+  if (savedCrewName) {
+    return savedCrewName;
+  }
+  if (savedCrewId) {
+    return "1 crew selected";
+  }
+
   return "No crew assigned";
 }
 

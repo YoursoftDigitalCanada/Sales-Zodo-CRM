@@ -176,6 +176,7 @@ function createProjectPayload(
   values: ProjectWizardFormValues,
   stageOptions: ProjectStageOption[],
   resolvedClientId: string,
+  selectedCrewName?: string | null,
 ): Record<string, unknown> {
   const stagePayload = inferStagePayload(values.stageSelection, stageOptions);
 
@@ -212,6 +213,7 @@ function createProjectPayload(
     estimatedDurationLabel: safeText(values.estimatedDuration),
     paymentTerms: safeText(values.paymentTerms),
     crewId: safeText(values.crewId),
+    crewName: safeText(selectedCrewName || ""),
     assignCrewLater: values.assignCrewLater,
     notifications: {
       notifyClient: values.notifyClient,
@@ -257,6 +259,8 @@ function createProjectPayload(
     permitRequired: values.permitRequired,
     permitStatus: values.permitRequired ? safeText(values.permitStatus) : null,
     permitNumber: values.permitRequired ? safeText(values.permitNumber) : null,
+    permitPulledDate: values.permitRequired ? values.permitPulledDate || null : null,
+    permitApprovedDate: values.permitRequired ? values.permitApprovedDate || null : null,
     permitCost: values.permitRequired ? safeNumber(values.permitCost) : null,
 
     isInsuranceJob: values.isInsuranceJob || values.projectType === "INSURANCE_CLAIM",
@@ -403,6 +407,8 @@ export function useProjectForm(editId?: string) {
           permitRequired: p.permitRequired || false,
           permitStatus: (p.permitStatus as any) || "",
           permitNumber: p.permitNumber || "",
+          permitPulledDate: p.permitPulledDate ? String(p.permitPulledDate).split("T")[0] : "",
+          permitApprovedDate: p.permitApprovedDate ? String(p.permitApprovedDate).split("T")[0] : "",
           isInsuranceJob: p.isInsuranceJob || false,
           insuranceCompany: p.insuranceCompany || "",
           policyNumber: p.policyNumber || "",
@@ -410,7 +416,20 @@ export function useProjectForm(editId?: string) {
           contractValue: p.contractValue ? Number(p.contractValue) : undefined,
           estimatedStartDate: p.estimatedStartDate ? String(p.estimatedStartDate).split("T")[0] : "",
           estimatedEndDate: p.estimatedEndDate ? String(p.estimatedEndDate).split("T")[0] : "",
+          projectManagerId: typeof p.projectManagerId === "string" ? p.projectManagerId : "",
+          salesRepId: typeof p.salesRepId === "string" ? p.salesRepId : "",
         };
+
+        const customFields = p.customFields && typeof p.customFields === "object"
+          ? (p.customFields as Record<string, unknown>)
+          : {};
+        const savedCrewId = typeof customFields.crewId === "string" ? customFields.crewId : "";
+        const assignCrewLater = typeof customFields.assignCrewLater === "boolean"
+          ? customFields.assignCrewLater
+          : !savedCrewId;
+
+        vals.crewId = savedCrewId;
+        vals.assignCrewLater = assignCrewLater;
 
         // Set budget breakdown if available
         if (p.estimatedCost) {
@@ -548,14 +567,18 @@ export function useProjectForm(editId?: string) {
         throw new Error("Client is required to save a project");
       }
 
-      const payload = createProjectPayload(values, stageQuery.data || [], resolvedClientId);
+      const selectedCrewName =
+        values.assignCrewLater
+          ? null
+          : ((crewsQuery.data || []).find((crew) => crew.id === values.crewId)?.name || null);
+      const finalPayload = createProjectPayload(values, stageQuery.data || [], resolvedClientId, selectedCrewName);
 
       if (isEditMode && editId) {
-        const result = await updateProject(editId, payload);
+        const result = await updateProject(editId, finalPayload);
         clearDraftStorage();
         return result;
       } else {
-        const result = await createProject(payload);
+        const result = await createProject(finalPayload);
         clearDraftStorage();
         return result;
       }

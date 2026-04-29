@@ -54,6 +54,23 @@ const projectDetailInclude = {
   projectPhotos: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }], take: 500 },
   projectDocuments: { orderBy: { addedAt: 'desc' }, take: 300 },
   projectStageHistory: { orderBy: { enteredAt: 'desc' }, take: 300, include: { stage: true } },
+  members: {
+    include: {
+      employee: {
+        select: {
+          id: true,
+          department: true,
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      },
+    },
+    take: 100,
+  },
   invoices: {
     include: {
       client: { select: { id: true, clientName: true } },
@@ -162,6 +179,9 @@ export class ProjectsRepository {
         dateOfLoss: this.asDateOrNull(data.dateOfLoss),
         permitRequired: data.permitRequired ?? true,
         permitNumber: data.permitNumber ?? null,
+        permitStatus: data.permitStatus ?? null,
+        permitPulledDate: this.asDateOrNull(data.permitPulledDate),
+        permitApprovedDate: this.asDateOrNull(data.permitApprovedDate),
         warrantyType: data.warrantyType ?? null,
         warrantyYears: data.warrantyYears ?? null,
         tags: data.tags ?? [],
@@ -531,6 +551,9 @@ export class ProjectsRepository {
         ...(data.dateOfLoss !== undefined && { dateOfLoss: this.asDateOrNull(data.dateOfLoss) }),
         ...(data.permitRequired !== undefined && { permitRequired: data.permitRequired }),
         ...(data.permitNumber !== undefined && { permitNumber: data.permitNumber }),
+        ...(data.permitStatus !== undefined && { permitStatus: data.permitStatus }),
+        ...(data.permitPulledDate !== undefined && { permitPulledDate: this.asDateOrNull(data.permitPulledDate) }),
+        ...(data.permitApprovedDate !== undefined && { permitApprovedDate: this.asDateOrNull(data.permitApprovedDate) }),
         ...(data.warrantyType !== undefined && { warrantyType: data.warrantyType }),
         ...(data.warrantyYears !== undefined && { warrantyYears: data.warrantyYears }),
         ...(data.tags !== undefined && { tags: data.tags }),

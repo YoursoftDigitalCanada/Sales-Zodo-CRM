@@ -406,6 +406,8 @@ export default function ProjectDetailPage() {
     : Array.isArray(project.teamMembers)
       ? (project.teamMembers as Array<Record<string, unknown>>)
       : [];
+  const crewSummary = getCrewSummary(project);
+  const hasCrewAssignment = crewSummary !== "No crew assigned";
   const materialCost = Array.isArray(project.projectMaterials)
     ? project.projectMaterials.reduce((sum, item) => sum + toNumber(item.totalCost ?? item.unitCost), 0)
     : 0;
@@ -795,9 +797,11 @@ export default function ProjectDetailPage() {
                   <Users className="h-3.5 w-3.5" />
                   Crew Assigned
                 </div>
-                <p className="mt-2 text-lg font-semibold text-[#0F172A]">{getCrewSummary(project)}</p>
+                <p className="mt-2 text-lg font-semibold text-[#0F172A]">{crewSummary}</p>
                 <p className="mt-1 text-xs text-[#64748B]">
-                  {members.length > 0 ? `${members.length} team member${members.length === 1 ? "" : "s"} attached to the job` : "Assign a crew when production is ready"}
+                  {hasCrewAssignment
+                    ? "Crew assignment captured for this job"
+                    : "Assign a crew when production is ready"}
                 </p>
               </div>
 

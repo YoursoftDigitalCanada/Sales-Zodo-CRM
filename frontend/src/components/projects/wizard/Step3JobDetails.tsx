@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { AlertCircle, Info } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +54,23 @@ export function Step3JobDetails({ shingleProductOptions }: Step3JobDetailsProps)
   const roofFeatures = watch("roofFeatures") || [];
   const additionalWork = watch("additionalWork") || [];
   const permitRequired = watch("permitRequired");
+  const permitStatus = watch("permitStatus");
+  const permitPulledDate = watch("permitPulledDate");
+  const permitApprovedDate = watch("permitApprovedDate");
+
+  useEffect(() => {
+    if (!permitRequired || !permitStatus) return;
+
+    const today = new Date().toISOString().split("T")[0];
+
+    if ((permitStatus === "SUBMITTED" || permitStatus === "APPROVED") && !permitPulledDate) {
+      setValue("permitPulledDate", today, { shouldDirty: true });
+    }
+
+    if (permitStatus === "APPROVED" && !permitApprovedDate) {
+      setValue("permitApprovedDate", today, { shouldDirty: true });
+    }
+  }, [permitApprovedDate, permitPulledDate, permitRequired, permitStatus, setValue]);
 
   const toggleArrayValue = (field: "roofFeatures" | "additionalWork", value: string) => {
     const current = watch(field) || [];
@@ -284,7 +302,7 @@ export function Step3JobDetails({ shingleProductOptions }: Step3JobDetailsProps)
             </RadioGroup>
 
             {permitRequired ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <div>
                   <Label>Permit Status</Label>
                   <Select value={watch("permitStatus") || ""} onValueChange={(value) => setValue("permitStatus", value, { shouldValidate: true })}>
@@ -305,6 +323,16 @@ export function Step3JobDetails({ shingleProductOptions }: Step3JobDetailsProps)
                 <div>
                   <Label>Permit Number</Label>
                   <Input {...register("permitNumber")} placeholder="Permit #" />
+                </div>
+
+                <div>
+                  <Label>Submitted Date</Label>
+                  <Input type="date" {...register("permitPulledDate")} />
+                </div>
+
+                <div>
+                  <Label>Approved Date</Label>
+                  <Input type="date" {...register("permitApprovedDate")} />
                 </div>
 
                 <div>

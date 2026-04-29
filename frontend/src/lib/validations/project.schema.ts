@@ -303,6 +303,8 @@ export const projectWizardSchema = z
     permitStatus: optionalString,
     permitNumber: optionalString,
     permitCost: currencyValue,
+    permitPulledDate: dateValue,
+    permitApprovedDate: dateValue,
 
     // Step 4
     isInsuranceJob: z.boolean().default(false),
@@ -480,6 +482,8 @@ export const projectWizardDefaultValues: ProjectWizardFormValues = {
   permitStatus: "PENDING",
   permitNumber: "",
   permitCost: undefined,
+  permitPulledDate: undefined,
+  permitApprovedDate: undefined,
 
   isInsuranceJob: false,
   insuranceCompany: "",

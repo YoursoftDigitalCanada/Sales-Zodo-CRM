@@ -1,4 +1,4 @@
-import { ProjectStatus, ProjectPriority, ProjectType, PropertyType, TaskPriority, TaskStatus } from '@prisma/client';
+import { PermitStatus, ProjectStatus, ProjectPriority, ProjectType, PropertyType, TaskPriority, TaskStatus } from '@prisma/client';
 
 export interface ProjectQueryDto {
   page?: number;
@@ -62,6 +62,9 @@ export interface CreateProjectDto {
   dateOfLoss?: string | null;
   permitRequired?: boolean;
   permitNumber?: string | null;
+  permitStatus?: PermitStatus | null;
+  permitPulledDate?: string | null;
+  permitApprovedDate?: string | null;
   warrantyType?: string | null;
   warrantyYears?: number | null;
   tags?: string[];

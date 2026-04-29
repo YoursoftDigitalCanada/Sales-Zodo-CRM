@@ -239,6 +239,12 @@ const invoiceSchema = z.object({
   paymentTerms: z.string(),
   currency: z.string(),
   clientProvince: z.string(),
+  gstEnabled: z.boolean().optional(),
+  gstRate: z.coerce.number().min(0).optional(),
+  pstEnabled: z.boolean().optional(),
+  pstRate: z.coerce.number().min(0).optional(),
+  hstEnabled: z.boolean().optional(),
+  hstRate: z.coerce.number().min(0).optional(),
   billedBy: z.object({
     businessName: z.string(),
     email: z.string(),
@@ -301,6 +307,16 @@ const calculateDueDate = (invoiceDate: string, days: number) => {
   const date = new Date(invoiceDate);
   date.setDate(date.getDate() + days);
   return date.toISOString().split("T")[0];
+};
+
+const getTaxTypeLabel = (taxRates: { gst: number; pst: number; hst: number }, provinceCode?: string) => {
+  if (taxRates.hst > 0) return "HST";
+  if (taxRates.gst > 0 && taxRates.pst > 0) {
+    return provinceCode === "QC" ? "GST+QST" : "GST+PST";
+  }
+  if (taxRates.gst > 0) return "GST";
+  if (taxRates.pst > 0) return provinceCode === "QC" ? "QST" : "PST";
+  return "Tax";
 };
 
 const readText = (value: unknown) => {
@@ -1235,6 +1251,12 @@ const CreateInvoicePage = () => {
       paymentTerms: "net_30",
       currency: "CAD",
       clientProvince: "ON",
+      gstEnabled: false,
+      gstRate: 0,
+      pstEnabled: false,
+      pstRate: 0,
+      hstEnabled: true,
+      hstRate: 13,
       billedBy: {
         businessName: "",
         email: "",
@@ -1299,17 +1321,32 @@ const CreateInvoicePage = () => {
   const items = watch("items");
   const discount = watch("discount") || 0;
   const discountType = watch("discountType");
+  const gstEnabled = watch("gstEnabled");
+  const gstRate = watch("gstRate");
+  const pstEnabled = watch("pstEnabled");
+  const pstRate = watch("pstRate");
+  const hstEnabled = watch("hstEnabled");
+  const hstRate = watch("hstRate");
 
   // Get tax rates for selected province
   const taxRates = useMemo(() => {
-    const province = canadianProvinces.find((p) => p.code === clientProvince);
+    const resolvedGst = gstEnabled ? toNumber(gstRate) : 0;
+    const resolvedPst = pstEnabled ? toNumber(pstRate) : 0;
+    const resolvedHst = hstEnabled ? toNumber(hstRate) : 0;
     return {
-      gst: province?.gst || 0,
-      pst: province?.pst || 0,
-      hst: province?.hst || 0,
-      taxType: province?.taxType || "HST",
+      gst: resolvedHst > 0 ? 0 : resolvedGst,
+      pst: resolvedHst > 0 ? 0 : resolvedPst,
+      hst: resolvedHst,
+      taxType: getTaxTypeLabel(
+        {
+          gst: resolvedHst > 0 ? 0 : resolvedGst,
+          pst: resolvedHst > 0 ? 0 : resolvedPst,
+          hst: resolvedHst,
+        },
+        clientProvince,
+      ),
     };
-  }, [clientProvince]);
+  }, [clientProvince, gstEnabled, gstRate, hstEnabled, hstRate, pstEnabled, pstRate]);
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -1593,6 +1630,18 @@ const CreateInvoicePage = () => {
       setValue("dueDate", calculateDueDate(invoiceDate, term.days));
     }
   }, [paymentTerms, invoiceDate, setValue]);
+
+  useEffect(() => {
+    const province = canadianProvinces.find((p) => p.code === clientProvince);
+    if (!province) return;
+
+    setValue("gstEnabled", province.gst > 0);
+    setValue("gstRate", province.gst || 0);
+    setValue("pstEnabled", province.pst > 0);
+    setValue("pstRate", province.pst || 0);
+    setValue("hstEnabled", province.hst > 0);
+    setValue("hstRate", province.hst || 0);
+  }, [clientProvince, setValue]);
 
   // Handlers
   const handleSelectClient = (client: Client) => {
@@ -2056,28 +2105,111 @@ const CreateInvoicePage = () => {
                         />
                       </div>
 
-                      {/* Tax Rate Display */}
-                      <div className="col-span-2 p-3 bg-[#0891B2]/5 rounded-md border border-[#22D3EE]/20">
-                        <div className="flex items-center gap-2 mb-1">
+                      {/* Tax Controls */}
+                      <div className="col-span-2 rounded-md border border-[#22D3EE]/20 bg-[#0891B2]/5 p-3">
+                        <div className="mb-3 flex items-center gap-2">
                           <Percent size={14} className="text-[#0891B2]" />
-                          <span className="text-xs font-medium text-[#0891B2]">Tax Rates Applied</span>
+                          <span className="text-xs font-medium text-[#0891B2]">Tax Controls</span>
                         </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          {taxRates.hst > 0 ? (
-                            <span className="text-[#475569]">HST: <strong>{taxRates.hst}%</strong></span>
-                          ) : (
-                            <>
-                              {taxRates.gst > 0 && (
-                                <span className="text-[#475569]">GST: <strong>{taxRates.gst}%</strong></span>
-                              )}
-                              {taxRates.pst > 0 && (
-                                <span className="text-[#475569]">
-                                  {clientProvince === "QC" ? "QST" : "PST"}: <strong>{taxRates.pst}%</strong>
-                                </span>
-                              )}
-                            </>
-                          )}
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-3">
+                            <div className="mb-2 flex items-center justify-between">
+                              <Label className="text-xs font-medium text-[#0F172A]">GST</Label>
+                              <Controller
+                                name="gstEnabled"
+                                control={control}
+                                render={({ field }) => (
+                                  <Checkbox
+                                    checked={Boolean(field.value)}
+                                    onCheckedChange={(checked) => {
+                                      const nextChecked = Boolean(checked);
+                                      field.onChange(nextChecked);
+                                      if (nextChecked) {
+                                        setValue("hstEnabled", false);
+                                      }
+                                    }}
+                                  />
+                                )}
+                              />
+                            </div>
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                step="0.001"
+                                {...register("gstRate")}
+                                disabled={!gstEnabled || hstEnabled}
+                                className="h-10 rounded-md border-[rgba(15,23,42,0.06)] pr-8 text-sm"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#64748B]">%</span>
+                            </div>
+                          </div>
+                          <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-3">
+                            <div className="mb-2 flex items-center justify-between">
+                              <Label className="text-xs font-medium text-[#0F172A]">{clientProvince === "QC" ? "QST" : "PST"}</Label>
+                              <Controller
+                                name="pstEnabled"
+                                control={control}
+                                render={({ field }) => (
+                                  <Checkbox
+                                    checked={Boolean(field.value)}
+                                    onCheckedChange={(checked) => {
+                                      const nextChecked = Boolean(checked);
+                                      field.onChange(nextChecked);
+                                      if (nextChecked) {
+                                        setValue("hstEnabled", false);
+                                      }
+                                    }}
+                                  />
+                                )}
+                              />
+                            </div>
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                step="0.001"
+                                {...register("pstRate")}
+                                disabled={!pstEnabled || hstEnabled}
+                                className="h-10 rounded-md border-[rgba(15,23,42,0.06)] pr-8 text-sm"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#64748B]">%</span>
+                            </div>
+                          </div>
+                          <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-3">
+                            <div className="mb-2 flex items-center justify-between">
+                              <Label className="text-xs font-medium text-[#0F172A]">HST</Label>
+                              <Controller
+                                name="hstEnabled"
+                                control={control}
+                                render={({ field }) => (
+                                  <Checkbox
+                                    checked={Boolean(field.value)}
+                                    onCheckedChange={(checked) => {
+                                      const nextChecked = Boolean(checked);
+                                      field.onChange(nextChecked);
+                                      if (nextChecked) {
+                                        setValue("gstEnabled", false);
+                                        setValue("pstEnabled", false);
+                                      }
+                                    }}
+                                  />
+                                )}
+                              />
+                            </div>
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                step="0.001"
+                                {...register("hstRate")}
+                                disabled={!hstEnabled}
+                                className="h-10 rounded-md border-[rgba(15,23,42,0.06)] pr-8 text-sm"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#64748B]">%</span>
+                            </div>
+                          </div>
                         </div>
+                        <p className="mt-3 text-xs text-[#64748B]">
+                          Pick a province to preload tax defaults, then adjust or disable GST, {clientProvince === "QC" ? "QST" : "PST"}, and HST manually.
+                        </p>
                       </div>
                     </div>
                   </SectionCard>

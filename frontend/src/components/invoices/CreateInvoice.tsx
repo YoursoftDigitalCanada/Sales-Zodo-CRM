@@ -1,7 +1,7 @@
 // src/pages/CreateInvoice.tsx
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useForm, FormProvider, useFieldArray, Controller } from "react-hook-form";
+import { useForm, FormProvider, useFieldArray, Controller, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1318,15 +1318,15 @@ const CreateInvoicePage = () => {
   const clientProvince = watch("clientProvince");
   const paymentTerms = watch("paymentTerms");
   const invoiceDate = watch("invoiceDate");
-  const items = watch("items");
-  const discount = watch("discount") || 0;
-  const discountType = watch("discountType");
-  const gstEnabled = watch("gstEnabled");
-  const gstRate = watch("gstRate");
-  const pstEnabled = watch("pstEnabled");
-  const pstRate = watch("pstRate");
-  const hstEnabled = watch("hstEnabled");
-  const hstRate = watch("hstRate");
+  const items = useWatch({ control, name: "items" });
+  const discount = useWatch({ control, name: "discount" }) || 0;
+  const discountType = useWatch({ control, name: "discountType" });
+  const gstEnabled = useWatch({ control, name: "gstEnabled" });
+  const gstRate = useWatch({ control, name: "gstRate" });
+  const pstEnabled = useWatch({ control, name: "pstEnabled" });
+  const pstRate = useWatch({ control, name: "pstRate" });
+  const hstEnabled = useWatch({ control, name: "hstEnabled" });
+  const hstRate = useWatch({ control, name: "hstRate" });
 
   // Get tax rates for selected province
   const taxRates = useMemo(() => {

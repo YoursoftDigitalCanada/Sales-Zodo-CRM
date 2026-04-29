@@ -350,6 +350,114 @@ export class MailboxRepository {
     return null;
   }
 
+  async findConfiguredSmtpForTenantByRoleNames(
+    tenantId: string,
+    roleNames: string[],
+    preferredUserId?: string,
+  ): Promise<MailboxRuntimeConfig | null> {
+    const normalizedRoleNames = roleNames.map((roleName) => roleName.trim().toLowerCase()).filter(Boolean);
+
+    if (preferredUserId) {
+      const preferred = await prisma.user.findUnique({
+        where: { id: preferredUserId },
+        select: {
+          id: true,
+          tenantId: true,
+          firstName: true,
+          lastName: true,
+          tenant: {
+            select: {
+              name: true,
+            },
+          },
+          preferences: true,
+          employees: {
+            where: {
+              tenantId,
+              isActive: true,
+            },
+            select: {
+              role: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+            take: 1,
+          },
+        },
+      });
+
+      const preferredRuntime = preferred ? toRuntimeConfig(preferred) : null;
+      const preferredRole = preferred?.employees[0]?.role?.name?.trim().toLowerCase() || '';
+      if (
+        preferredRuntime?.tenantId === tenantId
+        && hasConfiguredSmtp(preferredRuntime)
+        && normalizedRoleNames.includes(preferredRole)
+      ) {
+        return preferredRuntime;
+      }
+    }
+
+    const users = await prisma.user.findMany({
+      where: {
+        tenantId,
+        status: 'ACTIVE',
+        employees: {
+          some: {
+            tenantId,
+            isActive: true,
+          },
+        },
+      },
+      orderBy: [
+        { updatedAt: 'desc' },
+        { createdAt: 'asc' },
+      ],
+      select: {
+        id: true,
+        tenantId: true,
+        firstName: true,
+        lastName: true,
+        tenant: {
+          select: {
+            name: true,
+          },
+        },
+        preferences: true,
+        employees: {
+          where: {
+            tenantId,
+            isActive: true,
+          },
+          select: {
+            role: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    for (const user of users) {
+      const userRoleNames = user.employees
+        .map((employee) => employee.role.name.trim().toLowerCase())
+        .filter(Boolean);
+      if (!userRoleNames.some((roleName) => normalizedRoleNames.includes(roleName))) {
+        continue;
+      }
+
+      const runtime = toRuntimeConfig(user);
+      if (hasConfiguredSmtp(runtime)) {
+        return runtime;
+      }
+    }
+
+    return null;
+  }
+
   async listUsersWithImapConfigured(): Promise<MailboxRuntimeConfig[]> {
     const users = await prisma.user.findMany({
       where: {

@@ -7,8 +7,10 @@ import { eventBus } from '../../common/events/event-bus';
 import { clientLifecycleService } from '../../common/services/client-lifecycle.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { tenantMailerService } from '../../common/services/tenant-mailer.service';
+import { logger } from '../../common/utils/logger';
 import { prisma } from '../../config/database';
 import { config } from '../../config';
+import { communicationLogService } from '../communication-logs/communication-log.service';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -395,6 +397,37 @@ export class InvoicesService {
                 const delivery = await tenantMailerService.sendTenantEmail({
                     tenantId,
                     preferredUserId: actorUserId,
+                    ...options,
+                });
+                return { sent: delivery.sent, error: delivery.error };
+            },
+        };
+    }
+
+    private async resolvePrivilegedInvoiceSender(
+        tenantId: string,
+        actorUserId?: string,
+    ): Promise<{
+        senderName: string;
+        senderEmail: string;
+        send: (options: {
+            to: string | string[];
+            subject: string;
+            html: string;
+            text?: string;
+            attachments?: InvoiceEmailAttachment[];
+        }) => Promise<{ sent: boolean; error?: string }>;
+    }> {
+        const sender = await tenantMailerService.getPrivilegedTenantSender(tenantId, actorUserId, ['Owner', 'Manager']);
+
+        return {
+            senderName: sender.senderName,
+            senderEmail: sender.senderEmail,
+            send: async (options) => {
+                const delivery = await tenantMailerService.sendPrivilegedTenantEmail({
+                    tenantId,
+                    preferredUserId: actorUserId,
+                    roleNames: ['Owner', 'Manager'],
                     ...options,
                 });
                 return { sent: delivery.sent, error: delivery.error };
@@ -982,6 +1015,78 @@ export class InvoicesService {
                 clientId,
             },
         });
+
+        const clientEmail = String((existing as any).client?.primaryEmail || '').trim();
+        if (clientEmail) {
+            try {
+                const sender = await this.resolvePrivilegedInvoiceSender(tenantId, actorUserId);
+                const clientName = String((existing as any).client?.clientName || 'Customer').trim() || 'Customer';
+                const invoiceNumber = String((existing as any).invoiceNumber || id);
+                const paidAmount = this.formatCurrency(amount, String((existing as any).currency || 'CAD'));
+                const remainingBalanceValue = Number((invoice as any).amountDue || 0);
+                const remainingBalance = this.formatCurrency(
+                    remainingBalanceValue,
+                    String((existing as any).currency || 'CAD'),
+                );
+                const balanceMessage = remainingBalanceValue > 0
+                    ? `Your remaining balance is ${remainingBalance}.`
+                    : 'Your invoice is now fully paid.';
+
+                const subject = `Thank you for your payment for invoice ${invoiceNumber}`;
+                const html = `
+<!DOCTYPE html>
+<html>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0F172A;line-height:1.6;">
+  <h2 style="margin:0 0 12px;">Hi ${this.escapeHtml(clientName)},</h2>
+  <p style="margin:0 0 12px;">
+    Thank you for your payment of <strong>${this.escapeHtml(paidAmount)}</strong> for invoice
+    <strong>${this.escapeHtml(invoiceNumber)}</strong>.
+  </p>
+  <p style="margin:0 0 12px;">${this.escapeHtml(balanceMessage)}</p>
+  <p style="margin:0;">We appreciate your business.</p>
+</body>
+</html>`;
+                const text = [
+                    `Hi ${clientName},`,
+                    '',
+                    `Thank you for your payment of ${paidAmount} for invoice ${invoiceNumber}.`,
+                    balanceMessage,
+                    '',
+                    'We appreciate your business.',
+                ].join('\n');
+
+                const delivery = await sender.send({
+                    to: clientEmail,
+                    subject,
+                    html,
+                    text,
+                });
+
+                if (delivery.sent) {
+                    await communicationLogService.createSafe({
+                        tenantId,
+                        leadId: null,
+                        type: 'EMAIL',
+                        direction: 'OUTBOUND',
+                        subject,
+                        content: `payment-thank-you:${id}:${amount} Thank-you email sent for invoice ${invoiceNumber}.`,
+                        to: clientEmail,
+                    });
+                } else {
+                    logger.warn('[InvoicePayment] Thank-you email delivery failed', {
+                        invoiceId: id,
+                        clientEmail,
+                        error: delivery.error,
+                    });
+                }
+            } catch (error) {
+                logger.warn('[InvoicePayment] Thank-you email skipped', {
+                    invoiceId: id,
+                    clientEmail,
+                    error: error instanceof Error ? error.message : String(error),
+                });
+            }
+        }
 
         return dto;
     }

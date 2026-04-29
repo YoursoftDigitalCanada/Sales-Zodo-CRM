@@ -6,6 +6,7 @@ import { logger } from './common/utils/logger';
 import { imapPoller } from './common/services/imap-poller.service';
 import { emailScheduler } from './common/services/email-scheduler.service';
 import { permissionSyncService } from './common/services/permission-sync.service';
+import { invoiceReminderService } from './modules/invoices/invoice-reminder.service';
 
 // ============================================================================
 // SERVER STARTUP
@@ -34,6 +35,7 @@ async function startServer(): Promise<void> {
       // Start IMAP poller (check for incoming emails every 2 minutes)
       imapPoller.start(2 * 60 * 1000);
       emailScheduler.start(60 * 1000);
+      invoiceReminderService.start();
     });
 
     // ========================================================================
@@ -46,6 +48,7 @@ async function startServer(): Promise<void> {
       // Stop IMAP poller
       imapPoller.stop();
       emailScheduler.stop();
+      invoiceReminderService.stop();
 
       // Stop accepting new connections
       server.close(async () => {

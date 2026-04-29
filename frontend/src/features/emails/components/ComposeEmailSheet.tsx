@@ -232,18 +232,28 @@ export function ComposeEmailSheet({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
+      <SheetContent side="right" showCloseButton={false} className="w-full sm:max-w-2xl p-0 flex flex-col">
         <SheetHeader className="px-6 py-5 border-b border-[rgba(15,23,42,0.06)]">
-          <div className="pr-8">
-            <SheetTitle className="flex items-center gap-2 text-[#0F172A]">
-              <Mail className="h-5 w-5 text-[#14B8A6]" />
-              Compose Email
-            </SheetTitle>
-            <SheetDescription>
-              {defaultRecipientName
-                ? `Send an email to ${defaultRecipientName} from your configured mailbox${mailboxStatus?.mailboxAddress ? ` (${mailboxStatus.mailboxAddress})` : ""}.`
-                : `Send an email from your configured mailbox${mailboxStatus?.mailboxAddress ? ` (${mailboxStatus.mailboxAddress})` : ""}.`}
-            </SheetDescription>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <SheetTitle className="flex items-center gap-2 text-[#0F172A]">
+                <Mail className="h-5 w-5 text-[#14B8A6]" />
+                Compose Email
+              </SheetTitle>
+              <SheetDescription>
+                {defaultRecipientName
+                  ? `Send an email to ${defaultRecipientName} from your configured mailbox${mailboxStatus?.mailboxAddress ? ` (${mailboxStatus.mailboxAddress})` : ""}.`
+                  : `Send an email from your configured mailbox${mailboxStatus?.mailboxAddress ? ` (${mailboxStatus.mailboxAddress})` : ""}.`}
+              </SheetDescription>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-sm p-1 text-[#94A3B8] transition-colors hover:bg-[#F8FAFC] hover:text-[#475569]"
+              aria-label="Close compose email"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </SheetHeader>
 

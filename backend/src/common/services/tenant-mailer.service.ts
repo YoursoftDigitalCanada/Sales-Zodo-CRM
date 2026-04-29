@@ -130,6 +130,62 @@ class TenantMailerService {
     };
   }
 
+  async getPrivilegedTenantSender(
+    tenantId: string,
+    preferredUserId?: string,
+    roleNames: string[] = ['Owner', 'Manager'],
+  ): Promise<TenantSender> {
+    const privilegedMailbox = await mailboxRepository.findConfiguredSmtpForTenantByRoleNames(
+      tenantId,
+      roleNames,
+      preferredUserId,
+    );
+
+    if (!privilegedMailbox) {
+      throw new ServiceUnavailableError(
+        'Invoice automation email delivery requires a configured mailbox for a workspace owner or manager.',
+      );
+    }
+
+    const senderName = privilegedMailbox.smtp.senderName || 'ZODO CRM';
+    const senderEmail = privilegedMailbox.smtp.senderEmail || privilegedMailbox.smtp.user;
+
+    return {
+      senderName,
+      senderEmail,
+      send: (options) => mailerService.sendMailWithConfigDetailed(
+        {
+          host: privilegedMailbox.smtp.host,
+          port: privilegedMailbox.smtp.port,
+          user: privilegedMailbox.smtp.user,
+          pass: privilegedMailbox.smtp.pass,
+          encryption: privilegedMailbox.smtp.encryption,
+          senderName,
+          senderEmail,
+        },
+        options,
+      ),
+    };
+  }
+
+  async sendPrivilegedTenantEmail(
+    options: TenantEmailOptions & { roleNames?: string[] },
+  ): Promise<{ sent: boolean; error?: string; senderEmail: string; senderName: string }> {
+    const sender = await this.getPrivilegedTenantSender(
+      options.tenantId,
+      options.preferredUserId,
+      options.roleNames,
+    );
+    const { tenantId: _tenantId, preferredUserId: _preferredUserId, roleNames: _roleNames, ...mailOptions } = options;
+    const delivery = await sender.send(mailOptions);
+
+    return {
+      ...delivery,
+      senderEmail: sender.senderEmail,
+      senderName: sender.senderName,
+    };
+  }
+
   async sendSignupEmail(options: Omit<TenantEmailOptions, 'tenantId' | 'preferredUserId'>): Promise<{ sent: boolean; error?: string; senderEmail: string; senderName: string }> {
     const delivery = await mailerService.sendGlobalMailDetailed({
       ...options,

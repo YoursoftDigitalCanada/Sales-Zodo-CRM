@@ -57,7 +57,7 @@ function classifyIntent(message: string): ClassifiedIntent {
     }
 
     // General generative (longer conversational messages)
-    if (/\b(help me|can you|please|suggest|recommend|advice|how should|how can|what should)\b/.test(lower) && lower.length > 40) {
+    if (/\b(help me|can you|please|suggest|recommend|advice|how should|how can|what should)\b/.test(lower)) {
         return { type: 'generative', category: 'general' };
     }
 
@@ -97,6 +97,25 @@ function serializeContextForLLM(ctx: ResolvedCopilotContext): string {
 // ── Service ─────────────────────────────────────────────────────────────
 
 class CopilotIntelligenceService {
+    private normalizeMessage(message: string): string {
+        return message.trim().toLowerCase();
+    }
+
+    private isRevenueQuestion(message: string): boolean {
+        const lower = this.normalizeMessage(message);
+        return /\brevenue\b|\bgrowth\b|\bsales\b|\bclose rate\b|\bconversion\b/.test(lower);
+    }
+
+    private isFocusQuestion(message: string): boolean {
+        const lower = this.normalizeMessage(message);
+        return /\bfocus\b|\bpriorit/i.test(lower) || /\bthis week\b/.test(lower) || /\bnext step\b/.test(lower);
+    }
+
+    private isPipelineQuestion(message: string): boolean {
+        const lower = this.normalizeMessage(message);
+        return /\bpipeline\b|\bleads?\b|\bstalled\b|\bproposal\b|\bqualified\b/.test(lower);
+    }
+
 
     /**
      * Generate a context-aware response based on the user's message
@@ -502,8 +521,92 @@ class CopilotIntelligenceService {
     }
 
     // ── DASHBOARD ───────────────────────────────────────────────────────
-    private dashboardResponse(_msg: string, ctx: ResolvedCopilotContext): CopilotResponse {
+    private dashboardResponse(message: string, ctx: ResolvedCopilotContext): CopilotResponse {
         const ai = ctx.aiContext;
+
+        if (this.isRevenueQuestion(message)) {
+            const actions: string[] = [];
+            const followUps: string[] = [];
+            const activePipelineValue = ai.pipeline.stages.reduce((sum, stage) => sum + stage.value, 0);
+            const lines: string[] = [
+                `**📈 Revenue Growth Plan — ${ai.tenantName}**`,
+                '',
+                `• **This month revenue:** $${ai.revenue.thisMonth.toLocaleString()} (${ai.revenue.growth > 0 ? '+' : ''}${ai.revenue.growth}% MoM)`,
+                `• **Active pipeline:** $${activePipelineValue.toLocaleString()}`,
+                `• **Conversion rate:** ${ai.pipeline.conversionRate}%`,
+                `• **Outstanding revenue:** $${ai.revenue.outstanding.toLocaleString()}`,
+                '',
+            ];
+
+            if (ai.pipeline.stalled > 0) {
+                lines.push(`1. Move the **${ai.pipeline.stalled} stalled leads** forward first. That is the fastest near-term revenue unlock.`);
+                actions.push('Review stalled leads and schedule follow-ups');
+            }
+
+            if (ai.tasks.overdue > 0) {
+                lines.push(`2. Clear the **${ai.tasks.overdue} overdue tasks** blocking sales or operations so estimates and follow-ups do not slip.`);
+                actions.push('Prioritize and reassign overdue tasks');
+            }
+
+            if (ai.revenue.outstanding > 0) {
+                lines.push(`3. Follow up on **$${ai.revenue.outstanding.toLocaleString()} outstanding** to improve cash collection.`);
+                actions.push(`Follow up on $${ai.revenue.outstanding.toLocaleString()} outstanding`);
+            }
+
+            lines.push('4. Track estimate-to-close speed and make sure every qualified lead has a next action this week.');
+
+            followUps.push('Show me pipeline details', 'Which leads should I close first?', 'What is blocking revenue this month?');
+
+            return {
+                answer: lines.join('\n'),
+                suggestedActions: actions,
+                suggestedFollowUps: followUps,
+            };
+        }
+
+        if (this.isFocusQuestion(message)) {
+            const actions: string[] = [];
+            const lines: string[] = [
+                `**🎯 Focus for This Week — ${ai.tenantName}**`,
+                '',
+                'Here is the highest-leverage order:',
+                '',
+            ];
+
+            if (ai.tasks.overdue > 0) {
+                lines.push(`1. Resolve the **${ai.tasks.overdue} overdue tasks** affecting delivery and follow-up discipline.`);
+                actions.push('Prioritize and reassign overdue tasks');
+            }
+
+            if (ai.pipeline.stalled > 0) {
+                lines.push(`2. Re-engage the **${ai.pipeline.stalled} stalled leads** in the pipeline.`);
+                actions.push('Review stalled leads and schedule follow-ups');
+            }
+
+            if (ai.pipeline.newLeads > 0) {
+                lines.push(`3. Make first contact on the **${ai.pipeline.newLeads} new leads** so they do not cool off.`);
+                actions.push('Contact new leads');
+            }
+
+            if (ai.revenue.outstanding > 0) {
+                lines.push(`4. Follow up on **$${ai.revenue.outstanding.toLocaleString()} outstanding invoices** for faster cash flow.`);
+                actions.push(`Follow up on $${ai.revenue.outstanding.toLocaleString()} outstanding`);
+            }
+
+            return {
+                answer: lines.join('\n'),
+                suggestedActions: actions,
+                suggestedFollowUps: [
+                    'Show me pipeline details',
+                    'How can I improve my revenue growth?',
+                    'Which tasks are hurting progress most?',
+                ],
+            };
+        }
+
+        if (this.isPipelineQuestion(message)) {
+            return this.leadListResponse(message, ctx);
+        }
 
         const lines: string[] = [
             `**📊 Business Overview** — ${ai.tenantName}`,
@@ -639,7 +742,11 @@ class CopilotIntelligenceService {
     }
 
     // ── GENERAL (Fallback) ──────────────────────────────────────────────
-    private generalResponse(_msg: string, ctx: ResolvedCopilotContext): CopilotResponse {
+    private generalResponse(message: string, ctx: ResolvedCopilotContext): CopilotResponse {
+        if (this.isRevenueQuestion(message) || this.isFocusQuestion(message) || this.isPipelineQuestion(message)) {
+            return this.dashboardResponse(message, ctx);
+        }
+
         const ai = ctx.aiContext;
 
         const lines: string[] = [

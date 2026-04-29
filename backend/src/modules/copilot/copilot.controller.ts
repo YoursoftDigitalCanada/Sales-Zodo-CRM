@@ -75,6 +75,7 @@ class CopilotController {
                 tenantId,
                 context?.module,
                 context?.entityId,
+                message,
             );
 
             // 2.5 Load session history for conversational continuity

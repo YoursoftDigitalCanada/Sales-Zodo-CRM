@@ -116,6 +116,12 @@ class CopilotIntelligenceService {
         return /\bpipeline\b|\bleads?\b|\bstalled\b|\bproposal\b|\bqualified\b/.test(lower);
     }
 
+    private isLeadPriorityQuestion(message: string): boolean {
+        const lower = this.normalizeMessage(message);
+        return /\bwhich leads\b|\bwho should i focus\b|\bwhat leads\b/.test(lower)
+            || (/\bleads?\b/.test(lower) && this.isFocusQuestion(lower));
+    }
+
 
     /**
      * Generate a context-aware response based on the user's message
@@ -329,9 +335,50 @@ class CopilotIntelligenceService {
     }
 
     // ── LEAD LIST ───────────────────────────────────────────────────────
-    private leadListResponse(_msg: string, ctx: ResolvedCopilotContext): CopilotResponse {
+    private leadListResponse(message: string, ctx: ResolvedCopilotContext): CopilotResponse {
         const ai = ctx.aiContext;
         const p = ai.pipeline;
+
+        if (this.isLeadPriorityQuestion(message)) {
+            const lines: string[] = [
+                '**🎯 Lead Priorities for This Week**',
+                '',
+            ];
+            const actions: string[] = [];
+
+            if (p.stalled > 0) {
+                lines.push(`1. Focus first on the **${p.stalled} stalled leads** in contacted, qualified, proposal, or negotiation stages.`);
+                actions.push(`Follow up on ${p.stalled} stalled leads`);
+            }
+
+            if (p.proposalsSent > 0) {
+                lines.push(`2. Revisit the **${p.proposalsSent} proposal-stage leads** to push decisions and unblock close opportunities.`);
+                actions.push(`Review ${p.proposalsSent} proposal-stage leads`);
+            }
+
+            if (p.newLeads > 0) {
+                lines.push(`3. Make quick first contact with the **${p.newLeads} new lead${p.newLeads === 1 ? '' : 's'}** before they cool off.`);
+                actions.push('Contact new leads');
+            }
+
+            if (p.qualified > 0) {
+                lines.push(`4. Move the **${p.qualified} qualified lead${p.qualified === 1 ? '' : 's'}** toward estimate or inspection scheduling.`);
+                actions.push('Advance qualified leads');
+            }
+
+            lines.push('');
+            lines.push('Best order: stalled leads first, then proposal-stage leads, then new inbound leads.');
+
+            return {
+                answer: lines.join('\n'),
+                suggestedActions: actions,
+                suggestedFollowUps: [
+                    'Show me pipeline trends over time',
+                    'How can I improve my conversion rate?',
+                    'What is blocking closed deals?',
+                ],
+            };
+        }
 
         const lines: string[] = [
             '**📊 Pipeline Overview**',

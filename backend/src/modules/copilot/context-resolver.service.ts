@@ -147,16 +147,18 @@ class ContextResolverService {
         searchText: string,
         searchTokens: string[],
     ): Promise<{ module: string; entityId: string; score: number } | null> {
+        const searchVariants = Array.from(new Set([searchText, ...searchTokens].filter((value) => value.length >= 2)));
+
         if (module === 'leads') {
             const rows = await prisma.lead.findMany({
                 where: {
                     tenantId,
-                    OR: [
-                        { firstName: { contains: searchText, mode: 'insensitive' } },
-                        { lastName: { contains: searchText, mode: 'insensitive' } },
-                        { companyName: { contains: searchText, mode: 'insensitive' } },
-                        { email: { contains: searchText, mode: 'insensitive' } },
-                    ],
+                    OR: searchVariants.flatMap((term) => ([
+                        { firstName: { contains: term, mode: 'insensitive' as const } },
+                        { lastName: { contains: term, mode: 'insensitive' as const } },
+                        { companyName: { contains: term, mode: 'insensitive' as const } },
+                        { email: { contains: term, mode: 'insensitive' as const } },
+                    ])),
                 },
                 select: { id: true, firstName: true, lastName: true, companyName: true, email: true },
                 take: 8,
@@ -180,12 +182,12 @@ class ContextResolverService {
             const rows = await prisma.client.findMany({
                 where: {
                     tenantId,
-                    OR: [
-                        { clientName: { contains: searchText, mode: 'insensitive' } },
-                        { companyName: { contains: searchText, mode: 'insensitive' } },
-                        { primaryEmail: { contains: searchText, mode: 'insensitive' } },
-                        { contactName: { contains: searchText, mode: 'insensitive' } },
-                    ],
+                    OR: searchVariants.flatMap((term) => ([
+                        { clientName: { contains: term, mode: 'insensitive' as const } },
+                        { companyName: { contains: term, mode: 'insensitive' as const } },
+                        { primaryEmail: { contains: term, mode: 'insensitive' as const } },
+                        { contactName: { contains: term, mode: 'insensitive' as const } },
+                    ])),
                 },
                 select: { id: true, clientName: true, companyName: true, primaryEmail: true, contactName: true },
                 take: 8,
@@ -205,11 +207,11 @@ class ContextResolverService {
             const rows = await prisma.project.findMany({
                 where: {
                     tenantId,
-                    OR: [
-                        { name: { contains: searchText, mode: 'insensitive' } },
-                        { projectNumber: { contains: searchText, mode: 'insensitive' } },
-                        { client: { clientName: { contains: searchText, mode: 'insensitive' } } },
-                    ],
+                    OR: searchVariants.flatMap((term) => ([
+                        { name: { contains: term, mode: 'insensitive' as const } },
+                        { projectNumber: { contains: term, mode: 'insensitive' as const } },
+                        { client: { clientName: { contains: term, mode: 'insensitive' as const } } },
+                    ])),
                 },
                 select: {
                     id: true,
@@ -234,12 +236,12 @@ class ContextResolverService {
             const quotes = await prisma.quote.findMany({
                 where: {
                     tenantId,
-                    OR: [
-                        { quoteNumber: { contains: searchText, mode: 'insensitive' } },
-                        { client: { clientName: { contains: searchText, mode: 'insensitive' } } },
-                        { lead: { firstName: { contains: searchText, mode: 'insensitive' } } },
-                        { lead: { lastName: { contains: searchText, mode: 'insensitive' } } },
-                    ],
+                    OR: searchVariants.flatMap((term) => ([
+                        { quoteNumber: { contains: term, mode: 'insensitive' as const } },
+                        { client: { clientName: { contains: term, mode: 'insensitive' as const } } },
+                        { lead: { firstName: { contains: term, mode: 'insensitive' as const } } },
+                        { lead: { lastName: { contains: term, mode: 'insensitive' as const } } },
+                    ])),
                 },
                 select: {
                     id: true,
@@ -253,10 +255,10 @@ class ContextResolverService {
             const invoices = await prisma.invoice.findMany({
                 where: {
                     tenantId,
-                    OR: [
-                        { invoiceNumber: { contains: searchText, mode: 'insensitive' } },
-                        { client: { clientName: { contains: searchText, mode: 'insensitive' } } },
-                    ],
+                    OR: searchVariants.flatMap((term) => ([
+                        { invoiceNumber: { contains: term, mode: 'insensitive' as const } },
+                        { client: { clientName: { contains: term, mode: 'insensitive' as const } } },
+                    ])),
                 },
                 select: {
                     id: true,

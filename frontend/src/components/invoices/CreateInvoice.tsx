@@ -1313,7 +1313,11 @@ const CreateInvoicePage = () => {
 
   // Calculate totals
   const totals = useMemo(() => {
-    const subtotal = items?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+    const subtotal = items?.reduce((sum, item) => {
+      const quantity = toNumber(item?.quantity);
+      const rate = toNumber(item?.rate);
+      return sum + quantity * rate;
+    }, 0) || 0;
     const discountAmount = discountType === "percentage" ? (subtotal * discount) / 100 : discount;
     const taxableAmount = subtotal - discountAmount;
 

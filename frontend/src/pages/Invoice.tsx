@@ -1066,35 +1066,62 @@ const RecordPaymentDialog = ({
   isOpen,
   onClose,
   invoice,
+  invoices,
   onSubmit,
 }: {
   isOpen: boolean;
   onClose: () => void;
   invoice: Invoice | null;
+  invoices: Invoice[];
   onSubmit: (invoiceId: string, amount: number, method: string, notes: string) => void;
 }) => {
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("bank_transfer");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState("");
 
-  const amountDue = invoice ? (invoice.total - (invoice.amountPaid || 0)) : 0;
+  const availableInvoices = useMemo(
+    () => invoices.filter((entry) => entry.status !== "Paid" && entry.status !== "Cancelled"),
+    [invoices],
+  );
+
+  const selectedInvoice = useMemo(() => {
+    if (invoice) {
+      return invoice;
+    }
+
+    return availableInvoices.find((entry) => entry.id === selectedInvoiceId) || null;
+  }, [availableInvoices, invoice, selectedInvoiceId]);
+
+  const amountDue = selectedInvoice ? (selectedInvoice.total - (selectedInvoice.amountPaid || 0)) : 0;
 
   useEffect(() => {
     if (invoice) {
+      setSelectedInvoiceId(invoice.id);
+    } else if (availableInvoices.length > 0) {
+      setSelectedInvoiceId((current) => current || availableInvoices[0].id);
+    } else {
+      setSelectedInvoiceId("");
+    }
+  }, [availableInvoices, invoice]);
+
+  useEffect(() => {
+    if (selectedInvoice) {
       setAmount(String(amountDue));
     }
-  }, [invoice, amountDue]);
+  }, [selectedInvoice, amountDue]);
 
   const handleSubmit = async () => {
-    if (!invoice) return;
+    if (!selectedInvoice) return;
     setIsSubmitting(true);
-    await onSubmit(invoice.id, parseFloat(amount), method, notes);
+    await onSubmit(selectedInvoice.id, parseFloat(amount), method, notes);
     setIsSubmitting(false);
     onClose();
     setAmount("");
     setMethod("bank_transfer");
     setNotes("");
+    setSelectedInvoiceId("");
   };
 
   const paymentMethods = [
@@ -1114,30 +1141,55 @@ const RecordPaymentDialog = ({
               Record Payment
             </DialogTitle>
             <DialogDescription className="text-[#94A3B8]">
-              Record a payment for invoice {invoice?.invoiceNumber}
+              {selectedInvoice
+                ? `Record a payment for invoice ${selectedInvoice.invoiceNumber}`
+                : "Select an invoice and record its payment."}
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <div className="p-6 space-y-5">
+          {!invoice && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[#475569]">
+                Select Invoice <span className="text-red-500">*</span>
+              </label>
+              <Select value={selectedInvoiceId} onValueChange={setSelectedInvoiceId}>
+                <SelectTrigger className="h-12 rounded-md border-[rgba(15,23,42,0.06)]">
+                  <SelectValue placeholder="Choose an invoice" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  {availableInvoices.map((entry) => {
+                    const outstanding = Math.max((entry.total || 0) - (entry.amountPaid || 0), 0);
+                    return (
+                      <SelectItem key={entry.id} value={entry.id} className="rounded-md">
+                        {entry.invoiceNumber} - {entry.clientName} - {formatCurrency(outstanding, entry.currency)}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Invoice Summary */}
           <div className="p-4 bg-[#F8FAFC] rounded-md">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-[#94A3B8]">Invoice Total</span>
               <span className="font-semibold text-[#0F172A]">
-                {formatCurrency(invoice?.total)}
+                {formatCurrency(selectedInvoice?.total, selectedInvoice?.currency)}
               </span>
             </div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-[#94A3B8]">Already Paid</span>
               <span className="font-semibold text-green-600">
-                {formatCurrency(invoice?.amountPaid || 0)}
+                {formatCurrency(selectedInvoice?.amountPaid || 0, selectedInvoice?.currency)}
               </span>
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-[rgba(15,23,42,0.06)]">
               <span className="text-sm font-medium text-slate-200">Amount Due</span>
               <span className="font-bold text-[#0891B2]">
-                {formatCurrency(amountDue)}
+                {formatCurrency(amountDue, selectedInvoice?.currency)}
               </span>
             </div>
           </div>
@@ -1161,7 +1213,7 @@ const RecordPaymentDialog = ({
               onClick={() => setAmount(String(amountDue))}
               className="text-xs text-[#0891B2] hover:underline"
             >
-              Pay full amount ({formatCurrency(amountDue)})
+              Pay full amount ({formatCurrency(amountDue, selectedInvoice?.currency)})
             </button>
           </div>
 
@@ -1213,7 +1265,7 @@ const RecordPaymentDialog = ({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isSubmitting || !amount || parseFloat(amount) <= 0}
+            disabled={isSubmitting || !selectedInvoice || !amount || parseFloat(amount) <= 0}
             className="bg-green-600 hover:bg-green-700 text-[#0F172A] rounded-md"
           >
             {isSubmitting ? (
@@ -2733,15 +2785,15 @@ const InvoicePage = () => {
                           label: "Record Payment",
                           color: "green",
                           action: () => {
-                            const candidate = invoices.find((inv) => inv.status !== "Paid" && inv.status !== "Cancelled");
-                            if (!candidate) {
+                            const candidates = invoices.filter((inv) => inv.status !== "Paid" && inv.status !== "Cancelled");
+                            if (candidates.length === 0) {
                               toast({
                                 title: "No unpaid invoices",
                                 description: "There are no invoices ready for payment.",
                               });
                               return;
                             }
-                            setInvoiceForPayment(candidate);
+                            setInvoiceForPayment(null);
                             setPaymentDialogOpen(true);
                           },
                         }
@@ -3005,6 +3057,7 @@ const InvoicePage = () => {
             setInvoiceForPayment(null);
           }}
           invoice={invoiceForPayment}
+          invoices={invoices}
           onSubmit={handleRecordPayment}
         />
 

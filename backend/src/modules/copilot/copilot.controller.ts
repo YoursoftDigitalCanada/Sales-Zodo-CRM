@@ -23,6 +23,7 @@ import { copilotIntelligenceService } from './copilot-intelligence.service';
 import { copilotPermissionGuard } from './copilot-permission.guard';
 import { copilotSessionService } from './copilot-session.service';
 import { logger } from '../../common/utils/logger';
+import { copilotCRMActionService } from './copilot-crm-action.service';
 
 // ── Request validation schema ───────────────────────────────────────────
 
@@ -85,14 +86,17 @@ class CopilotController {
                 content: m.content,
             }));
 
-            // 3. Route to intelligence strategy + generate response
-            const response = await copilotIntelligenceService.generateResponse(
+            // 3. Conversational CRM actions (read/update) take priority when they match
+            const actionResponse = await copilotCRMActionService.tryHandle(tenantId, employeeId, message);
+
+            // 3.5 Otherwise route to intelligence strategy + generate response
+            const response = actionResponse || await copilotIntelligenceService.generateResponse(
                 message,
                 resolvedContext,
                 historyForLLM,
             );
 
-            // 3.5 Persist messages to session (user message + assistant response)
+            // 4. Persist messages to session (user message + assistant response)
             const now = Date.now();
             await copilotSessionService.appendMessage(tenantId, employeeId, {
                 role: 'user',
@@ -114,7 +118,7 @@ class CopilotController {
                 durationMs: Date.now() - startTime,
             });
 
-            // 4. Return structured response
+            // 5. Return structured response
             sendSuccess(res, {
                 answer: response.answer,
                 context: {

@@ -96,7 +96,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
       whileHover={isMobile ? undefined : { y: -4 }}
-      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] shadow-sm overflow-hidden group"
+      className="group flex h-full flex-col overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white shadow-sm"
     >
       {/* Header with gradient */}
       <div 
@@ -165,7 +165,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
       </div>
 
       {/* Profile Info */}
-      <div className="px-6 pb-6 -mt-10 relative">
+      <div className="relative -mt-10 flex flex-1 flex-col px-6 pb-6">
         <div className="flex flex-col items-center">
           <Avatar className="w-20 h-20 border-4 border-white card-shadow">
             <AvatarImage src={employee.avatar} alt={`${employee.firstName} ${employee.lastName}`} />
@@ -247,13 +247,15 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
         </div>
 
         {/* Action Button */}
+        <div className="mt-auto pt-4">
         <Button 
           variant="outline" 
-          className="mt-4 w-full transition-colors group-hover:border-[#22D3EE] group-hover:bg-[#0891B2] group-hover:text-[#0F172A]"
+          className="w-full transition-colors group-hover:border-[#22D3EE] group-hover:bg-[#0891B2] group-hover:text-[#0F172A]"
           onClick={() => onView?.(employee)}
         >
           View Profile
         </Button>
+        </div>
       </div>
     </motion.div>
   );

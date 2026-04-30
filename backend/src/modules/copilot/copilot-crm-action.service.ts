@@ -36,6 +36,13 @@ interface PendingCRMUpdate {
     newValue: string;
 }
 
+interface PendingCRMUpdateDisambiguation {
+    kind: 'crm_update_disambiguation';
+    field: CopilotCRMUpdateField;
+    newValue: string;
+    candidates: CRMRecordMatch[];
+}
+
 const ALLOWED_FIELDS = new Set<CopilotCRMUpdateField>(['name', 'email', 'phone', 'status', 'notes']);
 const LEAD_STATUS_VALUES = new Set<string>(Object.values(LeadStatus));
 const CLIENT_STATUS_VALUES = new Set<string>(Object.values(ClientStatus));
@@ -50,6 +57,11 @@ class CopilotCRMActionService {
                 return pendingResponse;
             }
 
+            const selectedCandidateResponse = await this.handleCandidateSelection(tenantId, employeeId, message);
+            if (selectedCandidateResponse) {
+                return selectedCandidateResponse;
+            }
+
             if (!this.shouldAttemptAction(message)) {
                 return null;
             }
@@ -60,7 +72,7 @@ class CopilotCRMActionService {
             }
 
             if (action.action === 'get_record') {
-                return this.handleRead(tenantId, action);
+                return this.handleRead(tenantId, employeeId, action);
             }
 
             if (action.action === 'update_record') {
@@ -90,15 +102,19 @@ class CopilotCRMActionService {
         message: string,
     ): Promise<CopilotResponse | null> {
         const state = await copilotSessionService.getState(tenantId, employeeId);
-        const pending = state.pendingAction as PendingCRMUpdate | undefined;
-        if (!pending || pending.kind !== 'crm_update') {
+        const pending = state.pendingAction as PendingCRMUpdate | PendingCRMUpdateDisambiguation | undefined;
+        if (!pending || (pending.kind !== 'crm_update' && pending.kind !== 'crm_update_disambiguation')) {
+            return null;
+        }
+
+        if (pending.kind === 'crm_update_disambiguation') {
             return null;
         }
 
         const trimmed = message.trim();
         if (YES_PATTERN.test(trimmed)) {
             const updated = await this.executeUpdate(tenantId, pending);
-            await copilotSessionService.clearState(tenantId, employeeId);
+            await this.patchSessionState(tenantId, employeeId, { pendingAction: null, lastCandidates: null });
 
             return {
                 answer: [
@@ -110,24 +126,17 @@ class CopilotCRMActionService {
                     '',
                     ...this.formatRecord(updated),
                 ].join('\n'),
-                suggestedActions: ['View full details', 'Update another field'],
-                suggestedFollowUps: [
-                    `Show details of ${pending.displayName}`,
-                    `Update phone of ${pending.displayName}`,
-                    `Update notes of ${pending.displayName}`,
-                ],
+                suggestedActions: [],
+                suggestedFollowUps: [],
             };
         }
 
         if (NO_PATTERN.test(trimmed)) {
-            await copilotSessionService.clearState(tenantId, employeeId);
+            await this.patchSessionState(tenantId, employeeId, { pendingAction: null });
             return {
                 answer: `Okay, I cancelled the pending update for **${pending.displayName}**.`,
-                suggestedActions: ['Update another record'],
-                suggestedFollowUps: [
-                    `Show details of ${pending.displayName}`,
-                    `Update phone of ${pending.displayName}`,
-                ],
+                suggestedActions: [],
+                suggestedFollowUps: [],
             };
         }
 
@@ -140,39 +149,41 @@ class CopilotCRMActionService {
                 '',
                 'Reply with **yes** to confirm or **no** to cancel.',
             ].join('\n'),
-            suggestedActions: ['Confirm update', 'Cancel update'],
-            suggestedFollowUps: ['yes', 'no'],
+            suggestedActions: [],
+            suggestedFollowUps: [],
         };
     }
 
-    private async handleRead(tenantId: string, action: CopilotCRMAction): Promise<CopilotResponse> {
+    private async handleRead(tenantId: string, employeeId: string, action: CopilotCRMAction): Promise<CopilotResponse> {
         const matches = await this.findRecords(tenantId, action.entityType, action.filters);
 
         if (matches.length === 0) {
+            await this.patchSessionState(tenantId, employeeId, { lastCandidates: null });
             return {
                 answer: 'I could not find any matching lead, client, or contact for that search.',
-                suggestedActions: ['Try a different name', 'Search by email', 'Search by phone'],
-                suggestedFollowUps: ['Show details of Bharti Dhawan', 'Find rakesh@company.com'],
+                suggestedActions: [],
+                suggestedFollowUps: [],
             };
         }
 
         if (matches.length > 1) {
+            await this.patchSessionState(tenantId, employeeId, {
+                lastCandidates: matches as unknown as Record<string, unknown>[],
+                pendingAction: null,
+            });
             return {
                 answer: this.formatAmbiguousResults(matches),
-                suggestedActions: ['Clarify which record you want'],
-                suggestedFollowUps: matches.slice(0, 3).map((match) => `Show details of ${match.displayName}`),
+                suggestedActions: [],
+                suggestedFollowUps: [],
             };
         }
 
         const [match] = matches;
+        await this.patchSessionState(tenantId, employeeId, { lastCandidates: null });
         return {
             answer: this.formatRecord(match).join('\n'),
-            suggestedActions: ['View full details', 'Update this record'],
-            suggestedFollowUps: [
-                `Update phone of ${match.displayName}`,
-                `Update notes of ${match.displayName}`,
-                `Show details of ${match.displayName}`,
-            ],
+            suggestedActions: [],
+            suggestedFollowUps: [],
         };
     }
 
@@ -190,18 +201,20 @@ class CopilotCRMActionService {
         }
 
         if (!action.update.value.trim()) {
+            const recordName = action.filters.name || action.filters.email || action.filters.phone || 'that record';
+            const fieldLabel = this.labelField(action.update.field || 'notes').toLowerCase();
             return {
-                answer: 'I understood that as an update request, but I am missing the new value.',
-                suggestedActions: ['Provide the new value'],
-                suggestedFollowUps: ['Update phone of Bharti to 9876543210'],
+                answer: `What ${fieldLabel} would you like to set for **${recordName}**?`,
+                suggestedActions: [],
+                suggestedFollowUps: [],
             };
         }
 
         if (!this.isFieldSupported(action.entityType, action.update.field)) {
             return {
                 answer: this.unsupportedFieldMessage(action.entityType, action.update.field),
-                suggestedActions: ['Choose a supported field'],
-                suggestedFollowUps: ['Update phone of Bharti to 9876543210', 'Update email of Rakesh to rakesh@example.com'],
+                suggestedActions: [],
+                suggestedFollowUps: [],
             };
         }
 
@@ -210,16 +223,26 @@ class CopilotCRMActionService {
         if (matches.length === 0) {
             return {
                 answer: 'I could not find a matching record to update.',
-                suggestedActions: ['Try a different identifier'],
-                suggestedFollowUps: ['Update phone of Bharti to 9876543210'],
+                suggestedActions: [],
+                suggestedFollowUps: [],
             };
         }
 
         if (matches.length > 1) {
+            await copilotSessionService.setState(tenantId, employeeId, {
+                pendingAction: {
+                    kind: 'crm_update_disambiguation',
+                    field: action.update.field,
+                    newValue: action.update.value.trim(),
+                    candidates: matches,
+                } as unknown as Record<string, unknown>,
+                lastCandidates: matches as unknown as Record<string, unknown>[],
+            });
+
             return {
                 answer: this.formatAmbiguousResults(matches, true),
-                suggestedActions: ['Clarify which record to update'],
-                suggestedFollowUps: matches.slice(0, 3).map((match) => `Update phone of ${match.displayName} to ${action.update.value}`),
+                suggestedActions: [],
+                suggestedFollowUps: [],
             };
         }
 
@@ -227,8 +250,8 @@ class CopilotCRMActionService {
         if (!this.isFieldSupported(match.entityType, action.update.field)) {
             return {
                 answer: this.unsupportedFieldMessage(match.entityType, action.update.field),
-                suggestedActions: ['Choose a supported field'],
-                suggestedFollowUps: ['Update phone of Bharti to 9876543210', 'Update email of Rakesh to rakesh@example.com'],
+                suggestedActions: [],
+                suggestedFollowUps: [],
             };
         }
 
@@ -255,8 +278,89 @@ class CopilotCRMActionService {
                 '',
                 'Reply with **yes** to confirm or **no** to cancel.',
             ].join('\n'),
-            suggestedActions: ['Confirm update', 'Cancel update'],
-            suggestedFollowUps: ['yes', 'no'],
+            suggestedActions: [],
+            suggestedFollowUps: [],
+        };
+    }
+
+    private async handleCandidateSelection(
+        tenantId: string,
+        employeeId: string,
+        message: string,
+    ): Promise<CopilotResponse | null> {
+        const state = await copilotSessionService.getState(tenantId, employeeId);
+        const candidates = (state.lastCandidates || []) as unknown as CRMRecordMatch[];
+        if (!candidates.length) return null;
+
+        const selected = this.resolveSelectedCandidate(message, candidates);
+        if (!selected) return null;
+
+        const pending = state.pendingAction as PendingCRMUpdateDisambiguation | undefined;
+        if (pending?.kind === 'crm_update_disambiguation') {
+            if (!this.isFieldSupported(selected.entityType, pending.field)) {
+                await this.patchSessionState(tenantId, employeeId, { pendingAction: null, lastCandidates: null });
+                return {
+                    answer: this.unsupportedFieldMessage(selected.entityType, pending.field),
+                    suggestedActions: [],
+                    suggestedFollowUps: [],
+                };
+            }
+
+            const hydrated = await this.getRecordById(tenantId, selected.entityType, selected.id);
+            if (!hydrated) {
+                await this.patchSessionState(tenantId, employeeId, { pendingAction: null, lastCandidates: null });
+                return {
+                    answer: 'That record is no longer available. Please search again.',
+                    suggestedActions: [],
+                    suggestedFollowUps: [],
+                };
+            }
+
+            const update: PendingCRMUpdate = {
+                kind: 'crm_update',
+                entityType: hydrated.entityType,
+                entityId: hydrated.id,
+                displayName: hydrated.displayName,
+                field: pending.field,
+                oldValue: this.currentFieldValue(hydrated, pending.field),
+                newValue: pending.newValue,
+            };
+            await this.patchSessionState(tenantId, employeeId, {
+                pendingAction: update as unknown as Record<string, unknown>,
+                lastCandidates: null,
+            });
+
+            return {
+                answer: [
+                    `Okay, I selected **${hydrated.displayName}** (${this.labelEntity(hydrated.entityType)}).`,
+                    '',
+                    'Please confirm this update:',
+                    `• **Field:** ${this.labelField(update.field)}`,
+                    `• **Old value:** ${update.oldValue || 'Empty'}`,
+                    `• **New value:** ${update.newValue}`,
+                    '',
+                    'Reply with **yes** to confirm or **no** to cancel.',
+                ].join('\n'),
+                suggestedActions: [],
+                suggestedFollowUps: [],
+            };
+        }
+
+        const hydrated = await this.getRecordById(tenantId, selected.entityType, selected.id);
+        await this.patchSessionState(tenantId, employeeId, { lastCandidates: null });
+
+        if (!hydrated) {
+            return {
+                answer: 'That record is no longer available. Please search again.',
+                suggestedActions: [],
+                suggestedFollowUps: [],
+            };
+        }
+
+        return {
+            answer: this.formatRecord(hydrated).join('\n'),
+            suggestedActions: [],
+            suggestedFollowUps: [],
         };
     }
 
@@ -360,8 +464,48 @@ class CopilotCRMActionService {
             ? ['lead', 'client', 'contact']
             : [entityType];
 
-        const matches = await Promise.all(targets.map((target) => this.findByEntity(target, tenantId, filters)));
-        return matches.flat().sort((a, b) => b.score - a.score).slice(0, 6);
+        const matches = (await Promise.all(targets.map((target) => this.findByEntity(target, tenantId, filters))))
+            .flat()
+            .filter((match) => match.score > 0)
+            .sort((a, b) => b.score - a.score);
+
+        const bestScore = matches[0]?.score || 0;
+        if (bestScore >= 120) {
+            return matches.filter((match) => match.score === bestScore).slice(0, 6);
+        }
+        if (bestScore >= 95) {
+            return matches.filter((match) => match.score >= 95).slice(0, 6);
+        }
+
+        return matches.slice(0, 6);
+    }
+
+    private async getRecordById(
+        tenantId: string,
+        entityType: CRMRecordType,
+        id: string,
+    ): Promise<CRMRecordMatch | null> {
+        if (entityType === 'lead') {
+            const row = await prisma.lead.findFirst({
+                where: { id, tenantId },
+                include: {
+                    assignedTo: { include: { user: { select: { firstName: true, lastName: true } } } },
+                    leadSource: true,
+                },
+            });
+            return row ? this.mapLead(row) : null;
+        }
+
+        if (entityType === 'client') {
+            const row = await prisma.client.findFirst({ where: { id, tenantId } });
+            return row ? this.mapClient(row) : null;
+        }
+
+        const row = await prisma.contact.findFirst({
+            where: { id, tenantId },
+            include: { company: { select: { clientName: true } } },
+        });
+        return row ? this.mapContact(row) : null;
     }
 
     private async findByEntity(
@@ -370,7 +514,7 @@ class CopilotCRMActionService {
         filters: { name?: string; email?: string; phone?: string },
     ): Promise<CRMRecordMatch[]> {
         if (entityType === 'lead') {
-            const rows = await prisma.lead.findMany({
+            let rows = await prisma.lead.findMany({
                 where: {
                     tenantId,
                     ...this.buildLeadWhere(filters),
@@ -381,21 +525,39 @@ class CopilotCRMActionService {
                 },
                 take: 6,
             });
+            if (rows.length === 0 && filters.name) {
+                rows = await prisma.lead.findMany({
+                    where: { tenantId },
+                    include: {
+                        assignedTo: { include: { user: { select: { firstName: true, lastName: true } } } },
+                        leadSource: true,
+                    },
+                    orderBy: { updatedAt: 'desc' },
+                    take: 100,
+                });
+            }
             return rows.map((row) => this.mapLead(row, filters));
         }
 
         if (entityType === 'client') {
-            const rows = await prisma.client.findMany({
+            let rows = await prisma.client.findMany({
                 where: {
                     tenantId,
                     ...this.buildClientWhere(filters),
                 },
                 take: 6,
             });
+            if (rows.length === 0 && filters.name) {
+                rows = await prisma.client.findMany({
+                    where: { tenantId },
+                    orderBy: { updatedAt: 'desc' },
+                    take: 100,
+                });
+            }
             return rows.map((row) => this.mapClient(row, filters));
         }
 
-        const rows = await prisma.contact.findMany({
+        let rows = await prisma.contact.findMany({
             where: {
                 tenantId,
                 ...this.buildContactWhere(filters),
@@ -403,6 +565,14 @@ class CopilotCRMActionService {
             include: { company: { select: { clientName: true } } },
             take: 6,
         });
+        if (rows.length === 0 && filters.name) {
+            rows = await prisma.contact.findMany({
+                where: { tenantId },
+                include: { company: { select: { clientName: true } } },
+                orderBy: { updatedAt: 'desc' },
+                take: 100,
+            });
+        }
         return rows.map((row) => this.mapContact(row, filters));
     }
 
@@ -423,12 +593,15 @@ class CopilotCRMActionService {
                 { firstName: { contains: name, mode: 'insensitive' } },
                 { lastName: { contains: name, mode: 'insensitive' } },
                 { companyName: { contains: name, mode: 'insensitive' } },
-                ...tokens.map((token) => ({
-                    OR: [
-                        { firstName: { contains: token, mode: 'insensitive' as const } },
-                        { lastName: { contains: token, mode: 'insensitive' as const } },
-                    ],
-                })),
+                {
+                    AND: tokens.map((token) => ({
+                        OR: [
+                            { firstName: { contains: token, mode: 'insensitive' as const } },
+                            { lastName: { contains: token, mode: 'insensitive' as const } },
+                            { companyName: { contains: token, mode: 'insensitive' as const } },
+                        ],
+                    })),
+                },
             ],
         };
     }
@@ -442,11 +615,22 @@ class CopilotCRMActionService {
         }
         if (!filters.name) return {};
 
+        const name = filters.name.trim();
+        const tokens = name.split(/\s+/).filter(Boolean);
         return {
             OR: [
-                { clientName: { contains: filters.name, mode: 'insensitive' } },
-                { companyName: { contains: filters.name, mode: 'insensitive' } },
-                { contactName: { contains: filters.name, mode: 'insensitive' } },
+                { clientName: { contains: name, mode: 'insensitive' } },
+                { companyName: { contains: name, mode: 'insensitive' } },
+                { contactName: { contains: name, mode: 'insensitive' } },
+                {
+                    AND: tokens.map((token) => ({
+                        OR: [
+                            { clientName: { contains: token, mode: 'insensitive' as const } },
+                            { companyName: { contains: token, mode: 'insensitive' as const } },
+                            { contactName: { contains: token, mode: 'insensitive' as const } },
+                        ],
+                    })),
+                },
             ],
         };
     }
@@ -465,7 +649,18 @@ class CopilotCRMActionService {
         }
         if (!filters.name) return {};
 
-        return { contactName: { contains: filters.name, mode: 'insensitive' } };
+        const name = filters.name.trim();
+        const tokens = name.split(/\s+/).filter(Boolean);
+        return {
+            OR: [
+                { contactName: { contains: name, mode: 'insensitive' } },
+                {
+                    AND: tokens.map((token) => ({
+                        contactName: { contains: token, mode: 'insensitive' as const },
+                    })),
+                },
+            ],
+        };
     }
 
     private mapLead(row: any, filters?: { name?: string; email?: string; phone?: string }): CRMRecordMatch {
@@ -542,16 +737,25 @@ class CopilotCRMActionService {
         if (!search) return 0;
 
         let score = 0;
+        const tokens = search.split(/\s+/).filter(Boolean);
         for (const value of values) {
             const normalized = String(value || '').toLowerCase();
             if (!normalized) continue;
             if (normalized === search) score = Math.max(score, 120);
-            else if (normalized.includes(search)) score = Math.max(score, 90);
+            else if (normalized.includes(search)) score = Math.max(score, 100);
 
-            const tokens = search.split(/\s+/).filter(Boolean);
             const matched = tokens.filter((token) => normalized.includes(token)).length;
-            if (matched > 0) {
-                score = Math.max(score, matched * 20);
+            if (tokens.length > 1 && matched === tokens.length) {
+                score = Math.max(score, 95);
+            } else if (tokens.length === 1 && matched === 1) {
+                score = Math.max(score, 55);
+            }
+
+            const similarity = this.similarity(normalized, search);
+            if (similarity >= 0.82) {
+                score = Math.max(score, 88);
+            } else if (similarity >= 0.68) {
+                score = Math.max(score, 70);
             }
         }
 
@@ -649,6 +853,71 @@ class CopilotCRMActionService {
         if (lower.includes('@')) return true;
 
         return /^[a-z0-9.'+\-\s]{3,80}$/i.test(lower) && !/\b(how|why|what|when|where|which|should|could|would|can)\b/.test(lower);
+    }
+
+    private resolveSelectedCandidate(message: string, candidates: CRMRecordMatch[]): CRMRecordMatch | null {
+        const trimmed = message.trim();
+        if (/^\d+$/.test(trimmed)) {
+            const index = Number(trimmed) - 1;
+            return candidates[index] || null;
+        }
+
+        const normalized = this.normalizeComparable(trimmed
+            .replace(/\b(show|details|detail|of|about|tell|me|lead|client|contact)\b/gi, ' ')
+            .replace(/\s+/g, ' ')
+            .trim());
+        if (!normalized) return null;
+
+        const scored = candidates
+            .map((candidate) => ({
+                candidate,
+                score: this.scoreMatch([candidate.displayName, candidate.email, candidate.phone, candidate.company], { name: normalized }),
+            }))
+            .sort((a, b) => b.score - a.score);
+
+        return scored[0]?.score >= 90 ? scored[0].candidate : null;
+    }
+
+    private async patchSessionState(
+        tenantId: string,
+        employeeId: string,
+        patch: { pendingAction?: Record<string, unknown> | null; lastCandidates?: Record<string, unknown>[] | null },
+    ): Promise<void> {
+        const current = await copilotSessionService.getState(tenantId, employeeId);
+        await copilotSessionService.setState(tenantId, employeeId, {
+            ...current,
+            ...patch,
+        });
+    }
+
+    private similarity(left: string, right: string): number {
+        const a = this.normalizeComparable(left);
+        const b = this.normalizeComparable(right);
+        if (!a || !b) return 0;
+        const distance = this.levenshteinDistance(a, b);
+        return 1 - distance / Math.max(a.length, b.length);
+    }
+
+    private levenshteinDistance(a: string, b: string): number {
+        const matrix = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+        for (let j = 1; j <= b.length; j += 1) matrix[0][j] = j;
+
+        for (let i = 1; i <= a.length; i += 1) {
+            for (let j = 1; j <= b.length; j += 1) {
+                const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j - 1] + cost,
+                );
+            }
+        }
+
+        return matrix[a.length][b.length];
+    }
+
+    private normalizeComparable(value: string): string {
+        return value.toLowerCase().replace(/[^a-z0-9@.+\-\s]/g, ' ').replace(/\s+/g, ' ').trim();
     }
 }
 

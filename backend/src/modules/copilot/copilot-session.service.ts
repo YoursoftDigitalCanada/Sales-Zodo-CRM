@@ -26,6 +26,7 @@ export interface CopilotSessionMessage {
 
 export interface CopilotSessionState {
     pendingAction?: Record<string, unknown> | null;
+    lastCandidates?: Record<string, unknown>[] | null;
 }
 
 // ── Configuration ───────────────────────────────────────────────────────

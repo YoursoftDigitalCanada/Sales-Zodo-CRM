@@ -136,7 +136,7 @@ interface FormData {
   clientCategory: string;
   tags: string;
   notes: string;
-  // Roofing-specific
+  // Sales account profile
   propertyType: string;
   numberOfStories: string;
   serviceType: string;
@@ -189,7 +189,7 @@ const initialFormState: FormData = {
   clientCategory: "Regular",
   tags: "",
   notes: "",
-  // Roofing-specific
+  // Sales account profile
   propertyType: "",
   numberOfStories: "",
   serviceType: "",
@@ -279,7 +279,7 @@ const mapApiClientToFormData = (data: any): FormData => {
     clientCategory: data.clientCategory || "Regular",
     tags: normalizeTags(data.tags),
     notes: data.internalNotes || data.notes || "",
-    // Roofing-specific
+    // Sales account profile
     propertyType: data.propertyType || "",
     numberOfStories: data.numberOfStories || "",
     serviceType: data.serviceType || "",
@@ -346,7 +346,7 @@ const mapFormDataToApiPayload = (data: FormData) => {
     leadSource: data.leadSource || null,
     clientCategory: data.clientCategory || null,
     tags: splitTags(data.tags),
-    // Roofing-specific
+    // Sales account profile
     propertyType: data.propertyType || null,
     numberOfStories: data.numberOfStories || null,
     serviceType: data.serviceType || null,
@@ -420,7 +420,7 @@ const validateClientForm = (data: FormData): FormErrors => {
 
   const spouseNameError = getPersonNameError(
     data.spouseCoOwnerName,
-    "Spouse / co-owner name",
+    "Secondary contact name",
   );
   if (spouseNameError) {
     errors.spouseCoOwnerName = spouseNameError;
@@ -909,7 +909,7 @@ const AddClientPage = () => {
                 >
                   <Sparkles size={20} className="text-[#D97706]" />
                   <span className="text-[#D97706] text-sm font-medium">
-                    Client Management
+                    Account Management
                   </span>
                 </motion.div>
                 <h1 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-2">
@@ -917,19 +917,19 @@ const AddClientPage = () => {
                     <>
                       Edit{" "}
                       <span className="text-[#0891B2]">
-                        {formData.clientName || "Client"}
+                        {formData.clientName || "Account"}
                       </span>
                     </>
                   ) : (
                     <>
-                      Add New <span className="text-[#0891B2]">Client</span>
+                      Add New <span className="text-[#0891B2]">Account</span>
                     </>
                   )}
                 </h1>
                 <p className="text-[#475569] text-lg max-w-xl">
                   {isEditMode
-                    ? "Update the client information below. All changes will be saved automatically."
-                    : "Register a new business or individual client to your CRM system."}
+                    ? "Update the account information below. All changes will be saved automatically."
+                    : "Register a new software sales account in your CRM system."}
                 </p>
               </div>
 
@@ -979,8 +979,8 @@ const AddClientPage = () => {
                 <StyledCard delay={0.1}>
                   <StyledCardHeader
                     icon={Users}
-                    title="Basic Information"
-                    subtitle="Client's primary details"
+                    title="Account Information"
+                    subtitle="Company and account ownership"
                     color="teal"
                   />
                   <div className="p-4 md:p-6 space-y-4 md:space-y-6">
@@ -1018,7 +1018,7 @@ const AddClientPage = () => {
                       </div>
                       <div>
                         <h3 className="font-semibold text-[#0F172A]">
-                          Client Logo / Photo
+                          Account Logo / Photo
                         </h3>
                         <p className="text-sm text-[#475569] mt-1">
                           Supports JPG, PNG (Max 10KB)
@@ -1038,7 +1038,7 @@ const AddClientPage = () => {
                     {/* Form Fields */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <StyledInput
-                        label="Client / Company Name"
+                        label="Account / Company Name"
                         required
                         id="clientName"
                         placeholder="e.g. Maple Leaf Tech"
@@ -1050,7 +1050,7 @@ const AddClientPage = () => {
                       />
 
                       <StyledSelect
-                        label="Client Type"
+                        label="Account Type"
                         value={formData.clientType}
                         onValueChange={(val) =>
                           handleSelectChange("clientType", val)
@@ -1392,52 +1392,53 @@ const AddClientPage = () => {
                   </div>
                 </StyledCard>
 
-                {/* Property & Service Details */}
+                {/* Account & Subscription Details */}
                 <StyledCard delay={0.35}>
                   <StyledCardHeader
-                    icon={Home}
-                    title="Property & Service Details"
-                    subtitle="Property type and service request"
+                    icon={Building2}
+                    title="Account & Subscription"
+                    subtitle="Plan, seats, and sales use case"
                     color="teal"
                   />
                   <div className="p-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <StyledSelect
-                        label="Property Type"
+                        label="Subscription Plan"
                         value={formData.propertyType}
                         onValueChange={(val) => handleSelectChange("propertyType", val)}
-                        placeholder="Select Type"
+                        placeholder="Select Plan"
                         options={[
-                          { value: "Residential", label: "Residential" },
-                          { value: "Commercial", label: "Commercial" },
-                          { value: "Multi-Family", label: "Multi-Family" },
+                          { value: "Free Trial", label: "Free Trial" },
+                          { value: "Starter", label: "Starter" },
+                          { value: "Growth", label: "Growth" },
+                          { value: "Professional", label: "Professional" },
+                          { value: "Enterprise", label: "Enterprise" },
                         ]}
                       />
                       <StyledSelect
-                        label="Number of Stories"
+                        label="Seats / Users"
                         value={formData.numberOfStories}
                         onValueChange={(val) => handleSelectChange("numberOfStories", val)}
                         placeholder="Select"
                         options={[
-                          { value: "1", label: "1 Story" },
-                          { value: "2", label: "2 Stories" },
-                          { value: "3+", label: "3+ Stories" },
+                          { value: "1", label: "1 user" },
+                          { value: "2", label: "2-10 users" },
+                          { value: "3+", label: "11+ users" },
                         ]}
                       />
                     </div>
                     <StyledSelect
-                      label="Service Type"
+                      label="Sales Use Case"
                       value={formData.serviceType}
                       onValueChange={(val) => handleSelectChange("serviceType", val)}
-                      placeholder="Select Service"
+                      placeholder="Select Use Case"
                       options={[
-                        { value: "Roof Replacement", label: "Roof Replacement" },
-                        { value: "Roof Repair", label: "Roof Repair" },
-                        { value: "Storm/Hail Damage", label: "Storm/Hail Damage" },
-                        { value: "Inspection", label: "Inspection" },
-                        { value: "Maintenance", label: "Maintenance" },
-                        { value: "Gutter Work", label: "Gutter Work" },
-                        { value: "Siding", label: "Siding" },
+                        { value: "Lead Management", label: "Lead Management" },
+                        { value: "Deals Pipeline", label: "Deals Pipeline" },
+                        { value: "Sales Engagement", label: "Sales Engagement" },
+                        { value: "Reporting & Forecasting", label: "Reporting & Forecasting" },
+                        { value: "Customer Success", label: "Customer Success" },
+                        { value: "Billing & Subscriptions", label: "Billing & Subscriptions" },
                         { value: "Other", label: "Other" },
                       ]}
                     />
@@ -1469,91 +1470,92 @@ const AddClientPage = () => {
                   </div>
                 </StyledCard>
 
-                {/* Roof & Insurance Details */}
+                {/* Revenue & Customer Success */}
                 <StyledCard delay={0.4}>
                   <StyledCardHeader
-                    icon={Wrench}
-                    title="Roof & Insurance Details"
-                    subtitle="Roof info and insurance claim"
+                    icon={CreditCard}
+                    title="Revenue & Customer Success"
+                    subtitle="Revenue, renewal, and account health"
                     color="navy"
                   />
                   <div className="p-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <StyledSelect
-                        label="Current Roof Material"
+                        label="Current CRM / Tool"
                         value={formData.currentRoofMaterial}
                         onValueChange={(val) => handleSelectChange("currentRoofMaterial", val)}
-                        placeholder="Select Material"
+                        placeholder="Select Tool"
                         options={[
-                          { value: "Asphalt Shingles", label: "Asphalt Shingles" },
-                          { value: "Metal", label: "Metal" },
-                          { value: "Tile", label: "Tile" },
-                          { value: "Flat/TPO", label: "Flat/TPO" },
-                          { value: "Wood Shake", label: "Wood Shake" },
-                          { value: "Slate", label: "Slate" },
+                          { value: "Spreadsheets", label: "Spreadsheets" },
+                          { value: "HubSpot", label: "HubSpot" },
+                          { value: "Salesforce", label: "Salesforce" },
+                          { value: "Zoho", label: "Zoho" },
+                          { value: "Pipedrive", label: "Pipedrive" },
+                          { value: "Custom System", label: "Custom System" },
                           { value: "Unknown", label: "Unknown" },
                         ]}
                       />
                       <StyledSelect
-                        label="Roof Age"
+                        label="Renewal Cycle"
                         value={formData.roofAge}
                         onValueChange={(val) => handleSelectChange("roofAge", val)}
-                        placeholder="Select Age"
+                        placeholder="Select Cycle"
                         options={[
-                          { value: "0-5 years", label: "0-5 years" },
-                          { value: "5-10 years", label: "5-10 years" },
-                          { value: "10-15 years", label: "10-15 years" },
-                          { value: "15-20 years", label: "15-20 years" },
-                          { value: "20+ years", label: "20+ years" },
+                          { value: "Monthly", label: "Monthly" },
+                          { value: "Quarterly", label: "Quarterly" },
+                          { value: "Annual", label: "Annual" },
+                          { value: "Multi-Year", label: "Multi-Year" },
                           { value: "Unknown", label: "Unknown" },
                         ]}
                       />
                     </div>
                     <StyledInput
-                      label="Insurance Company Name"
+                      label="MRR / ARR"
                       id="insuranceCompanyName"
-                      placeholder="e.g. State Farm, Allstate"
+                      placeholder="e.g. $1,500 MRR or $18,000 ARR"
                       value={formData.insuranceCompanyName}
                       onChange={handleInputChange}
-                      icon={Shield}
+                      icon={DollarSign}
                     />
                     <StyledSelect
-                      label="Insurance Claim?"
+                      label="Customer Status"
                       value={formData.isInsuranceClaim}
                       onValueChange={(val) => handleSelectChange("isInsuranceClaim", val)}
                       placeholder="Select"
                       options={[
-                        { value: "Yes", label: "Yes" },
-                        { value: "No", label: "No" },
-                        { value: "Not Sure", label: "Not Sure" },
+                        { value: "Prospect", label: "Prospect" },
+                        { value: "Trial", label: "Trial" },
+                        { value: "Onboarding", label: "Onboarding" },
+                        { value: "Active Customer", label: "Active Customer" },
+                        { value: "At Risk", label: "At Risk" },
                       ]}
                     />
                   </div>
                 </StyledCard>
 
-                {/* Ownership & Secondary Contact */}
+                {/* Buying Committee & Renewal */}
                 <StyledCard delay={0.45}>
                   <StyledCardHeader
                     icon={User}
-                    title="Ownership & Secondary Contact"
-                    subtitle="Homeowner details and co-owner"
+                    title="Buying Committee & Renewal"
+                    subtitle="Decision authority and renewal notes"
                     color="gold"
                   />
                   <div className="p-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <StyledSelect
-                        label="Homeowner?"
+                        label="Decision Maker?"
                         value={formData.isHomeowner}
                         onValueChange={(val) => handleSelectChange("isHomeowner", val)}
                         placeholder="Select"
                         options={[
                           { value: "Yes", label: "Yes" },
                           { value: "No", label: "No" },
-                          { value: "Tenant", label: "Tenant" },
+                          { value: "Tenant", label: "Evaluator" },
                         ]}
                       />
                       <StyledSelect
-                        label="HOA?"
+                        label="Renewal Review?"
                         value={formData.isHOA}
                         onValueChange={(val) => handleSelectChange("isHOA", val)}
                         placeholder="Select"
@@ -1565,10 +1567,10 @@ const AddClientPage = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-[#475569]">HOA Restrictions</Label>
+                      <Label className="text-sm font-medium text-[#475569]">Renewal / Success Notes</Label>
                       <Textarea
                         id="hoaRestrictions"
-                        placeholder="Any HOA restrictions or requirements..."
+                        placeholder="Renewal date, success risks, procurement notes..."
                         value={formData.hoaRestrictions}
                         onChange={handleInputChange}
                         className="min-h-[60px] rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
@@ -1576,9 +1578,9 @@ const AddClientPage = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <StyledInput
-                        label="Spouse / Co-Owner Name"
+                        label="Secondary Stakeholder"
                         id="spouseCoOwnerName"
-                        placeholder="e.g. John Smith"
+                        placeholder="e.g. Finance approver or champion"
                         value={formData.spouseCoOwnerName}
                         onChange={handleInputChange}
                         icon={User}

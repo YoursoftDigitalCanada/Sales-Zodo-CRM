@@ -774,28 +774,28 @@ const ClientDetailPage = () => {
             </div>
           </DashCard>
 
-          {/* ── CARD 5: Property Details ── */}
+          {/* ── CARD 5: Account Details ── */}
           <DashCard delay={520}>
             <CardHeader
-              icon={<div className="w-7 h-7 rounded-lg bg-[#FEF3C7] flex items-center justify-center"><Home size={14} className="text-[#D97706]" /></div>}
-              title="Property Details"
+              icon={<div className="w-7 h-7 rounded-lg bg-[#FEF3C7] flex items-center justify-center"><Building2 size={14} className="text-[#D97706]" /></div>}
+              title="Account Details"
               actionLabel="✏️ Edit"
               action={() => navigate(`/client-list/${id}/edit`)}
             />
             {!client.propertyType && !client.currentRoofMaterial && !client.roofSize ? (
-              <EmptyState icon={<Home size={20} className="text-[#9CA3AF]" />} title="No property details" subtitle="Add property details to this client" cta="Add Property Details" onCta={() => navigate(`/client-list/${id}/edit`)} />
+              <EmptyState icon={<Building2 size={20} className="text-[#9CA3AF]" />} title="No account details" subtitle="Add subscription and customer success details to this account" cta="Add Account Details" onCta={() => navigate(`/client-list/${id}/edit`)} />
             ) : (
               <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
-                <InfoField label="Property Type" value={client.propertyType} icon={Building2} />
-                <InfoField label="Stories" value={client.numberOfStories} icon={Layers} />
-                <InfoField label="Roof Material" value={client.currentRoofMaterial} icon={Home} />
-                <InfoField label="Roof Age" value={client.roofAge} icon={Clock} />
-                <InfoField label="Roof Size (sqft)" value={client.roofSize} icon={Ruler} />
-                <InfoField label="Roof Pitch" value={client.roofPitch} icon={Layers} />
-                <InfoField label="Service Type" value={client.serviceType} icon={Wrench} />
-                <InfoField label="Homeowner" value={client.isHomeowner} icon={Home} />
-                <InfoField label="HOA" value={client.isHOA} icon={Shield} />
-                {client.hoaRestrictions && <InfoField label="HOA Restrictions" value={client.hoaRestrictions} icon={AlertTriangle} />}
+                <InfoField label="Subscription Plan" value={client.propertyType} icon={Building2} />
+                <InfoField label="Seats / Users" value={client.numberOfStories} icon={Layers} />
+                <InfoField label="Current CRM / Tool" value={client.currentRoofMaterial} icon={Globe} />
+                <InfoField label="Renewal Cycle" value={client.roofAge} icon={Clock} />
+                <InfoField label="MRR / ARR" value={client.insuranceCompanyName} icon={DollarSign} />
+                <InfoField label="Customer Status" value={client.isInsuranceClaim} icon={Shield} />
+                <InfoField label="Sales Use Case" value={client.serviceType} icon={Wrench} />
+                <InfoField label="Decision Maker" value={client.isHomeowner} icon={User} />
+                <InfoField label="Renewal Review" value={client.isHOA} icon={Shield} />
+                {client.hoaRestrictions && <InfoField label="Renewal / Success Notes" value={client.hoaRestrictions} icon={AlertTriangle} />}
               </div>
             )}
           </DashCard>

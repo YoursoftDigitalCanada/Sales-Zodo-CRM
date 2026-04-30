@@ -158,7 +158,7 @@ interface FilterState {
 // ============================================
 
 const defaultColumns: ColumnConfig[] = [
-  { key: "clientName", label: "Client", visible: true, sortable: true },
+  { key: "clientName", label: "Account", visible: true, sortable: true },
   { key: "assignedOwner", label: "Owner", visible: true, sortable: true },
   { key: "outstandingBalance", label: "Balance", visible: true, sortable: true },
   { key: "totalRevenue", label: "Revenue", visible: true, sortable: true },
@@ -1425,12 +1425,12 @@ const ClientListPage = () => {
                 >
                   <Sparkles size={20} className="text-[#D97706]" />
                   <span className="text-[#D97706] text-sm font-medium">
-                    Client Management
+                    Account Management
                   </span>
                 </motion.div>
                 <div className="flex items-center justify-between gap-3">
                   <h1 className="text-2xl font-bold text-[#0F172A] lg:text-4xl mb-2">
-                  Client <span className="text-[#0891B2]">Directory</span>
+                  Account <span className="text-[#0891B2]">Directory</span>
                   </h1>
                   {isMobile ? (
                     <button
@@ -1443,9 +1443,9 @@ const ClientListPage = () => {
                   ) : null}
                 </div>
                 <p className={cn("max-w-xl text-[#475569]", isMobile ? "text-sm" : "text-lg", isHeroCollapsed && isMobile && "hidden")}>
-                  Manage your client relationships. You have{" "}
+                  Manage your sales accounts. You have{" "}
                   <span className="text-[#0891B2] font-semibold">
-                    {stats.total} clients
+                    {stats.total} accounts
                   </span>{" "}
                   in your database.
                 </p>
@@ -1498,7 +1498,7 @@ const ClientListPage = () => {
             <StatCard
               title="Total Accounts"
               value={stats.total}
-              subtitle="All registered clients"
+              subtitle="All registered accounts"
               trend={12}
               icon={Users}
               color="teal"

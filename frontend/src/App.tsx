@@ -633,6 +633,17 @@ const AppRoutes = () => {
         />
 
         {/* ========== LEAD ROUTES ========== */}
+        <Route path="/deals" element={<AccessGuard featureId="projects" permissionModule="projects" action="view"><ProjectsPage /></AccessGuard>} />
+        <Route path="/pipeline" element={<AccessGuard featureId="kanban" permissionModule="projects" action="view"><KanbanPage /></AccessGuard>} />
+        <Route path="/meetings" element={<AccessGuard featureId="calendar" permissionModule="calendar" action="view"><CalendarPage /></AccessGuard>} />
+        <Route path="/sequences" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><LetterBoxPage /></AccessGuard>} />
+        <Route path="/proposals" element={<AccessGuard featureId="finance" permissionModule="quotes" action="view"><QuotesPage /></AccessGuard>} />
+        <Route path="/subscriptions" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><InvoicePage /></AccessGuard>} />
+        <Route path="/accounts" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><ClientListPage /></AccessGuard>} />
+        <Route path="/mail" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><LetterBoxPage /></AccessGuard>} />
+        <Route path="/ai/sales-assistant" element={<AccessGuard featureId="aiAssistant"><Index /></AccessGuard>} />
+        <Route path="/ai/email-generator" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><LetterBoxPage /></AccessGuard>} />
+        <Route path="/forecast" element={<AccessGuard featureId="analytics" permissionModule="analytics" action="view"><AnalyticsPage /></AccessGuard>} />
         <Route
           path="/leads"
           element={

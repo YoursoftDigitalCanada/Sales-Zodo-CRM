@@ -125,8 +125,8 @@ export const SidebarSuppressionContext = createContext<boolean>(false);
 
 const SIDEBAR_META_KEYS = {
   tasks: "/tasks",
-  pipeline: "/leads/pipeline",
-  letterbox: "/letterbox",
+  pipeline: "/pipeline",
+  letterbox: "/mail",
   chats: "/chats",
   tickets: "/support/tickets",
   notifications: "/notifications",
@@ -228,74 +228,74 @@ const navigationItems: NavigationItem[] = [
   {
     title: "Leads",
     icon: Target,
+    path: "/leads",
     featureId: "leads",
     permissionModule: "leads",
-    submenu: [
-      { title: "All Leads", path: "/leads", featureId: "leads" },
-      { title: "Pipeline", path: "/leads/pipeline", featureId: "leads" },
-      { title: "Lead Sources", path: "/leads/sources", featureId: "leads", permissionModule: "lead-sources" },
-    ]
   },
   {
-    title: "Clients",
+    title: "Contacts",
+    icon: Contact,
+    path: "/contacts",
+    featureId: "clients",
+    permissionModule: "contacts",
+  },
+  {
+    title: "Accounts",
     icon: Users,
+    path: "/accounts",
     featureId: "clients",
     permissionModule: "clients",
-    submenu: [
-      { title: "Client List", path: "/client-list", featureId: "clients" },
-      { title: "Client Contacts", path: "/contacts", featureId: "clients", permissionModule: "contacts" },
-      { title: "Client Groups", path: "/clients/groups", featureId: "clients" },
-    ]
   },
-
-  // ===== PROJECT MANAGEMENT =====
-  { title: "Jobs", isHeader: true },
   {
-    title: "All Jobs",
+    title: "Deals",
     icon: Briefcase,
+    path: "/deals",
     featureId: "projects",
     permissionModule: "projects",
-    submenu: [
-      { title: "Active Jobs", path: "/projects", featureId: "projects" },
-      { title: "Archived", path: "javascript:void(0)", featureId: "projects" },
-      { title: "Templates", path: "javascript:void(0)", featureId: "projects" },
-    ]
   },
+
+  // ===== SALES =====
+  { title: "Sales", isHeader: true },
   {
-    title: "Kanban Board",
+    title: "Pipeline",
     icon: FolderKanban,
-    path: "/kanban",
+    path: "/pipeline",
     featureId: "kanban",
     permissionModule: "projects",
+    badge: "Deals",
+    badgeColor: "teal",
   },
   {
-    title: "File Manager",
-    icon: FileText,
-    path: "/filemanager",
-    featureId: "files",
-    permissionModule: "files",
+    title: "Meetings",
+    icon: CalendarCheck,
+    path: "/meetings",
+    featureId: "calendar",
+    permissionModule: "calendar",
+  },
+  {
+    title: "Sequences",
+    icon: GitBranch,
+    path: "/sequences",
+    featureId: "letterbox",
+    permissionModule: "emails",
+    isNew: true,
   },
 
   // ===== FINANCE =====
   { title: "Finance", isHeader: true },
   {
-    title: "Invoices",
-    icon: Receipt,
-    featureId: "finance",
-    permissionModule: "invoices",
-    submenu: [
-      { title: "All Invoices", path: "/invoice", featureId: "finance" },
-      { title: "Create Invoice", path: "/invoice/create", featureId: "finance" },
-      { title: "Recurring", path: "javascript:void(0)", featureId: "finance" },
-    ]
-  },
-  {
-    title: "Estimates",
+    title: "Proposals",
     icon: FileStack,
-    path: "/quotes",
+    path: "/proposals",
     featureId: "finance",
     permissionModule: "quotes",
-    isNew: true,
+  },
+  {
+    title: "Invoices",
+    icon: Receipt,
+    path: "/invoice",
+    featureId: "finance",
+    permissionModule: "invoices",
   },
   {
     title: "Payments",
@@ -308,41 +308,40 @@ const navigationItems: NavigationItem[] = [
       { title: "Transactions", path: "javascript:void(0)", featureId: "finance" },
     ]
   },
-
-  // ===== BUSINESS =====
-  { title: "Business", isHeader: true },
   {
-    title: "AI Roof Estimator",
-    icon: Zap,
-    path: "/roof-estimator",
-    featureId: "roofEstimator",
-    permissionModule: "roof-estimator",
+    title: "Subscriptions",
+    icon: CreditCard,
+    path: "/subscriptions",
+    featureId: "finance",
+    permissionModule: "invoices",
+    isNew: true,
+  },
+
+  // ===== AI =====
+  { title: "AI", isHeader: true },
+  {
+    title: "Sales Assistant",
+    icon: Sparkles,
+    path: "/ai/sales-assistant",
+    featureId: "aiAssistant",
     badge: "AI",
     badgeColor: "teal",
   },
   {
-    title: "Inspections",
-    icon: CheckSquare,
-    path: "/inspections",
-    featureId: "leads",
-    permissionModule: "leads",
-    isNew: true,
-  },
-  {
-    title: "Insurance Claims",
-    icon: Shield,
-    path: "javascript:void(0)",
-    featureId: "leads",
-    permissionModule: "leads",
-    isNew: true,
+    title: "Email Generator",
+    icon: Mail,
+    path: "/ai/email-generator",
+    featureId: "aiAssistant",
+    badge: "AI",
+    badgeColor: "teal",
   },
 
   // ===== COMMUNICATION =====
   { title: "Communication", isHeader: true },
   {
-    title: "Zodo Mail",
+    title: "Mail",
     icon: Mail,
-    path: "/letterbox",
+    path: "/mail",
     featureId: "letterbox",
     permissionModule: "emails",
   },
@@ -354,15 +353,11 @@ const navigationItems: NavigationItem[] = [
     permissionModule: "chat",
   },
   {
-    title: "Support",
+    title: "Support Tickets",
     icon: Headphones,
+    path: "/support/tickets",
     featureId: "support",
     permissionModule: "support",
-    submenu: [
-      { title: "Tickets", path: "/support/tickets", featureId: "support", permissionModule: "support" },
-      { title: "Knowledge Base", path: "/support/knowledge-base", featureId: "support", permissionModule: "support" },
-      { title: "FAQ", path: "/support/faq", featureId: "support", permissionModule: "support" },
-    ]
   },
   {
     title: "Notifications",
@@ -373,17 +368,6 @@ const navigationItems: NavigationItem[] = [
   },
   // ===== TEAM =====
   { title: "Team", isHeader: true },
-  {
-    title: "Employees",
-    icon: UserCog,
-    featureId: "team",
-    submenu: [
-      { title: "All Employees", path: "/employees", featureId: "team", permissionModule: "employees", adminOnly: true },
-      { title: "Departments", path: "/employees/departments", featureId: "team", permissionModule: "employees", isNew: true, adminOnly: true },
-      { title: "Attendance", path: "/employees/attendance", featureId: "team" },
-      { title: "Leave Requests", path: "/employees/leave-requests", featureId: "team" },
-    ]
-  },
   {
     title: "Users",
     icon: Users,
@@ -404,14 +388,14 @@ const navigationItems: NavigationItem[] = [
   {
     title: "Reports",
     icon: BarChart3,
-    path: "javascript:void(0)",
+    path: "/reports",
     featureId: "reports",
     permissionModule: "analytics",
   },
   {
-    title: "Analytics",
+    title: "Forecast",
     icon: TrendingUp,
-    path: "javascript:void(0)",
+    path: "/forecast",
     featureId: "analytics",
     permissionModule: "analytics",
     isPro: true,

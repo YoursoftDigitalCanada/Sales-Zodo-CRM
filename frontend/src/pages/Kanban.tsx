@@ -140,10 +140,10 @@ const priorityColors = {
 };
 
 const defaultColumns: KanbanColumn[] = [
-  { id: "todo", title: "To Do", tasks: [], color: "teal", icon: Circle },
-  { id: "in-progress", title: "In Progress", tasks: [], color: "gold", icon: Timer },
-  { id: "review", title: "Review", tasks: [], color: "purple", icon: AlertCircle },
-  { id: "done", title: "Done", tasks: [], color: "green", icon: CheckCircle2 },
+  { id: "todo", title: "New Lead", tasks: [], color: "teal", icon: Circle },
+  { id: "in-progress", title: "Qualified", tasks: [], color: "gold", icon: Timer },
+  { id: "review", title: "Proposal Sent", tasks: [], color: "purple", icon: AlertCircle },
+  { id: "done", title: "Won / Lost", tasks: [], color: "green", icon: CheckCircle2 },
 ];
 
 const statusToColumnId: Record<string, string> = {
@@ -1099,7 +1099,7 @@ const KanbanPage: React.FC = () => {
             <div className="w-16 h-16 rounded-md bg-[#0891B2]/10 flex items-center justify-center mx-auto mb-4">
               <Loader2 className="w-8 h-8 text-[#0891B2] animate-spin" />
             </div>
-            <p className="text-[#94A3B8] font-medium">Loading Kanban Board...</p>
+            <p className="text-[#94A3B8] font-medium">Loading Deals Pipeline...</p>
           </motion.div>
         </main>
       </div>
@@ -1231,16 +1231,16 @@ const KanbanPage: React.FC = () => {
                 >
                   <Sparkles size={20} className="text-[#D97706]" />
                   <span className="text-[#D97706] text-sm font-medium">
-                    Project Management
+                    Sales Pipeline
                   </span>
                 </motion.div>
                 <h1 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-2">
-                  Kanban <span className="text-[#0891B2]">Board</span>
+                  Deals <span className="text-[#0891B2]">Pipeline</span>
                 </h1>
                 <p className="text-[#475569] text-lg max-w-xl">
-                  Drag and drop tasks to organize your workflow. You have{" "}
+                  Move opportunities through the sales cycle. You have{" "}
                   <span className="text-[#0891B2] font-semibold">
-                    {totalTasks} tasks
+                    {totalTasks} deals
                   </span>{" "}
                   across all columns.
                 </p>

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  Calculator,
+  FolderKanban,
   LayoutDashboard,
   ReceiptText,
   Users,
@@ -25,10 +25,10 @@ const navigationItems: MobileBottomNavItem[] = [
     matchPrefixes: ["/dashboard"],
   },
   {
-    label: "AI Estimator",
-    path: "/roof-estimator",
-    icon: Calculator,
-    matchPrefixes: ["/roof-estimator"],
+    label: "Deals",
+    path: "/deals",
+    icon: FolderKanban,
+    matchPrefixes: ["/deals", "/projects", "/pipeline", "/kanban"],
   },
   {
     label: "Invoice",
@@ -55,7 +55,7 @@ export function MobileBottomNav() {
     () =>
       navigationItems.filter((item) => {
         if (item.path === "/dashboard") return canPerformAction("dashboard", "view");
-        if (item.path === "/roof-estimator") return canPerformAction("roof-estimator", "view");
+        if (item.path === "/deals") return canPerformAction("projects", "view");
         if (item.path === "/invoice") return canPerformAction("invoices", "view");
         if (item.path === "/leads") return canPerformAction("leads", "view");
         return true;

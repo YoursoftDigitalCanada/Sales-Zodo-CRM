@@ -8,20 +8,20 @@ export const ONBOARDING_MODULES = {
     featureIds: ["leads"],
   },
   clients: {
-    label: "Clients",
-    description: "Track customer records and relationships.",
+    label: "Accounts",
+    description: "Track companies, subscriptions, renewal dates, and customer status.",
     plans: ["basic", "standard", "premium"],
     featureIds: ["clients"],
   },
   finance: {
     label: "Finance",
-    description: "Invoices, payments, quotes, and billing operations.",
+    description: "Proposals, invoices, payments, subscriptions, and billing operations.",
     plans: ["basic", "standard", "premium"],
     featureIds: ["finance"],
   },
   letterbox: {
-    label: "Zodo Mail",
-    description: "Shared inbox and customer communication history.",
+    label: "Sales Inbox",
+    description: "Shared sales inbox and prospect communication history.",
     plans: ["basic"],
     featureIds: ["letterbox"],
   },
@@ -32,14 +32,14 @@ export const ONBOARDING_MODULES = {
     featureIds: ["support"],
   },
   projects: {
-    label: "Projects",
-    description: "All Projects, Kanban, Time Tracking, and File Manager.",
+    label: "Deals",
+    description: "Deals, pipeline stages, close dates, owners, and revenue tracking.",
     plans: ["standard", "premium"],
     featureIds: ["projects", "kanban", "timeTracking", "files"],
   },
   communication: {
     label: "Communication",
-    description: "Chat plus Zodo Mail collaboration.",
+    description: "Chats plus sales inbox collaboration.",
     plans: ["standard", "premium"],
     featureIds: ["chat", "letterbox"],
   },
@@ -50,8 +50,8 @@ export const ONBOARDING_MODULES = {
     featureIds: ["team"],
   },
   roofEstimator: {
-    label: "AI Roof Estimator",
-    description: "Premium AI-assisted roof measurements and estimates.",
+    label: "AI Sales Assistant",
+    description: "Lead scoring, email writing, deal insights, and forecasting assistance.",
     plans: ["premium"],
     featureIds: ["roofEstimator"],
     highlight: true,
@@ -123,9 +123,9 @@ export const TASK_STATUS_OPTIONS = [
 ] as const;
 
 export const AI_BUSINESS_TYPE_OPTIONS = [
-  { value: "roofing", label: "Roofing" },
-  { value: "construction", label: "Construction" },
-  { value: "general_contractor", label: "General Contractor" },
+  { value: "saas", label: "SaaS" },
+  { value: "b2b_sales", label: "B2B Sales" },
+  { value: "professional_services", label: "Professional Services" },
   { value: "other", label: "Other" },
 ] as const;
 

@@ -194,7 +194,7 @@ const QuoteRow = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSen
           )}
           {isSignedQuote(quote.status) && !quote.linkedProjectId && (
             <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={onConvert}
-              className="p-2 rounded-md hover:bg-green-100 text-green-600 transition-colors" title="Convert to Job">
+              className="p-2 rounded-md hover:bg-green-100 text-green-600 transition-colors" title="Convert to Deal">
               <ArrowRight size={16} />
             </motion.button>
           )}
@@ -203,15 +203,15 @@ const QuoteRow = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSen
               <button className="p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors"><MoreVertical size={16} /></button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 rounded-md">
-              <DropdownMenuItem onClick={onView} className="rounded-md"><Eye size={14} className="mr-2" />View Quote</DropdownMenuItem>
-              {!isSignedQuote(quote.status) && <DropdownMenuItem onClick={onEdit} className="rounded-md"><Pencil size={14} className="mr-2" />Edit Quote</DropdownMenuItem>}
+              <DropdownMenuItem onClick={onView} className="rounded-md"><Eye size={14} className="mr-2" />View Proposal</DropdownMenuItem>
+              {!isSignedQuote(quote.status) && <DropdownMenuItem onClick={onEdit} className="rounded-md"><Pencil size={14} className="mr-2" />Edit Proposal</DropdownMenuItem>}
               <DropdownMenuItem onClick={onDuplicate} className="rounded-md"><Copy size={14} className="mr-2" />Duplicate</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onSend} className="rounded-md"><Send size={14} className="mr-2" />Send for Signature</DropdownMenuItem>
               <DropdownMenuItem className="rounded-md"><FileDown size={14} className="mr-2" />Download PDF</DropdownMenuItem>
               <DropdownMenuItem className="rounded-md"><Printer size={14} className="mr-2" />Print</DropdownMenuItem>
               {isSignedQuote(quote.status) && !quote.linkedProjectId && (
-                <><DropdownMenuSeparator /><DropdownMenuItem onClick={onConvert} className="rounded-md text-green-600"><ArrowRight size={14} className="mr-2" />Convert to Job</DropdownMenuItem></>
+                <><DropdownMenuSeparator /><DropdownMenuItem onClick={onConvert} className="rounded-md text-green-600"><ArrowRight size={14} className="mr-2" />Convert to Deal</DropdownMenuItem></>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50" onClick={onDelete}>
@@ -263,7 +263,7 @@ const QuoteCard = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSe
               {!isSignedQuote(quote.status) && <DropdownMenuItem onClick={onEdit} className="rounded-md"><Pencil size={14} className="mr-2" />Edit</DropdownMenuItem>}
               <DropdownMenuItem onClick={onSend} className="rounded-md"><Send size={14} className="mr-2" />Send for Signature</DropdownMenuItem>
               {isSignedQuote(quote.status) && !quote.linkedProjectId && (
-                <DropdownMenuItem onClick={onConvert} className="rounded-md text-green-600"><ArrowRight size={14} className="mr-2" />Convert to Job</DropdownMenuItem>
+                <DropdownMenuItem onClick={onConvert} className="rounded-md text-green-600"><ArrowRight size={14} className="mr-2" />Convert to Deal</DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem className="rounded-md text-red-600" onClick={onDelete}><Trash2 size={14} className="mr-2" />Delete</DropdownMenuItem>
@@ -305,7 +305,7 @@ const QuoteCard = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSe
             </Button>
           ) : isSignedQuote(quote.status) && !quote.linkedProjectId ? (
             <Button size="sm" onClick={onConvert} className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-md h-9">
-              <ArrowRight size={14} className="mr-1.5" />Convert to Job
+              <ArrowRight size={14} className="mr-1.5" />Convert to Deal
             </Button>
           ) : (
             <Button size="sm" onClick={onView} className="flex-1 bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md h-9">
@@ -420,7 +420,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
   const [formData, setFormData] = useState({
     title: "", clientId: "", clientName: "", clientEmail: "", clientCompany: "",
     leadId: "", leadName: "", projectName: "",
-    description: "", notes: "", terms: "A material deposit is due before scheduling. Remaining balance is due upon substantial completion. Quote valid for 14 days unless otherwise noted.",
+    description: "", notes: "", terms: "A material deposit is due before scheduling. Remaining balance is due upon substantial completion. Proposal valid for 14 days unless otherwise noted.",
     validUntil: "", priority: "medium" as Quote["priority"], status: "draft" as Quote["status"],
     items: [{ id: "new-1", description: "", quantity: 1, rate: 0, amount: 0 }] as QuoteItem[],
     discount: 0, tax: 13,
@@ -514,22 +514,22 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
         <div className={cn("border-b border-[rgba(15,23,42,0.06)]", isMobile ? "p-4" : "p-6")}>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0F172A]">
-              {quote ? "Edit Quote" : "Create New Quote"}
+              {quote ? "Edit Proposal" : "Create New Proposal"}
             </DialogTitle>
             <DialogDescription className="text-[#94A3B8]">
-              {quote ? `Editing ${quote.quoteNumber}` : "Fill in the details to create a professional roofing quote"}
+              {quote ? `Editing ${quote.quoteNumber}` : "Fill in the details to create a professional sales proposal"}
             </DialogDescription>
           </DialogHeader>
         </div>
         <form onSubmit={handleSubmit}>
           <div className={cn("space-y-5", isMobile ? "p-4" : "p-6")}>
-            {/* Client & Project Info */}
+            {/* Account & Deal Info */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div><Label className="text-xs text-[#475569]">Quote Title *</Label>
+              <div><Label className="text-xs text-[#475569]">Proposal Title *</Label>
                 <Input value={formData.title} onChange={e => setFormData(p => ({ ...p, title: e.target.value }))}
                   placeholder="e.g. Asphalt Shingle Roof Replacement" className="mt-1 rounded-md" required />
               </div>
-              <div><Label className="text-xs text-[#475569]">Project Name</Label>
+              <div><Label className="text-xs text-[#475569]">Deal Name</Label>
                 <Input value={formData.projectName} onChange={e => setFormData(p => ({ ...p, projectName: e.target.value }))}
                   placeholder="e.g. Johnson Residence Roof Replacement" className="mt-1 rounded-md" />
               </div>
@@ -558,11 +558,11 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
               </div>
             </div>
 
-            {/* Client / Lead Selector */}
+            {/* Account / Lead Selector */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <Label className="text-xs text-[#475569]">
-                  {recipientType === "client" ? "Client Name *" : "Lead Name *"}
+                  {recipientType === "client" ? "Account Name *" : "Lead Name *"}
                 </Label>
                 <div className="relative mt-1">
                   <Input
@@ -575,7 +575,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                         setFormData(p => ({ ...p, leadName: e.target.value, leadId: "" }));
                       }
                     }}
-                    placeholder={recipientType === "client" ? "Search clients..." : "Search leads..."}
+                    placeholder={recipientType === "client" ? "Search accounts..." : "Search leads..."}
                     className="rounded-md"
                     required
                   />
@@ -607,7 +607,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                               );
                             })}
                           {clients.filter(c => String(c.clientName || "").toLowerCase().includes(recipientSearch.toLowerCase())).length === 0 && (
-                            <p className="px-3 py-2 text-sm text-[#94A3B8]">No clients found</p>
+                            <p className="px-3 py-2 text-sm text-[#94A3B8]">No accounts found</p>
                           )}
                         </>
                       ) : (
@@ -700,7 +700,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                           <Input
                             value={item.description}
                             onChange={e => updateItem(idx, "description", e.target.value)}
-                            placeholder="Tear-off, underlayment, shingles, flashing, cleanup"
+                            placeholder="Implementation, onboarding, license, support, or professional services"
                             className="mt-1 rounded-md text-sm"
                           />
                         </div>
@@ -748,7 +748,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                       {formData.items.map((item, idx) => (
                         <tr key={item.id} className="border-t border-[rgba(15,23,42,0.06)]">
                           <td className="px-3 py-2"><Input value={item.description} onChange={e => updateItem(idx, "description", e.target.value)}
-                            placeholder="Tear-off, underlayment, shingles, flashing, cleanup" className="h-8 rounded-md text-sm" /></td>
+                            placeholder="Implementation, onboarding, license, support, or professional services" className="h-8 rounded-md text-sm" /></td>
                           <td className="px-3 py-2"><Input type="number" value={item.quantity} onChange={e => updateItem(idx, "quantity", Number(e.target.value))}
                             className="h-8 rounded-md text-sm text-center" min={1} /></td>
                           <td className="px-3 py-2"><Input type="number" value={item.rate} onChange={e => updateItem(idx, "rate", Number(e.target.value))}
@@ -795,10 +795,10 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                 : roofEstimates;
               return filteredEstimates.length > 0 ? (
                 <div>
-                  <Label className="text-xs text-[#475569] mb-1.5 block">📎 Attach Roof Estimate PDF</Label>
+                  <Label className="text-xs text-[#475569] mb-1.5 block">📎 Attach Proposal Attachment</Label>
                   <Select value={selectedEstimateId} onValueChange={setSelectedEstimateId}>
                     <SelectTrigger className="rounded-md">
-                      <SelectValue placeholder="Select a roof estimate (optional)" />
+                      <SelectValue placeholder="Select an attachment (optional)" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">No attachment</SelectItem>
@@ -809,7 +809,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-[10px] text-[#94A3B8] mt-1">This PDF will be attached when the quote is sent via email.</p>
+                  <p className="text-[10px] text-[#94A3B8] mt-1">This PDF will be attached when the proposal is sent via email.</p>
                 </div>
               ) : null;
             })()}
@@ -818,11 +818,11 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div><Label className="text-xs text-[#475569]">Notes</Label>
                 <Textarea value={formData.notes} onChange={e => setFormData(p => ({ ...p, notes: e.target.value }))}
-                  placeholder="Internal notes about access, steep pitch, insurance scope, or supplements..." className="mt-1 rounded-md h-20" />
+                  placeholder="Internal notes about stakeholders, budget, timeline, or next steps..." className="mt-1 rounded-md h-20" />
               </div>
               <div><Label className="text-xs text-[#475569]">Terms & Conditions</Label>
                 <Textarea value={formData.terms} onChange={e => setFormData(p => ({ ...p, terms: e.target.value }))}
-                  placeholder="Material deposit, scheduling, workmanship warranty, and final payment terms..." className="mt-1 rounded-md h-20" />
+                  placeholder="Payment schedule, approval terms, renewal conditions, and legal notes..." className="mt-1 rounded-md h-20" />
               </div>
             </div>
           </div>
@@ -830,7 +830,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
             <Button type="button" variant="outline" onClick={onClose} className={cn("rounded-md", isMobile && "w-full")}>Cancel</Button>
             <Button type="submit" disabled={!formData.title || !hasRecipient}
               className={cn("bg-[#0891B2] hover:bg-[#0E7490] text-white rounded-md", isMobile && "w-full")}>
-              {quote ? <><CheckCircle2 size={16} className="mr-2" />Update Quote</> : <><Plus size={16} className="mr-2" />Create Quote</>}
+              {quote ? <><CheckCircle2 size={16} className="mr-2" />Update Proposal</> : <><Plus size={16} className="mr-2" />Create Proposal</>}
             </Button>
           </DialogFooter>
         </form>
@@ -942,7 +942,7 @@ const QuoteDetailDialog = ({ isOpen, onClose, quote, onEdit, onDelete, onSend, o
           </Button>
           <div className="flex-1" />
           {canSendForSignature(quote.status) && <Button onClick={onSend} className="rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"><Send size={16} className="mr-2" />Send for Signature</Button>}
-          {isSignedQuote(quote.status) && !quote.linkedProjectId && <Button onClick={onConvert} className="rounded-md bg-green-600 hover:bg-green-700 text-white"><ArrowRight size={16} className="mr-2" />Convert to Job</Button>}
+          {isSignedQuote(quote.status) && !quote.linkedProjectId && <Button onClick={onConvert} className="rounded-md bg-green-600 hover:bg-green-700 text-white"><ArrowRight size={16} className="mr-2" />Convert to Deal</Button>}
           {!isSignedQuote(quote.status) && <Button onClick={onEdit} className="rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"><Pencil size={16} className="mr-2" />Edit</Button>}
         </DialogFooter>
       </DialogContent>
@@ -1180,7 +1180,7 @@ const QuotesPage = () => {
         roofEstimateId: data.roofEstimateId || null,
       };
       await createQuote(apiPayload);
-      toast({ title: "Quote Created", description: "New quote has been created successfully." });
+      toast({ title: "Proposal Created", description: "New proposal has been created successfully." });
       fetchQuotes();
     } catch (err) {
       console.error("Failed to create quote:", err);
@@ -1209,7 +1209,7 @@ const QuotesPage = () => {
         roofEstimateId: data.roofEstimateId || null,
       };
       await updateQuote(currentQuote.id, apiPayload);
-      toast({ title: "Quote Updated", description: `${currentQuote.quoteNumber} has been updated.` });
+      toast({ title: "Proposal Updated", description: `${currentQuote.quoteNumber} has been updated.` });
       fetchQuotes();
     } catch (err) {
       console.error("Failed to update quote:", err);
@@ -1225,7 +1225,7 @@ const QuotesPage = () => {
       setQuotes(prev => prev.filter(q => q.id !== deleteQuoteId));
       setDeleteQuoteId(null);
       setIsDetailOpen(false);
-      toast({ title: "Quote Deleted", description: `${qt?.quoteNumber || "Quote"} has been deleted.` });
+      toast({ title: "Proposal Deleted", description: `${qt?.quoteNumber || "Quote"} has been deleted.` });
     } catch (err) {
       console.error("Failed to delete quote:", err);
       toast({ title: "Error", description: "Failed to delete quote", variant: "destructive" });
@@ -1236,7 +1236,7 @@ const QuotesPage = () => {
     try {
       await sendQuoteEmail(quoteId);
       await fetchQuotes();
-      toast({ title: "Signature Request Sent", description: "Estimate link has been emailed to the recipient." });
+      toast({ title: "Signature Request Sent", description: "Proposal link has been emailed to the recipient." });
     } catch (err: any) {
       console.error("Failed to send quote:", err);
       const msg = err?.response?.data?.message || "Failed to send signature request";
@@ -1248,11 +1248,11 @@ const QuotesPage = () => {
     try {
       const project = await createProjectFromQuote(quoteId);
       setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, linkedProjectId: project.id } : q));
-      toast({ title: "Converted to Job", description: "Signed estimate has been converted into a job." });
+      toast({ title: "Converted to Deal", description: "Signed proposal has been converted into a deal." });
       navigate(`/projects/${project.id}`);
     } catch (err) {
-      console.error("Failed to convert estimate into job:", err);
-      toast({ title: "Error", description: "Failed to convert estimate into a job", variant: "destructive" });
+      console.error("Failed to convert proposal into deal:", err);
+      toast({ title: "Error", description: "Failed to convert proposal into a deal", variant: "destructive" });
     }
   };
 
@@ -1276,7 +1276,7 @@ const QuotesPage = () => {
         })),
       };
       await createQuote(apiPayload);
-      toast({ title: "Quote Duplicated", description: `New quote created from ${original.quoteNumber}.` });
+      toast({ title: "Proposal Duplicated", description: `New proposal created from ${original.quoteNumber}.` });
       fetchQuotes();
     } catch (err) {
       console.error("Failed to duplicate quote:", err);
@@ -1288,7 +1288,7 @@ const QuotesPage = () => {
     try {
       await Promise.allSettled(Array.from(selectedQuotes).map(id => deleteQuoteApi(id)));
       setQuotes(prev => prev.filter(q => !selectedQuotes.has(q.id)));
-      toast({ title: "Quotes Deleted", description: `${selectedQuotes.size} quotes deleted.` });
+      toast({ title: "Proposals Deleted", description: `${selectedQuotes.size} proposals deleted.` });
       setSelectedQuotes(new Set());
     } catch (err) {
       console.error("Failed to bulk delete:", err);
@@ -1301,7 +1301,7 @@ const QuotesPage = () => {
     try {
       await Promise.allSettled(sendableIds.map(id => sendQuoteEmail(id)));
       await fetchQuotes();
-      toast({ title: "Signature Requests Sent", description: "Selected estimates have been sent for signature." });
+      toast({ title: "Signature Requests Sent", description: "Selected proposals have been sent for signature." });
       setSelectedQuotes(new Set());
     } catch (err) {
       console.error("Failed to bulk send:", err);
@@ -1311,7 +1311,7 @@ const QuotesPage = () => {
 
   const handleExport = () => {
     const data = filteredQuotes.map((quote) => ({
-      "Quote #": quote.quoteNumber,
+      "Proposal #": quote.quoteNumber,
       Recipient: quote.leadId ? quote.leadName || quote.clientName : quote.clientName,
       Status: quote.status,
       "Valid Until": formatDate(quote.validUntil),
@@ -1330,7 +1330,7 @@ const QuotesPage = () => {
     anchor.download = "quotes.csv";
     anchor.click();
 
-    toast({ title: "Exported", description: "Quotes exported to CSV successfully." });
+    toast({ title: "Exported", description: "Proposals exported to CSV successfully." });
   };
 
   const handleMobileQuickAction = (quote: Quote) => {
@@ -1369,7 +1369,7 @@ const QuotesPage = () => {
               className="mb-4 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
             >
               <AlertTriangle size={16} className="shrink-0" />
-              You&apos;re offline. Showing the latest loaded quotes until the connection comes back.
+              You&apos;re offline. Showing the latest loaded proposals until the connection comes back.
             </motion.div>
           )}
           {/* Header */}
@@ -1380,8 +1380,8 @@ const QuotesPage = () => {
                   <FileStack size={20} className="text-[#0891B2]" />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Quotes</h1>
-                  <p className="text-sm text-[#94A3B8] break-words">{stats.totalCount} quotes · Pipeline value {formatCurrency(stats.totalValue)}</p>
+                  <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Proposals</h1>
+                  <p className="text-sm text-[#94A3B8] break-words">{stats.totalCount} proposals · Pipeline value {formatCurrency(stats.totalValue)}</p>
                 </div>
               </div>
             </div>
@@ -1400,7 +1400,7 @@ const QuotesPage = () => {
                   </Button>
                   <Button size="sm" className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
                     onClick={() => { setCurrentQuote(null); setIsFormOpen(true); }}>
-                    <Plus size={16} className="mr-2" />New Quote
+                    <Plus size={16} className="mr-2" />New Proposal
                   </Button>
                 </>
               )}
@@ -1475,7 +1475,7 @@ const QuotesPage = () => {
                   <Input
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search quotes..."
+                    placeholder="Search proposals..."
                     className="h-11 rounded-xl border-[rgba(15,23,42,0.06)] pl-10"
                   />
                   {searchQuery && (
@@ -1504,7 +1504,7 @@ const QuotesPage = () => {
                 </div>
 
                 <p className="text-xs text-[#94A3B8]">
-                  Swipe right to view, swipe left to delete, and long press a quote to start multi-select.
+                  Swipe right to view, swipe left to delete, and long press a proposal to start multi-select.
                 </p>
               </div>
 
@@ -1533,8 +1533,8 @@ const QuotesPage = () => {
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F1F5F9]">
                     <FileStack size={32} className="text-[#94A3B8]" />
                   </div>
-                  <h3 className="text-lg font-semibold text-[#0F172A]">No quotes found</h3>
-                  <p className="mt-2 text-sm text-[#94A3B8]">Create a quote to start building your pipeline.</p>
+                  <h3 className="text-lg font-semibold text-[#0F172A]">No proposals found</h3>
+                  <p className="mt-2 text-sm text-[#94A3B8]">Create a proposal to start building your pipeline.</p>
                 </motion.div>
               ) : (
                 <div className="space-y-3">
@@ -1601,7 +1601,7 @@ const QuotesPage = () => {
               <div className="relative flex-1 min-w-[240px]">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                 <Input value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                  placeholder="Search quotes..." className="pl-10 rounded-md border-[rgba(15,23,42,0.06)] h-10" />
+                  placeholder="Search proposals..." className="pl-10 rounded-md border-[rgba(15,23,42,0.06)] h-10" />
                 {searchQuery && (
                   <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0F172A]">
                     <X size={14} />
@@ -1653,7 +1653,7 @@ const QuotesPage = () => {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-16 text-center">
               <RefreshCw size={32} className="text-[#0891B2] animate-spin mx-auto mb-4" />
-              <p className="text-[#94A3B8]">Loading quotes...</p>
+              <p className="text-[#94A3B8]">Loading proposals...</p>
             </motion.div>
           ) : filteredQuotes.length === 0 ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -1661,11 +1661,11 @@ const QuotesPage = () => {
               <div className="w-16 h-16 rounded-full bg-[#F1F5F9] flex items-center justify-center mx-auto mb-4">
                 <FileStack size={32} className="text-[#94A3B8]" />
               </div>
-              <h3 className="text-lg font-semibold text-[#0F172A] mb-2">No quotes found</h3>
-              <p className="text-[#94A3B8] mb-6">Create your first quote to get started</p>
+              <h3 className="text-lg font-semibold text-[#0F172A] mb-2">No proposals found</h3>
+              <p className="text-[#94A3B8] mb-6">Create your first proposal to get started</p>
               <Button className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"
                 onClick={() => { setCurrentQuote(null); setIsFormOpen(true); }}>
-                <Plus size={16} className="mr-2" />Create Quote
+                <Plus size={16} className="mr-2" />Create Proposal
               </Button>
             </motion.div>
           ) : viewMode === "list" ? (
@@ -1680,8 +1680,8 @@ const QuotesPage = () => {
                           onCheckedChange={toggleSelectAll}
                           className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]" />
                       </th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Quote</th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Client / Lead</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Proposal</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Account / Lead</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Valid Until</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Status</th>
                       <th className="py-3 px-4 text-right text-xs font-semibold text-[#475569] uppercase tracking-wider">Amount</th>
@@ -1749,9 +1749,9 @@ const QuotesPage = () => {
           <Drawer open={isMobile && filtersOpen} onOpenChange={setFiltersOpen}>
             <DrawerContent className="max-h-[85dvh] rounded-t-[24px] border-none bg-white px-0">
               <DrawerHeader className="px-5 pb-2 text-left">
-                <DrawerTitle className="text-[#0F172A]">Filter Quotes</DrawerTitle>
+                <DrawerTitle className="text-[#0F172A]">Filter Proposals</DrawerTitle>
                 <DrawerDescription>
-                  Refine the mobile quotes list by date range or export the current results.
+                  Refine the mobile proposals list by date range or export the current results.
                 </DrawerDescription>
               </DrawerHeader>
               <div className="space-y-5 px-5 pb-6 pt-2">
@@ -1805,8 +1805,8 @@ const QuotesPage = () => {
       <AlertDialog open={!!deleteQuoteId} onOpenChange={() => setDeleteQuoteId(null)}>
         <AlertDialogContent className="rounded-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Quote</AlertDialogTitle>
-            <AlertDialogDescription>Are you sure you want to delete this quote? This action cannot be undone.</AlertDialogDescription>
+            <AlertDialogTitle>Delete Proposal</AlertDialogTitle>
+            <AlertDialogDescription>Are you sure you want to delete this proposal? This action cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>

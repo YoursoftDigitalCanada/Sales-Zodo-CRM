@@ -662,7 +662,7 @@ function EmptyState({ onCreate, canCreate }: { onCreate: () => void; canCreate: 
       {canCreate ? (
         <Button onClick={onCreate} className="mt-5 rounded-md bg-[#0891B2] hover:bg-[#0E7490]">
           <Plus className="mr-2 h-4 w-4" />
-          Create Roofing Job
+          Create Deal
         </Button>
       ) : null}
     </div>
@@ -745,7 +745,7 @@ export default function ProjectsPage() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast({
-        title: "Job updated",
+        title: "Deal updated",
         description: variables.status === "COMPLETED" ? "The job is now marked complete." : "The job moved into active production.",
       });
     },
@@ -870,7 +870,7 @@ export default function ProjectsPage() {
               <div className="crm-toolbar-breadcrumb">
                 <span className="text-[#475569]">CRM</span>
                 <ChevronRight size={16} className="text-[#475569]" />
-                <span className="crm-toolbar-breadcrumb-current">Roofing Projects</span>
+                <span className="crm-toolbar-breadcrumb-current">Deals</span>
               </div>
             </div>
             <div className="crm-toolbar-actions">
@@ -889,7 +889,7 @@ export default function ProjectsPage() {
                   className={cn("crm-toolbar-button crm-toolbar-button-primary", isMobile && "hidden")}
                 >
                   <Plus size={18} className="mr-2" />
-                  Create Roofing Job
+                  Create Deal
                 </Button>
               ) : null}
             </div>
@@ -906,9 +906,9 @@ export default function ProjectsPage() {
                 <HardHat size={20} className="text-[#0891B2]" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Roofing Projects</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Deals</h1>
                 <p className="text-sm text-[#94A3B8]">
-                  {allProjects.length} total projects • Manage inspections, insurance, permits, and production
+                  {allProjects.length} total deals - track stage, value, owner, probability, and close date
                 </p>
               </div>
             </div>
@@ -940,7 +940,7 @@ export default function ProjectsPage() {
             isMobile ? "flex gap-3 overflow-x-auto pb-2" : "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
           )}>
             {[
-              { title: "Total Jobs", value: metricsProjects.length, subtitle: "Across portfolio", icon: ClipboardList, color: "teal" as const, delay: 0 },
+              { title: "Total Deals", value: metricsProjects.length, subtitle: "Across pipeline", icon: ClipboardList, color: "teal" as const, delay: 0 },
               { title: "In Production", value: productionCount, subtitle: "In field execution", icon: HardHat, color: "gold" as const, delay: 0.05 },
               { title: "Completed", value: completedCount, subtitle: "Finished / invoiced", icon: CheckCircle2, color: "green" as const, delay: 0.1 },
               { title: "Contract Value", value: formatCurrency(totalContractValue), subtitle: "Total booked revenue", icon: CircleDollarSign, color: "navy" as const, delay: 0.15 },
@@ -995,12 +995,12 @@ export default function ProjectsPage() {
 
                       <Select value={jobTypeFilter} onValueChange={setJobTypeFilter}>
                         <SelectTrigger className="w-[140px] rounded-md border-[rgba(15,23,42,0.1)]">
-                          <SelectValue placeholder="Job Type" />
+                          <SelectValue placeholder="Deal Type" />
                         </SelectTrigger>
                         <SelectContent className="rounded-md">
                           {jobTypeOptions.map((option) => (
                             <SelectItem key={option} value={option}>
-                              {option === "ALL" ? "All Job Types" : option}
+                              {option === "ALL" ? "All Deal Types" : option}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1133,7 +1133,7 @@ export default function ProjectsPage() {
                           className="border-slate-300 data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#22D3EE]"
                         />
                       </th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">Project</th>
+                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">Deal</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">Stage</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">Priority</th>
                       <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-[#64748B]">Contract</th>
@@ -1188,7 +1188,7 @@ export default function ProjectsPage() {
 
             {/* Footer / Results count */}
             <div className="px-4 py-3 border-t border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]/60 flex items-center justify-between text-sm text-[#64748B]">
-              <span>Showing {orderedProjects.length} of {allProjects.length} projects</span>
+              <span>Showing {orderedProjects.length} of {allProjects.length} deals</span>
               <span>{selectedProjects.size > 0 ? `${selectedProjects.size} selected` : ""}</span>
             </div>
           </div>
@@ -1198,7 +1198,7 @@ export default function ProjectsPage() {
       {isMobile && canCreateProjects && (
         <MobileCreateFab
           onClick={() => navigate("/projects/add")}
-          ariaLabel="Add Job"
+          ariaLabel="Add Deal"
           className="bg-[#0891B2] shadow-[0_16px_36px_rgba(8,145,178,0.35)] hover:bg-[#0E7490]"
         >
           <Plus size={22} />
@@ -1208,7 +1208,7 @@ export default function ProjectsPage() {
       <Drawer open={isMobile && filtersOpen} onOpenChange={setFiltersOpen}>
         <DrawerContent className="max-h-[85dvh]">
           <DrawerHeader>
-            <DrawerTitle>Filter Jobs</DrawerTitle>
+            <DrawerTitle>Filter Deals</DrawerTitle>
             <DrawerDescription>Refine active, archived, or template jobs on mobile.</DrawerDescription>
           </DrawerHeader>
           <div className="space-y-4 px-4 pb-4">
@@ -1229,15 +1229,15 @@ export default function ProjectsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[#475569]">Job Type</label>
+              <label className="text-xs font-medium text-[#475569]">Deal Type</label>
               <Select value={jobTypeFilter} onValueChange={setJobTypeFilter}>
                 <SelectTrigger className="rounded-md">
-                  <SelectValue placeholder="Job Type" />
+                  <SelectValue placeholder="Deal Type" />
                 </SelectTrigger>
                 <SelectContent className="rounded-md">
                   {jobTypeOptions.map((option) => (
                     <SelectItem key={option} value={option}>
-                      {option === "ALL" ? "All Job Types" : option}
+                      {option === "ALL" ? "All Deal Types" : option}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1296,7 +1296,7 @@ export default function ProjectsPage() {
               className="rounded-md bg-rose-600 hover:bg-rose-700"
               onClick={() => pendingDelete && archiveMutation.mutate(pendingDelete.id)}
             >
-              {archiveMutation.isPending ? "Archiving..." : "Archive Job"}
+              {archiveMutation.isPending ? "Archiving..." : "Archive Deal"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

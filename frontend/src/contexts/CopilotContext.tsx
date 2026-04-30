@@ -42,26 +42,29 @@ const ROUTE_PATTERNS: RoutePattern[] = [
     { match: /^\/dashboard$/, module: "dashboard", page: "overview", label: "Dashboard" },
 
     // Leads
-    { match: /^\/leads\/pipeline$/, module: "leads", page: "pipeline", label: "Pipeline" },
+    { match: /^\/pipeline$/, module: "deals", page: "pipeline", label: "Deals Pipeline" },
+    { match: /^\/leads\/pipeline$/, module: "leads", page: "pipeline", label: "Lead Pipeline" },
     { match: /^\/leads\/sources$/, module: "leads", page: "sources", label: "Lead Sources" },
     { match: /^\/leads\/([a-f0-9-]+)$/, module: "leads", page: "detail", label: "Lead Detail", entityGroup: 1 },
     { match: /^\/leads$/, module: "leads", page: "list", label: "Leads" },
 
-    // Clients
-    { match: /^\/client-list\/([a-f0-9-]+)\/edit$/, module: "clients", page: "edit", label: "Client Edit", entityGroup: 1 },
-    { match: /^\/client-list\/([a-f0-9-]+)$/, module: "clients", page: "detail", label: "Client Detail", entityGroup: 1 },
-    { match: /^\/client-list\/add$/, module: "clients", page: "add", label: "New Client" },
-    { match: /^\/client-list$/, module: "clients", page: "list", label: "Clients" },
-    { match: /^\/contacts$/, module: "clients", page: "contacts", label: "Contacts" },
-    { match: /^\/clients\/groups$/, module: "clients", page: "groups", label: "Client Groups" },
+    // Accounts and contacts
+    { match: /^\/accounts$/, module: "accounts", page: "list", label: "Accounts" },
+    { match: /^\/client-list\/([a-f0-9-]+)\/edit$/, module: "accounts", page: "edit", label: "Account Edit", entityGroup: 1 },
+    { match: /^\/client-list\/([a-f0-9-]+)$/, module: "accounts", page: "detail", label: "Account Detail", entityGroup: 1 },
+    { match: /^\/client-list\/add$/, module: "accounts", page: "add", label: "New Account" },
+    { match: /^\/client-list$/, module: "accounts", page: "list", label: "Accounts" },
+    { match: /^\/contacts$/, module: "contacts", page: "contacts", label: "Contacts" },
+    { match: /^\/clients\/groups$/, module: "accounts", page: "groups", label: "Account Segments" },
     { match: /^\/crm$/, module: "clients", page: "crm", label: "CRM" },
 
-    // Projects
-    { match: /^\/projects\/add$/, module: "projects", page: "add", label: "New Project" },
-    { match: /^\/projects\/([a-f0-9-]+)\/edit$/, module: "projects", page: "edit", label: "Project Edit", entityGroup: 1 },
-    { match: /^\/projects\/([a-f0-9-]+)$/, module: "projects", page: "detail", label: "Project Detail", entityGroup: 1 },
-    { match: /^\/projects$/, module: "projects", page: "list", label: "Projects" },
-    { match: /^\/kanban$/, module: "projects", page: "kanban", label: "Kanban" },
+    // Deals
+    { match: /^\/deals$/, module: "deals", page: "list", label: "Deals" },
+    { match: /^\/projects\/add$/, module: "deals", page: "add", label: "New Deal" },
+    { match: /^\/projects\/([a-f0-9-]+)\/edit$/, module: "deals", page: "edit", label: "Deal Edit", entityGroup: 1 },
+    { match: /^\/projects\/([a-f0-9-]+)$/, module: "deals", page: "detail", label: "Deal Detail", entityGroup: 1 },
+    { match: /^\/projects$/, module: "deals", page: "list", label: "Deals" },
+    { match: /^\/kanban$/, module: "deals", page: "pipeline", label: "Deals Pipeline" },
 
     // Tasks
     { match: /^\/tasks$/, module: "tasks", page: "list", label: "Tasks" },
@@ -74,7 +77,9 @@ const ROUTE_PATTERNS: RoutePattern[] = [
     { match: /^\/invoice\/list$/, module: "finance", page: "invoice-list", label: "Invoice List" },
     { match: /^\/invoice$/, module: "finance", page: "invoices", label: "Invoices" },
     { match: /^\/expenses$/, module: "finance", page: "expenses", label: "Expenses" },
-    { match: /^\/quotes$/, module: "finance", page: "quotes", label: "Quotes" },
+    { match: /^\/proposals$/, module: "finance", page: "proposals", label: "Proposals" },
+    { match: /^\/quotes$/, module: "finance", page: "proposals", label: "Proposals" },
+    { match: /^\/subscriptions$/, module: "finance", page: "subscriptions", label: "Subscriptions" },
 
     // Bookings
     { match: /^\/bookings$/, module: "bookings", page: "list", label: "Bookings" },
@@ -88,7 +93,8 @@ const ROUTE_PATTERNS: RoutePattern[] = [
     { match: /^\/employees/, module: "hr", page: "list", label: "Employees" },
 
     // Communication
-    { match: /^\/letterbox$/, module: "communication", page: "email", label: "Email" },
+    { match: /^\/mail$/, module: "communication", page: "mail", label: "Mail" },
+    { match: /^\/letterbox$/, module: "communication", page: "mail", label: "Mail" },
     { match: /^\/chats$/, module: "communication", page: "chat", label: "Chat" },
     { match: /^\/calendar$/, module: "communication", page: "calendar", label: "Calendar" },
     { match: /^\/notifications$/, module: "communication", page: "notifications", label: "Notifications" },
@@ -107,7 +113,8 @@ const ROUTE_PATTERNS: RoutePattern[] = [
     { match: /^\/settings/, module: "settings", page: "settings", label: "Settings" },
 
     // AI
-    { match: /^\/roof-estimator$/, module: "ai", page: "roof-estimator", label: "Roof Estimator" },
+    { match: /^\/ai\/sales-assistant$/, module: "ai", page: "sales-assistant", label: "AI Sales Assistant" },
+    { match: /^\/ai\/email-generator$/, module: "ai", page: "email-generator", label: "Email Generator" },
 ];
 
 function resolveContext(pathname: string): CopilotPageContext {

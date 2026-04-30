@@ -438,7 +438,7 @@ const ClientRow = ({
         </button>
       </td>
 
-      {/* Client Name & Info */}
+      {/* Account Name & Info */}
       {columns.find((c) => c.key === "clientName")?.visible && (
         <td className="py-4 px-4">
           <div className="flex items-center gap-3">
@@ -653,7 +653,7 @@ const ClientRow = ({
               </DropdownMenuItem>
               <DropdownMenuItem className="rounded-md">
                 <Phone size={14} className="mr-2" />
-                Call Client
+                Call Account
               </DropdownMenuItem>
               {canDelete ? (
                 <>
@@ -793,7 +793,7 @@ const ClientCard = ({
         </div>
       </div>
 
-      {/* Client Info */}
+      {/* Account Info */}
       <div className="mb-4">
         <h3 className="font-semibold text-[#0F172A] group-hover:text-[#0891B2] transition-colors mb-1">
           {client.clientName}
@@ -1156,7 +1156,7 @@ const ClientListPage = () => {
       setSelectedClients([]);
       toast({
         title: "Deleted",
-        description: `${selectedClients.length} clients have been deleted.`,
+        description: `${selectedClients.length} accounts have been deleted.`,
       });
     } catch (error: any) {
       toast({
@@ -1312,7 +1312,7 @@ const ClientListPage = () => {
   const handleExport = (format: "csv" | "excel" | "pdf") => {
     toast({
       title: "Exporting...",
-      description: `Exporting ${filteredClients.length} clients to ${format.toUpperCase()}`,
+      description: `Exporting ${filteredClients.length} accounts to ${format.toUpperCase()}`,
     });
     // Implement actual export logic here
   };
@@ -1361,7 +1361,7 @@ const ClientListPage = () => {
                 Dashboard
               </button>
               <ChevronRight size={14} className="text-[#475569]" />
-              <span className="crm-toolbar-breadcrumb-current">Clients</span>
+              <span className="crm-toolbar-breadcrumb-current">Accounts</span>
             </div>
 
             {/* Right - Actions */}
@@ -1374,7 +1374,7 @@ const ClientListPage = () => {
                   className="crm-toolbar-button crm-toolbar-button-primary"
                 >
                   <Plus size={16} />
-                  <span>Add Client</span>
+                  <span>Add Account</span>
                 </motion.button>
               ) : null}
 
@@ -1496,7 +1496,7 @@ const ClientListPage = () => {
           {/* Stats Cards */}
           <div className={cn("gap-4", isMobile ? "flex overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none]" : "grid grid-cols-2 md:grid-cols-4")}>
             <StatCard
-              title="Total Clients"
+              title="Total Accounts"
               value={stats.total}
               subtitle="All registered clients"
               trend={12}
@@ -1505,7 +1505,7 @@ const ClientListPage = () => {
               delay={0}
             />
             <StatCard
-              title="Active Clients"
+              title="Active Accounts"
               value={stats.active}
               subtitle={`${Math.round((stats.active / stats.total) * 100)}% of total`}
               trend={8}
@@ -1857,7 +1857,7 @@ const ClientListPage = () => {
                   <Users size={32} className="text-[#475569]" />
                 </div>
                 <h3 className="text-lg font-semibold text-[#0F172A] mb-2">
-                  No clients found
+                  No accounts found
                 </h3>
                 <p className="text-[#94A3B8] mb-4">
                   {searchTerm || activeFiltersCount > 0
@@ -1882,7 +1882,7 @@ const ClientListPage = () => {
                   ) : (
                     <>
                       <Plus size={16} className="mr-2" />
-                      Add Client
+                      Add Account
                     </>
                   )}
                 </Button>
@@ -2175,7 +2175,7 @@ const ClientListPage = () => {
                 type="button"
                 onClick={() => navigate("/client-list/add")}
                 className="mobile-create-fab fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#0891B2] text-white shadow-xl transition-transform active:scale-95"
-                aria-label="Add Client"
+                aria-label="Add Account"
               >
                 <Plus size={22} />
               </button>
@@ -2184,7 +2184,7 @@ const ClientListPage = () => {
             <Drawer open={isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
               <DrawerContent className="max-h-[85vh] rounded-t-[24px] border-none bg-white px-0">
                 <DrawerHeader className="px-5 pb-2 text-left">
-                  <DrawerTitle className="text-[#0F172A]">Filter Clients</DrawerTitle>
+                  <DrawerTitle className="text-[#0F172A]">Filter Accounts</DrawerTitle>
                   <DrawerDescription>
                     Refine the client list without leaving the page.
                   </DrawerDescription>
@@ -2329,7 +2329,7 @@ const ClientListPage = () => {
               <Trash2 className="w-6 h-6 text-red-600" />
             </div>
             <AlertDialogTitle className="text-xl font-bold text-[#0F172A]">
-              Delete {selectedClients.length} Clients
+              Delete {selectedClients.length} Accounts
             </AlertDialogTitle>
             <AlertDialogDescription className="text-[#94A3B8]">
               Are you sure you want to delete{" "}

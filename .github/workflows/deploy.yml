@@ -11,22 +11,22 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
+          host: ${{ secrets.VPS_HOST || '82.197.94.229' }}
+          username: ${{ secrets.VPS_USER || 'root' }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
           script_stop: true
           script: |
             set -e
             echo "📦 Pulling latest code..."
-            cd /var/www/zodo-crm
+            cd /var/www/sales-zodo-crm
             
             # Reset any local changes (e.g. package-lock.json modified by npm ci)
             git fetch origin main
             git reset --hard origin/main
             
             echo "🔧 Installing backend dependencies..."
-            cd /var/www/zodo-crm/backend
+            cd /var/www/sales-zodo-crm/backend
             rm -rf node_modules
             npm ci --include=dev
             
@@ -36,14 +36,14 @@ jobs:
             npm run build
             
             echo "🎨 Installing frontend dependencies..."
-            cd /var/www/zodo-crm/frontend
+            cd /var/www/sales-zodo-crm/frontend
             rm -rf node_modules
             npm ci
             
             echo "🏗️ Building frontend..."
-            npx vite build
+            VITE_API_URL=https://salesapi.zodo.ca npx vite build
             
             echo "🔄 Restarting backend..."
-            pm2 restart zodo-crm-api
+            pm2 restart sales-zodo-crm-api
             
             echo "✅ Deployment complete!"

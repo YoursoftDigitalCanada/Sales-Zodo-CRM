@@ -16,6 +16,9 @@ export interface CreateLeadDto {
   companyName?: string;
   jobTitle?: string;
   website?: string;
+  industry?: string;
+  companySize?: string;
+  useCase?: string;
 
   // Classification
   status?: LeadStatus;
@@ -128,6 +131,9 @@ export interface UpdateLeadDto {
   companyName?: string;
   jobTitle?: string;
   website?: string;
+  industry?: string;
+  companySize?: string;
+  useCase?: string;
 
   // Classification
   status?: LeadStatus;
@@ -301,6 +307,9 @@ export interface LeadResponseDto {
   companyName?: string;
   jobTitle?: string;
   website?: string;
+  industry?: string;
+  companySize?: string;
+  useCase?: string;
   status: LeadStatus;
   temperature: LeadTemperature;
   potentialValue?: number;
@@ -490,6 +499,9 @@ export function toLeadResponseDto(lead: any): LeadResponseDto {
     companyName: lead.companyName || undefined,
     jobTitle: lead.jobTitle || undefined,
     website: lead.website || undefined,
+    industry: lead.industry || undefined,
+    companySize: lead.companySize || undefined,
+    useCase: lead.useCase || undefined,
     status: lead.status,
     temperature: lead.temperature,
     potentialValue: lead.potentialValue ? Number(lead.potentialValue) : undefined,

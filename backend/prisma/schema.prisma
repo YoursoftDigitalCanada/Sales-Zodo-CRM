@@ -1153,6 +1153,9 @@ model Lead {
   companyName       String?
   jobTitle          String?
   website           String?
+  industry          String?
+  companySize       String?
+  useCase           String?         @db.Text
   
   // Lead Classification
   status            LeadStatus          @default(NEW)

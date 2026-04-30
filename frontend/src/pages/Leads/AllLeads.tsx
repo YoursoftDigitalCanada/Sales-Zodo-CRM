@@ -193,6 +193,9 @@ interface Lead {
   companyName: string;
   jobTitle: string;
   website?: string;
+  industry?: string;
+  companySize?: string;
+  useCase?: string;
   location: string;
   leadSourceName: string;
   status: LeadStatus;
@@ -1268,7 +1271,7 @@ export const LeadFormDialog = ({
   onSubmit: (data: Partial<Lead>) => Promise<boolean>;
 }) => {
   const { isMobile } = useIsMobile();
-  type LeadFormTab = "basic" | "property" | "service" | "qualification" | "insurance" | "assessment" | "details";
+  type LeadFormTab = "basic" | "property" | "service" | "qualification" | "assessment" | "details";
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -1278,6 +1281,9 @@ export const LeadFormDialog = ({
     companyName: "",
     jobTitle: "",
     website: "",
+    industry: "",
+    companySize: "",
+    useCase: "",
     location: "",
     source: "website",
     leadSourceId: "",
@@ -1353,12 +1359,8 @@ export const LeadFormDialog = ({
   const [leadSourceOptions, setLeadSourceOptions] = useState<{ id: string; name: string }[]>([]);
 
   const tabOrder = useMemo<LeadFormTab[]>(
-    () => (
-      formData.isInsuranceClaim === "Yes"
-        ? ["basic", "property", "service", "qualification", "insurance", "assessment", "details"]
-        : ["basic", "property", "service", "qualification", "assessment", "details"]
-    ),
-    [formData.isInsuranceClaim]
+    () => ["basic", "property", "service", "qualification", "assessment", "details"],
+    []
   );
   const activeTabIndex = tabOrder.indexOf(activeTab as LeadFormTab);
   const isLastTab = activeTabIndex === tabOrder.length - 1;
@@ -1368,13 +1370,11 @@ export const LeadFormDialog = ({
       case "basic":
         return ["firstName", "lastName", "phone", "email", "secondaryPhone", "spouseCoOwnerName"];
       case "property":
-        return ["propertyAddress", "zipCode"];
+        return ["propertyAddress", "zipCode", "website"];
       case "service":
-        return ["serviceType", "issueDescription"];
+        return ["serviceType", "useCase", "issueDescription"];
       case "qualification":
         return ["numberOfOtherQuotes"];
-      case "insurance":
-        return ["insuranceCompanyName", "adjusterEmail", "adjusterName", "adjusterPhone"];
       case "assessment":
         return ["leadScore", "qualificationCallNotes"];
       case "details":
@@ -1504,8 +1504,11 @@ export const LeadFormDialog = ({
         }
         break;
       case "service":
+        if (formData.useCase.trim().length > 1000) {
+          nextErrors.useCase = "Use case must be 1000 characters or less.";
+        }
         if (formData.issueDescription.trim().length > 500) {
-          nextErrors.issueDescription = "Issue description must be 500 characters or less.";
+          nextErrors.issueDescription = "Pain point notes must be 500 characters or less.";
         }
         break;
       case "qualification":
@@ -1515,29 +1518,6 @@ export const LeadFormDialog = ({
             nextErrors.numberOfOtherQuotes = "Enter how many other quotes the lead is getting.";
           } else if (!Number.isInteger(quoteCount) || quoteCount < 1 || quoteCount > 10) {
             nextErrors.numberOfOtherQuotes = "Other quotes must be a whole number between 1 and 10.";
-          }
-        }
-        break;
-      case "insurance":
-        if (formData.isInsuranceClaim === "Yes" && !formData.insuranceCompanyName.trim()) {
-          nextErrors.insuranceCompanyName = "Insurance company name is required.";
-        }
-        if (formData.adjusterEmail.trim()) {
-          const adjusterEmailError = getEmailAddressError(formData.adjusterEmail, "Adjuster email");
-          if (adjusterEmailError) {
-            nextErrors.adjusterEmail = adjusterEmailError;
-          }
-        }
-        if (formData.adjusterName.trim()) {
-          const adjusterNameError = getPersonNameError(formData.adjusterName, "Adjuster name");
-          if (adjusterNameError) {
-            nextErrors.adjusterName = adjusterNameError;
-          }
-        }
-        if (formData.adjusterPhone.trim()) {
-          const adjusterPhoneError = getCanadianPhoneError(formData.adjusterPhone, "Adjuster phone");
-          if (adjusterPhoneError) {
-            nextErrors.adjusterPhone = adjusterPhoneError;
           }
         }
         break;
@@ -1658,6 +1638,9 @@ export const LeadFormDialog = ({
         companyName: lead.companyName,
         jobTitle: lead.jobTitle,
         website: lead.website || "",
+        industry: lead.industry || "",
+        companySize: lead.companySize || "",
+        useCase: lead.useCase || "",
         location: lead.location,
         source: lead.leadSourceName,
         leadSourceId: lead.leadSourceId || "",
@@ -1722,11 +1705,11 @@ export const LeadFormDialog = ({
     } else {
       setFormData({
         firstName: "", lastName: "", email: "", phone: "",
-        companyName: "", jobTitle: "", website: "", location: "",
+        companyName: "", jobTitle: "", website: "", industry: "", companySize: "", useCase: "", location: "",
         source: "website", leadSourceId: "", status: LeadStatus.NEW, temperature: LeadTemperature.WARM,
         potentialValue: "", assignedToId: "", tags: "", notes: "",
         propertyAddress: "", city: "", state: "", zipCode: "", propertyType: "",
-        serviceType: "", isInsuranceClaim: "", urgencyLevel: "",
+        serviceType: "", isInsuranceClaim: "No", urgencyLevel: "",
         preferredContactMethod: "", bestTimeToContact: "", issueDescription: "",
         confirmedName: false, confirmedPhone: false, confirmedEmail: false, confirmedAddress: false,
         secondaryPhone: "", spouseCoOwnerName: "",
@@ -1745,12 +1728,6 @@ export const LeadFormDialog = ({
     setActiveTab("basic");
     setErrors({});
   }, [lead, isOpen]);
-
-  useEffect(() => {
-    if (formData.isInsuranceClaim !== "Yes" && activeTab === "insurance") {
-      setActiveTab("assessment");
-    }
-  }, [activeTab, formData.isInsuranceClaim]);
 
   const submitLeadForm = useCallback(async () => {
     const combinedErrors: Record<string, string> = {};
@@ -1828,7 +1805,7 @@ export const LeadFormDialog = ({
               {lead ? "Edit Lead" : "Add New Lead"}
             </DialogTitle>
             <DialogDescription className="text-[#94A3B8]">
-              {lead ? "Update lead information" : "Capture a new potential customer"}
+              {lead ? "Update sales lead information" : "Capture a new software sales opportunity"}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -1840,21 +1817,16 @@ export const LeadFormDialog = ({
                 Basic Info
               </TabsTrigger>
               <TabsTrigger value="property" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
-                Property
+                Company
               </TabsTrigger>
               <TabsTrigger value="service" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
-                Service
+                Need
               </TabsTrigger>
               <TabsTrigger value="qualification" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
                 Qualification
               </TabsTrigger>
-              {formData.isInsuranceClaim === "Yes" && (
-                <TabsTrigger value="insurance" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
-                  Insurance
-                </TabsTrigger>
-              )}
               <TabsTrigger value="assessment" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
-                Assessment
+                Sales Actions
               </TabsTrigger>
               <TabsTrigger value="details" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
                 Lead Details
@@ -1940,11 +1912,11 @@ export const LeadFormDialog = ({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Spouse / Co-Owner Name</Label>
+                <Label className="text-sm font-medium text-[#475569]">Champion / Influencer</Label>
                 <Input
                   value={formData.spouseCoOwnerName}
                   onChange={(e) => setFieldValue("spouseCoOwnerName", e.target.value)}
-                  placeholder="Jane Doe"
+                  placeholder="Internal champion or buying influencer"
                   className={cn("h-11 rounded-md", getFieldErrorClass("spouseCoOwnerName"))}
                 />
                 {renderFieldError("spouseCoOwnerName")}
@@ -1964,11 +1936,11 @@ export const LeadFormDialog = ({
               </div>
             </TabsContent>
 
-            {/* ── TAB: Property Info ──────────────────────────────────────── */}
+            {/* ── TAB: Company Info ───────────────────────────────────────── */}
             <TabsContent value="property" className="space-y-4 mt-0">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">
-                  Property Address
+                  Company Address
                 </Label>
                 <AddressAutocompleteInput
                   value={formData.propertyAddress}
@@ -1988,7 +1960,7 @@ export const LeadFormDialog = ({
                       return next;
                     });
                   }}
-                  placeholder="123 Main Street"
+                  placeholder="123 Business Avenue"
                   className={cn("h-11 rounded-md", getFieldErrorClass("propertyAddress"))}
                 />
                 {renderFieldError("propertyAddress")}
@@ -2014,7 +1986,7 @@ export const LeadFormDialog = ({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Zip Code</Label>
+                  <Label className="text-sm font-medium text-[#475569]">Postal Code</Label>
                   <Input
                     value={formData.zipCode}
                     onChange={(e) => setFieldValue("zipCode", e.target.value)}
@@ -2026,20 +1998,42 @@ export const LeadFormDialog = ({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Property Type</Label>
+                <Label className="text-sm font-medium text-[#475569]">Company Size</Label>
                 <Select
-                  value={formData.propertyType}
-                  onValueChange={(val) => setFormData({ ...formData, propertyType: val })}
+                  value={formData.companySize}
+                  onValueChange={(val) => setFormData({ ...formData, companySize: val })}
                 >
                   <SelectTrigger className="h-11 rounded-md">
-                    <SelectValue placeholder="Select property type" />
+                    <SelectValue placeholder="Select company size" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md">
-                    <SelectItem value="Residential" className="rounded-md">Residential</SelectItem>
-                    <SelectItem value="Commercial" className="rounded-md">Commercial</SelectItem>
-                    <SelectItem value="Multi-Family" className="rounded-md">Multi-Family</SelectItem>
+                    {["1-10 employees", "11-50 employees", "51-200 employees", "201-500 employees", "501-1000 employees", "1000+ employees"].map((size) => (
+                      <SelectItem key={size} value={size} className="rounded-md">{size}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Industry</Label>
+                  <Input
+                    value={formData.industry}
+                    onChange={(e) => setFieldValue("industry", e.target.value)}
+                    placeholder="SaaS, construction, healthcare..."
+                    className="h-11 rounded-md"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Website</Label>
+                  <Input
+                    value={formData.website}
+                    onChange={(e) => setFieldValue("website", e.target.value)}
+                    placeholder="https://company.com"
+                    className={cn("h-11 rounded-md", getFieldErrorClass("website"))}
+                  />
+                  {renderFieldError("website")}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -2056,22 +2050,22 @@ export const LeadFormDialog = ({
               </div>
             </TabsContent>
 
-            {/* ── TAB: Service Details ────────────────────────────────────── */}
+            {/* ── TAB: Sales Need ─────────────────────────────────────────── */}
             <TabsContent value="service" className="space-y-4 mt-0">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">
-                  What Service Do You Need?
+                  Sales Use Case
                 </Label>
                 <Select
                   value={formData.serviceType}
                   onValueChange={(val) => setFieldValue("serviceType", val)}
                 >
                   <SelectTrigger className={cn("h-11 rounded-md", getFieldErrorClass("serviceType"))}>
-                    <SelectValue placeholder="Select service type" />
+                    <SelectValue placeholder="Select use case" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md">
-                    {["Roof Replacement", "Roof Repair", "Storm/Hail Damage", "Roof Inspection",
-                      "Leak Repair (Emergency)", "Gutters", "Siding", "Other"].map((s) => (
+                    {["CRM Replacement", "Lead Management", "Deals Pipeline", "Sales Engagement",
+                      "Reporting & Forecasting", "Customer Success", "Billing & Subscriptions", "Other"].map((s) => (
                         <SelectItem key={s} value={s} className="rounded-md">{s}</SelectItem>
                       ))}
                   </SelectContent>
@@ -2080,34 +2074,28 @@ export const LeadFormDialog = ({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Is This an Insurance Claim?</Label>
-                <Select
-                  value={formData.isInsuranceClaim}
-                  onValueChange={(val) => setFieldValue("isInsuranceClaim", val)}
-                >
-                  <SelectTrigger className="h-11 rounded-md">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md">
-                    <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
-                    <SelectItem value="No" className="rounded-md">No</SelectItem>
-                    <SelectItem value="Not Sure" className="rounded-md">Not Sure</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label className="text-sm font-medium text-[#475569]">Use Case Details</Label>
+                <Textarea
+                  value={formData.useCase}
+                  onChange={(e) => setFieldValue("useCase", e.target.value)}
+                  placeholder="What sales problem are they trying to solve?"
+                  rows={3}
+                  className={cn("rounded-md resize-none", getFieldErrorClass("useCase"))}
+                />
+                {renderFieldError("useCase")}
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">How Urgent Is This?</Label>
+                <Label className="text-sm font-medium text-[#475569]">Buying Urgency</Label>
                 <Select
                   value={formData.urgencyLevel}
                   onValueChange={(val) => setFormData({ ...formData, urgencyLevel: val })}
                 >
                   <SelectTrigger className="h-11 rounded-md">
-                    <SelectValue placeholder="Select urgency" />
+                    <SelectValue placeholder="Select buying urgency" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md">
-                    {["Emergency (Leaking Now!)", "ASAP (Within a few days)", "Within a couple weeks",
-                      "Just getting quotes / planning ahead"].map((u) => (
+                    {["Urgent - this month", "This quarter", "Next quarter", "Just researching"].map((u) => (
                         <SelectItem key={u} value={u} className="rounded-md">{u}</SelectItem>
                       ))}
                   </SelectContent>
@@ -2150,11 +2138,11 @@ export const LeadFormDialog = ({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Describe the Issue</Label>
+                <Label className="text-sm font-medium text-[#475569]">Pain Points / Current Process</Label>
                 <Textarea
                   value={formData.issueDescription}
                   onChange={(e) => setFieldValue("issueDescription", e.target.value)}
-                  placeholder="Describe what you're seeing — leaks, missing shingles, storm damage, etc."
+                  placeholder="Current tools, manual process, reporting gaps, follow-up problems..."
                   rows={3}
                   className={cn("rounded-md resize-none", getFieldErrorClass("issueDescription"))}
                 />
@@ -2209,18 +2197,18 @@ export const LeadFormDialog = ({
                 </div>
               </div>
 
-              {/* Ownership */}
+              {/* Buying Authority */}
               <div>
-                <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Ownership Verification</h4>
+                <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Buying Authority</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Are You the Homeowner?</Label>
+                    <Label className="text-sm font-medium text-[#475569]">Contact Role</Label>
                     <Select value={formData.isHomeowner} onValueChange={(val) => setFormData({ ...formData, isHomeowner: val })}>
                       <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent className="rounded-md">
-                        <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
-                        <SelectItem value="No" className="rounded-md">No</SelectItem>
-                        <SelectItem value="Tenant" className="rounded-md">Tenant</SelectItem>
+                        <SelectItem value="Yes" className="rounded-md">Primary Buyer</SelectItem>
+                        <SelectItem value="No" className="rounded-md">Influencer</SelectItem>
+                        <SelectItem value="Tenant" className="rounded-md">Evaluator</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -2231,34 +2219,34 @@ export const LeadFormDialog = ({
                       <SelectContent className="rounded-md">
                         <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
                         <SelectItem value="No" className="rounded-md">No</SelectItem>
-                        <SelectItem value="Need Spouse Approval" className="rounded-md">Need Spouse Approval</SelectItem>
+                        <SelectItem value="Need Spouse Approval" className="rounded-md">Needs Team Approval</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
               </div>
 
-              {/* Roof Details */}
+              {/* Buying Context */}
               <div>
-                <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Roof Details</h4>
+                <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Buying Context</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Approximate Roof Age</Label>
+                    <Label className="text-sm font-medium text-[#475569]">Current CRM Maturity</Label>
                     <Select value={formData.roofAge} onValueChange={(val) => setFormData({ ...formData, roofAge: val })}>
                       <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent className="rounded-md">
-                        {["0-5 years", "5-10 years", "10-15 years", "15-20 years", "20+ years", "Unknown"].map((a) => (
+                        {["No CRM yet", "Spreadsheet-based", "Basic CRM", "Advanced CRM", "Replacing existing CRM", "Unknown"].map((a) => (
                           <SelectItem key={a} value={a} className="rounded-md">{a}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Current Roof Material</Label>
+                    <Label className="text-sm font-medium text-[#475569]">Current Sales Tool</Label>
                     <Select value={formData.currentRoofMaterial} onValueChange={(val) => setFormData({ ...formData, currentRoofMaterial: val })}>
                       <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent className="rounded-md">
-                        {["Asphalt Shingle", "Metal", "Tile/Clay", "Flat/TPO/EPDM", "Wood Shake", "Slate", "Unknown"].map((m) => (
+                        {["Spreadsheets", "HubSpot", "Salesforce", "Zoho", "Pipedrive", "Custom System", "Unknown"].map((m) => (
                           <SelectItem key={m} value={m} className="rounded-md">{m}</SelectItem>
                         ))}
                       </SelectContent>
@@ -2268,18 +2256,18 @@ export const LeadFormDialog = ({
 
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Number of Stories</Label>
+                    <Label className="text-sm font-medium text-[#475569]">Sales Team Size</Label>
                     <Select value={formData.numberOfStories} onValueChange={(val) => setFormData({ ...formData, numberOfStories: val })}>
                       <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent className="rounded-md">
-                        <SelectItem value="1" className="rounded-md">1 Story</SelectItem>
-                        <SelectItem value="2" className="rounded-md">2 Stories</SelectItem>
-                        <SelectItem value="3+" className="rounded-md">3+ Stories</SelectItem>
+                        <SelectItem value="1" className="rounded-md">1 rep</SelectItem>
+                        <SelectItem value="2" className="rounded-md">2-5 reps</SelectItem>
+                        <SelectItem value="3+" className="rounded-md">6+ reps</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Previous Roof Work?</Label>
+                    <Label className="text-sm font-medium text-[#475569]">Used CRM Before?</Label>
                     <Select value={formData.previousRoofWork} onValueChange={(val) => setFormData({ ...formData, previousRoofWork: val })}>
                       <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent className="rounded-md">
@@ -2293,20 +2281,20 @@ export const LeadFormDialog = ({
 
                 {formData.previousRoofWork === "Yes" && (
                   <div className="space-y-2 mt-4">
-                    <Label className="text-sm font-medium text-[#475569]">Previous Work Details</Label>
+                    <Label className="text-sm font-medium text-[#475569]">Previous CRM Details</Label>
                     <Input
                       value={formData.previousRoofWorkDetails}
                       onChange={(e) => setFormData({ ...formData, previousRoofWorkDetails: e.target.value })}
-                      placeholder="Describe previous work done..."
+                      placeholder="Current or previous CRM, pain points, implementation history..."
                       className="h-11 rounded-md"
                     />
                   </div>
                 )}
 
                 <div className="space-y-2 mt-4">
-                  <Label className="text-sm font-medium text-[#475569]">Known Damage Types</Label>
+                  <Label className="text-sm font-medium text-[#475569]">Pain Areas</Label>
                   <div className="flex flex-wrap gap-2">
-                    {["Leak", "Missing Shingles", "Storm Damage", "Hail Damage", "Wind Damage", "Age/Wear", "Sagging/Structural", "Unknown"].map((dtype) => (
+                    {["Lead Follow-up", "Pipeline Visibility", "Manual Reporting", "Low Conversion", "No Automation", "Data Cleanup", "Team Adoption", "Unknown"].map((dtype) => (
                       <label key={dtype} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs cursor-pointer border transition-colors ${formData.knownDamageType.includes(dtype)
                         ? "bg-[#6637F4]/10 border-[#6637F4] text-[#6637F4]"
                         : "bg-[#F7F7FB] border-[#E2E8F0] text-[#475569] hover:border-[#94A3B8]"
@@ -2323,11 +2311,11 @@ export const LeadFormDialog = ({
                 </div>
 
                 <div className="space-y-2 mt-4">
-                  <Label className="text-sm font-medium text-[#475569]">When Did Damage Occur?</Label>
+                  <Label className="text-sm font-medium text-[#475569]">When Did This Need Start?</Label>
                   <Input
                     value={formData.damageOccurrenceDate}
                     onChange={(e) => setFormData({ ...formData, damageOccurrenceDate: e.target.value })}
-                    placeholder="e.g., Last week, June 2024 storm"
+                    placeholder="e.g., This quarter, after a team expansion, before renewal..."
                     className="h-11 rounded-md"
                   />
                 </div>
@@ -2342,18 +2330,18 @@ export const LeadFormDialog = ({
                     <Select value={formData.budgetRange} onValueChange={(val) => setFormData({ ...formData, budgetRange: val })}>
                       <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent className="rounded-md">
-                        {["Under $5,000", "$5,000 - $10,000", "$10,000 - $20,000", "$20,000+", "Insurance Covering", "Not Sure"].map((b) => (
+                        {["Under $500/mo", "$500 - $1,500/mo", "$1,500 - $5,000/mo", "$5,000+/mo", "Annual budget approved", "Not Sure"].map((b) => (
                           <SelectItem key={b} value={b} className="rounded-md">{b}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Timeline for Work</Label>
+                    <Label className="text-sm font-medium text-[#475569]">Buying Timeline</Label>
                     <Select value={formData.workTimeline} onValueChange={(val) => setFormData({ ...formData, workTimeline: val })}>
                       <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent className="rounded-md">
-                        {["ASAP", "1-2 Weeks", "Within 1 Month", "2-3 Months", "Flexible / Just Exploring"].map((t) => (
+                        {["This week", "This month", "This quarter", "Next quarter", "Flexible / Just Exploring"].map((t) => (
                           <SelectItem key={t} value={t} className="rounded-md">{t}</SelectItem>
                         ))}
                       </SelectContent>
@@ -2363,7 +2351,7 @@ export const LeadFormDialog = ({
 
                 <div className="grid grid-cols-3 gap-4 mt-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Financing Needed?</Label>
+                    <Label className="text-sm font-medium text-[#475569]">Subscription Approved?</Label>
                     <Select value={formData.financingNeeded} onValueChange={(val) => setFormData({ ...formData, financingNeeded: val })}>
                       <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent className="rounded-md">
@@ -2374,7 +2362,7 @@ export const LeadFormDialog = ({
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Getting Other Quotes?</Label>
+                    <Label className="text-sm font-medium text-[#475569]">Evaluating Other Vendors?</Label>
                     <Select value={formData.gettingOtherQuotes} onValueChange={(val) => setFieldValue("gettingOtherQuotes", val)}>
                       <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent className="rounded-md">
@@ -2388,7 +2376,7 @@ export const LeadFormDialog = ({
                     <Select value={formData.topPriority} onValueChange={(val) => setFormData({ ...formData, topPriority: val })}>
                       <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent className="rounded-md">
-                        {["Price", "Quality of Materials", "Speed/Timeline", "Warranty", "Company Reputation"].map((p) => (
+                        {["Price", "Ease of Use", "Integrations", "Automation", "Reporting", "Support", "Implementation Speed"].map((p) => (
                           <SelectItem key={p} value={p} className="rounded-md">{p}</SelectItem>
                         ))}
                       </SelectContent>
@@ -2398,7 +2386,7 @@ export const LeadFormDialog = ({
 
                 {formData.gettingOtherQuotes === "Yes" && (
                   <div className="space-y-2 mt-4">
-                    <Label className="text-sm font-medium text-[#475569]">How Many Other Quotes?</Label>
+                    <Label className="text-sm font-medium text-[#475569]">How Many Vendors?</Label>
                     <Input
                       type="number"
                       min={1}
@@ -2413,11 +2401,11 @@ export const LeadFormDialog = ({
                 )}
               </div>
 
-              {/* HOA */}
+              {/* Procurement */}
               <div>
-                <h4 className="text-sm font-semibold text-[#0F172A] mb-3">HOA Information</h4>
+                <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Procurement</h4>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">HOA Community?</Label>
+                  <Label className="text-sm font-medium text-[#475569]">Procurement Review?</Label>
                   <Select value={formData.isHOA} onValueChange={(val) => setFormData({ ...formData, isHOA: val })}>
                     <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent className="rounded-md">
@@ -2429,11 +2417,11 @@ export const LeadFormDialog = ({
                 </div>
                 {formData.isHOA === "Yes" && (
                   <div className="space-y-2 mt-4">
-                    <Label className="text-sm font-medium text-[#475569]">HOA Restrictions Details</Label>
+                    <Label className="text-sm font-medium text-[#475569]">Procurement Notes</Label>
                     <Textarea
                       value={formData.hoaRestrictions}
                       onChange={(e) => setFormData({ ...formData, hoaRestrictions: e.target.value })}
-                      placeholder="Color restrictions, material requirements, approval process..."
+                      placeholder="Security review, legal approval, procurement process..."
                       rows={2}
                       className="rounded-md resize-none"
                     />
@@ -2563,7 +2551,7 @@ export const LeadFormDialog = ({
                   <Select value={formData.nextStep} onValueChange={(val) => setFormData({ ...formData, nextStep: val })}>
                     <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select next step" /></SelectTrigger>
                     <SelectContent className="rounded-md">
-                      {["Schedule Inspection", "Send More Info", "Follow Up Later", "Needs Insurance Filed First", "Dead Lead"].map((s) => (
+                      {["Schedule Discovery Call", "Book Demo", "Send Proposal", "Start Trial", "Follow Up Later", "Nurture", "Disqualify"].map((s) => (
                         <SelectItem key={s} value={s} className="rounded-md">{s}</SelectItem>
                       ))}
                     </SelectContent>
@@ -2629,7 +2617,7 @@ export const LeadFormDialog = ({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Inspection Date</Label>
+                  <Label className="text-sm font-medium text-[#475569]">Demo Date</Label>
                   <div className="flex flex-wrap gap-3">
                     <Input
                       type="date"
@@ -2691,7 +2679,7 @@ export const LeadFormDialog = ({
                 <Select value={formData.disqualifiedReason} onValueChange={(val) => setFormData({ ...formData, disqualifiedReason: val })}>
                   <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Only if disqualified" /></SelectTrigger>
                   <SelectContent className="rounded-md">
-                    {["Not Homeowner", "No Budget", "Tire Kicker", "Outside Service Area", "No Authority", "Unreachable", "Other"].map((r) => (
+                    {["No Budget", "No Authority", "No Need", "Bad Fit", "Unresponsive", "Chose Competitor", "Other"].map((r) => (
                       <SelectItem key={r} value={r} className="rounded-md">{r}</SelectItem>
                     ))}
                   </SelectContent>
@@ -2705,7 +2693,7 @@ export const LeadFormDialog = ({
                 <Textarea
                   value={formData.qualificationCallNotes}
                   onChange={(e) => setFieldValue("qualificationCallNotes", e.target.value)}
-                  placeholder="Notes from the call or visit..."
+                  placeholder="Discovery notes, buying committee, objections, next action..."
                   rows={4}
                   className={cn("rounded-md resize-none", getFieldErrorClass("qualificationCallNotes"))}
                 />
@@ -3646,6 +3634,9 @@ const mapApiLead = (apiLead: any): Lead => ({
   })(),
   jobTitle: apiLead.jobTitle || "",
   website: apiLead.website,
+  industry: apiLead.industry || "",
+  companySize: apiLead.companySize || "",
+  useCase: apiLead.useCase || "",
   location: apiLead.location || "",
   leadSourceName: (apiLead.leadSource?.name || "other").toLowerCase().replace(/\s+/g, "_"),
   status: (apiLead.status || "NEW") as LeadStatus,
@@ -4052,6 +4043,9 @@ const AllLeads = () => {
       companyName: data.companyName?.trim() || "",
       jobTitle: data.jobTitle?.trim() || undefined,
       website: data.website && data.website.trim() ? data.website.trim() : undefined,
+      industry: data.industry?.trim() || undefined,
+      companySize: data.companySize?.trim() || undefined,
+      useCase: data.useCase?.trim() || undefined,
       location: data.location?.trim() || undefined,
       status: normalizeLeadStatusValue(String(data.status || LeadStatus.NEW)),
       temperature: normalizeLeadTemperatureValue(String(data.temperature || LeadTemperature.WARM)),
@@ -4133,18 +4127,21 @@ const AllLeads = () => {
         "Phone",
         "Company Name",
         "Job Title",
+        "Industry",
+        "Company Size",
+        "Use Case",
         "Location",
         "Status",
         "Temperature",
         "Potential Value",
         "Assigned To",
         "Lead Source",
-        "Property Address",
+        "Company Address",
         "City",
         "State",
-        "Zip Code",
-        "Service Type",
-        "Insurance Claim",
+        "Postal Code",
+        "Sales Need",
+        "Buying Urgency",
         "Notes",
         "Tags",
       ],
@@ -4155,6 +4152,9 @@ const AllLeads = () => {
         lead.phone,
         lead.companyName,
         lead.jobTitle,
+        lead.industry,
+        lead.companySize,
+        lead.useCase,
         lead.location,
         lead.status,
         lead.temperature,
@@ -4166,7 +4166,7 @@ const AllLeads = () => {
         lead.state,
         lead.zipCode,
         lead.serviceType,
-        lead.isInsuranceClaim,
+        lead.urgencyLevel,
         lead.notes,
         (lead.tags || []).join(", "),
       ]),
@@ -4187,13 +4187,16 @@ const AllLeads = () => {
       return v && v !== "" ? v : undefined;
     };
     return {
-      // Stage 1: Property
+      industry: opt(data.industry),
+      companySize: opt(data.companySize),
+      useCase: opt(data.useCase),
+      // Stage 1: Company address
       propertyAddress: opt(data.propertyAddress),
       city: opt(data.city),
       state: opt(data.state),
       zipCode: data.zipCode ? normalizeCanadianPostalCode(data.zipCode) : undefined,
       propertyType: opt(data.propertyType),
-      // Stage 1: Service
+      // Stage 1: Sales need
       serviceType: opt(data.serviceType),
       isInsuranceClaim: opt(data.isInsuranceClaim),
       urgencyLevel: opt(data.urgencyLevel),
@@ -4211,7 +4214,7 @@ const AllLeads = () => {
       isHomeowner: opt(data.isHomeowner),
       isDecisionMaker: opt(data.isDecisionMaker),
       ownershipType: opt(data.ownershipType),
-      // Stage 2: Roof
+      // Stage 2: Buying context
       roofAge: opt(data.roofAge),
       currentRoofMaterial: opt(data.currentRoofMaterial),
       numberOfStories: opt(data.numberOfStories),
@@ -4219,7 +4222,7 @@ const AllLeads = () => {
       damageOccurrenceDate: opt(data.damageOccurrenceDate),
       previousRoofWork: opt(data.previousRoofWork),
       previousRoofWorkDetails: opt(data.previousRoofWorkDetails),
-      // Stage 2: Insurance
+      // Stage 2: Legacy insurance data
       insuranceCompanyName: opt(data.insuranceCompanyName),
       hasClaimBeenFiled: opt(data.hasClaimBeenFiled),
       claimNumber: opt(data.claimNumber),
@@ -4235,7 +4238,7 @@ const AllLeads = () => {
       gettingOtherQuotes: opt(data.gettingOtherQuotes),
       numberOfOtherQuotes: data.numberOfOtherQuotes || undefined,
       topPriority: opt(data.topPriority),
-      // Stage 2: HOA
+      // Stage 2: Procurement
       isHOA: opt(data.isHOA),
       hoaRestrictions: opt(data.hoaRestrictions),
       // Stage 2: Assessment
@@ -5967,7 +5970,7 @@ const AllLeads = () => {
               id="bulkTagsInput"
               value={bulkTagsInput}
               onChange={(event) => setBulkTagsInput(event.target.value)}
-              placeholder="Insurance Claim, High Value, Repeat Customer"
+              placeholder="Hot Lead, Enterprise, Demo Booked"
               className="rounded-md"
             />
           </div>
@@ -6192,10 +6195,10 @@ const AllLeads = () => {
                     )}
                   </div>
 
-                  {/* Property Info (if available) */}
+                  {/* Company & Sales Need */}
                   {(lead.propertyAddress || lead.serviceType) && (
                     <div className="space-y-3">
-                      <h4 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Property & Service</h4>
+                      <h4 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Company & Sales Need</h4>
                       {lead.propertyAddress && (
                         <p className="text-sm text-[#475569]">
                           <MapPin size={14} className="inline mr-1 text-[#94A3B8]" />
@@ -6208,9 +6211,14 @@ const AllLeads = () => {
                           {lead.serviceType}
                         </p>
                       )}
-                      {lead.isInsuranceClaim && (
+                      {lead.industry && (
                         <p className="text-sm text-[#475569]">
-                          Insurance Claim: <span className="font-medium">{lead.isInsuranceClaim}</span>
+                          Industry: <span className="font-medium">{lead.industry}</span>
+                        </p>
+                      )}
+                      {lead.companySize && (
+                        <p className="text-sm text-[#475569]">
+                          Company Size: <span className="font-medium">{lead.companySize}</span>
                         </p>
                       )}
                     </div>

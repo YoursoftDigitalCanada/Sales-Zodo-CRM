@@ -55,6 +55,9 @@ interface LeadData {
     companyName: string | null;
     jobTitle: string | null;
     website: string | null;
+    industry?: string | null;
+    companySize?: string | null;
+    useCase?: string | null;
     status: string;
     temperature: string;
     potentialValue: number | string | null;
@@ -938,24 +941,25 @@ const LeadDetailPage = () => {
                         </div>
                     </div>
 
-                    {/* CARD 2: Property & Service */}
+                    {/* CARD 2: Company & Sales Need */}
                     <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 280ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
-                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FEF3C7] flex items-center justify-center"><Home size={14} className="text-[#D97706]" /></div><h3 className="text-sm font-semibold text-[#111827]">Property & Service</h3></div>
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FEF3C7] flex items-center justify-center"><Building2 size={14} className="text-[#D97706]" /></div><h3 className="text-sm font-semibold text-[#111827]">Company & Sales Need</h3></div>
                         </div>
                         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                             {[
-                                { l: "Property Address", v: propertyAddr }, { l: "Property Type", v: lead.propertyType },
-                                { l: "Service Type", v: lead.serviceType }, { l: "Insurance Claim?", v: lead.isInsuranceClaim },
-                                { l: "Urgency", v: lead.urgencyLevel }, { l: "Homeowner?", v: lead.isHomeowner },
-                                { l: "Roof Age", v: lead.roofAge }, { l: "Roof Material", v: lead.currentRoofMaterial },
-                                { l: "Stories", v: lead.numberOfStories }, { l: "Previous Work", v: lead.previousRoofWork },
+                                { l: "Company Address", v: propertyAddr }, { l: "Industry", v: lead.industry },
+                                { l: "Company Size", v: lead.companySize }, { l: "Sales Need", v: lead.serviceType },
+                                { l: "Buying Urgency", v: lead.urgencyLevel }, { l: "Current Tool", v: lead.currentRoofMaterial },
+                                { l: "CRM Maturity", v: lead.roofAge }, { l: "Sales Team", v: lead.numberOfStories },
+                                { l: "Used CRM Before?", v: lead.previousRoofWork }, { l: "Preferred Contact", v: lead.preferredContactMethod },
                             ].filter(r => r.v).map((r, i) => (
                                 <div key={i} className="py-1"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium">{r.l}</p><p className="font-medium text-[#111827]">{r.v}</p></div>
                             ))}
                         </div>
-                        {lead.issueDescription && <div className="mt-3 pt-3 border-t border-[#F1F5F9]"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium mb-1">Issue Description</p><p className="text-sm text-[#111827] bg-[#F9FAFB] p-3 rounded-lg">{lead.issueDescription}</p></div>}
-                        {lead.knownDamageType && lead.knownDamageType.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{lead.knownDamageType.map(d => <span key={d} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#FEE2E2] text-[#FF2E2D] flex items-center gap-0.5"><AlertTriangle size={10} />{d}</span>)}</div>}
+                        {lead.useCase && <div className="mt-3 pt-3 border-t border-[#F1F5F9]"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium mb-1">Use Case</p><p className="text-sm text-[#111827] bg-[#F9FAFB] p-3 rounded-lg">{lead.useCase}</p></div>}
+                        {lead.issueDescription && <div className="mt-3 pt-3 border-t border-[#F1F5F9]"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium mb-1">Pain Points</p><p className="text-sm text-[#111827] bg-[#F9FAFB] p-3 rounded-lg">{lead.issueDescription}</p></div>}
+                        {lead.knownDamageType && lead.knownDamageType.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{lead.knownDamageType.map(d => <span key={d} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#DBEAFE] text-[#2563EB] flex items-center gap-0.5"><AlertTriangle size={10} />{d}</span>)}</div>}
                     </div>
 
                     {/* CARD 3: Qualification & Budget */}
@@ -974,10 +978,10 @@ const LeadDetailPage = () => {
                         <div className="space-y-0">
                             {[
                                 { l: "Budget Range", v: lead.budgetRange }, { l: "Timeline", v: lead.workTimeline },
-                                { l: "Decision Maker?", v: lead.isDecisionMaker }, { l: "Financing Needed?", v: lead.financingNeeded },
-                                { l: "Getting Other Quotes?", v: lead.gettingOtherQuotes }, { l: "# Other Quotes", v: lead.numberOfOtherQuotes != null ? String(lead.numberOfOtherQuotes) : undefined },
-                                { l: "Top Priority", v: lead.topPriority }, { l: "HOA?", v: lead.isHOA },
-                                { l: "HOA Restrictions", v: lead.hoaRestrictions },
+                                { l: "Decision Maker?", v: lead.isDecisionMaker }, { l: "Subscription Approved?", v: lead.financingNeeded },
+                                { l: "Evaluating Vendors?", v: lead.gettingOtherQuotes }, { l: "# Vendors", v: lead.numberOfOtherQuotes != null ? String(lead.numberOfOtherQuotes) : undefined },
+                                { l: "Top Priority", v: lead.topPriority }, { l: "Procurement Review?", v: lead.isHOA },
+                                { l: "Procurement Notes", v: lead.hoaRestrictions },
                             ].filter(r => r.v).map((r, i, arr) => (
                                 <div key={i} className={`flex items-center justify-between py-2.5 ${i < arr.length - 1 ? 'border-b border-dashed border-[#F1F5F9]' : ''}`}>
                                     <span className="text-xs text-[#6B7280]">{r.l}</span><span className="text-sm font-medium text-[#374151]">{r.v}</span>
@@ -986,21 +990,16 @@ const LeadDetailPage = () => {
                         </div>
                     </div>
 
-                    {/* CARD 4: Insurance & Assessment */}
+                    {/* CARD 4: Sales Assessment */}
                     <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 440ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
-                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FCE7F3] flex items-center justify-center"><Shield size={14} className="text-[#DB2777]" /></div><h3 className="text-sm font-semibold text-[#111827]">Insurance & Assessment</h3></div>
-                            <button onClick={() => { setEditingClaim(null); setShowClaimDialog(true); }} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">+ New Claim</button>
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FCE7F3] flex items-center justify-center"><Shield size={14} className="text-[#DB2777]" /></div><h3 className="text-sm font-semibold text-[#111827]">Sales Assessment</h3></div>
                         </div>
                         <div className="space-y-0">
                             {[
-                                { l: "Insurance Company", v: lead.insuranceCompanyName }, { l: "Claim Filed?", v: lead.hasClaimBeenFiled },
-                                { l: "Claim Number", v: lead.claimNumber }, { l: "Adjuster Assigned?", v: lead.adjusterAssigned },
-                                { l: "Adjuster Name", v: lead.adjusterName }, { l: "Adjuster Phone", v: lead.adjusterPhone },
-                                { l: "Adjuster Meeting", v: lead.adjusterMeetingDate ? formatDate(lead.adjusterMeetingDate) : undefined },
                                 { l: "Lead Score", v: lead.leadScore != null ? `${lead.leadScore}/10` : undefined },
                                 { l: "Next Step", v: lead.nextStep }, { l: "Follow-Up", v: lead.followUpDateTime ? formatDate(lead.followUpDateTime) : undefined },
-                                { l: "Inspection Date", v: lead.inspectionAppointmentDate ? formatDate(lead.inspectionAppointmentDate) : undefined },
+                                { l: "Demo Date", v: lead.inspectionAppointmentDate ? formatDate(lead.inspectionAppointmentDate) : undefined },
                             ].filter(r => r.v).map((r, i, arr) => (
                                 <div key={i} className={`flex items-center justify-between py-2.5 ${i < arr.length - 1 ? 'border-b border-dashed border-[#F1F5F9]' : ''}`}>
                                     <span className="text-xs text-[#6B7280]">{r.l}</span><span className="text-sm font-medium text-[#374151]">{r.v}</span>
@@ -1105,27 +1104,26 @@ const LeadDetailPage = () => {
                                 ))}</div>}
                     </div>
 
-                    {/* CARD 9: Inspections */}
+                    {/* CARD 9: Sales Meetings */}
                     <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 840ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
-                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center"><ClipboardList size={14} className="text-[#FF7B36]" /></div><h3 className="text-sm font-semibold text-[#111827]">Inspections</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{inspections.length}</span></div>
-                            <button onClick={() => { setEditingInspection(null); setShowInspectionDialog(true); }} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">+ New</button>
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center"><ClipboardList size={14} className="text-[#FF7B36]" /></div><h3 className="text-sm font-semibold text-[#111827]">Sales Meetings</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{inspections.length}</span></div>
                         </div>
                         {inspectionsLoading ? <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div> :
-                            inspections.length === 0 ? <div className="text-center py-8"><ClipboardList size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No inspections yet</p></div> :
+                            inspections.length === 0 ? <div className="text-center py-8"><ClipboardList size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No meetings yet</p></div> :
                                 <div className="space-y-2">{inspections.slice(0, 4).map((insp: any) => (
                                     <div key={insp.id} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors">
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2"><Badge variant="outline" className="text-[10px]">{insp.inspectionType || "General"}</Badge>{insp.overallCondition && <Badge variant="outline" className="text-[10px]">{insp.overallCondition}</Badge>}</div>
-                                            <div className="flex items-center gap-3 mt-1 text-xs text-[#6B7280]"><span>{insp.inspectionDate ? formatDate(insp.inspectionDate) : '—'}</span>{insp.inspectorName && <span>by {insp.inspectorName}</span>}{insp.totalEstimate && <span className="font-medium text-[#111827]">${Number(insp.totalEstimate).toLocaleString()}</span>}</div>
+                                            <div className="flex items-center gap-3 mt-1 text-xs text-[#6B7280]"><span>{insp.inspectionDate ? formatDate(insp.inspectionDate) : '—'}</span>{insp.inspectorName && <span>with {insp.inspectorName}</span>}{insp.totalEstimate && <span className="font-medium text-[#111827]">${Number(insp.totalEstimate).toLocaleString()}</span>}</div>
                                         </div>
                                         <div className="flex gap-1"><button onClick={() => { setEditingInspection(insp); setShowInspectionDialog(true); }} className="p-1 rounded hover:bg-[#E5E7EB]"><Pencil size={12} className="text-[#6B7280]" /></button><button onClick={() => handleDeleteInspection(insp.id)} className="p-1 rounded hover:bg-[#FEE2E2]"><Trash2 size={12} className="text-[#EF4444]" /></button></div>
                                     </div>
                                 ))}</div>}
                     </div>
 
-                    {/* CARD 10: Insurance Claims */}
-                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 920ms both' }}>
+                    {/* CARD 10: Legacy claims hidden for sales CRM */}
+                    <div className="hidden bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 920ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
                             <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#EDE9FE] flex items-center justify-center"><Shield size={14} className="text-[#7C3AED]" /></div><h3 className="text-sm font-semibold text-[#111827]">Insurance Claims</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{insuranceClaims.length}</span></div>
                             <button onClick={() => { setEditingClaim(null); setShowClaimDialog(true); }} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">+ New</button>

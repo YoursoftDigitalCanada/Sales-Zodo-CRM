@@ -6,12 +6,8 @@ import {
   autocompleteAddress,
   getPlaceDetails,
   type PlaceDetailsResult,
-} from "@/features/roof-estimator/services/roof-estimator-service";
-
-type AddressSuggestion = {
-  description: string;
-  placeId: string;
-};
+  type AddressSuggestion,
+} from "@/services/address/address-service";
 
 function createFallbackDetails(suggestion: AddressSuggestion): PlaceDetailsResult {
   return {

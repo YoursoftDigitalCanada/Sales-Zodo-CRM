@@ -1,0 +1,122 @@
+import {
+  autocompleteAddress as autocompleteViaApi,
+  getPlaceDetails as getPlaceDetailsViaApi,
+  type PlaceDetailsResult,
+} from "@/features/roof-estimator/services/roof-estimator-service";
+
+export type AddressSuggestion = {
+  description: string;
+  placeId: string;
+};
+
+type NominatimResult = {
+  display_name?: string;
+  place_id?: number | string;
+  lat?: string;
+  lon?: string;
+  address?: {
+    house_number?: string;
+    road?: string;
+    pedestrian?: string;
+    neighbourhood?: string;
+    suburb?: string;
+    city?: string;
+    town?: string;
+    village?: string;
+    municipality?: string;
+    state?: string;
+    province?: string;
+    postcode?: string;
+    country?: string;
+  };
+};
+
+const NOMINATIM_PLACE_PREFIX = "nominatim:";
+
+function toNominatimDetails(result: NominatimResult): PlaceDetailsResult | null {
+  if (!result.display_name) return null;
+
+  const address = result.address || {};
+  const street = [address.house_number, address.road || address.pedestrian]
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    placeId: `${NOMINATIM_PLACE_PREFIX}${result.place_id || result.display_name}`,
+    formattedAddress: result.display_name,
+    lat: Number(result.lat || 0),
+    lng: Number(result.lon || 0),
+    addressLine1: street || result.display_name,
+    city: address.city || address.town || address.village || address.municipality || address.suburb || "",
+    state: address.state || address.province || "",
+    postalCode: address.postcode || "",
+    country: address.country || "",
+    locationType: "APPROXIMATE",
+    types: [],
+    url: null,
+    viewport: null,
+  };
+}
+
+async function searchNominatim(input: string): Promise<NominatimResult[]> {
+  const params = new URLSearchParams({
+    q: input,
+    format: "jsonv2",
+    addressdetails: "1",
+    limit: "8",
+    countrycodes: "ca,us",
+  });
+
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+    headers: { Accept: "application/json" },
+  });
+
+  if (!response.ok) return [];
+  return response.json();
+}
+
+async function lookupNominatim(placeId: string): Promise<PlaceDetailsResult | null> {
+  const id = placeId.replace(NOMINATIM_PLACE_PREFIX, "");
+  if (!id || Number.isNaN(Number(id))) return null;
+
+  const params = new URLSearchParams({
+    place_id: id,
+    format: "jsonv2",
+    addressdetails: "1",
+  });
+
+  const response = await fetch(`https://nominatim.openstreetmap.org/lookup?${params.toString()}`, {
+    headers: { Accept: "application/json" },
+  });
+
+  if (!response.ok) return null;
+  const results = (await response.json()) as NominatimResult[];
+  return toNominatimDetails(results[0]);
+}
+
+export async function autocompleteAddress(input: string): Promise<AddressSuggestion[]> {
+  try {
+    const apiResults = await autocompleteViaApi(input);
+    if (apiResults.length > 0) return apiResults;
+  } catch {
+    // Fall through to the browser-side fallback below.
+  }
+
+  const fallbackResults = await searchNominatim(input);
+  return fallbackResults
+    .filter((result) => result.display_name)
+    .map((result) => ({
+      description: result.display_name || "",
+      placeId: `${NOMINATIM_PLACE_PREFIX}${result.place_id || result.display_name}`,
+    }));
+}
+
+export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResult | null> {
+  if (placeId.startsWith(NOMINATIM_PLACE_PREFIX)) {
+    return lookupNominatim(placeId);
+  }
+
+  return getPlaceDetailsViaApi(placeId);
+}
+
+export type { PlaceDetailsResult };

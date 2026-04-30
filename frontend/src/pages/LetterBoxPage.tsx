@@ -919,14 +919,15 @@ const ComposeEmailDialog = ({
           <DialogDescription>Compose and send an email</DialogDescription>
         </DialogHeader>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 bg-[#F8FAFC] text-[#0F172A]">
+        <div className="flex items-center justify-between p-4 pr-16 bg-[#F8FAFC] text-[#0F172A]">
           <h2 className="font-semibold">
             {replyTo ? "Reply" : forwardEmail ? "Forward" : "New Message"}
           </h2>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2 mr-3">
             <button
               onClick={() => setIsMinimized(true)}
               className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
+              aria-label="Minimize compose"
             >
               <Minimize2 size={16} />
             </button>

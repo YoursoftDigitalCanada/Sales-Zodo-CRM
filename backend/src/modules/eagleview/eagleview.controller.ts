@@ -77,6 +77,7 @@ class EagleViewController {
                 });
                 return;
             }
+            console.log(orderAddress);
 
             if (!eagleViewMeasurementService.isSandboxSupportedAddress(orderAddress)) {
                 res.status(400).json({
@@ -94,9 +95,11 @@ class EagleViewController {
 
                 sendSuccess(res, reportData, 'EagleView sandbox lookup retrieved');
             } catch (error) {
+                console.log(error);
                 logger.error('[EagleView] Sandbox lookup request failed', {
                     message: error instanceof Error ? error.message : String(error),
                     address: orderAddress,
+
                 });
                 next(new ServiceUnavailableError(SANDBOX_LOOKUP_FAILURE_MESSAGE));
             }

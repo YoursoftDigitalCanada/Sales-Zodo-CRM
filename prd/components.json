@@ -1,0 +1,292 @@
+{
+  "metadata": {
+    "sourceScreenshot": "/Users/lucifer/Downloads/ChatGPT Image Apr 14, 2026, 11_55_53 PM.png",
+    "analyzedAt": "2026-04-15",
+    "confidence": 0.86,
+    "deliverableType": "documentation-only",
+    "stack": {
+      "framework": "React 18",
+      "language": "TypeScript",
+      "styling": "Tailwind CSS",
+      "bundler": "Vite",
+      "fontFamily": "Urbanist"
+    }
+  },
+  "source": {
+    "screenshotCount": 1,
+    "statesIncluded": [
+      "default"
+    ],
+    "scope": "visible screenshot only"
+  },
+  "page": {
+    "name": "RoofEstimatorPromoLanding",
+    "type": "standalone marketing page",
+    "routeRecommendation": "/roof-estimator/promo",
+    "replaceExistingLandingPage": false
+  },
+  "designSystem": {
+    "colors": {
+      "pageBg": {
+        "value": "#F5FAFF",
+        "confidence": "high"
+      },
+      "heroBg": {
+        "value": "#F2F8FE",
+        "confidence": "high"
+      },
+      "surface": {
+        "value": "#FFFFFF",
+        "confidence": "high"
+      },
+      "surfaceSoft": {
+        "value": "#EDF5FC",
+        "confidence": "high"
+      },
+      "surfaceSoftAlt": {
+        "value": "#EAF4FB",
+        "confidence": "medium"
+      },
+      "primary": {
+        "value": "#23C4C7",
+        "confidence": "medium"
+      },
+      "primaryDark": {
+        "value": "#14A7B3",
+        "confidence": "medium"
+      },
+      "accentSky": {
+        "value": "#88DDF5",
+        "confidence": "medium"
+      },
+      "textStrong": {
+        "value": "#35516B",
+        "confidence": "high"
+      },
+      "textBody": {
+        "value": "#6D829C",
+        "confidence": "high"
+      },
+      "textMuted": {
+        "value": "#8FA4B8",
+        "confidence": "medium"
+      },
+      "borderSoft": {
+        "value": "rgba(161, 184, 209, 0.28)",
+        "confidence": "medium"
+      },
+      "success": {
+        "value": "#1BB89D",
+        "confidence": "medium"
+      },
+      "warning": {
+        "value": "#F3B23C",
+        "confidence": "medium"
+      }
+    },
+    "typography": {
+      "fontFamily": "Urbanist, -apple-system, BlinkMacSystemFont, Segoe UI, system-ui, sans-serif",
+      "heroTitle": {
+        "sizeDesktop": "52-58px",
+        "sizeMobile": "34-40px",
+        "weight": 800,
+        "lineHeight": 1.08
+      },
+      "sectionTitle": {
+        "sizeDesktop": "34-40px",
+        "sizeMobile": "28-32px",
+        "weight": "700-800",
+        "lineHeight": 1.18
+      },
+      "heroBody": {
+        "size": "18px desktop / 16px mobile",
+        "weight": "400-500",
+        "lineHeight": 1.6
+      },
+      "cardTitle": {
+        "size": "20-22px",
+        "weight": 700,
+        "lineHeight": 1.25
+      },
+      "cardBody": {
+        "size": "14-15px",
+        "weight": 500,
+        "lineHeight": 1.55
+      },
+      "microLabel": {
+        "size": "12-13px",
+        "weight": "600-700",
+        "lineHeight": 1.3
+      }
+    },
+    "spacing": {
+      "maxWidth": "1200px",
+      "desktopPaddingX": "24px",
+      "tabletPaddingX": "20px",
+      "mobilePaddingX": "16px",
+      "sectionPaddingY": "64px desktop / 48px mobile",
+      "cardPadding": "20-24px",
+      "cardGapDesktop": "16px",
+      "cardGapMobile": "12px",
+      "sectionHeaderMarginBottom": "28-36px"
+    },
+    "shadows": {
+      "soft": "0 10px 30px rgba(83, 122, 162, 0.12)",
+      "hover": "0 18px 36px rgba(83, 122, 162, 0.18)",
+      "mockup": "0 16px 40px rgba(93, 136, 177, 0.18)"
+    },
+    "radii": {
+      "xl": "24px",
+      "lg": "18px",
+      "md": "12px"
+    }
+  },
+  "sections": [
+    {
+      "id": "hero",
+      "layout": "two-column desktop, stacked mobile",
+      "content": [
+        "headline",
+        "support copy",
+        "primary CTA",
+        "secondary CTA",
+        "layered mockup collage"
+      ]
+    },
+    {
+      "id": "process",
+      "layout": "4-up grid desktop, 2x2 tablet, 1-up mobile",
+      "content": [
+        "section title",
+        "4 numbered cards",
+        "benefit callouts"
+      ]
+    },
+    {
+      "id": "problems",
+      "layout": "3-up grid desktop, stacked mobile",
+      "content": [
+        "section title",
+        "3 pain-point cards"
+      ]
+    },
+    {
+      "id": "features",
+      "layout": "3-up wide card strip desktop, stacked mobile",
+      "content": [
+        "section title",
+        "3 feature cards"
+      ]
+    },
+    {
+      "id": "fixes",
+      "layout": "3 compact tiles desktop, stacked mobile",
+      "content": [
+        "accent-led section title",
+        "3 solution tiles"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "SectionHeader",
+      "role": "shared section heading block",
+      "props": [
+        "title",
+        "accentText",
+        "subtitle",
+        "align"
+      ]
+    },
+    {
+      "name": "PrimaryCtaButton",
+      "role": "filled action button",
+      "props": [
+        "label",
+        "href",
+        "onClick"
+      ]
+    },
+    {
+      "name": "SecondaryCtaButton",
+      "role": "outline action button",
+      "props": [
+        "label",
+        "href",
+        "icon"
+      ]
+    },
+    {
+      "name": "FeatureCard",
+      "role": "process or feature card",
+      "variants": [
+        "illustration",
+        "mini-ui"
+      ],
+      "props": [
+        "title",
+        "description",
+        "badge",
+        "previewType"
+      ]
+    },
+    {
+      "name": "ProblemCard",
+      "role": "pain-point presentation card",
+      "props": [
+        "title",
+        "description",
+        "illustrationTone"
+      ]
+    },
+    {
+      "name": "MetricBenefitPill",
+      "role": "small supporting benefit label",
+      "props": [
+        "icon",
+        "label"
+      ]
+    }
+  ],
+  "responsiveRules": [
+    {
+      "breakpoint": 1280,
+      "behavior": "full desktop composition, hero remains split, all rows remain horizontal"
+    },
+    {
+      "breakpoint": 1024,
+      "behavior": "hero may remain split, process row can shift to 2x2 if needed"
+    },
+    {
+      "breakpoint": 768,
+      "behavior": "hero stacks, process becomes 2x2, remaining rows mostly stack"
+    },
+    {
+      "breakpoint": 390,
+      "behavior": "single-column flow, full-width CTAs, simplified overlap depth for hero collage"
+    }
+  ],
+  "interactionAssumptions": [
+    "Primary CTA darkens slightly on hover",
+    "Secondary CTA strengthens border and tint on hover",
+    "Cards translate upward by 2-4px on hover",
+    "Focus states use visible primary-colored ring",
+    "No unshown interactions such as carousels, tabs, sticky nav, or hidden drawers"
+  ],
+  "accessibility": {
+    "headingStructure": [
+      "single h1",
+      "section h2",
+      "card h3 when semantically useful"
+    ],
+    "keyboardSupport": [
+      "CTA buttons tabbable in reading order",
+      "visible focus states on all actionable controls"
+    ],
+    "imageHandling": [
+      "decorative hero collage images may use empty alt text",
+      "content-bearing preview art should use descriptive alt text only if meaningful"
+    ],
+    "contrastExpectation": "Maintain readable contrast on white and soft-blue surfaces"
+  }
+}

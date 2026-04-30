@@ -930,12 +930,6 @@ const ComposeEmailDialog = ({
             >
               <Minimize2 size={16} />
             </button>
-            <button
-              onClick={onClose}
-              className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
-            >
-              <X size={16} />
-            </button>
           </div>
         </div>
 

@@ -58,7 +58,12 @@ export class LeadsRepository {
         ...leadData,
         tenantId,
         createdById,
+        companyName: data.companyName || data.organization || '',
+        organization: data.organization || data.companyName || null,
+        phone: data.phone || data.mobileNo || null,
+        mobileNo: data.mobileNo || data.phone || null,
         potentialValue: data.potentialValue ? new Prisma.Decimal(data.potentialValue) : null,
+        annualRevenue: data.annualRevenue ? new Prisma.Decimal(data.annualRevenue) : null,
         tags: tagIds?.length
           ? {
             create: tagIds.map((tagId) => ({
@@ -199,9 +204,26 @@ export class LeadsRepository {
       where: { id_tenantId: { id, tenantId } },
       data: {
         ...leadData,
+        companyName: data.companyName !== undefined || data.organization !== undefined
+          ? data.companyName || data.organization || null
+          : undefined,
+        organization: data.organization !== undefined || data.companyName !== undefined
+          ? data.organization || data.companyName || null
+          : undefined,
+        phone: data.phone !== undefined || data.mobileNo !== undefined
+          ? data.phone || data.mobileNo || null
+          : undefined,
+        mobileNo: data.mobileNo !== undefined || data.phone !== undefined
+          ? data.mobileNo || data.phone || null
+          : undefined,
         potentialValue: data.potentialValue !== undefined
           ? data.potentialValue
             ? new Prisma.Decimal(data.potentialValue)
+            : null
+          : undefined,
+        annualRevenue: data.annualRevenue !== undefined
+          ? data.annualRevenue
+            ? new Prisma.Decimal(data.annualRevenue)
             : null
           : undefined,
       },

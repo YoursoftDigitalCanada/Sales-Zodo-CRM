@@ -1143,18 +1143,25 @@ model Lead {
   leadNumber        String?                   // Auto-generated: LD-YYYY-0001
   
   // Basic Info
+  salutation        String?
   firstName         String
+  middleName        String?
   lastName          String
+  gender            String?
   email             String?
   phone             String?
+  mobileNo          String?
   location          String?
   
   // Company Info
+  organization      String?
   companyName       String?
   jobTitle          String?
   website           String?
+  territory         String?
   industry          String?
   companySize       String?
+  annualRevenue     Decimal?        @db.Decimal(15, 2)
   useCase           String?         @db.Text
   
   // Lead Classification
@@ -1175,8 +1182,15 @@ model Lead {
   notes             String?         @db.Text
   
   // Conversion tracking
+  converted         Boolean         @default(false)
   convertedAt       DateTime?
   convertedToClientId String?
+  
+  // CRM-develop syncing and lost details
+  facebookLeadId    String?
+  facebookFormId    String?
+  lostReason        String?
+  lostNotes         String?         @db.Text
   
   // ── Stage 1: Property Info ─────────────────────────────────────────────
   propertyAddress       String?

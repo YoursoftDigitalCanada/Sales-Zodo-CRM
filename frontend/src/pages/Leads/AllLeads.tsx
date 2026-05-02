@@ -186,15 +186,22 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 interface Lead {
   id: string;
+  salutation?: string;
   firstName: string;
+  middleName?: string;
   lastName: string;
+  gender?: string;
   email: string;
   phone: string;
+  mobileNo?: string;
+  organization?: string;
   companyName: string;
   jobTitle: string;
   website?: string;
+  territory?: string;
   industry?: string;
   companySize?: string;
+  annualRevenue?: number;
   useCase?: string;
   location: string;
   leadSourceName: string;
@@ -209,6 +216,11 @@ interface Lead {
   leadSourceId?: string;
   tags?: string[];
   notes?: string;
+  converted?: boolean;
+  facebookLeadId?: string;
+  facebookFormId?: string;
+  lostReason?: string;
+  lostNotes?: string;
   lastContact?: string;
   nextFollowUp?: string;
   createdAt: string;
@@ -1274,15 +1286,22 @@ export const LeadFormDialog = ({
   type LeadFormTab = "basic" | "property" | "service" | "qualification" | "assessment" | "details";
 
   const [formData, setFormData] = useState({
+    salutation: "",
     firstName: "",
+    middleName: "",
     lastName: "",
+    gender: "",
     email: "",
     phone: "",
+    mobileNo: "",
+    organization: "",
     companyName: "",
     jobTitle: "",
     website: "",
+    territory: "",
     industry: "",
     companySize: "",
+    annualRevenue: "",
     useCase: "",
     location: "",
     source: "website",
@@ -1293,6 +1312,11 @@ export const LeadFormDialog = ({
     assignedToId: "",
     tags: "",
     notes: "",
+    converted: false,
+    facebookLeadId: "",
+    facebookFormId: "",
+    lostReason: "",
+    lostNotes: "",
     // Stage 1: Property Info
     propertyAddress: "",
     city: "",
@@ -1469,17 +1493,17 @@ export const LeadFormDialog = ({
           nextErrors.firstName = firstNameError;
         }
 
-        const lastNameError = getPersonNameError(formData.lastName, "Last name", { required: true });
+        const lastNameError = getPersonNameError(formData.lastName, "Last name");
         if (lastNameError) {
           nextErrors.lastName = lastNameError;
         }
 
-        const phoneError = getCanadianPhoneError(formData.phone, "Phone number", { required: true });
+        const phoneError = getCanadianPhoneError(formData.phone, "Phone number");
         if (phoneError) {
           nextErrors.phone = phoneError;
         }
 
-        const emailError = getEmailAddressError(formData.email, "Email", { required: true });
+        const emailError = getEmailAddressError(formData.email, "Email");
         if (emailError) {
           nextErrors.email = emailError;
         }
@@ -1631,15 +1655,22 @@ export const LeadFormDialog = ({
   useEffect(() => {
     if (lead) {
       setFormData({
+        salutation: lead.salutation || "",
         firstName: lead.firstName,
+        middleName: lead.middleName || "",
         lastName: lead.lastName,
+        gender: lead.gender || "",
         email: lead.email,
         phone: lead.phone,
-        companyName: lead.companyName,
+        mobileNo: lead.mobileNo || lead.phone || "",
+        organization: lead.organization || lead.companyName || "",
+        companyName: lead.companyName || lead.organization || "",
         jobTitle: lead.jobTitle,
         website: lead.website || "",
+        territory: lead.territory || "",
         industry: lead.industry || "",
         companySize: lead.companySize || "",
+        annualRevenue: lead.annualRevenue?.toString() || "",
         useCase: lead.useCase || "",
         location: lead.location,
         source: lead.leadSourceName,
@@ -1650,6 +1681,11 @@ export const LeadFormDialog = ({
         assignedToId: lead.assignedToId || "",
         tags: lead.tags?.join(", ") || "",
         notes: lead.notes || "",
+        converted: lead.converted || false,
+        facebookLeadId: lead.facebookLeadId || "",
+        facebookFormId: lead.facebookFormId || "",
+        lostReason: lead.lostReason || "",
+        lostNotes: lead.lostNotes || "",
         // Stage 1
         propertyAddress: lead.propertyAddress || "",
         city: lead.city || "",
@@ -1704,10 +1740,11 @@ export const LeadFormDialog = ({
       });
     } else {
       setFormData({
-        firstName: "", lastName: "", email: "", phone: "",
-        companyName: "", jobTitle: "", website: "", industry: "", companySize: "", useCase: "", location: "",
+        salutation: "", firstName: "", middleName: "", lastName: "", gender: "", email: "", phone: "", mobileNo: "",
+        organization: "", companyName: "", jobTitle: "", website: "", territory: "", industry: "", companySize: "", annualRevenue: "", useCase: "", location: "",
         source: "website", leadSourceId: "", status: LeadStatus.NEW, temperature: LeadTemperature.WARM,
         potentialValue: "", assignedToId: "", tags: "", notes: "",
+        converted: false, facebookLeadId: "", facebookFormId: "", lostReason: "", lostNotes: "",
         propertyAddress: "", city: "", state: "", zipCode: "", propertyType: "",
         serviceType: "", isInsuranceClaim: "No", urgencyLevel: "",
         preferredContactMethod: "", bestTimeToContact: "", issueDescription: "",
@@ -1752,7 +1789,12 @@ export const LeadFormDialog = ({
     try {
       const didSave = await onSubmit({
         ...formData,
+        mobileNo: formData.mobileNo || formData.phone,
+        phone: formData.phone || formData.mobileNo,
+        organization: formData.organization || formData.companyName,
+        companyName: formData.companyName || formData.organization,
         potentialValue: parseFloat(formData.potentialValue) || 0,
+        annualRevenue: parseFloat(formData.annualRevenue) || undefined,
         tags: formData.tags
           .split(",")
           .map((t) => t.trim())
@@ -1835,6 +1877,36 @@ export const LeadFormDialog = ({
 
             {/* ── TAB: Basic Info (existing) ─────────────────────────────── */}
             <TabsContent value="basic" className="space-y-4 mt-0">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Salutation</Label>
+                  <Input
+                    value={formData.salutation}
+                    onChange={(e) => setFieldValue("salutation", e.target.value)}
+                    placeholder="Mr., Ms., Dr."
+                    className="h-11 rounded-md"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Middle Name</Label>
+                  <Input
+                    value={formData.middleName}
+                    onChange={(e) => setFieldValue("middleName", e.target.value)}
+                    placeholder="Middle name"
+                    className="h-11 rounded-md"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Gender</Label>
+                  <Input
+                    value={formData.gender}
+                    onChange={(e) => setFieldValue("gender", e.target.value)}
+                    placeholder="Gender"
+                    className="h-11 rounded-md"
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">
@@ -1850,14 +1922,11 @@ export const LeadFormDialog = ({
                   {renderFieldError("firstName")}
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">
-                    Last Name <span className="text-red-500">*</span>
-                  </Label>
+                  <Label className="text-sm font-medium text-[#475569]">Last Name</Label>
                   <Input
                     value={formData.lastName}
                     onChange={(e) => setFieldValue("lastName", e.target.value)}
                     placeholder="Doe"
-                    required
                     className={cn("h-11 rounded-md", getFieldErrorClass("lastName"))}
                   />
                   {renderFieldError("lastName")}
@@ -1865,9 +1934,7 @@ export const LeadFormDialog = ({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">
-                  Email Address <span className="text-red-500">*</span>
-                </Label>
+                <Label className="text-sm font-medium text-[#475569]">Email</Label>
                 <div className="relative">
                   <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
@@ -1875,7 +1942,6 @@ export const LeadFormDialog = ({
                     value={formData.email}
                     onChange={(e) => setFieldValue("email", e.target.value)}
                     placeholder="john@company.com"
-                    required
                     className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("email"))}
                   />
                 </div>
@@ -1884,30 +1950,29 @@ export const LeadFormDialog = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">
-                    Phone Number <span className="text-red-500">*</span>
-                  </Label>
+                  <Label className="text-sm font-medium text-[#475569]">Mobile No.</Label>
                   <div className="relative">
                     <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                     <Input
-                      value={formData.phone}
-                      onChange={(e) => setFieldValue("phone", e.target.value)}
+                      value={formData.mobileNo}
+                      onChange={(e) => {
+                        setFieldValue("mobileNo", e.target.value);
+                        if (!formData.phone) setFieldValue("phone", e.target.value);
+                      }}
                       placeholder="+1 (416) 555-0123"
-                      required
-                      className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("phone"))}
+                      className="h-11 pl-10 rounded-md"
                     />
                   </div>
-                  {renderFieldError("phone")}
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Secondary Phone</Label>
+                  <Label className="text-sm font-medium text-[#475569]">Phone</Label>
                   <Input
-                    value={formData.secondaryPhone}
-                    onChange={(e) => setFieldValue("secondaryPhone", e.target.value)}
-                    placeholder="Alt phone number"
-                    className={cn("h-11 rounded-md", getFieldErrorClass("secondaryPhone"))}
+                    value={formData.phone}
+                    onChange={(e) => setFieldValue("phone", e.target.value)}
+                    placeholder="Office phone"
+                    className={cn("h-11 rounded-md", getFieldErrorClass("phone"))}
                   />
-                  {renderFieldError("secondaryPhone")}
+                  {renderFieldError("phone")}
                 </div>
               </div>
 
@@ -1997,6 +2062,30 @@ export const LeadFormDialog = ({
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Organization</Label>
+                  <Input
+                    value={formData.organization}
+                    onChange={(e) => {
+                      setFieldValue("organization", e.target.value);
+                      if (!formData.companyName) setFieldValue("companyName", e.target.value);
+                    }}
+                    placeholder="Organization name"
+                    className="h-11 rounded-md"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Territory</Label>
+                  <Input
+                    value={formData.territory}
+                    onChange={(e) => setFieldValue("territory", e.target.value)}
+                    placeholder="Canada, Ontario, GTA..."
+                    className="h-11 rounded-md"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">Company Size</Label>
                 <Select
@@ -2034,6 +2123,18 @@ export const LeadFormDialog = ({
                   />
                   {renderFieldError("website")}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">Annual Revenue</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.annualRevenue}
+                  onChange={(e) => setFieldValue("annualRevenue", e.target.value)}
+                  placeholder="0.00"
+                  className="h-11 rounded-md"
+                />
               </div>
 
               <div className="space-y-2">
@@ -2822,6 +2923,57 @@ export const LeadFormDialog = ({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label className="flex items-center gap-2 rounded-md border border-[#E2E8F0] p-3 text-sm text-[#475569]">
+                  <Checkbox
+                    checked={formData.converted}
+                    onCheckedChange={(checked) => setFieldValue("converted", !!checked)}
+                  />
+                  Converted
+                </label>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Lost Reason</Label>
+                  <Input
+                    value={formData.lostReason}
+                    onChange={(e) => setFieldValue("lostReason", e.target.value)}
+                    placeholder="Budget, timing, no fit..."
+                    className="h-11 rounded-md"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Facebook Lead ID</Label>
+                  <Input
+                    value={formData.facebookLeadId}
+                    onChange={(e) => setFieldValue("facebookLeadId", e.target.value)}
+                    placeholder="Facebook lead identifier"
+                    className="h-11 rounded-md"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Facebook Form ID</Label>
+                  <Input
+                    value={formData.facebookFormId}
+                    onChange={(e) => setFieldValue("facebookFormId", e.target.value)}
+                    placeholder="Facebook form identifier"
+                    className="h-11 rounded-md"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">Lost Notes</Label>
+                <Textarea
+                  value={formData.lostNotes}
+                  onChange={(e) => setFieldValue("lostNotes", e.target.value)}
+                  placeholder="Why this lead was lost or paused"
+                  rows={3}
+                  className="rounded-md resize-none"
+                />
               </div>
 
               <div className="space-y-2">
@@ -3623,19 +3775,26 @@ const ScheduleMeetingDialog = ({
 // Helper: map API lead response to frontend Lead type
 const mapApiLead = (apiLead: any): Lead => ({
   id: apiLead.id,
+  salutation: apiLead.salutation || "",
   firstName: apiLead.firstName || "",
+  middleName: apiLead.middleName || "",
   lastName: apiLead.lastName || "",
+  gender: apiLead.gender || "",
   email: apiLead.email || "",
   phone: apiLead.phone || "",
+  mobileNo: apiLead.mobileNo || apiLead.phone || "",
+  organization: apiLead.organization || apiLead.companyName || "",
   companyName: (() => {
-    const cn = apiLead.companyName || "";
+    const cn = apiLead.companyName || apiLead.organization || "";
     if (cn && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cn)) return "";
     return cn;
   })(),
   jobTitle: apiLead.jobTitle || "",
   website: apiLead.website,
+  territory: apiLead.territory || "",
   industry: apiLead.industry || "",
   companySize: apiLead.companySize || "",
+  annualRevenue: apiLead.annualRevenue || 0,
   useCase: apiLead.useCase || "",
   location: apiLead.location || "",
   leadSourceName: (apiLead.leadSource?.name || "other").toLowerCase().replace(/\s+/g, "_"),
@@ -3667,6 +3826,11 @@ const mapApiLead = (apiLead: any): Lead => ({
   leadSourceId: apiLead.leadSourceId || "",
   tags: apiLead.tags?.map((t: any) => t.name) || [],
   notes: apiLead.notes,
+  converted: apiLead.converted || false,
+  facebookLeadId: apiLead.facebookLeadId || "",
+  facebookFormId: apiLead.facebookFormId || "",
+  lostReason: apiLead.lostReason || "",
+  lostNotes: apiLead.lostNotes || "",
   lastContact: apiLead.lastContact,
   nextFollowUp: apiLead.nextFollowUp,
   createdAt: apiLead.createdAt,

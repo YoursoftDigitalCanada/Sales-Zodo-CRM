@@ -19,37 +19,42 @@ import {
 const nullableDateTime = z.string().datetime().optional().nullable().or(z.literal(""));
 
 export const CreateLeadSchema = z.object({
+  salutation: z.string().max(50).optional().nullable(),
   firstName: z
     .string()
     .trim()
     .min(1)
     .max(100)
     .refine(isValidPersonName, `First name ${PERSON_NAME_VALIDATION_MESSAGE}`),
+  middleName: z.string().trim().max(100).optional().nullable(),
   lastName: z
     .string()
     .trim()
-    .min(1)
     .max(100)
-    .refine(isValidPersonName, `Last name ${PERSON_NAME_VALIDATION_MESSAGE}`),
+    .refine((value) => !value || isValidPersonName(value), `Last name ${PERSON_NAME_VALIDATION_MESSAGE}`),
+  gender: z.string().max(50).optional().nullable(),
   email: z
     .string()
     .trim()
-    .refine(isValidEmailAddress, EMAIL_VALIDATION_MESSAGE)
+    .refine((value) => !value || isValidEmailAddress(value), EMAIL_VALIDATION_MESSAGE)
     .optional()
     .nullable(),
   phone: z
     .string()
     .trim()
     .max(30)
-    .refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE)
     .optional()
     .nullable(),
+  mobileNo: z.string().trim().max(30).optional().nullable(),
   location: z.string().max(255).optional().nullable(),
+  organization: z.string().max(255).optional().nullable(),
   companyName: z.string().max(255).default(""),
   jobTitle: z.string().max(100).optional().nullable(),
   website: z.string().url().optional().nullable().or(z.literal("")),
+  territory: z.string().max(100).optional().nullable(),
   industry: z.string().max(100).optional().nullable(),
   companySize: z.string().max(100).optional().nullable(),
+  annualRevenue: z.number().min(0).optional().nullable(),
   useCase: z.string().max(2000).optional().nullable(),
   leadSourceId: z.string().uuid().optional().nullable(),
   status: LeadStatusSchema.default("NEW"),
@@ -58,6 +63,11 @@ export const CreateLeadSchema = z.object({
   assignedToId: z.string().uuid().optional().nullable(),
   tagIds: z.array(z.string().uuid()).default([]),
   notes: z.string().optional().nullable(),
+  converted: z.boolean().optional(),
+  facebookLeadId: z.string().max(255).optional().nullable(),
+  facebookFormId: z.string().max(255).optional().nullable(),
+  lostReason: z.string().max(255).optional().nullable(),
+  lostNotes: z.string().max(2000).optional().nullable(),
   propertyAddress: z.string().max(500).optional().nullable(),
   city: z.string().max(100).optional().nullable(),
   state: z.string().max(50).optional().nullable(),
@@ -65,7 +75,7 @@ export const CreateLeadSchema = z.object({
     .string()
     .trim()
     .max(10)
-    .refine(isValidCanadianPostalCode, CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE)
+    .refine((value) => !value || isValidCanadianPostalCode(value), CANADIAN_POSTAL_CODE_VALIDATION_MESSAGE)
     .optional()
     .nullable(),
   propertyType: z.enum(["Residential", "Commercial", "Multi-Family"]).optional().nullable(),
@@ -90,7 +100,6 @@ export const CreateLeadSchema = z.object({
     .string()
     .trim()
     .max(30)
-    .refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE)
     .optional()
     .nullable(),
   spouseCoOwnerName: z

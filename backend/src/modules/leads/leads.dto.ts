@@ -6,18 +6,25 @@ import { LeadStatus, LeadTemperature, EstimationMethod } from '@prisma/client';
 
 export interface CreateLeadDto {
   // Basic Info
+  salutation?: string;
   firstName: string;
+  middleName?: string;
   lastName: string;
+  gender?: string;
   email?: string;
   phone?: string;
+  mobileNo?: string;
   location?: string;
 
   // Company Info
+  organization?: string;
   companyName?: string;
   jobTitle?: string;
   website?: string;
+  territory?: string;
   industry?: string;
   companySize?: string;
+  annualRevenue?: number;
   useCase?: string;
 
   // Classification
@@ -34,6 +41,13 @@ export interface CreateLeadDto {
   // Notes & Tags
   notes?: string;
   tagIds?: string[];
+
+  // CRM-develop details
+  converted?: boolean;
+  facebookLeadId?: string;
+  facebookFormId?: string;
+  lostReason?: string;
+  lostNotes?: string;
 
   // ── Stage 1: Property Info ───────────────────────────────────────────
   propertyAddress?: string;
@@ -121,18 +135,25 @@ export interface CreateLeadDto {
 
 export interface UpdateLeadDto {
   // Basic Info
+  salutation?: string;
   firstName?: string;
+  middleName?: string;
   lastName?: string;
+  gender?: string;
   email?: string;
   phone?: string;
+  mobileNo?: string;
   location?: string;
 
   // Company Info
+  organization?: string;
   companyName?: string;
   jobTitle?: string;
   website?: string;
+  territory?: string;
   industry?: string;
   companySize?: string;
+  annualRevenue?: number;
   useCase?: string;
 
   // Classification
@@ -149,6 +170,13 @@ export interface UpdateLeadDto {
   // Notes & Tags
   notes?: string;
   tagIds?: string[];
+
+  // CRM-develop details
+  converted?: boolean;
+  facebookLeadId?: string;
+  facebookFormId?: string;
+  lostReason?: string;
+  lostNotes?: string;
 
   // ── Stage 1: Property Info ───────────────────────────────────────────
   propertyAddress?: string;
@@ -298,22 +326,34 @@ export interface BulkUpdateStatusDto {
 export interface LeadResponseDto {
   id: string;
   leadNumber?: string;
+  salutation?: string;
   firstName: string;
+  middleName?: string;
   lastName: string;
   fullName: string;
+  gender?: string;
   email?: string;
   phone?: string;
+  mobileNo?: string;
   location?: string;
+  organization?: string;
   companyName?: string;
   jobTitle?: string;
   website?: string;
+  territory?: string;
   industry?: string;
   companySize?: string;
+  annualRevenue?: number;
   useCase?: string;
   status: LeadStatus;
   temperature: LeadTemperature;
   potentialValue?: number;
   notes?: string;
+  converted?: boolean;
+  facebookLeadId?: string;
+  facebookFormId?: string;
+  lostReason?: string;
+  lostNotes?: string;
   leadSource?: {
     id: string;
     name: string;
@@ -490,22 +530,34 @@ export function toLeadResponseDto(lead: any): LeadResponseDto {
   return {
     id: lead.id,
     leadNumber: lead.leadNumber || undefined,
+    salutation: lead.salutation || undefined,
     firstName: lead.firstName,
+    middleName: lead.middleName || undefined,
     lastName: lead.lastName,
-    fullName: `${lead.firstName} ${lead.lastName}`,
+    fullName: [lead.firstName, lead.middleName, lead.lastName].filter(Boolean).join(' '),
+    gender: lead.gender || undefined,
     email: lead.email || undefined,
     phone: lead.phone || undefined,
+    mobileNo: lead.mobileNo || undefined,
     location: lead.location || undefined,
+    organization: lead.organization || undefined,
     companyName: lead.companyName || undefined,
     jobTitle: lead.jobTitle || undefined,
     website: lead.website || undefined,
+    territory: lead.territory || undefined,
     industry: lead.industry || undefined,
     companySize: lead.companySize || undefined,
+    annualRevenue: lead.annualRevenue ? Number(lead.annualRevenue) : undefined,
     useCase: lead.useCase || undefined,
     status: lead.status,
     temperature: lead.temperature,
     potentialValue: lead.potentialValue ? Number(lead.potentialValue) : undefined,
     notes: lead.notes || undefined,
+    converted: lead.converted ?? false,
+    facebookLeadId: lead.facebookLeadId || undefined,
+    facebookFormId: lead.facebookFormId || undefined,
+    lostReason: lead.lostReason || undefined,
+    lostNotes: lead.lostNotes || undefined,
     leadSource: lead.leadSource
       ? {
         id: lead.leadSource.id,

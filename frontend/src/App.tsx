@@ -150,6 +150,7 @@ import ProfilePage from "./pages/Profile";
 
 // Notifications
 import NotificationsPage from "./pages/Notifications";
+import { CallLogsPage, DataImportPage, NotesPage } from "./pages/crm/CrmDevelopModulePage";
 
 // Support
 import SupportPage from "./pages/Support";
@@ -640,6 +641,10 @@ const AppRoutes = () => {
         <Route path="/proposals" element={<AccessGuard featureId="finance" permissionModule="quotes" action="view"><QuotesPage /></AccessGuard>} />
         <Route path="/subscriptions" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><InvoicePage /></AccessGuard>} />
         <Route path="/accounts" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><ClientListPage /></AccessGuard>} />
+        <Route path="/organizations" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><ClientListPage /></AccessGuard>} />
+        <Route path="/notes" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><NotesPage /></AccessGuard>} />
+        <Route path="/call-logs" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><CallLogsPage /></AccessGuard>} />
+        <Route path="/data-import" element={<AccessGuard permissionModule="settings" action="view"><DataImportPage /></AccessGuard>} />
         <Route path="/mail" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><LetterBoxPage /></AccessGuard>} />
         <Route path="/ai/sales-assistant" element={<AccessGuard featureId="aiAssistant"><Index /></AccessGuard>} />
         <Route path="/ai/email-generator" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><LetterBoxPage /></AccessGuard>} />

@@ -62,6 +62,7 @@ import {
   Tags,
   Megaphone,
   Building2,
+  Phone,
   UserPlus,
   GitBranch,
   Layers,
@@ -199,32 +200,20 @@ function readStoredOwnerOrAdmin(): boolean {
 // ============================================
 
 const navigationItems: NavigationItem[] = [
-  // ===== MAIN =====
-  { title: "Main", isHeader: true },
+  // ===== CRM-DEVELOP CORE =====
+  {
+    title: "Notifications",
+    icon: Bell,
+    path: "/notifications",
+    featureId: "letterbox",
+    permissionModule: "notifications",
+  },
   {
     title: "Dashboard",
     icon: LayoutDashboard,
     path: "/dashboard",
     permissionModule: "dashboard",
   },
-  {
-    title: "Calendar",
-    icon: Calendar,
-    path: "/calendar",
-    featureId: "calendar",
-    permissionModule: "calendar",
-    isNew: true,
-  },
-  {
-    title: "Tasks",
-    icon: CheckSquare,
-    path: "/tasks",
-    featureId: "tasks",
-    permissionModule: "tasks",
-  },
-
-  // ===== CRM =====
-  { title: "CRM", isHeader: true },
   {
     title: "Leads",
     icon: Target,
@@ -233,11 +222,11 @@ const navigationItems: NavigationItem[] = [
     permissionModule: "leads",
   },
   {
-    title: "Lead Sources",
-    icon: Tags,
-    path: "/leads/sources",
-    featureId: "leads",
-    permissionModule: "lead-sources",
+    title: "Deals",
+    icon: Briefcase,
+    path: "/deals",
+    featureId: "projects",
+    permissionModule: "projects",
   },
   {
     title: "Contacts",
@@ -247,182 +236,49 @@ const navigationItems: NavigationItem[] = [
     permissionModule: "contacts",
   },
   {
-    title: "Accounts",
-    icon: Users,
-    path: "/accounts",
+    title: "Organizations",
+    icon: Building2,
+    path: "/organizations",
     featureId: "clients",
     permissionModule: "clients",
   },
   {
-    title: "Deals",
-    icon: Briefcase,
-    path: "/deals",
-    featureId: "projects",
-    permissionModule: "projects",
-  },
-
-  // ===== SALES =====
-  { title: "Sales", isHeader: true },
-  {
-    title: "Pipeline",
-    icon: FolderKanban,
-    path: "/pipeline",
-    featureId: "kanban",
-    permissionModule: "projects",
-    badge: "Deals",
-    badgeColor: "teal",
+    title: "Notes",
+    icon: FileText,
+    path: "/notes",
+    featureId: "tasks",
+    permissionModule: "tasks",
   },
   {
-    title: "Meetings",
-    icon: CalendarCheck,
-    path: "/meetings",
+    title: "Tasks",
+    icon: CheckSquare,
+    path: "/tasks",
+    featureId: "tasks",
+    permissionModule: "tasks",
+  },
+  {
+    title: "Calendar",
+    icon: Calendar,
+    path: "/calendar",
     featureId: "calendar",
     permissionModule: "calendar",
   },
-
-  // ===== FINANCE =====
-  { title: "Finance", isHeader: true },
   {
-    title: "Proposals",
-    icon: FileStack,
-    path: "/proposals",
-    featureId: "finance",
-    permissionModule: "quotes",
+    title: "Call Logs",
+    icon: Phone,
+    path: "/call-logs",
+    featureId: "tasks",
+    permissionModule: "tasks",
   },
-  {
-    title: "Invoices",
-    icon: Receipt,
-    path: "/invoice",
-    featureId: "finance",
-    permissionModule: "invoices",
-  },
-  {
-    title: "Payments",
-    icon: CreditCard,
-    featureId: "finance",
-    permissionModule: "invoices",
-    submenu: [
-      { title: "All Payments", path: "javascript:void(0)", featureId: "finance" },
-      { title: "Payment Methods", path: "javascript:void(0)", featureId: "finance" },
-      { title: "Transactions", path: "javascript:void(0)", featureId: "finance" },
-    ]
-  },
-  {
-    title: "Subscriptions",
-    icon: CreditCard,
-    path: "/subscriptions",
-    featureId: "finance",
-    permissionModule: "invoices",
-    isNew: true,
-  },
-
-  // ===== AI =====
-  { title: "AI", isHeader: true },
-  {
-    title: "Sales Assistant",
-    icon: Sparkles,
-    path: "/ai/sales-assistant",
-    featureId: "aiAssistant",
-    badge: "AI",
-    badgeColor: "teal",
-  },
-  {
-    title: "Email Generator",
-    icon: Mail,
-    path: "/ai/email-generator",
-    featureId: "aiAssistant",
-    badge: "AI",
-    badgeColor: "teal",
-  },
-
-  // ===== COMMUNICATION =====
-  { title: "Communication", isHeader: true },
-  {
-    title: "Mail",
-    icon: Mail,
-    path: "/mail",
-    featureId: "letterbox",
-    permissionModule: "emails",
-  },
-  {
-    title: "Chats",
-    icon: MessageSquare,
-    path: "/chats",
-    featureId: "chat",
-    permissionModule: "chat",
-  },
-  {
-    title: "Support Tickets",
-    icon: Headphones,
-    path: "/support/tickets",
-    featureId: "support",
-    permissionModule: "support",
-  },
-  {
-    title: "Notifications",
-    icon: Bell,
-    path: "/notifications",
-    featureId: "letterbox",
-    permissionModule: "notifications",
-  },
-  // ===== TEAM =====
-  { title: "Team", isHeader: true },
-  {
-    title: "Users",
-    icon: Users,
-    path: "/users",
-    featureId: "team",
-    permissionModule: "users",
-  },
-  {
-    title: "Roles & Permissions",
-    icon: Shield,
-    path: "/roles",
-    featureId: "team",
-    permissionModule: "roles",
-  },
-
-  // ===== ANALYTICS =====
-  { title: "Analytics", isHeader: true },
-  {
-    title: "Reports",
-    icon: BarChart3,
-    path: "/reports",
-    featureId: "reports",
-    permissionModule: "analytics",
-  },
-  {
-    title: "Forecast",
-    icon: TrendingUp,
-    path: "/forecast",
-    featureId: "analytics",
-    permissionModule: "analytics",
-    isPro: true,
-  },
-
-  // ===== SETTINGS =====
   { title: "Settings", isHeader: true },
   {
     title: "Settings",
     icon: Settings,
-    submenu: [
-      { title: "General", path: "/settings/general", permissionModule: "settings" },
-      { title: "Company Profile", path: "/settings/company", permissionModule: "settings" },
-      { title: "Billing", path: "/settings/billing", permissionModule: "settings" },
-      { title: "Email Settings", path: "/settings/email", permissionModule: ["settings", "emails"] },
-      { title: "Security", path: "/settings/security", permissionModule: "settings" },
-      { title: "Integrations", path: "/settings/integrations/whatsapp", permissionModule: "settings" },
-    ]
-  },
-  {
-    title: "Integrations",
-    icon: Plug,
-    path: "/integrations",
+    path: "/settings/general",
     permissionModule: "settings",
-    isNew: true,
   },
   {
-    title: "Help Center",
+    title: "Help",
     icon: HelpCircle,
     path: "/help",
   },

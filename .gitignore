@@ -36,3 +36,4 @@ backend/prisma/*.db-journal
 .cache/
 .temp/
 ai-roof-service/heat-model/
+crm-develop/

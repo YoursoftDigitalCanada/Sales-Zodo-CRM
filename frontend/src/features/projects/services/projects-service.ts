@@ -115,6 +115,44 @@ export interface ProjectEntity {
   invoices?: Array<Record<string, unknown>>;
   payments?: Array<Record<string, unknown>>;
   _count?: Record<string, number>;
+  organization?: string | null;
+  organizationName?: string | null;
+  nextStep?: string | null;
+  dealStatus?: string | null;
+  dealOwnerId?: string | null;
+  probability?: number | string | null;
+  expectedDealValue?: number | string | null;
+  dealValue?: number | string | null;
+  expectedClosureDate?: string | null;
+  closedDate?: string | null;
+  sourceId?: string | null;
+  leadId?: string | null;
+  leadName?: string | null;
+  website?: string | null;
+  noOfEmployees?: string | null;
+  jobTitle?: string | null;
+  territory?: string | null;
+  exchangeRate?: number | string | null;
+  annualRevenue?: number | string | null;
+  salutation?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  mobileNo?: string | null;
+  phone?: string | null;
+  gender?: string | null;
+  contactId?: string | null;
+  total?: number | string | null;
+  netTotal?: number | string | null;
+  lostReason?: string | null;
+  lostNotes?: string | null;
+  lead?: {
+    id: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  } | null;
   [key: string]: unknown;
 }
 

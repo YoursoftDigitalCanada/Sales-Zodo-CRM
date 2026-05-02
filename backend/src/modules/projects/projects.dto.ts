@@ -70,6 +70,36 @@ export interface CreateProjectDto {
   tags?: string[];
   customFields?: Record<string, unknown> | null;
   internalNotes?: string | null;
+  organization?: string | null;
+  organizationName?: string | null;
+  nextStep?: string | null;
+  dealStatus?: string | null;
+  dealOwnerId?: string | null;
+  probability?: number | null;
+  expectedDealValue?: number | null;
+  dealValue?: number | null;
+  expectedClosureDate?: string | null;
+  closedDate?: string | null;
+  sourceId?: string | null;
+  leadName?: string | null;
+  website?: string | null;
+  noOfEmployees?: string | null;
+  jobTitle?: string | null;
+  territory?: string | null;
+  exchangeRate?: number | null;
+  annualRevenue?: number | null;
+  salutation?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  mobileNo?: string | null;
+  phone?: string | null;
+  gender?: string | null;
+  contactId?: string | null;
+  total?: number | null;
+  netTotal?: number | null;
+  lostReason?: string | null;
+  lostNotes?: string | null;
 }
 
 export type UpdateProjectDto = Partial<CreateProjectDto>;
@@ -115,6 +145,14 @@ export function normalizeProjectDto(input: Record<string, any>): CreateProjectDt
 
   // backward compatibility with current frontend payload
   if (data.projectTitle && !data.name) data.name = data.projectTitle;
+  if (data.organization && !data.name) data.name = data.organization;
+  if (data.organizationName && !data.organization) data.organization = data.organizationName;
+  if (data.name && !data.organization) data.organization = data.name;
+  if (data.dealValue !== undefined && data.contractValue === undefined) data.contractValue = data.dealValue;
+  if (data.expectedDealValue !== undefined && data.budget === undefined) data.budget = data.expectedDealValue;
+  if (data.expectedClosureDate && !data.estimatedEndDate) data.estimatedEndDate = data.expectedClosureDate;
+  if (data.dealStatus === 'Won' && !data.closedDate) data.closedDate = new Date().toISOString();
+  if (data.leadName && !data.description) data.description = `Lead: ${data.leadName}`;
   if (data.dueDate && !data.estimatedEndDate) data.estimatedEndDate = data.dueDate;
   if (data.progressPercentage !== undefined && data.completionPercentage === undefined) {
     data.completionPercentage = data.progressPercentage;

@@ -82,6 +82,7 @@ import InvoiceList from "./components/invoices/InvoiceList";
 import CreateInvoice from "./components/invoices/CreateInvoice";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import DealsPage from "./pages/Deals";
 import ProjectsPage from "./pages/Projects";
 import ProjectDetailPage from "./pages/ProjectDetail";
 import ClientListPage from "./pages/ClientList";
@@ -634,7 +635,7 @@ const AppRoutes = () => {
         />
 
         {/* ========== LEAD ROUTES ========== */}
-        <Route path="/deals" element={<AccessGuard featureId="projects" permissionModule="projects" action="view"><ProjectsPage /></AccessGuard>} />
+        <Route path="/deals" element={<AccessGuard featureId="projects" permissionModule="projects" action="view"><DealsPage /></AccessGuard>} />
         <Route path="/pipeline" element={<AccessGuard featureId="kanban" permissionModule="projects" action="view"><KanbanPage /></AccessGuard>} />
         <Route path="/meetings" element={<AccessGuard featureId="calendar" permissionModule="calendar" action="view"><CalendarPage /></AccessGuard>} />
         <Route path="/sequences" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><LetterBoxPage /></AccessGuard>} />

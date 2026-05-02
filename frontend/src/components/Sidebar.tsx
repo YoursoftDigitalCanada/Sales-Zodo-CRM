@@ -279,14 +279,6 @@ const navigationItems: NavigationItem[] = [
     featureId: "calendar",
     permissionModule: "calendar",
   },
-  {
-    title: "Sequences",
-    icon: GitBranch,
-    path: "/sequences",
-    featureId: "letterbox",
-    permissionModule: "emails",
-    isNew: true,
-  },
 
   // ===== FINANCE =====
   { title: "Finance", isHeader: true },

@@ -8,6 +8,7 @@ import {
 } from './contacts.dto';
 import {
     NotFoundError,
+    BadRequestError,
 } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
@@ -20,6 +21,9 @@ export class ContactsService {
      */
     async create(tenantId: string, data: CreateContactDto): Promise<ContactResponseDto> {
         await settingsManager.assertUsageWithinPlan(tenantId, 'contacts');
+        if (!data.companyId && !data.dealId) {
+            throw new BadRequestError('Contact must be linked to an Account or Deal', ErrorCodes.VALIDATION_FAILED);
+        }
         const contact = await contactsRepository.create(tenantId, data);
         const dto = toContactResponseDto(contact);
 
@@ -84,7 +88,20 @@ export class ContactsService {
             throw new NotFoundError('Contact not found', ErrorCodes.RESOURCE_NOT_FOUND);
         }
 
-        const contact = await contactsRepository.update(id, tenantId, data);
+        const nextCompanyId = data.companyId !== undefined ? data.companyId : (existing as any).companyId;
+        const hasDealLink = Boolean(data.dealId || (existing as any).deals?.length);
+        if (!nextCompanyId && !hasDealLink) {
+            throw new BadRequestError('Contact must be linked to an Account or Deal', ErrorCodes.VALIDATION_FAILED);
+        }
+
+        await contactsRepository.update(id, tenantId, data);
+        if (data.dealId) {
+            await contactsRepository.linkDeal(tenantId, id, data.dealId, data.roleInBuyingProcess);
+        }
+        const contact = await contactsRepository.findById(id, tenantId);
+        if (!contact) {
+            throw new NotFoundError('Contact not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        }
         const dto = toContactResponseDto(contact);
 
         activityLogger.log({

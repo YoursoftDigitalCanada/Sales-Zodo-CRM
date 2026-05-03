@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -51,6 +52,8 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { getClients as getClientEntities } from "@/features/clients";
+import { getProjects } from "@/features/projects/services/projects-service";
+import { getEmployees } from "@/features/users";
 import api from "@/lib/axios";
 import {
   getCanadianPhoneError,
@@ -134,13 +137,31 @@ interface Contact {
   type: string;
   clientName: string;
   clientId?: string;
+  dealId?: string;
+  dealName?: string;
   contactPerson: string;
+  firstName?: string;
+  lastName?: string;
   designation: string;
   department?: string;
   contactEmail: string;
   contactNo: string;
   mobile?: string;
   linkedin?: string;
+  relationshipStatus?: string;
+  roleInBuyingProcess?: string;
+  seniorityLevel?: string;
+  buyingAuthorityScore?: string;
+  secondaryEmail?: string;
+  alternatePhone?: string;
+  preferredContactMethod?: string;
+  timeZone?: string;
+  tags?: string[];
+  assignedToId?: string;
+  assignedToName?: string;
+  totalInteractions?: number;
+  lastActivityType?: string;
+  deals?: Array<{ id: string; dealId: string; dealName: string; role?: string; isPrimary?: boolean }>;
   isPrimary?: boolean;
   isFavorite?: boolean;
   lastContacted?: string;
@@ -177,10 +198,15 @@ const defaultColumns: ColumnConfig[] = [
 const typeOptions = [
   { value: "all", label: "All Types" },
   { value: "Client", label: "Client" },
-  { value: "Lead", label: "Lead" },
+  { value: "Prospect", label: "Prospect" },
   { value: "Partner", label: "Partner" },
-  { value: "Vendor", label: "Vendor" },
 ];
+
+const relationshipStatusOptions = ["Active", "Inactive"];
+const buyingRoleOptions = ["Decision Maker", "Influencer", "User", "Gatekeeper"];
+const seniorityOptions = ["Manager", "Director", "VP", "CXO", "Owner", "Individual Contributor"];
+const authorityScoreOptions = ["1", "2", "3", "4", "5"];
+const preferredContactOptions = ["Email", "Call", "WhatsApp"];
 
 // ============================================
 // UTILITY FUNCTIONS
@@ -215,11 +241,32 @@ const getRelativeTime = (dateString?: string) => {
 const getTypeColor = (type: string) => {
   const colors: Record<string, { bg: string; text: string; dot: string }> = {
     Client: { bg: "bg-[#0891B2]/10", text: "text-[#0891B2]", dot: "bg-[#0891B2]" },
-    Lead: { bg: "bg-[#D97706]/10", text: "text-[#D97706]", dot: "bg-[#D97706]" },
+    Prospect: { bg: "bg-[#D97706]/10", text: "text-[#D97706]", dot: "bg-[#D97706]" },
     Partner: { bg: "bg-purple-500/10", text: "text-purple-500", dot: "bg-purple-500" },
-    Vendor: { bg: "bg-[#0891B2]/10", text: "text-blue-500", dot: "bg-[#0891B2]" },
   };
   return colors[type] || colors.Client;
+};
+
+const toContactTypeLabel = (type?: string | null) => {
+  if (type === "LEAD" || type === "Prospect") return "Prospect";
+  if (type === "Partner") return "Partner";
+  return "Client";
+};
+
+const toContactTypePayload = (type?: string | null) => {
+  return type === "Prospect" ? "LEAD" : "CLIENT";
+};
+
+const getEmployeeName = (employee: any) => {
+  const user = employee?.user || {};
+  return (
+    employee?.fullName ||
+    employee?.name ||
+    [user.firstName || employee?.firstName, user.lastName || employee?.lastName].filter(Boolean).join(" ") ||
+    user.email ||
+    employee?.email ||
+    "Sales Rep"
+  );
 };
 
 // ============================================
@@ -819,41 +866,75 @@ const ContactDialog = ({
   onSubmit,
   contact,
   clients,
+  deals,
+  employees,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: Partial<Contact>) => Promise<boolean>;
   contact?: Contact | null;
   clients: { id: string; clientName: string }[];
+  deals: { id: string; name: string }[];
+  employees: { id: string; name: string }[];
 }) => {
   const { isMobile } = useIsMobile();
   const [formData, setFormData] = useState({
     contactPerson: "",
+    firstName: "",
+    lastName: "",
     clientId: "",
+    dealId: "",
     designation: "",
     department: "",
     contactEmail: "",
     contactNo: "",
     mobile: "",
     type: "Client",
+    relationshipStatus: "Active",
+    roleInBuyingProcess: "Decision Maker",
+    seniorityLevel: "",
+    buyingAuthorityScore: "",
+    secondaryEmail: "",
+    alternatePhone: "",
+    preferredContactMethod: "Email",
+    timeZone: "",
+    tagsText: "",
+    assignedToId: "",
     isPrimary: false,
     linkedin: "",
     notes: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
 
   useEffect(() => {
     if (contact) {
+      const nameParts = (contact.contactPerson || "").trim().split(/\s+/);
+      const firstName = contact.firstName || nameParts[0] || "";
+      const lastName = contact.lastName || nameParts.slice(1).join(" ") || "";
       setFormData({
         contactPerson: contact.contactPerson || "",
+        firstName,
+        lastName,
         clientId: contact.clientId?.toString() || "",
+        dealId: contact.dealId?.toString() || "",
         designation: contact.designation || "",
         department: contact.department || "",
         contactEmail: contact.contactEmail || "",
         contactNo: contact.contactNo || "",
         mobile: contact.mobile || "",
-        type: contact.type || "Client",
+        type: toContactTypeLabel(contact.type),
+        relationshipStatus: contact.relationshipStatus || "Active",
+        roleInBuyingProcess: contact.roleInBuyingProcess || "Decision Maker",
+        seniorityLevel: contact.seniorityLevel || "",
+        buyingAuthorityScore: contact.buyingAuthorityScore || "",
+        secondaryEmail: contact.secondaryEmail || "",
+        alternatePhone: contact.alternatePhone || "",
+        preferredContactMethod: contact.preferredContactMethod || "Email",
+        timeZone: contact.timeZone || "",
+        tagsText: (contact.tags || []).join(", "),
+        assignedToId: contact.assignedToId || "",
         isPrimary: contact.isPrimary || false,
         linkedin: contact.linkedin || "",
         notes: contact.notes || "",
@@ -861,19 +942,33 @@ const ContactDialog = ({
     } else {
       setFormData({
         contactPerson: "",
+        firstName: "",
+        lastName: "",
         clientId: "",
+        dealId: "",
         designation: "",
         department: "",
         contactEmail: "",
         contactNo: "",
         mobile: "",
         type: "Client",
+        relationshipStatus: "Active",
+        roleInBuyingProcess: "Decision Maker",
+        seniorityLevel: "",
+        buyingAuthorityScore: "",
+        secondaryEmail: "",
+        alternatePhone: "",
+        preferredContactMethod: "Email",
+        timeZone: "",
+        tagsText: "",
+        assignedToId: "",
         isPrimary: false,
         linkedin: "",
         notes: "",
       });
     }
     setErrors({});
+    setShowMoreDetails(false);
   }, [contact, isOpen]);
 
   const setFieldValue = (field: keyof typeof formData, value: string | boolean) => {
@@ -904,9 +999,14 @@ const ContactDialog = ({
   const validateForm = () => {
     const nextErrors: Record<string, string> = {};
 
-    const nameError = getPersonNameError(formData.contactPerson, "Contact name", { required: true });
-    if (nameError) {
-      nextErrors.contactPerson = nameError;
+    const firstNameError = getPersonNameError(formData.firstName, "First name", { required: true });
+    if (firstNameError) {
+      nextErrors.firstName = firstNameError;
+    }
+
+    const lastNameError = getPersonNameError(formData.lastName, "Last name", { required: true });
+    if (lastNameError) {
+      nextErrors.lastName = lastNameError;
     }
 
     const emailError = getEmailAddressError(formData.contactEmail, "Email", { required: true });
@@ -914,7 +1014,7 @@ const ContactDialog = ({
       nextErrors.contactEmail = emailError;
     }
 
-    const officePhoneError = getCanadianPhoneError(formData.contactNo, "Office phone");
+    const officePhoneError = getCanadianPhoneError(formData.contactNo, "Phone number", { required: true });
     if (officePhoneError) {
       nextErrors.contactNo = officePhoneError;
     }
@@ -922,6 +1022,20 @@ const ContactDialog = ({
     const mobilePhoneError = getCanadianPhoneError(formData.mobile, "Mobile");
     if (mobilePhoneError) {
       nextErrors.mobile = mobilePhoneError;
+    }
+
+    const alternatePhoneError = getCanadianPhoneError(formData.alternatePhone, "Alternate phone");
+    if (alternatePhoneError) {
+      nextErrors.alternatePhone = alternatePhoneError;
+    }
+
+    const secondaryEmailError = getEmailAddressError(formData.secondaryEmail, "Secondary email");
+    if (secondaryEmailError) {
+      nextErrors.secondaryEmail = secondaryEmailError;
+    }
+
+    if (!formData.clientId && !formData.dealId) {
+      nextErrors.clientId = "Link this contact to an account or deal.";
     }
 
     if (formData.linkedin.trim()) {
@@ -946,9 +1060,20 @@ const ContactDialog = ({
 
     setIsLoading(true);
 
+    const firstName = normalizeWhitespace(formData.firstName) || "";
+    const lastName = normalizeWhitespace(formData.lastName) || "";
+    const contactPerson = normalizeWhitespace(`${firstName} ${lastName}`) || normalizeWhitespace(formData.contactPerson) || "";
     const didSave = await onSubmit({
       ...formData,
+      contactPerson,
+      firstName,
+      lastName,
       clientId: formData.clientId || undefined,
+      dealId: formData.dealId || undefined,
+      tags: formData.tagsText
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
     });
 
     setIsLoading(false);
@@ -961,132 +1086,86 @@ const ContactDialog = ({
 
   const formBody = (
     <form onSubmit={handleSubmit} className={cn("space-y-5", isMobile ? "px-4 pb-4" : "p-6 max-h-[70vh] overflow-y-auto")}>
-          {/* Contact Name */}
+          {/* Basic Identity */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 space-y-2">
+            <div className="space-y-2">
               <Label className="text-sm font-medium text-[#475569]">
-                Contact Name <span className="text-red-500">*</span>
+                First Name <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
                 <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
-                  value={formData.contactPerson}
-                  onChange={(e) => setFieldValue("contactPerson", e.target.value)}
-                  placeholder="John Doe"
+                  value={formData.firstName}
+                  onChange={(e) => setFieldValue("firstName", e.target.value)}
+                  placeholder="John"
                   required
                   className={cn(
                     "h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20",
-                    errors.contactPerson && "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                    errors.firstName && "border-red-500 focus:border-red-500 focus:ring-red-500/20"
                   )}
                 />
               </div>
-              {errors.contactPerson ? (
+              {errors.firstName ? (
                 <FieldErrorMessage
-                  message={errors.contactPerson}
-                  onDismiss={() => clearFieldError("contactPerson")}
+                  message={errors.firstName}
+                  onDismiss={() => clearFieldError("firstName")}
+                />
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-[#475569]">
+                Last Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                value={formData.lastName}
+                onChange={(e) => setFieldValue("lastName", e.target.value)}
+                placeholder="Doe"
+                required
+                className={cn(
+                  "h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20",
+                  errors.lastName && "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                )}
+              />
+              {errors.lastName ? (
+                <FieldErrorMessage
+                  message={errors.lastName}
+                  onDismiss={() => clearFieldError("lastName")}
                 />
               ) : null}
             </div>
           </div>
 
-          {/* Company & Type */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#475569]">Company</Label>
-              <Select
-                value={formData.clientId}
-                onValueChange={(val) => setFormData({ ...formData, clientId: val })}
-              >
-                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
-                  <SelectValue placeholder="Select company" />
-                </SelectTrigger>
-                <SelectContent className="rounded-md">
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={String(client.id)} className="rounded-md">
-                      {client.clientName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#475569]">Type</Label>
-              <Select
-                value={formData.type}
-                onValueChange={(val) => setFormData({ ...formData, type: val })}
-              >
-                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-md">
-                  {typeOptions.filter((t) => t.value !== "all").map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value} className="rounded-md">
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Designation & Department */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#475569]">Job Title</Label>
+              <Label className="text-sm font-medium text-[#475569]">
+                Email <span className="text-red-500">*</span>
+              </Label>
               <div className="relative">
-                <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
-                  value={formData.designation}
-                  onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                  placeholder="CEO, Manager..."
-                  className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                  type="email"
+                  value={formData.contactEmail}
+                  onChange={(e) => setFieldValue("contactEmail", e.target.value)}
+                  placeholder="john@company.com"
+                  required
+                  className={cn(
+                    "h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20",
+                    errors.contactEmail && "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                  )}
                 />
               </div>
+              {errors.contactEmail ? (
+                <FieldErrorMessage
+                  message={errors.contactEmail}
+                  onDismiss={() => clearFieldError("contactEmail")}
+                />
+              ) : null}
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#475569]">Department</Label>
-              <Input
-                value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                placeholder="Sales, Marketing..."
-                className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
-              />
-            </div>
-          </div>
-
-          {/* Email */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-[#475569]">
-              Email <span className="text-red-500">*</span>
-            </Label>
-            <div className="relative">
-              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-              <Input
-                type="email"
-                value={formData.contactEmail}
-                onChange={(e) => setFieldValue("contactEmail", e.target.value)}
-                placeholder="john@company.com"
-                required
-                className={cn(
-                  "h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20",
-                  errors.contactEmail && "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                )}
-              />
-            </div>
-            {errors.contactEmail ? (
-              <FieldErrorMessage
-                message={errors.contactEmail}
-                onDismiss={() => clearFieldError("contactEmail")}
-              />
-            ) : null}
-          </div>
-
-          {/* Phone Numbers */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#475569]">Office Phone</Label>
+              <Label className="text-sm font-medium text-[#475569]">
+                Phone Number <span className="text-red-500">*</span>
+              </Label>
               <div className="relative">
                 <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                 <Input
@@ -1106,58 +1185,299 @@ const ContactDialog = ({
                 />
               ) : null}
             </div>
+          </div>
 
+          {/* Account, Deal, Role */}
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#475569]">Mobile</Label>
-              <div className="relative">
-                <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-                <Input
-                  value={formData.mobile}
-                  onChange={(e) => setFieldValue("mobile", e.target.value)}
-                  placeholder="+1 (555) 000-0000"
-                  className={cn(
-                    "h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20",
-                    errors.mobile && "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                  )}
-                />
-              </div>
-              {errors.mobile ? (
+              <Label className="text-sm font-medium text-[#475569]">
+                Account / Company <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.clientId}
+                onValueChange={(val) => setFieldValue("clientId", val)}
+              >
+                <SelectTrigger className={cn("h-11 rounded-md border-[rgba(15,23,42,0.06)]", errors.clientId && "border-red-500")}>
+                  <SelectValue placeholder="Select account" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={String(client.id)} className="rounded-md">
+                      {client.clientName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.clientId ? (
                 <FieldErrorMessage
-                  message={errors.mobile}
-                  onDismiss={() => clearFieldError("mobile")}
+                  message={errors.clientId}
+                  onDismiss={() => setErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.clientId;
+                    return next;
+                  })}
                 />
               ) : null}
             </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-[#475569]">Deal</Label>
+              <Select
+                value={formData.dealId}
+                onValueChange={(val) => setFieldValue("dealId", val)}
+              >
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
+                  <SelectValue placeholder="Link deal" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  {deals.map((deal) => (
+                    <SelectItem key={deal.id} value={deal.id} className="rounded-md">
+                      {deal.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {/* LinkedIn */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-[#475569]">LinkedIn URL</Label>
-            <div className="relative">
-              <Linkedin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-              <Input
-                value={formData.linkedin}
-                onChange={(e) => setFieldValue("linkedin", e.target.value)}
-                placeholder="https://linkedin.com/in/username"
-                className={cn(
-                  "h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20",
-                  errors.linkedin && "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                )}
-              />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-[#475569]">Role in Buying Process</Label>
+              <Select
+                value={formData.roleInBuyingProcess}
+                onValueChange={(val) => setFieldValue("roleInBuyingProcess", val)}
+              >
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  {buyingRoleOptions.map((role) => (
+                    <SelectItem key={role} value={role} className="rounded-md">{role}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            {errors.linkedin ? (
-              <FieldErrorMessage
-                message={errors.linkedin}
-                onDismiss={() => clearFieldError("linkedin")}
-              />
-            ) : null}
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-[#475569]">Assigned Sales Rep</Label>
+              <Select
+                value={formData.assignedToId}
+                onValueChange={(val) => setFieldValue("assignedToId", val)}
+              >
+                <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
+                  <SelectValue placeholder="Select rep" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.id} value={employee.id} className="rounded-md">
+                      {employee.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowMoreDetails((value) => !value)}
+            className="w-full justify-between rounded-md border-[rgba(15,23,42,0.06)]"
+          >
+            More Details
+            <ChevronDown size={16} className={cn("transition-transform", showMoreDetails && "rotate-180")} />
+          </Button>
+
+          {showMoreDetails ? (
+            <div className="space-y-5 rounded-md border border-[rgba(15,23,42,0.06)] p-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Job Title</Label>
+                  <div className="relative">
+                    <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                    <Input
+                      value={formData.designation}
+                      onChange={(e) => setFieldValue("designation", e.target.value)}
+                      placeholder="CEO, Manager..."
+                      className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Department</Label>
+                  <Input
+                    value={formData.department}
+                    onChange={(e) => setFieldValue("department", e.target.value)}
+                    placeholder="Sales, Operations..."
+                    className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Contact Type</Label>
+                  <Select value={formData.type} onValueChange={(val) => setFieldValue("type", val)}>
+                    <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      {typeOptions.filter((t) => t.value !== "all").map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value} className="rounded-md">
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Relationship Status</Label>
+                  <Select value={formData.relationshipStatus} onValueChange={(val) => setFieldValue("relationshipStatus", val)}>
+                    <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      {relationshipStatusOptions.map((status) => (
+                        <SelectItem key={status} value={status} className="rounded-md">{status}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Seniority Level</Label>
+                  <Select value={formData.seniorityLevel} onValueChange={(val) => setFieldValue("seniorityLevel", val)}>
+                    <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
+                      <SelectValue placeholder="Select seniority" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      {seniorityOptions.map((level) => (
+                        <SelectItem key={level} value={level} className="rounded-md">{level}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Buying Authority Score</Label>
+                  <Select value={formData.buyingAuthorityScore} onValueChange={(val) => setFieldValue("buyingAuthorityScore", val)}>
+                    <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
+                      <SelectValue placeholder="1-5" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      {authorityScoreOptions.map((score) => (
+                        <SelectItem key={score} value={score} className="rounded-md">{score}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Secondary Email</Label>
+                  <Input
+                    type="email"
+                    value={formData.secondaryEmail}
+                    onChange={(e) => setFieldValue("secondaryEmail", e.target.value)}
+                    placeholder="secondary@company.com"
+                    className={cn("h-11 rounded-md border-[rgba(15,23,42,0.06)]", errors.secondaryEmail && "border-red-500")}
+                  />
+                  {errors.secondaryEmail ? (
+                    <FieldErrorMessage message={errors.secondaryEmail} onDismiss={() => clearFieldError("secondaryEmail")} />
+                  ) : null}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Alternate Phone</Label>
+                  <Input
+                    value={formData.alternatePhone}
+                    onChange={(e) => setFieldValue("alternatePhone", e.target.value)}
+                    placeholder="+1 (555) 000-0000"
+                    className={cn("h-11 rounded-md border-[rgba(15,23,42,0.06)]", errors.alternatePhone && "border-red-500")}
+                  />
+                  {errors.alternatePhone ? (
+                    <FieldErrorMessage message={errors.alternatePhone} onDismiss={() => clearFieldError("alternatePhone")} />
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">LinkedIn URL</Label>
+                <div className="relative">
+                  <Linkedin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                  <Input
+                    value={formData.linkedin}
+                    onChange={(e) => setFieldValue("linkedin", e.target.value)}
+                    placeholder="https://linkedin.com/in/username"
+                    className={cn(
+                      "h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20",
+                      errors.linkedin && "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                    )}
+                  />
+                </div>
+                {errors.linkedin ? (
+                  <FieldErrorMessage message={errors.linkedin} onDismiss={() => clearFieldError("linkedin")} />
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Preferred Contact Method</Label>
+                  <Select value={formData.preferredContactMethod} onValueChange={(val) => setFieldValue("preferredContactMethod", val)}>
+                    <SelectTrigger className="h-11 rounded-md border-[rgba(15,23,42,0.06)]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      {preferredContactOptions.map((method) => (
+                        <SelectItem key={method} value={method} className="rounded-md">{method}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Time Zone</Label>
+                  <Input
+                    value={formData.timeZone}
+                    onChange={(e) => setFieldValue("timeZone", e.target.value)}
+                    placeholder="America/Toronto"
+                    className="h-11 rounded-md border-[rgba(15,23,42,0.06)]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">Tags</Label>
+                <Input
+                  value={formData.tagsText}
+                  onChange={(e) => setFieldValue("tagsText", e.target.value)}
+                  placeholder="Hot, VIP, Champion"
+                  className="h-11 rounded-md border-[rgba(15,23,42,0.06)]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-[#475569]">Notes</Label>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFieldValue("notes", e.target.value)}
+                  placeholder="Context, preferences, objections, and next steps..."
+                  className="min-h-[96px] rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+                />
+              </div>
+            </div>
+          ) : null}
 
           {/* Primary Contact Toggle */}
           <div className="flex items-center justify-between p-4 bg-[#F8FAFC] rounded-md">
             <div>
               <p className="font-medium text-[#0F172A]">Primary Contact</p>
-              <p className="text-xs text-[#94A3B8]">Set as the main contact for this company</p>
+              <p className="text-xs text-[#94A3B8]">Use for the main decision contact on this account or deal</p>
             </div>
             <Checkbox
               checked={formData.isPrimary}
@@ -1180,7 +1500,7 @@ const ContactDialog = ({
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || !formData.contactPerson.trim() || !formData.contactEmail.trim()}
+              disabled={isLoading || !formData.firstName.trim() || !formData.lastName.trim() || !formData.contactEmail.trim() || !formData.contactNo.trim()}
               className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md "
             >
               {isLoading ? (
@@ -1238,6 +1558,8 @@ const ClientContactListPage = () => {
   // State
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [clients, setClients] = useState<{ id: string; clientName: string }[]>([]);
+  const [deals, setDeals] = useState<{ id: string; name: string }[]>([]);
+  const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
@@ -1280,6 +1602,8 @@ const ClientContactListPage = () => {
   useEffect(() => {
     fetchContacts();
     fetchClients();
+    fetchDeals();
+    fetchEmployees();
   }, []);
 
   useEffect(() => {
@@ -1304,20 +1628,40 @@ const ClientContactListPage = () => {
       const apiContacts = res.data?.data?.data || res.data?.data || [];
       const mapped = (apiContacts || []).map((c: any) => ({
         id: String(c.id),
-        type: c.type || "Client",
+        type: toContactTypeLabel(c.type),
         clientName: c.company?.clientName || "",
         clientId: c.company?.id ? String(c.company.id) : c.companyId ? String(c.companyId) : undefined,
         contactPerson: c.contactName || "",
+        firstName: c.firstName || "",
+        lastName: c.lastName || "",
         designation: c.jobTitle || "",
         department: c.department || "",
         contactEmail: c.email || "",
         contactNo: c.officePhone || "",
         mobile: c.mobilePhone || "",
+        relationshipStatus: c.relationshipStatus || "Active",
+        roleInBuyingProcess: c.roleInBuyingProcess || "",
+        seniorityLevel: c.seniorityLevel || "",
+        buyingAuthorityScore: c.buyingAuthorityScore || "",
+        secondaryEmail: c.secondaryEmail || "",
+        alternatePhone: c.alternatePhone || "",
+        preferredContactMethod: c.preferredContactMethod || "",
+        timeZone: c.timeZone || "",
+        tags: Array.isArray(c.tags) ? c.tags : [],
+        assignedToId: c.assignedTo?.id || c.assignedToId || "",
+        assignedToName: c.assignedTo?.user
+          ? [c.assignedTo.user.firstName, c.assignedTo.user.lastName].filter(Boolean).join(" ") || c.assignedTo.user.email
+          : "",
+        totalInteractions: c.totalInteractions || 0,
+        lastActivityType: c.lastActivityType || "",
+        deals: c.deals || [],
+        dealId: c.deals?.[0]?.dealId || "",
+        dealName: c.deals?.[0]?.dealName || "",
         isPrimary: c.isPrimaryContact || false,
         isFavorite: false,
-        lastContacted: c.updatedAt,
+        lastContacted: c.lastContactedAt || c.updatedAt,
         linkedin: c.linkedInUrl || "",
-        notes: "",
+        notes: c.notes || "",
       }));
       setContacts(mapped);
       setLoadError(null);
@@ -1348,6 +1692,34 @@ const ClientContactListPage = () => {
     }
   };
 
+  const fetchDeals = async () => {
+    try {
+      const data = await getProjects({ limit: 200 });
+      setDeals(
+        (data || []).map((deal: any) => ({
+          id: String(deal.id ?? ""),
+          name: deal.name ?? deal.projectName ?? deal.dealName ?? "Untitled Deal",
+        }))
+      );
+    } catch (error) {
+      console.error("Failed to fetch deals for dropdown");
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const data = await getEmployees({ limit: 200 });
+      setEmployees(
+        (data || []).map((employee: any) => ({
+          id: String(employee.id ?? ""),
+          name: getEmployeeName(employee),
+        }))
+      );
+    } catch (error) {
+      console.error("Failed to fetch employees for dropdown");
+    }
+  };
+
   const getContactErrorMessage = (error: any, fallback: string) => {
     const responseData = error?.response?.data;
     const validationErrors = responseData?.details?.errors;
@@ -1367,14 +1739,28 @@ const ClientContactListPage = () => {
     try {
       const payload = {
         contactName: normalizeWhitespace(data.contactPerson) || "",
+        firstName: normalizeWhitespace(data.firstName) || undefined,
+        lastName: normalizeWhitespace(data.lastName) || undefined,
         companyId: data.clientId ? String(data.clientId) : undefined,
-        type: (data.type?.toUpperCase() === "CLIENT" ? "CLIENT" : data.type?.toUpperCase() === "LEAD" ? "LEAD" : "CLIENT") as string,
+        dealId: data.dealId ? String(data.dealId) : undefined,
+        type: toContactTypePayload(data.type),
         jobTitle: data.designation?.trim() || undefined,
         department: data.department?.trim() || undefined,
         email: data.contactEmail ? normalizeEmailAddress(data.contactEmail) : "",
         officePhone: data.contactNo?.trim() || undefined,
         mobilePhone: data.mobile?.trim() || undefined,
         linkedInUrl: data.linkedin?.trim() || undefined,
+        relationshipStatus: data.relationshipStatus || "Active",
+        roleInBuyingProcess: data.roleInBuyingProcess || undefined,
+        seniorityLevel: data.seniorityLevel || undefined,
+        buyingAuthorityScore: data.buyingAuthorityScore || undefined,
+        secondaryEmail: data.secondaryEmail ? normalizeEmailAddress(data.secondaryEmail) : undefined,
+        alternatePhone: data.alternatePhone?.trim() || undefined,
+        preferredContactMethod: data.preferredContactMethod || undefined,
+        timeZone: data.timeZone?.trim() || undefined,
+        notes: data.notes?.trim() || undefined,
+        tags: data.tags || [],
+        assignedToId: data.assignedToId || undefined,
         isPrimaryContact: data.isPrimary || false,
       };
       await api.post("/contacts", payload);
@@ -1401,14 +1787,28 @@ const ClientContactListPage = () => {
     try {
       const payload: Record<string, any> = {};
       if (data.contactPerson !== undefined) payload.contactName = normalizeWhitespace(data.contactPerson);
-      if (data.clientId !== undefined) payload.companyId = String(data.clientId);
-      if (data.type !== undefined) payload.type = data.type.toUpperCase();
+      if (data.firstName !== undefined) payload.firstName = normalizeWhitespace(data.firstName);
+      if (data.lastName !== undefined) payload.lastName = normalizeWhitespace(data.lastName);
+      if (data.clientId !== undefined) payload.companyId = data.clientId ? String(data.clientId) : null;
+      if (data.dealId !== undefined) payload.dealId = data.dealId ? String(data.dealId) : null;
+      if (data.type !== undefined) payload.type = toContactTypePayload(data.type);
       if (data.designation !== undefined) payload.jobTitle = data.designation?.trim() || null;
       if (data.department !== undefined) payload.department = data.department?.trim() || null;
       if (data.contactEmail !== undefined) payload.email = data.contactEmail ? normalizeEmailAddress(data.contactEmail) : data.contactEmail;
       if (data.contactNo !== undefined) payload.officePhone = data.contactNo?.trim() || null;
       if (data.mobile !== undefined) payload.mobilePhone = data.mobile?.trim() || null;
       if (data.linkedin !== undefined) payload.linkedInUrl = data.linkedin?.trim() || null;
+      if (data.relationshipStatus !== undefined) payload.relationshipStatus = data.relationshipStatus || null;
+      if (data.roleInBuyingProcess !== undefined) payload.roleInBuyingProcess = data.roleInBuyingProcess || null;
+      if (data.seniorityLevel !== undefined) payload.seniorityLevel = data.seniorityLevel || null;
+      if (data.buyingAuthorityScore !== undefined) payload.buyingAuthorityScore = data.buyingAuthorityScore || null;
+      if (data.secondaryEmail !== undefined) payload.secondaryEmail = data.secondaryEmail ? normalizeEmailAddress(data.secondaryEmail) : null;
+      if (data.alternatePhone !== undefined) payload.alternatePhone = data.alternatePhone?.trim() || null;
+      if (data.preferredContactMethod !== undefined) payload.preferredContactMethod = data.preferredContactMethod || null;
+      if (data.timeZone !== undefined) payload.timeZone = data.timeZone?.trim() || null;
+      if (data.notes !== undefined) payload.notes = data.notes?.trim() || null;
+      if (data.tags !== undefined) payload.tags = data.tags || [];
+      if (data.assignedToId !== undefined) payload.assignedToId = data.assignedToId || null;
       if (data.isPrimary !== undefined) payload.isPrimaryContact = data.isPrimary;
 
       await api.put(`/contacts/${editingContact.id}`, payload);
@@ -2343,6 +2743,8 @@ const ClientContactListPage = () => {
         onSubmit={editingContact ? handleUpdateContact : handleAddContact}
         contact={editingContact}
         clients={clients}
+        deals={deals}
+        employees={employees}
       />
 
       {/* ============================================ */}

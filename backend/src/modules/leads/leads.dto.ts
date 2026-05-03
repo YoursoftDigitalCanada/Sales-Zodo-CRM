@@ -273,6 +273,8 @@ export interface LeadQueryDto {
   leadSourceId?: string;
   assignedToId?: string;
   convertedToClientId?: string;
+  convertedToContactId?: string;
+  convertedToDealId?: string;
   startDate?: Date;
   endDate?: Date;
   minValue?: number;
@@ -280,8 +282,9 @@ export interface LeadQueryDto {
 }
 
 export interface ConvertLeadDto {
-  clientType: 'INDIVIDUAL' | 'COMPANY';
+  clientType: 'INDIVIDUAL' | 'COMPANY' | 'BUSINESS';
   createContact?: boolean;
+  createClient?: boolean;
 }
 
 export interface MarkLeadContactedDto {
@@ -382,6 +385,25 @@ export interface LeadResponseDto {
   createdAt: Date;
   updatedAt: Date;
   convertedAt?: Date;
+  convertedToClientId?: string;
+  convertedToContactId?: string;
+  convertedToDealId?: string;
+  convertedToClient?: {
+    id: string;
+    clientName: string;
+    primaryEmail?: string;
+  };
+  convertedToContact?: {
+    id: string;
+    contactName: string;
+    email?: string;
+  };
+  convertedToDeal?: {
+    id: string;
+    name: string;
+    dealStatus?: string;
+    dealValue?: number;
+  };
 
   // ── Stage 1: Property Info ───────────────────────────────────────────
   propertyAddress?: string;
@@ -592,6 +614,31 @@ export function toLeadResponseDto(lead: any): LeadResponseDto {
     createdAt: lead.createdAt,
     updatedAt: lead.updatedAt,
     convertedAt: lead.convertedAt || undefined,
+    convertedToClientId: lead.convertedToClientId || undefined,
+    convertedToContactId: lead.convertedToContactId || undefined,
+    convertedToDealId: lead.convertedToDealId || undefined,
+    convertedToClient: lead.convertedToClient
+      ? {
+        id: lead.convertedToClient.id,
+        clientName: lead.convertedToClient.clientName,
+        primaryEmail: lead.convertedToClient.primaryEmail || undefined,
+      }
+      : undefined,
+    convertedToContact: lead.convertedToContact
+      ? {
+        id: lead.convertedToContact.id,
+        contactName: lead.convertedToContact.contactName,
+        email: lead.convertedToContact.email || undefined,
+      }
+      : undefined,
+    convertedToDeal: lead.convertedToDeal
+      ? {
+        id: lead.convertedToDeal.id,
+        name: lead.convertedToDeal.name,
+        dealStatus: lead.convertedToDeal.dealStatus || undefined,
+        dealValue: lead.convertedToDeal.dealValue ? Number(lead.convertedToDeal.dealValue) : undefined,
+      }
+      : undefined,
 
     // ── Stage 1: Property Info ─────────────────────────────────────────
     propertyAddress: lead.propertyAddress || undefined,

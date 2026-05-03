@@ -1185,6 +1185,11 @@ model Lead {
   converted         Boolean         @default(false)
   convertedAt       DateTime?
   convertedToClientId String?
+  convertedToClient Client?         @relation("LeadConvertedClient", fields: [convertedToClientId], references: [id], onDelete: SetNull)
+  convertedToContactId String?
+  convertedToContact Contact?       @relation("LeadConvertedContact", fields: [convertedToContactId], references: [id], onDelete: SetNull)
+  convertedToDealId String?
+  convertedToDeal   Project?        @relation("LeadConvertedDeal", fields: [convertedToDealId], references: [id], onDelete: SetNull)
   
   // CRM-develop syncing and lost details
   facebookLeadId    String?
@@ -1291,6 +1296,7 @@ model Lead {
   tags              LeadTag[]
   calendarEvents    CalendarEvent[]
   activities        LeadActivity[]
+  tasks             Task[]
   quotes            Quote[]
   projects          Project[]
   files             File[]
@@ -1307,6 +1313,9 @@ model Lead {
   @@index([temperature])
   @@index([assignedToId])
   @@index([leadSourceId])
+  @@index([convertedToClientId])
+  @@index([convertedToContactId])
+  @@index([convertedToDealId])
   @@index([createdAt])
   @@index([serviceType])
   @@index([isInsuranceClaim])
@@ -1643,6 +1652,7 @@ model Client {
   projects                Project[]
   invoices                Invoice[]
   quotes                  Quote[]
+  convertedLeads          Lead[]     @relation("LeadConvertedClient")
   orders                  Order[]
   bookings                Booking[]
   tasks                   Task[]
@@ -1705,6 +1715,7 @@ model Contact {
 
   // Relations
   emails                Email[]
+  convertedLeads        Lead[]       @relation("LeadConvertedContact")
 }
 
 // ============================================================================
@@ -1835,6 +1846,14 @@ model Task {
   // Client relation (optional)
   clientId        String?
   client          Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  // Lead relation (optional)
+  leadId          String?
+  lead            Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  // CRM-develop-style dynamic activity reference
+  referenceDoctype String?
+  referenceDocname String?
   
   // Tenant relation
   tenantId        String
@@ -1856,6 +1875,8 @@ model Task {
   @@index([priority])
   @@index([assignedToId])
   @@index([projectId])
+  @@index([leadId])
+  @@index([referenceDoctype, referenceDocname])
   @@index([dueDate])
   @@unique([id, tenantId])
 }
@@ -2066,6 +2087,7 @@ model Project {
   payments        InvoicePayment[]
   emails          Email[]
   contracts       Contract[]
+  convertedFromLeads Lead[]        @relation("LeadConvertedDeal")
   timeEntries     TimeEntry[]
   jobNotes        JobNote[]
   checklistSubmissions ChecklistSubmission[]

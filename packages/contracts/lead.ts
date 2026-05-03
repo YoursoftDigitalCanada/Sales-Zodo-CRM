@@ -178,6 +178,8 @@ export const LeadQuerySchema = z.object({
   assignedToId: z.string().uuid().optional(),
   leadSourceId: z.string().uuid().optional(),
   convertedToClientId: z.string().uuid().optional(),
+  convertedToContactId: z.string().uuid().optional(),
+  convertedToDealId: z.string().uuid().optional(),
   sortBy: z.enum(["firstName", "createdAt", "potentialValue", "companyName"]).default("createdAt"),
   sortOrder: SortOrderSchema.default("desc"),
 });

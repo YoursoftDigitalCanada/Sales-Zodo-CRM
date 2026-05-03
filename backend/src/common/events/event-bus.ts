@@ -35,6 +35,8 @@ export interface LeadConvertedEvent {
     leadId: string;
     leadName: string;
     clientId: string;
+    contactId?: string;
+    dealId?: string;
     clientType: string;
     convertedByUserId: string;
     ownerUserId?: string;

@@ -57,7 +57,10 @@ export async function updateLeadStatus(
     return response.data?.data || response.data;
 }
 
-export async function convertLead(id: string | number, data: ConvertLeadDto): Promise<unknown> {
+export async function convertLead(
+    id: string | number,
+    data: ConvertLeadDto
+): Promise<{ clientId: string; contactId?: string; dealId?: string }> {
     const response = await api.post(`/leads/${id}/convert`, data);
     return response.data?.data || response.data;
 }

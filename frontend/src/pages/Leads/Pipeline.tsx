@@ -1797,16 +1797,16 @@ const Pipeline = () => {
         </DrawerContent>
       </Drawer>
 
-      {/* Convert Lead to Client Dialog */}
+      {/* Convert Lead to Deal Dialog */}
       <Dialog open={!!convertingLead} onOpenChange={(open) => { if (!open) handleConvertCancel(); }}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <ArrowRightLeft className="h-5 w-5 text-[#6637F4]" />
-              Convert Lead to Client
+              Convert Lead to Deal
             </DialogTitle>
             <DialogDescription>
-              This will create a new client from <strong>{convertingLead?.lead.firstName} {convertingLead?.lead.lastName}</strong>
+              This will create an account, contact, and deal from <strong>{convertingLead?.lead.firstName} {convertingLead?.lead.lastName}</strong>
               {convertingLead?.lead.company && <> at <strong>{convertingLead.lead.company}</strong></>}.
               The lead will be marked as <strong>Won</strong>.
             </DialogDescription>
@@ -1863,14 +1863,18 @@ const Pipeline = () => {
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-sm">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span>New <strong>{convertClientType === "COMPANY" ? "Company" : "Individual"}</strong> client</span>
+                  <span>New <strong>{convertClientType === "COMPANY" ? "Company" : "Individual"}</strong> account</span>
                 </div>
                 {convertClientType === "COMPANY" && convertCreateContact && (
                   <div className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    <span>Primary contact: <strong>{convertingLead?.lead.firstName} {convertingLead?.lead.lastName}</strong></span>
+                  <span>Primary contact: <strong>{convertingLead?.lead.firstName} {convertingLead?.lead.lastName}</strong></span>
                   </div>
                 )}
+                <div className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span>Sales deal linked to this lead</span>
+                </div>
                 <div className="flex items-center gap-2 text-sm">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span>Lead marked as <strong>Won</strong></span>
@@ -1891,7 +1895,7 @@ const Pipeline = () => {
               className="bg-green-600 hover:bg-green-700 text-white gap-2"
             >
               {convertLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRightLeft className="h-4 w-4" />}
-              {convertLoading ? "Converting..." : "Convert to Client"}
+              {convertLoading ? "Converting..." : "Convert to Deal"}
             </Button>
           </DialogFooter>
         </DialogContent>

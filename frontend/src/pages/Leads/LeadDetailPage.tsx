@@ -64,6 +64,11 @@ interface LeadData {
     notes: string | null;
     convertedAt: string | null;
     convertedToClientId: string | null;
+    convertedToContactId?: string | null;
+    convertedToDealId?: string | null;
+    convertedToClient?: { id: string; clientName: string; primaryEmail?: string | null } | null;
+    convertedToContact?: { id: string; contactName: string; email?: string | null } | null;
+    convertedToDeal?: { id: string; name: string; dealStatus?: string | null; dealValue?: number | string | null } | null;
     createdAt: string;
     updatedAt: string;
     leadSource: { id: string; name: string } | null;
@@ -325,7 +330,7 @@ interface ConvertDialogProps {
     open: boolean;
     onClose: () => void;
     lead: LeadData;
-    onSuccess: (clientId: string) => void;
+    onSuccess: (result: { clientId: string; dealId?: string }) => void;
 }
 
 const ConvertLeadDialog = ({ open, onClose, lead, onSuccess }: ConvertDialogProps) => {
@@ -342,9 +347,9 @@ const ConvertLeadDialog = ({ open, onClose, lead, onSuccess }: ConvertDialogProp
             const data = await convertLead(lead.id, { clientType, createContact });
             toast({
                 title: "🎉 Lead Converted!",
-                description: `${lead.firstName} ${lead.lastName} is now a client.`,
+                description: `${lead.firstName} ${lead.lastName} is now linked to an account, contact, and deal.`,
             });
-            onSuccess(data.clientId);
+            onSuccess(data);
         } catch (err: any) {
             const msg = err?.response?.data?.message || "Conversion failed. Please try again.";
             setError(msg);
@@ -360,10 +365,10 @@ const ConvertLeadDialog = ({ open, onClose, lead, onSuccess }: ConvertDialogProp
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-lg">
                         <ArrowRightLeft className="h-5 w-5 text-[#6637F4]" />
-                        Convert Lead to Client
+                        Convert Lead to Deal
                     </DialogTitle>
                     <DialogDescription>
-                        This will create a new client from <strong>{lead.firstName} {lead.lastName}</strong>
+                        This will create an account, contact, and deal from <strong>{lead.firstName} {lead.lastName}</strong>
                         {lead.companyName && <> at <strong>{lead.companyName}</strong></>}.
                         The lead will be marked as <strong>Won</strong>.
                     </DialogDescription>
@@ -420,7 +425,7 @@ const ConvertLeadDialog = ({ open, onClose, lead, onSuccess }: ConvertDialogProp
                         <div className="space-y-1.5">
                             <div className="flex items-center gap-2 text-sm">
                                 <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                <span>New <strong>{clientType === "COMPANY" ? "Company" : "Individual"}</strong> client</span>
+                                <span>New <strong>{clientType === "COMPANY" ? "Company" : "Individual"}</strong> account</span>
                             </div>
                             {clientType === "COMPANY" && createContact && (
                                 <div className="flex items-center gap-2 text-sm">
@@ -428,6 +433,10 @@ const ConvertLeadDialog = ({ open, onClose, lead, onSuccess }: ConvertDialogProp
                                     <span>Primary contact: <strong>{lead.firstName} {lead.lastName}</strong></span>
                                 </div>
                             )}
+                            <div className="flex items-center gap-2 text-sm">
+                                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                <span>Sales deal linked to this lead</span>
+                            </div>
                             <div className="flex items-center gap-2 text-sm">
                                 <CheckCircle2 className="h-4 w-4 text-green-500" />
                                 <span>Lead marked as <strong>Won</strong></span>
@@ -448,7 +457,7 @@ const ConvertLeadDialog = ({ open, onClose, lead, onSuccess }: ConvertDialogProp
                         className="bg-green-600 hover:bg-green-700 text-white gap-2"
                     >
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRightLeft className="h-4 w-4" />}
-                        {loading ? "Converting..." : "Convert to Client"}
+                        {loading ? "Converting..." : "Convert to Deal"}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -758,9 +767,9 @@ const LeadDetailPage = () => {
         }
     };
 
-    const handleConvertSuccess = (clientId: string) => {
+    const handleConvertSuccess = (result: { clientId: string; dealId?: string }) => {
         setShowConvertDialog(false);
-        navigate(`/client-list/${clientId}`);
+        navigate(result.dealId ? `/projects/${result.dealId}` : `/client-list/${result.clientId}`);
     };
 
     // ── Loading / Error ───────────────────────────────────────────────────
@@ -849,7 +858,7 @@ const LeadDetailPage = () => {
                             phoneNumber={lead.phone}
                             className="hidden sm:inline-flex h-auto px-3 py-2"
                         />
-                        {isConverted && <Link to={`/client-list/${lead.convertedToClientId}`}><Button variant="outline" size="sm" className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50 text-xs"><ExternalLink size={14} />View Client</Button></Link>}
+                        {isConverted && lead.convertedToDealId && <Link to={`/projects/${lead.convertedToDealId}`}><Button variant="outline" size="sm" className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50 text-xs"><ExternalLink size={14} />View Deal</Button></Link>}
                         {canConvert && <Button size="sm" onClick={() => setShowConvertDialog(true)} className="bg-green-600 hover:bg-green-700 text-white gap-1.5 text-xs shadow-sm"><ArrowRightLeft size={14} />Convert</Button>}
                     </div>
                 </div>
@@ -865,14 +874,17 @@ const LeadDetailPage = () => {
                 {/* Convert/Converted Banner */}
                 {canConvert && (
                     <div className="rounded-xl border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 p-4 flex items-center justify-between" style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-                        <div><h3 className="font-semibold text-green-800 text-sm">Ready to convert?</h3><p className="text-xs text-green-600 mt-0.5">Turn this lead into a client to unlock projects, invoicing, and more.</p></div>
-                        <Button size="sm" onClick={() => setShowConvertDialog(true)} className="bg-green-600 hover:bg-green-700 text-white gap-1.5 text-xs"><ArrowRightLeft size={14} />Convert to Client</Button>
+                        <div><h3 className="font-semibold text-green-800 text-sm">Ready to convert?</h3><p className="text-xs text-green-600 mt-0.5">Turn this lead into an account, contact, and sales deal.</p></div>
+                        <Button size="sm" onClick={() => setShowConvertDialog(true)} className="bg-green-600 hover:bg-green-700 text-white gap-1.5 text-xs"><ArrowRightLeft size={14} />Convert to Deal</Button>
                     </div>
                 )}
                 {isConverted && (
                     <div className="rounded-xl border border-green-200 bg-green-50 p-4 flex items-center justify-between" style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-                        <div className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-green-600" /><div><h3 className="font-semibold text-green-800 text-sm">Lead Converted</h3><p className="text-xs text-green-600">Converted on {formatDate(lead.convertedAt)}</p></div></div>
-                        <Link to={`/client-list/${lead.convertedToClientId}`}><Button variant="outline" size="sm" className="gap-1.5 border-green-300 text-green-700 hover:bg-green-100 text-xs"><ExternalLink size={14} />View Client</Button></Link>
+                        <div className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-green-600" /><div><h3 className="font-semibold text-green-800 text-sm">Lead Converted</h3><p className="text-xs text-green-600">Account, contact, and deal linked on {formatDate(lead.convertedAt)}</p></div></div>
+                        <div className="flex items-center gap-2">
+                            {lead.convertedToClientId && <Link to={`/client-list/${lead.convertedToClientId}`}><Button variant="outline" size="sm" className="gap-1.5 border-green-300 text-green-700 hover:bg-green-100 text-xs"><ExternalLink size={14} />Account</Button></Link>}
+                            {lead.convertedToDealId && <Link to={`/projects/${lead.convertedToDealId}`}><Button variant="outline" size="sm" className="gap-1.5 border-green-300 text-green-700 hover:bg-green-100 text-xs"><ExternalLink size={14} />Deal</Button></Link>}
+                        </div>
                     </div>
                 )}
 

@@ -41,6 +41,15 @@ export class LeadsRepository {
       },
     },
     contactedDetails: true,
+    convertedToClient: {
+      select: { id: true, clientName: true, primaryEmail: true },
+    },
+    convertedToContact: {
+      select: { id: true, contactName: true, email: true },
+    },
+    convertedToDeal: {
+      select: { id: true, name: true, dealStatus: true, dealValue: true },
+    },
   };
 
   /**
@@ -101,6 +110,8 @@ export class LeadsRepository {
       leadSourceId,
       assignedToId,
       convertedToClientId,
+      convertedToContactId,
+      convertedToDealId,
       startDate,
       endDate,
       minValue,
@@ -117,6 +128,8 @@ export class LeadsRepository {
       ...(leadSourceId && { leadSourceId }),
       ...(assignedToId && { assignedToId }),
       ...(convertedToClientId && { convertedToClientId }),
+      ...(convertedToContactId && { convertedToContactId }),
+      ...(convertedToDealId && { convertedToDealId }),
       ...(startDate || endDate
         ? {
           createdAt: {
@@ -299,7 +312,7 @@ export class LeadsRepository {
   /**
    * Mark lead as converted
    */
-  async markConverted(id: string, tenantId: string, clientId: string) {
+  async markConverted(id: string, tenantId: string, clientId: string, contactId?: string | null, dealId?: string | null) {
     // Verify tenant ownership
     const existing = await prisma.lead.findFirst({ where: { id, tenantId } });
     if (!existing) throw new Error('Lead not found or access denied');
@@ -310,6 +323,8 @@ export class LeadsRepository {
         status: 'WON',
         convertedAt: new Date(),
         convertedToClientId: clientId,
+        convertedToContactId: contactId ?? undefined,
+        convertedToDealId: dealId ?? undefined,
       },
       include: this.defaultInclude,
     });

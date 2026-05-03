@@ -813,7 +813,8 @@ export class LeadsService {
   // ── CONVERSION ──────────────────────────────────────────────────────────
 
   /**
-   * Convert a lead into a client (and optionally a contact).
+   * Convert a lead into crm-develop-style sales records:
+   * Account/Organization (Client), primary Contact, and Deal (Project).
    *
    * Transactional: client create + optional contact create + lead status update
    * are committed atomically. Domain side effects fire AFTER commit.
@@ -823,7 +824,7 @@ export class LeadsService {
     tenantId: string,
     options: ConvertLeadDto,
     actorUserId?: string,
-  ): Promise<{ clientId: string; contactId?: string }> {
+  ): Promise<{ clientId: string; contactId?: string; dealId: string }> {
     // ── Validate ──────────────────────────────────────────────────────────
     const lead = await leadsRepository.findById(leadId, tenantId);
 
@@ -831,28 +832,48 @@ export class LeadsService {
       throw new NotFoundError('Lead not found', ErrorCodes.RESOURCE_NOT_FOUND);
     }
 
-    if (lead.status === 'WON' && lead.convertedToClientId) {
+    if (lead.status === 'WON' && lead.convertedToClientId && lead.convertedToDealId) {
       throw new BadRequestError('Lead has already been converted', ErrorCodes.VALIDATION_FAILED);
     }
 
     // ── Atomic writes ─────────────────────────────────────────────────────
     // Normalize clientType: frontend sends 'COMPANY' but Prisma enum is 'BUSINESS'
-    const normalizedClientType = (options.clientType === 'COMPANY' ? 'BUSINESS' : options.clientType) as ClientType;
+    const normalizedClientType = (options.clientType === 'COMPANY' ? 'BUSINESS' : options.clientType || 'BUSINESS') as ClientType;
     const isBusinessClient = normalizedClientType === 'BUSINESS';
+    const organizationName = lead.organization || lead.companyName || `${lead.firstName} ${lead.lastName}`;
+    const leadFullName = [lead.firstName, lead.middleName, lead.lastName].filter(Boolean).join(' ');
+    const dealValue = lead.potentialValue || lead.annualRevenue || null;
+    const propertyType = lead.propertyType === 'Commercial'
+      ? 'COMMERCIAL'
+      : lead.propertyType === 'Multi-Family'
+        ? 'MULTI_FAMILY'
+        : 'RESIDENTIAL';
 
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Create client — maps lead fields to CreateClientDto shape
-      const client = await tx.client.create({
+      // 1. Create account/organization — maps CRM Lead organization fields.
+      const existingClient = lead.convertedToClientId
+        ? await tx.client.findFirst({ where: { id: lead.convertedToClientId, tenantId } })
+        : await tx.client.findFirst({
+          where: {
+            tenantId,
+            OR: [
+              ...(lead.email ? [{ primaryEmail: lead.email }] : []),
+              { clientName: organizationName },
+            ],
+          },
+        });
+
+      const client = existingClient || await tx.client.create({
         data: {
           tenantId,
           clientType: normalizedClientType,
           clientName:
             isBusinessClient
-              ? (lead.companyName || `${lead.firstName} ${lead.lastName}`)
-              : `${lead.firstName} ${lead.lastName}`,
-          companyName: isBusinessClient ? lead.companyName : null,
+              ? organizationName
+              : leadFullName,
+          companyName: isBusinessClient ? organizationName : null,
           primaryEmail: lead.email || '',
-          primaryPhone: lead.phone || '',
+          primaryPhone: lead.phone || lead.mobileNo || '',
           status: 'ACTIVE',
           assignedOwnerId: lead.assignedToId,
           internalNotes: lead.notes,
@@ -881,33 +902,118 @@ export class LeadsService {
         },
       });
 
-      // 2. Create primary contact (company leads only)
-      let contact = null;
-      if (options.createContact && isBusinessClient) {
-        contact = await tx.contact.create({
-          data: {
+      // 2. Create/reuse primary contact, then link it to the account.
+      let contact = lead.convertedToContactId
+        ? await tx.contact.findFirst({ where: { id: lead.convertedToContactId, tenantId } })
+        : null;
+
+      if (!contact && (lead.email || lead.phone || lead.mobileNo || lead.firstName || lead.lastName)) {
+        contact = await tx.contact.findFirst({
+          where: {
             tenantId,
-            companyId: client.id,
-            contactName: `${lead.firstName} ${lead.lastName}`,
-            email: lead.email || '',
-            officePhone: lead.phone,
-            jobTitle: lead.jobTitle,
-            isPrimaryContact: true,
+            OR: [
+              ...(lead.email ? [{ email: lead.email }] : []),
+              { contactName: leadFullName },
+            ],
           },
         });
       }
 
-      // 3. Mark lead as converted
+      if (!contact) {
+        contact = await tx.contact.create({
+          data: {
+            tenantId,
+            companyId: client.id,
+            type: 'LEAD',
+            contactName: leadFullName || organizationName,
+            email: lead.email || '',
+            officePhone: lead.phone,
+            mobilePhone: lead.mobileNo,
+            jobTitle: lead.jobTitle,
+            isPrimaryContact: true,
+          },
+        });
+      } else if (contact.companyId !== client.id || !contact.isPrimaryContact) {
+        contact = await tx.contact.update({
+          where: { id: contact.id },
+          data: {
+            companyId: contact.companyId || client.id,
+            isPrimaryContact: contact.isPrimaryContact || true,
+            jobTitle: contact.jobTitle || lead.jobTitle || undefined,
+            mobilePhone: contact.mobilePhone || lead.mobileNo || undefined,
+            officePhone: contact.officePhone || lead.phone || undefined,
+          },
+        });
+      }
+
+      // 3. Create/reuse deal — our Project model is the Sales Deal surface.
+      const existingDeal = lead.convertedToDealId
+        ? await tx.project.findFirst({ where: { id: lead.convertedToDealId, tenantId, deletedAt: null } })
+        : await tx.project.findFirst({ where: { tenantId, leadId: lead.id, deletedAt: null } });
+
+      const deal = existingDeal || await tx.project.create({
+        data: {
+          tenantId,
+          leadId: lead.id,
+          clientId: client.id,
+          name: `${organizationName} Deal`,
+          description: lead.notes || lead.useCase || null,
+          projectNumber: await this.generateDealNumber(tx, tenantId),
+          status: 'ACTIVE',
+          priority: lead.temperature === 'HOT' ? 'HIGH' : 'NORMAL',
+          projectType: 'OTHER',
+          propertyType,
+          salesRepId: lead.assignedToId,
+          projectManagerId: lead.assignedToId,
+          organization: client.id,
+          organizationName,
+          nextStep: lead.nextStep || null,
+          dealStatus: 'Qualification',
+          dealOwnerId: lead.assignedToId,
+          probability: 25,
+          expectedDealValue: dealValue,
+          dealValue,
+          expectedClosureDate: lead.followUpDateTime || lead.inspectionAppointmentDate || null,
+          sourceId: lead.leadSourceId || null,
+          leadName: leadFullName || organizationName,
+          website: lead.website || null,
+          noOfEmployees: lead.companySize || null,
+          jobTitle: lead.jobTitle || null,
+          territory: lead.territory || null,
+          annualRevenue: lead.annualRevenue || null,
+          salutation: lead.salutation || null,
+          firstName: lead.firstName || null,
+          lastName: lead.lastName || null,
+          email: lead.email || null,
+          mobileNo: lead.mobileNo || lead.phone || null,
+          phone: lead.phone || lead.mobileNo || null,
+          gender: lead.gender || null,
+          contactId: contact?.id || null,
+          total: dealValue,
+          netTotal: dealValue,
+          currency: 'CAD',
+          jobSiteAddress: lead.propertyAddress || null,
+          jobSiteCity: lead.city || null,
+          jobSiteState: lead.state || null,
+          jobSiteZip: lead.zipCode || null,
+          createdById: lead.createdById || null,
+        },
+      });
+
+      // 4. Mark lead as converted and store all crm-develop-style links.
       await tx.lead.update({
         where: { id: leadId },
         data: {
           status: 'WON',
+          converted: true,
           convertedAt: new Date(),
           convertedToClientId: client.id,
+          convertedToContactId: contact?.id || null,
+          convertedToDealId: deal.id,
         },
       });
 
-      return { client, contact };
+      return { client, contact, deal };
     });
 
     // ── Post-commit domain side effects ───────────────────────────────────
@@ -916,11 +1022,13 @@ export class LeadsService {
       : (options.clientType || 'BUSINESS');
 
     // Timeline: log conversion activity on the lead
-    await this.logActivity(tenantId, leadId, 'CONVERTED', 'Lead converted to client', {
+    await this.logActivity(tenantId, leadId, 'CONVERTED', 'Lead converted to account, contact and deal', {
       clientId: result.client.id,
       clientName: result.client.clientName,
       clientType: safeClientType,
       contactId: result.contact?.id,
+      dealId: result.deal.id,
+      dealName: result.deal.name,
     });
 
     // Event: client.created (mirrors what clientsService.create() emits)
@@ -938,6 +1046,8 @@ export class LeadsService {
       leadId,
       leadName: `${lead.firstName} ${lead.lastName}`,
       clientId: result.client.id,
+      contactId: result.contact?.id,
+      dealId: result.deal.id,
       clientType: safeClientType,
       convertedByUserId: actorUserId || '',
       ownerUserId: lead.assignedTo?.user?.id,
@@ -950,13 +1060,27 @@ export class LeadsService {
       leadId,
       clientId: result.client.id,
       contactId: result.contact?.id,
+      dealId: result.deal.id,
       tenantId,
     });
 
     return {
       clientId: result.client.id,
       contactId: result.contact?.id,
+      dealId: result.deal.id,
     };
+  }
+
+  private async generateDealNumber(tx: any, tenantId: string): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `DEAL-${year}-`;
+    const latest = await tx.project.findFirst({
+      where: { tenantId, projectNumber: { startsWith: prefix } },
+      orderBy: { projectNumber: 'desc' },
+      select: { projectNumber: true },
+    });
+    const latestSeq = latest?.projectNumber ? Number(latest.projectNumber.split('-').pop()) || 0 : 0;
+    return `${prefix}${String(latestSeq + 1).padStart(4, '0')}`;
   }
 
   // ── PRIVATE HELPERS ────────────────────────────────────────────────────

@@ -26,6 +26,14 @@ export interface CreateLeadDto {
   companySize?: string;
   annualRevenue?: number;
   useCase?: string;
+  leadType?: string;
+  buyingIntent?: string;
+  purchaseTimeline?: string;
+  productInterest?: string;
+  numberOfUsers?: number;
+  currentSolution?: string;
+  teamRegion?: string;
+  country?: string;
 
   // Classification
   status?: LeadStatus;
@@ -155,6 +163,14 @@ export interface UpdateLeadDto {
   companySize?: string;
   annualRevenue?: number;
   useCase?: string;
+  leadType?: string;
+  buyingIntent?: string;
+  purchaseTimeline?: string;
+  productInterest?: string;
+  numberOfUsers?: number;
+  currentSolution?: string;
+  teamRegion?: string;
+  country?: string;
 
   // Classification
   status?: LeadStatus;
@@ -348,6 +364,14 @@ export interface LeadResponseDto {
   companySize?: string;
   annualRevenue?: number;
   useCase?: string;
+  leadType?: string;
+  buyingIntent?: string;
+  purchaseTimeline?: string;
+  productInterest?: string;
+  numberOfUsers?: number;
+  currentSolution?: string;
+  teamRegion?: string;
+  country?: string;
   status: LeadStatus;
   temperature: LeadTemperature;
   potentialValue?: number;
@@ -571,6 +595,14 @@ export function toLeadResponseDto(lead: any): LeadResponseDto {
     companySize: lead.companySize || undefined,
     annualRevenue: lead.annualRevenue ? Number(lead.annualRevenue) : undefined,
     useCase: lead.useCase || undefined,
+    leadType: lead.leadType || undefined,
+    buyingIntent: lead.buyingIntent || undefined,
+    purchaseTimeline: lead.purchaseTimeline || undefined,
+    productInterest: lead.productInterest || undefined,
+    numberOfUsers: lead.numberOfUsers ?? undefined,
+    currentSolution: lead.currentSolution || undefined,
+    teamRegion: lead.teamRegion || undefined,
+    country: lead.country || undefined,
     status: lead.status,
     temperature: lead.temperature,
     potentialValue: lead.potentialValue ? Number(lead.potentialValue) : undefined,

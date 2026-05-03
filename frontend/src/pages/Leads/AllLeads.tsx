@@ -203,6 +203,14 @@ interface Lead {
   companySize?: string;
   annualRevenue?: number;
   useCase?: string;
+  leadType?: string;
+  buyingIntent?: string;
+  purchaseTimeline?: string;
+  productInterest?: string;
+  numberOfUsers?: number;
+  currentSolution?: string;
+  teamRegion?: string;
+  country?: string;
   location: string;
   leadSourceName: string;
   status: LeadStatus;
@@ -1303,6 +1311,14 @@ export const LeadFormDialog = ({
     companySize: "",
     annualRevenue: "",
     useCase: "",
+    leadType: "",
+    buyingIntent: "",
+    purchaseTimeline: "",
+    productInterest: "",
+    numberOfUsers: "",
+    currentSolution: "",
+    teamRegion: "",
+    country: "",
     location: "",
     source: "website",
     leadSourceId: "",
@@ -1392,17 +1408,17 @@ export const LeadFormDialog = ({
   const getTabErrorFields = useCallback((tab: LeadFormTab) => {
     switch (tab) {
       case "basic":
-        return ["firstName", "lastName", "phone", "email", "secondaryPhone", "spouseCoOwnerName"];
+        return ["firstName", "lastName", "phone", "email", "companyName"];
       case "property":
         return ["propertyAddress", "zipCode", "website"];
       case "service":
-        return ["serviceType", "useCase", "issueDescription"];
+        return ["productInterest", "useCase", "numberOfUsers", "currentSolution"];
       case "qualification":
-        return ["numberOfOtherQuotes"];
+        return ["status", "leadSourceId", "leadType", "buyingIntent", "budgetRange", "purchaseTimeline"];
       case "assessment":
         return ["leadScore", "qualificationCallNotes"];
       case "details":
-        return ["potentialValue", "website"];
+        return ["assignedToId", "potentialValue", "website"];
       default:
         return [];
     }
@@ -1502,6 +1518,9 @@ export const LeadFormDialog = ({
         if (phoneError) {
           nextErrors.phone = phoneError;
         }
+        if (!formData.companyName.trim()) {
+          nextErrors.companyName = "Company is required.";
+        }
 
         const emailError = getEmailAddressError(formData.email, "Email");
         if (emailError) {
@@ -1528,6 +1547,18 @@ export const LeadFormDialog = ({
         }
         break;
       case "service":
+        if (!formData.useCase.trim()) {
+          nextErrors.useCase = "Use case is required.";
+        }
+        if (!formData.productInterest.trim()) {
+          nextErrors.productInterest = "Product interest is required.";
+        }
+        if (formData.numberOfUsers.trim()) {
+          const seats = Number(formData.numberOfUsers);
+          if (!Number.isInteger(seats) || seats < 0) {
+            nextErrors.numberOfUsers = "Number of users must be a whole number.";
+          }
+        }
         if (formData.useCase.trim().length > 1000) {
           nextErrors.useCase = "Use case must be 1000 characters or less.";
         }
@@ -1536,13 +1567,20 @@ export const LeadFormDialog = ({
         }
         break;
       case "qualification":
-        if (formData.gettingOtherQuotes === "Yes") {
-          const quoteCount = Number(formData.numberOfOtherQuotes);
-          if (!formData.numberOfOtherQuotes.trim()) {
-            nextErrors.numberOfOtherQuotes = "Enter how many other quotes the lead is getting.";
-          } else if (!Number.isInteger(quoteCount) || quoteCount < 1 || quoteCount > 10) {
-            nextErrors.numberOfOtherQuotes = "Other quotes must be a whole number between 1 and 10.";
-          }
+        if (!formData.leadSourceId || formData.leadSourceId === "none") {
+          nextErrors.leadSourceId = "Source is required.";
+        }
+        if (!formData.leadType) {
+          nextErrors.leadType = "Lead type is required.";
+        }
+        if (!formData.buyingIntent) {
+          nextErrors.buyingIntent = "Buying intent is required.";
+        }
+        if (!formData.budgetRange) {
+          nextErrors.budgetRange = "Budget is required.";
+        }
+        if (!formData.purchaseTimeline) {
+          nextErrors.purchaseTimeline = "Timeline is required.";
         }
         break;
       case "assessment":
@@ -1554,6 +1592,9 @@ export const LeadFormDialog = ({
         }
         break;
       case "details":
+        if (!formData.assignedToId || formData.assignedToId === "unassigned") {
+          nextErrors.assignedToId = "Assigned rep is required.";
+        }
         if (formData.potentialValue.trim()) {
           const potentialValue = Number(formData.potentialValue);
           if (Number.isNaN(potentialValue) || potentialValue < 0) {
@@ -1672,6 +1713,14 @@ export const LeadFormDialog = ({
         companySize: lead.companySize || "",
         annualRevenue: lead.annualRevenue?.toString() || "",
         useCase: lead.useCase || "",
+        leadType: lead.leadType || "",
+        buyingIntent: lead.buyingIntent || "",
+        purchaseTimeline: lead.purchaseTimeline || lead.workTimeline || "",
+        productInterest: lead.productInterest || lead.serviceType || "",
+        numberOfUsers: lead.numberOfUsers?.toString() || "",
+        currentSolution: lead.currentSolution || "",
+        teamRegion: lead.teamRegion || lead.territory || "",
+        country: lead.country || "",
         location: lead.location,
         source: lead.leadSourceName,
         leadSourceId: lead.leadSourceId || "",
@@ -1741,7 +1790,7 @@ export const LeadFormDialog = ({
     } else {
       setFormData({
         salutation: "", firstName: "", middleName: "", lastName: "", gender: "", email: "", phone: "", mobileNo: "",
-        organization: "", companyName: "", jobTitle: "", website: "", territory: "", industry: "", companySize: "", annualRevenue: "", useCase: "", location: "",
+        organization: "", companyName: "", jobTitle: "", website: "", territory: "", industry: "", companySize: "", annualRevenue: "", useCase: "", leadType: "", buyingIntent: "", purchaseTimeline: "", productInterest: "", numberOfUsers: "", currentSolution: "", teamRegion: "", country: "", location: "",
         source: "website", leadSourceId: "", status: LeadStatus.NEW, temperature: LeadTemperature.WARM,
         potentialValue: "", assignedToId: "", tags: "", notes: "",
         converted: false, facebookLeadId: "", facebookFormId: "", lostReason: "", lostNotes: "",
@@ -1993,11 +2042,12 @@ export const LeadFormDialog = ({
                   <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={formData.companyName}
-                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                    onChange={(e) => setFieldValue("companyName", e.target.value)}
                     placeholder="Acme Inc."
-                    className="h-11 pl-10 rounded-md"
+                    className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("companyName"))}
                   />
                 </div>
+                {renderFieldError("companyName")}
               </div>
             </TabsContent>
 
@@ -2086,6 +2136,31 @@ export const LeadFormDialog = ({
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Country</Label>
+                  <Input
+                    value={formData.country}
+                    onChange={(e) => setFieldValue("country", e.target.value)}
+                    placeholder="Canada"
+                    className="h-11 rounded-md"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Team / Region</Label>
+                  <Input
+                    value={formData.teamRegion}
+                    onChange={(e) => {
+                      setFieldValue("teamRegion", e.target.value);
+                      if (!formData.territory) setFieldValue("territory", e.target.value);
+                    }}
+                    placeholder="GTA, Ontario, West Coast..."
+                    className={cn("h-11 rounded-md", getFieldErrorClass("teamRegion"))}
+                  />
+                  {renderFieldError("teamRegion")}
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">Company Size</Label>
                 <Select
@@ -2154,28 +2229,28 @@ export const LeadFormDialog = ({
             {/* ── TAB: Sales Need ─────────────────────────────────────────── */}
             <TabsContent value="service" className="space-y-4 mt-0">
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">
-                  Sales Use Case
-                </Label>
+                <Label className="text-sm font-medium text-[#475569]">Product Interest <span className="text-red-500">*</span></Label>
                 <Select
-                  value={formData.serviceType}
-                  onValueChange={(val) => setFieldValue("serviceType", val)}
+                  value={formData.productInterest}
+                  onValueChange={(val) => {
+                    setFieldValue("productInterest", val);
+                    setFieldValue("serviceType", val);
+                  }}
                 >
-                  <SelectTrigger className={cn("h-11 rounded-md", getFieldErrorClass("serviceType"))}>
-                    <SelectValue placeholder="Select use case" />
+                  <SelectTrigger className={cn("h-11 rounded-md", getFieldErrorClass("productInterest"))}>
+                    <SelectValue placeholder="Select product/module" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md">
-                    {["CRM Replacement", "Lead Management", "Deals Pipeline", "Sales Engagement",
-                      "Reporting & Forecasting", "Customer Success", "Billing & Subscriptions", "Other"].map((s) => (
+                    {["Roofer CRM", "Lead Management", "Deals Pipeline", "Sales Inbox", "Sequences", "Reporting & Forecasting", "Customer Success", "Billing & Subscriptions", "Full Suite", "Other"].map((s) => (
                         <SelectItem key={s} value={s} className="rounded-md">{s}</SelectItem>
                       ))}
                   </SelectContent>
                 </Select>
-                {renderFieldError("serviceType")}
+                {renderFieldError("productInterest")}
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Use Case Details</Label>
+                <Label className="text-sm font-medium text-[#475569]">Use Case / Requirement <span className="text-red-500">*</span></Label>
                 <Textarea
                   value={formData.useCase}
                   onChange={(e) => setFieldValue("useCase", e.target.value)}
@@ -2184,6 +2259,33 @@ export const LeadFormDialog = ({
                   className={cn("rounded-md resize-none", getFieldErrorClass("useCase"))}
                 />
                 {renderFieldError("useCase")}
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Number of Users / Seats</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={formData.numberOfUsers}
+                    onChange={(e) => setFieldValue("numberOfUsers", e.target.value)}
+                    placeholder="10"
+                    className={cn("h-11 rounded-md", getFieldErrorClass("numberOfUsers"))}
+                  />
+                  {renderFieldError("numberOfUsers")}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Current Solution</Label>
+                  <Input
+                    value={formData.currentSolution}
+                    onChange={(e) => {
+                      setFieldValue("currentSolution", e.target.value);
+                      setFieldValue("currentRoofMaterial", e.target.value);
+                    }}
+                    placeholder="HubSpot, Salesforce, spreadsheet..."
+                    className="h-11 rounded-md"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -2276,6 +2378,94 @@ export const LeadFormDialog = ({
 
             {/* ── TAB: Qualification ──────────────────────────────────────── */}
             <TabsContent value="qualification" className="space-y-6 mt-0">
+              <div>
+                <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Lead Qualification</h4>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Lead Status <span className="text-red-500">*</span></Label>
+                    <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val as Lead["status"] })}>
+                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select status" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {leadStatuses.map((status) => (
+                          <SelectItem key={status.id} value={status.id} className="rounded-md">{status.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Lead Source <span className="text-red-500">*</span></Label>
+                    <Select value={formData.leadSourceId} onValueChange={(val) => setFormData({ ...formData, leadSourceId: val })}>
+                      <SelectTrigger className={cn("h-11 rounded-md", getFieldErrorClass("leadSourceId"))}><SelectValue placeholder="Select source" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {leadSourceOptions.map((src) => (
+                          <SelectItem key={src.id} value={src.id} className="rounded-md">{src.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {renderFieldError("leadSourceId")}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Lead Type <span className="text-red-500">*</span></Label>
+                    <Select value={formData.leadType} onValueChange={(val) => setFormData({ ...formData, leadType: val })}>
+                      <SelectTrigger className={cn("h-11 rounded-md", getFieldErrorClass("leadType"))}><SelectValue placeholder="Inbound or outbound" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        <SelectItem value="Inbound" className="rounded-md">Inbound</SelectItem>
+                        <SelectItem value="Outbound" className="rounded-md">Outbound</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {renderFieldError("leadType")}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Buying Intent <span className="text-red-500">*</span></Label>
+                    <Select
+                      value={formData.buyingIntent}
+                      onValueChange={(val) => {
+                        setFieldValue("buyingIntent", val);
+                        setFieldValue("temperature", val === "High" ? LeadTemperature.HOT : val === "Low" ? LeadTemperature.COLD : LeadTemperature.WARM);
+                      }}
+                    >
+                      <SelectTrigger className={cn("h-11 rounded-md", getFieldErrorClass("buyingIntent"))}><SelectValue placeholder="Select intent" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        <SelectItem value="Low" className="rounded-md">Low</SelectItem>
+                        <SelectItem value="Medium" className="rounded-md">Medium</SelectItem>
+                        <SelectItem value="High" className="rounded-md">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {renderFieldError("buyingIntent")}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Budget Range <span className="text-red-500">*</span></Label>
+                    <Select value={formData.budgetRange} onValueChange={(val) => setFormData({ ...formData, budgetRange: val })}>
+                      <SelectTrigger className={cn("h-11 rounded-md", getFieldErrorClass("budgetRange"))}><SelectValue placeholder="Select budget" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {["Under $500/mo", "$500 - $1,500/mo", "$1,500 - $5,000/mo", "$5,000+/mo", "Annual budget approved", "Not Sure"].map((b) => (
+                          <SelectItem key={b} value={b} className="rounded-md">{b}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {renderFieldError("budgetRange")}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-[#475569]">Purchase Timeline <span className="text-red-500">*</span></Label>
+                    <Select
+                      value={formData.purchaseTimeline}
+                      onValueChange={(val) => {
+                        setFieldValue("purchaseTimeline", val);
+                        setFieldValue("workTimeline", val);
+                      }}
+                    >
+                      <SelectTrigger className={cn("h-11 rounded-md", getFieldErrorClass("purchaseTimeline"))}><SelectValue placeholder="Select timeline" /></SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {["Immediate", "1-3 months", "3-6 months", "6+ months", "Just researching"].map((t) => (
+                          <SelectItem key={t} value={t} className="rounded-md">{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {renderFieldError("purchaseTimeline")}
+                  </div>
+                </div>
+              </div>
+
               {/* Verification Checkboxes */}
               <div>
                 <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Verify Contact Information</h4>
@@ -2427,7 +2617,7 @@ export const LeadFormDialog = ({
                 <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Budget & Timeline</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Budget Range</Label>
+                  <Label className="text-sm font-medium text-[#475569]">Budget Range</Label>
                     <Select value={formData.budgetRange} onValueChange={(val) => setFormData({ ...formData, budgetRange: val })}>
                       <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent className="rounded-md">
@@ -2438,7 +2628,7 @@ export const LeadFormDialog = ({
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Buying Timeline</Label>
+                  <Label className="text-sm font-medium text-[#475569]">Buying Timeline</Label>
                     <Select value={formData.workTimeline} onValueChange={(val) => setFormData({ ...formData, workTimeline: val })}>
                       <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent className="rounded-md">
@@ -2881,7 +3071,7 @@ export const LeadFormDialog = ({
                   value={formData.assignedToId}
                   onValueChange={(val) => setFormData({ ...formData, assignedToId: val })}
                 >
-                  <SelectTrigger className="h-11 rounded-md">
+                  <SelectTrigger className={cn("h-11 rounded-md", getFieldErrorClass("assignedToId"))}>
                     <div className="flex items-center gap-2">
                       <Users size={16} className="text-[#475569]" />
                       <SelectValue placeholder="Select employee" />
@@ -2898,6 +3088,7 @@ export const LeadFormDialog = ({
                     ))}
                   </SelectContent>
                 </Select>
+                {renderFieldError("assignedToId")}
               </div>
 
               <div className="space-y-2">
@@ -3796,6 +3987,14 @@ const mapApiLead = (apiLead: any): Lead => ({
   companySize: apiLead.companySize || "",
   annualRevenue: apiLead.annualRevenue || 0,
   useCase: apiLead.useCase || "",
+  leadType: apiLead.leadType || "",
+  buyingIntent: apiLead.buyingIntent || "",
+  purchaseTimeline: apiLead.purchaseTimeline || apiLead.workTimeline || "",
+  productInterest: apiLead.productInterest || apiLead.serviceType || "",
+  numberOfUsers: apiLead.numberOfUsers || 0,
+  currentSolution: apiLead.currentSolution || apiLead.currentRoofMaterial || "",
+  teamRegion: apiLead.teamRegion || apiLead.territory || "",
+  country: apiLead.country || "",
   location: apiLead.location || "",
   leadSourceName: (apiLead.leadSource?.name || "other").toLowerCase().replace(/\s+/g, "_"),
   status: (apiLead.status || "NEW") as LeadStatus,
@@ -4210,6 +4409,14 @@ const AllLeads = () => {
       industry: data.industry?.trim() || undefined,
       companySize: data.companySize?.trim() || undefined,
       useCase: data.useCase?.trim() || undefined,
+      leadType: data.leadType?.trim() || undefined,
+      buyingIntent: data.buyingIntent?.trim() || undefined,
+      purchaseTimeline: data.purchaseTimeline?.trim() || data.workTimeline?.trim() || undefined,
+      productInterest: data.productInterest?.trim() || data.serviceType?.trim() || undefined,
+      numberOfUsers: data.numberOfUsers ? Number(data.numberOfUsers) : undefined,
+      currentSolution: data.currentSolution?.trim() || data.currentRoofMaterial?.trim() || undefined,
+      teamRegion: data.teamRegion?.trim() || data.territory?.trim() || undefined,
+      country: data.country?.trim() || undefined,
       location: data.location?.trim() || undefined,
       status: normalizeLeadStatusValue(String(data.status || LeadStatus.NEW)),
       temperature: normalizeLeadTemperatureValue(String(data.temperature || LeadTemperature.WARM)),
@@ -4354,6 +4561,14 @@ const AllLeads = () => {
       industry: opt(data.industry),
       companySize: opt(data.companySize),
       useCase: opt(data.useCase),
+      leadType: opt(data.leadType),
+      buyingIntent: opt(data.buyingIntent),
+      purchaseTimeline: opt(data.purchaseTimeline) || opt(data.workTimeline),
+      productInterest: opt(data.productInterest) || opt(data.serviceType),
+      numberOfUsers: data.numberOfUsers || undefined,
+      currentSolution: opt(data.currentSolution) || opt(data.currentRoofMaterial),
+      teamRegion: opt(data.teamRegion) || opt(data.territory),
+      country: opt(data.country),
       // Stage 1: Company address
       propertyAddress: opt(data.propertyAddress),
       city: opt(data.city),

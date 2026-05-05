@@ -270,6 +270,13 @@ const navigationItems: NavigationItem[] = [
     featureId: "tasks",
     permissionModule: "tasks",
   },
+  {
+    title: "Zodo Mail",
+    icon: Mail,
+    path: "/mail",
+    featureId: "letterbox",
+    permissionModule: "emails",
+  },
   { title: "Settings", isHeader: true },
   {
     title: "Settings",

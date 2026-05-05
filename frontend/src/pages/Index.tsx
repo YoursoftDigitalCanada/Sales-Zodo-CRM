@@ -517,9 +517,9 @@ function toDashboardLeadStage(status: string): RevenuePipelineStage {
 }
 
 function getLeadNextAction(stage: RevenuePipelineStage, temperature: LeadItem["temperature"]): string {
-  if (stage === "lead") return temperature === "hot" ? "Call homeowner" : "Qualify opportunity";
-  if (stage === "contacted") return "Schedule inspection";
-  if (stage === "estimate-sent") return "Follow up on estimate";
+  if (stage === "lead") return temperature === "hot" ? "Call prospect" : "Qualify opportunity";
+  if (stage === "contacted") return "Schedule demo";
+  if (stage === "estimate-sent") return "Follow up on proposal";
   if (stage === "negotiation") return "Resolve objections";
   if (stage === "won") return "Open job file";
   return "Review lead";
@@ -584,7 +584,7 @@ function mapLead(lead: DashboardLead): LeadItem {
     source: lead.leadSource?.name || "Direct",
     assignee: assignee || "Unassigned",
     address: propertyAddress || "Address pending",
-    jobType: readText(lead.serviceType) || "Roofing estimate",
+    jobType: readText(lead.serviceType) || "Software sales",
     nextAction: getLeadNextAction(stage, temperature),
     phone: readText(lead.phone),
     email: readText(lead.email),
@@ -650,7 +650,7 @@ function mapProject(project: DashboardProject): JobItem {
     deadline: project.endDate ? formatDateLabel(project.endDate) : "Pending",
     status,
     statusLabel: status === "on-track" ? "On Track" : status === "at-risk" ? "At Risk" : status === "delayed" ? "Delayed" : "Completed",
-    type: readText((project as Record<string, unknown>).projectType) || "Roofing Job",
+    type: readText((project as Record<string, unknown>).projectType) || "Sales Deal",
   };
 }
 
@@ -984,24 +984,24 @@ const Index = () => {
   const quickActions = useMemo<QuickActionItem[]>(() => {
     const items: QuickActionItem[] = [];
 
-    if (dashboardAccess.canViewRoofEstimator) {
+    if (dashboardAccess.canViewLeads) {
       items.push({
-        id: "create-estimate",
-        label: "Create Estimate",
-        description: "Launch the ZODO AI Roof Estimator",
-        icon: FileText,
-        path: "/roof-estimator/new",
+        id: "add-lead",
+        label: "Add Lead",
+        description: "Create a new sales opportunity",
+        icon: Target,
+        path: "/leads",
         variant: "default",
       });
     }
 
-    if (dashboardAccess.canViewSiteVisits) {
+    if (dashboardAccess.canViewProjects) {
       items.push({
-        id: "schedule-site-visit",
-        label: "Schedule Inspection",
-        description: "Book the next inspection slot",
-        icon: Calendar,
-        path: "/inspections/new",
+        id: "create-deal",
+        label: "Create Deal",
+        description: "Open a new pipeline deal",
+        icon: Briefcase,
+        path: "/deals",
         variant: "outline",
       });
     }
@@ -1010,20 +1010,9 @@ const Index = () => {
       items.push({
         id: "view-pipeline",
         label: "View Pipeline",
-        description: "Work the leads closest to revenue",
+        description: "Work the deals closest to revenue",
         icon: Target,
-        path: "/leads/pipeline",
-        variant: "outline",
-      });
-    }
-
-    if (dashboardAccess.canViewProjects) {
-      items.push({
-        id: "view-jobs",
-        label: "View Jobs",
-        description: "Track production and crew deadlines",
-        icon: Briefcase,
-        path: "/projects",
+        path: "/pipeline",
         variant: "outline",
       });
     }
@@ -1044,8 +1033,7 @@ const Index = () => {
     dashboardAccess.canViewInvoices,
     dashboardAccess.canViewLeads,
     dashboardAccess.canViewProjects,
-    dashboardAccess.canViewRoofEstimator,
-    dashboardAccess.canViewSiteVisits,
+    dashboardAccess.canViewProjects,
   ]);
 
   const filteredQuickActions = useMemo(() => {
@@ -1254,6 +1242,293 @@ const Index = () => {
     dashboardAccess.canViewRoofEstimator ||
     dashboardAccess.canViewSiteVisits;
 
+  const wonLeads = leads.filter((lead) => lead.stage === "won");
+  const totalDeals = jobs.length || leads.filter((lead) => lead.stage !== "lead").length;
+  const paidInvoiceRevenue = invoices
+    .filter((invoice) => invoice.status === "paid")
+    .reduce((sum, invoice) => sum + invoice.amount, 0);
+  const closedWonRevenue = wonLeads.reduce((sum, lead) => sum + lead.value, 0) || paidInvoiceRevenue;
+  const conversionRate = leads.length > 0 ? Math.round((wonLeads.length / leads.length) * 100) : 0;
+  const forecastWeights: Record<RevenuePipelineStage, number> = {
+    lead: 0.15,
+    contacted: 0.35,
+    "estimate-sent": 0.6,
+    negotiation: 0.8,
+    won: 1,
+    lost: 0,
+  };
+  const salesForecast = openPipelineLeads.reduce((sum, lead) => sum + (lead.value * forecastWeights[lead.stage]), 0);
+  const todaysActivities = siteVisits.filter((visit) => {
+    if (!visit.scheduledAt) return false;
+    const today = new Date();
+    return visit.scheduledAt.toDateString() === today.toDateString();
+  });
+  const pipelineHealthStages = [
+    { id: "lead", title: "New Lead", color: "bg-[#0891B2]" },
+    { id: "contacted", title: "Qualified", color: "bg-[#6637F4]" },
+    { id: "estimate-sent", title: "Proposal", color: "bg-[#D97706]" },
+    { id: "negotiation", title: "Negotiation", color: "bg-[#FF7B36]" },
+    { id: "won", title: "Won", color: "bg-[#01C44A]" },
+  ].map((stage) => {
+    const matchingLeads = leads.filter((lead) => lead.stage === stage.id);
+    return {
+      ...stage,
+      count: matchingLeads.length,
+      value: matchingLeads.reduce((sum, lead) => sum + lead.value, 0),
+    };
+  });
+  const maxPipelineStageCount = Math.max(...pipelineHealthStages.map((stage) => stage.count), 1);
+  const leadSourceBreakdown = Object.values(leads.reduce<Record<string, { source: string; count: number; value: number }>>((acc, lead) => {
+    const source = lead.source || "Direct";
+    acc[source] = acc[source] || { source, count: 0, value: 0 };
+    acc[source].count += 1;
+    acc[source].value += lead.value;
+    return acc;
+  }, {})).sort((left, right) => right.count - left.count).slice(0, 5);
+  const newLeadCount = leads.filter((lead) => lead.stage === "lead").length;
+  const qualifiedLeadCount = leads.filter((lead) => ["contacted", "estimate-sent", "negotiation", "won"].includes(lead.stage)).length;
+  const recentRevenueRecords = [
+    ...leads.slice(0, 4).map((lead) => ({
+      id: `lead-${lead.id}`,
+      title: lead.name,
+      meta: `${lead.company} · ${lead.source}`,
+      value: formatMoney(lead.value),
+      path: `/leads/${lead.id}`,
+      type: "Lead",
+    })),
+    ...jobs.slice(0, 4).map((deal) => ({
+      id: `deal-${deal.id}`,
+      title: deal.name,
+      meta: `${deal.client} · ${deal.statusLabel}`,
+      value: formatMoney(deal.value),
+      path: `/deals`,
+      type: "Deal",
+    })),
+  ].slice(0, 6);
+  const salesLeaderboard = Object.values(leads.reduce<Record<string, { rep: string; leads: number; revenue: number; won: number }>>((acc, lead) => {
+    const rep = lead.assignee || "Unassigned";
+    acc[rep] = acc[rep] || { rep, leads: 0, revenue: 0, won: 0 };
+    acc[rep].leads += 1;
+    acc[rep].revenue += lead.stage === "won" ? lead.value : lead.value * forecastWeights[lead.stage];
+    acc[rep].won += lead.stage === "won" ? 1 : 0;
+    return acc;
+  }, {})).sort((left, right) => right.revenue - left.revenue).slice(0, 5);
+
+  const kpiCards = [
+    { label: "Total Leads", value: leads.length.toLocaleString(), detail: `${hotLeads.length} hot leads`, icon: Target, tone: "text-[#0891B2]", bg: "bg-[#0891B2]/10" },
+    { label: "Total Deals", value: totalDeals.toLocaleString(), detail: `${openPipelineLeads.length} open opportunities`, icon: Briefcase, tone: "text-[#6637F4]", bg: "bg-[#6637F4]/10" },
+    { label: "Revenue Closed Won", value: formatMoney(closedWonRevenue), detail: `${wonLeads.length} won lead${wonLeads.length === 1 ? "" : "s"}`, icon: DollarSign, tone: "text-[#01C44A]", bg: "bg-[#01C44A]/10" },
+    { label: "Conversion Rate", value: `${conversionRate}%`, detail: "Lead to won conversion", icon: ArrowUpRight, tone: "text-[#D97706]", bg: "bg-[#D97706]/10" },
+  ];
+
+  const renderPanelHeader = (title: string, description: string, Icon: ElementType) => (
+    <div className="flex items-start justify-between gap-3 border-b border-[rgba(15,23,42,0.06)] px-5 py-4">
+      <div>
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#0891B2]/10 text-[#0891B2]">
+            <Icon size={16} />
+          </div>
+          <h2 className="text-sm font-semibold text-[#0F172A]">{title}</h2>
+        </div>
+        <p className="mt-1 text-xs text-[#64748B]">{description}</p>
+      </div>
+    </div>
+  );
+
+  const renderSalesDashboard = () => (
+    <div className={cn("space-y-5 page-enter", isMobile ? "p-3" : "p-4 md:p-6")}>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[#0F172A]">Sales Dashboard</h1>
+          <p className="mt-1 text-sm text-[#64748B]">
+            Pipeline, revenue, lead quality, and rep activity in one operating view.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="rounded bg-[#0891B2]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#0891B2]">Live</span>
+          <span className="text-xs text-[#94A3B8]">
+            {currentTime.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+          </span>
+        </div>
+      </div>
+
+      {!hasAnyDashboardModuleAccess ? (
+        <div className={`${sectionCardClassName} px-5 py-4`}>
+          <h2 className="text-sm font-semibold text-[#0F172A]">Dashboard Access Limited</h2>
+          <p className="mt-1 text-sm text-[#475569]">This account can open the dashboard, but sales widgets are hidden by permissions.</p>
+        </div>
+      ) : null}
+
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {kpiCards.map((card) => (
+          <motion.button
+            key={card.label}
+            type="button"
+            onClick={() => navigate(card.label.includes("Lead") ? "/leads" : card.label.includes("Deal") ? "/deals" : "/forecast")}
+            whileHover={{ y: -2 }}
+            className={`${sectionCardClassName} p-5 text-left transition-shadow hover:shadow-lg`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#64748B]">{card.label}</p>
+                <p className="mt-3 text-2xl font-bold text-[#0F172A]">{isLoading ? "..." : card.value}</p>
+                <p className="mt-1 text-xs text-[#64748B]">{card.detail}</p>
+              </div>
+              <div className={cn("flex h-10 w-10 items-center justify-center rounded-md", card.bg, card.tone)}>
+                <card.icon size={18} />
+              </div>
+            </div>
+          </motion.button>
+        ))}
+      </section>
+
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.35fr_0.65fr]">
+        <div className={sectionCardClassName}>
+          {renderPanelHeader("Deals by Stage", "Kanban-style funnel showing where money is stuck.", FolderKanban)}
+          <div className="grid gap-4 p-5 md:grid-cols-5">
+            {pipelineHealthStages.map((stage) => (
+              <div key={stage.id} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-[#0F172A]">{stage.title}</p>
+                  <span className="text-xs font-bold text-[#0F172A]">{stage.count}</span>
+                </div>
+                <div className="mt-4 h-2 rounded-full bg-white">
+                  <div className={cn("h-2 rounded-full", stage.color)} style={{ width: `${Math.max(6, (stage.count / maxPipelineStageCount) * 100)}%` }} />
+                </div>
+                <p className="mt-3 text-xs text-[#64748B]">{formatMoney(stage.value)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={sectionCardClassName}>
+          {renderPanelHeader("Sales Forecast", "Expected revenue weighted by stage probability.", DollarSign)}
+          <div className="p-5">
+            <p className="text-3xl font-bold text-[#0F172A]">{formatMoney(salesForecast)}</p>
+            <p className="mt-2 text-sm text-[#64748B]">Based on {openPipelineLeads.length} open opportunities.</p>
+            <div className="mt-5 space-y-3">
+              {pipelineHealthStages.filter((stage) => stage.id !== "won").slice(0, 4).map((stage) => (
+                <div key={stage.id} className="flex items-center justify-between text-xs">
+                  <span className="text-[#64748B]">{stage.title}</span>
+                  <span className="font-semibold text-[#0F172A]">{stage.count} deals</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className={sectionCardClassName}>
+          {renderPanelHeader("Tasks Due Today", "Operational focus for sales reps.", Clock)}
+          <div className="grid grid-cols-2 gap-4 p-5">
+            <div className="rounded-md bg-[#F8FAFC] p-4">
+              <p className="text-xs uppercase tracking-[0.12em] text-[#64748B]">Open Tasks</p>
+              <p className="mt-2 text-2xl font-bold text-[#0F172A]">{pendingTasksCount}</p>
+            </div>
+            <button onClick={() => navigate("/tasks")} className="rounded-md border border-[#0891B2]/20 bg-[#0891B2]/5 p-4 text-left">
+              <p className="text-xs font-semibold text-[#0891B2]">Open Task Board</p>
+              <p className="mt-2 text-sm text-[#475569]">Review follow-ups, demos, proposals, and internal work.</p>
+            </button>
+          </div>
+        </div>
+
+        <div className={sectionCardClassName}>
+          {renderPanelHeader("Activities", "Calls, demos, and meetings scheduled today.", Calendar)}
+          <div className="p-5">
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-2xl font-bold text-[#0F172A]">{todaysActivities.length}</p>
+                <p className="text-sm text-[#64748B]">scheduled today</p>
+              </div>
+              <Button size="sm" onClick={() => navigate("/calendar")} className="bg-[#0891B2] hover:bg-[#0E7490]">Open Calendar</Button>
+            </div>
+            <div className="mt-5 space-y-3">
+              {todaysActivities.slice(0, 3).map((activity) => (
+                <div key={activity.id} className="flex items-center justify-between rounded-md bg-[#F8FAFC] px-3 py-2">
+                  <span className="truncate text-sm font-medium text-[#0F172A]">{activity.clientName}</span>
+                  <span className="text-xs text-[#64748B]">{formatTimeLabel(activity.scheduledAt)}</span>
+                </div>
+              ))}
+              {todaysActivities.length === 0 ? <p className="text-sm text-[#64748B]">No calls or meetings scheduled for today.</p> : null}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className={sectionCardClassName}>
+          {renderPanelHeader("Lead Source Breakdown", "Marketing channels feeding the sales team.", Target)}
+          <div className="space-y-4 p-5">
+            {leadSourceBreakdown.map((source) => (
+              <div key={source.source}>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-[#0F172A]">{source.source}</span>
+                  <span className="text-[#64748B]">{source.count} leads</span>
+                </div>
+                <div className="mt-2 h-2 rounded-full bg-[#F1F5F9]">
+                  <div className="h-2 rounded-full bg-[#0891B2]" style={{ width: `${Math.max(8, (source.count / Math.max(leads.length, 1)) * 100)}%` }} />
+                </div>
+              </div>
+            ))}
+            {leadSourceBreakdown.length === 0 ? <p className="text-sm text-[#64748B]">Lead source data will appear when leads are added.</p> : null}
+          </div>
+        </div>
+
+        <div className={sectionCardClassName}>
+          {renderPanelHeader("New vs Qualified Leads", "SDR quality signal for the current database.", Users)}
+          <div className="grid grid-cols-2 gap-4 p-5">
+            <div className="rounded-md bg-[#0891B2]/10 p-5">
+              <p className="text-xs uppercase tracking-[0.12em] text-[#0891B2]">New</p>
+              <p className="mt-2 text-3xl font-bold text-[#0F172A]">{newLeadCount}</p>
+            </div>
+            <div className="rounded-md bg-[#01C44A]/10 p-5">
+              <p className="text-xs uppercase tracking-[0.12em] text-[#01C44A]">Qualified+</p>
+              <p className="mt-2 text-3xl font-bold text-[#0F172A]">{qualifiedLeadCount}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className={sectionCardClassName}>
+          {renderPanelHeader("Recent Leads / Deals", "Latest records entering the revenue system.", FileText)}
+          <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+            {recentRevenueRecords.map((record) => (
+              <button key={record.id} onClick={() => navigate(record.path)} className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left hover:bg-[#F8FAFC]">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-[#0F172A]">{record.title}</p>
+                  <p className="mt-1 text-xs text-[#64748B]">{record.type} · {record.meta}</p>
+                </div>
+                <span className="text-sm font-semibold text-[#0F172A]">{record.value}</span>
+              </button>
+            ))}
+            {recentRevenueRecords.length === 0 ? <div className="px-5 py-8 text-sm text-[#64748B]">No recent leads or deals yet.</div> : null}
+          </div>
+        </div>
+
+        <div className={sectionCardClassName}>
+          {renderPanelHeader("Sales Leaderboard", "Rep-wise forecast and won performance.", Users)}
+          <div className="divide-y divide-[rgba(15,23,42,0.04)]">
+            {salesLeaderboard.map((rep, index) => (
+              <div key={rep.rep} className="flex items-center justify-between gap-3 px-5 py-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#F1F5F9] text-xs font-bold text-[#0F172A]">{index + 1}</div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[#0F172A]">{rep.rep}</p>
+                    <p className="text-xs text-[#64748B]">{rep.leads} leads · {rep.won} won</p>
+                  </div>
+                </div>
+                <span className="text-sm font-semibold text-[#0F172A]">{formatMoney(rep.revenue)}</span>
+              </div>
+            ))}
+            {salesLeaderboard.length === 0 ? <div className="px-5 py-8 text-sm text-[#64748B]">Rep performance appears after leads are assigned.</div> : null}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+
   return (
     <div className="min-h-screen w-full bg-[#F7F7FB]">
       <main>
@@ -1363,7 +1638,7 @@ const Index = () => {
                   <Search className="crm-toolbar-search-icon" />
                   <input
                     type="text"
-                    placeholder="Search jobs, estimates, clients..."
+                    placeholder="Search leads, deals, contacts..."
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     onClick={() => setShowSearchModal(true)}
@@ -1542,7 +1817,9 @@ const Index = () => {
           )}
         </header>
 
-        <div className={cn("space-y-4 md:space-y-6 page-enter", isMobile ? "p-3" : "p-4 md:p-6")}>
+        {renderSalesDashboard()}
+
+        <div className={cn("hidden space-y-4 md:space-y-6 page-enter", isMobile ? "p-3" : "p-4 md:p-6")}>
           <div className={cn(
             "flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between",
             isMobile && `${sectionCardClassName} p-4`,
@@ -2740,7 +3017,7 @@ const Index = () => {
                 <input
                   ref={searchInputRef}
                   type="text"
-                  placeholder="Search actions across jobs, estimates, and clients..."
+                  placeholder="Search actions across leads, deals, and contacts..."
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   className="flex-1 bg-transparent text-lg text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none"

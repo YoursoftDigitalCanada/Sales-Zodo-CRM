@@ -18,6 +18,9 @@ export interface CreateCalendarEventDto {
     recurrenceRule?: string | null;
     recurrenceEndDate?: Date | string | null;
     reminderMinutes?: number | null;
+    attending?: string | null;
+    referenceDoctype?: string | null;
+    referenceDocname?: string | null;
     attendeeIds?: string[];
     meetingLink?: string | null;
     priority?: string;
@@ -38,6 +41,8 @@ export interface CalendarEventQueryDto {
     eventType?: CalendarEventType;
     category?: string;
     priority?: string;
+    referenceDoctype?: string;
+    referenceDocname?: string;
     sortBy?: 'startTime' | 'createdAt' | 'title';
     sortOrder?: 'asc' | 'desc';
 }
@@ -57,6 +62,9 @@ export interface CalendarEventResponseDto {
     recurrenceRule: string | null;
     recurrenceEndDate: Date | null;
     reminderMinutes: number | null;
+    attending: string | null;
+    referenceDoctype: string | null;
+    referenceDocname: string | null;
     meetingLink: string | null;
     priority: string;
     isPrivate: boolean;
@@ -121,6 +129,9 @@ export function toCalendarEventResponseDto(e: CalendarEventWithRelations): Calen
         recurrenceRule: e.recurrenceRule,
         recurrenceEndDate: e.recurrenceEndDate,
         reminderMinutes: e.reminderMinutes,
+        attending: (e as any).attending ?? null,
+        referenceDoctype: (e as any).referenceDoctype ?? null,
+        referenceDocname: (e as any).referenceDocname ?? null,
         meetingLink: e.meetingLink,
         priority: e.priority,
         isPrivate: e.isPrivate,

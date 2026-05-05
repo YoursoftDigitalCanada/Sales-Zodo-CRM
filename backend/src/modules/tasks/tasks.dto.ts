@@ -33,6 +33,9 @@ export interface CreateTaskDto {
     startDate?: Date | string | null;
     projectId?: string | null;
     clientId?: string | null;
+    leadId?: string | null;
+    referenceDoctype?: string | null;
+    referenceDocname?: string | null;
     estimatedHours?: number | null;
     actualMinutes?: number | null;
     category?: string | null;
@@ -72,6 +75,9 @@ export interface TaskResponseDto {
     actualTime: number | null;
     project: { id: string; name: string } | null;
     client: { id: string; clientName: string } | null;
+    leadId: string | null;
+    referenceDoctype: string | null;
+    referenceDocname: string | null;
     category: string | null;
     tags: string[];
     subtasks: TaskSubtaskDto[];
@@ -224,6 +230,9 @@ export function toTaskResponseDto(t: TaskWithRelations): TaskResponseDto {
         actualTime: t.actualTime,
         project: t.project || null,
         client: t.client || null,
+        leadId: (t as any).leadId ?? null,
+        referenceDoctype: (t as any).referenceDoctype ?? null,
+        referenceDocname: (t as any).referenceDocname ?? null,
         category: tagState.category,
         tags: tagState.tags,
         subtasks: (t.subtasks || []).map((subtask) => ({

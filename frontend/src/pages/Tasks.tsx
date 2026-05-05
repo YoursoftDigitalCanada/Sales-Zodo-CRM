@@ -162,13 +162,15 @@ interface Task {
   id: string;
   title: string;
   description?: string;
-  status: "todo" | "in_progress" | "in_review" | "completed" | "cancelled";
-  priority: "low" | "medium" | "high" | "urgent";
+  status: "backlog" | "todo" | "in_progress" | "completed" | "cancelled";
+  priority: "low" | "medium" | "high";
   dueDate?: Date;
   startDate?: Date;
   completedDate?: Date;
   projectId?: string;
   project?: string;
+  referenceDoctype?: "CRM Lead" | "CRM Deal" | "CRM Organization" | "Contact" | "";
+  referenceDocname?: string;
   projectColor?: string;
   category: string;
   tags?: string[];
@@ -218,34 +220,31 @@ interface TaskCategory {
 // ============================================
 
 const taskStatuses = [
-  { id: "todo", name: "To Do", color: "#64748B", bgColor: "#F1F5F9", icon: Circle },
+  { id: "backlog", name: "Backlog", color: "#64748B", bgColor: "#F1F5F9", icon: Inbox },
+  { id: "todo", name: "Todo", color: "#0891B2", bgColor: "#E0F7FA", icon: Circle },
   { id: "in_progress", name: "In Progress", color: "#3B82F6", bgColor: "#EFF6FF", icon: Play },
-  { id: "in_review", name: "In Review", color: "#F59E0B", bgColor: "#FFFBEB", icon: Eye },
-  { id: "completed", name: "Completed", color: "#10B981", bgColor: "#ECFDF5", icon: CheckCircle2 },
-  { id: "cancelled", name: "Cancelled", color: "#EF4444", bgColor: "#FEF2F2", icon: X },
+  { id: "completed", name: "Done", color: "#10B981", bgColor: "#ECFDF5", icon: CheckCircle2 },
+  { id: "cancelled", name: "Canceled", color: "#EF4444", bgColor: "#FEF2F2", icon: X },
 ];
 
 const taskPriorities = [
   { id: "low", name: "Low", color: "#64748B", bgColor: "#F1F5F9", icon: Flag },
-  { id: "medium", name: "Medium", color: "#3B82F6", bgColor: "#EFF6FF", icon: Flag },
+  { id: "medium", name: "Medium", color: "#D97706", bgColor: "#FFF7ED", icon: Flag },
   { id: "high", name: "High", color: "#F59E0B", bgColor: "#FFFBEB", icon: Flag },
-  { id: "urgent", name: "Urgent", color: "#EF4444", bgColor: "#FEF2F2", icon: Flame },
 ];
 
 const taskCategories: TaskCategory[] = [
-  { id: "roof_inspection", name: "Roof Inspection", icon: Eye, color: "#3B82F6" },
-  { id: "roof_repair", name: "Roof Repair", icon: Settings, color: "#EF4444" },
-  { id: "roof_replacement", name: "Roof Replacement", icon: Upload, color: "#10B981" },
-  { id: "gutters_fascia", name: "Gutters & Fascia", icon: ArrowDownRight, color: "#06B6D4" },
-  { id: "insurance_claim", name: "Insurance Claim", icon: AlertTriangle, color: "#F59E0B" },
-  { id: "materials_delivery", name: "Materials & Delivery", icon: Inbox, color: "#8B5CF6" },
-  { id: "permits_paperwork", name: "Permits & Paperwork", icon: FolderOpen, color: "#64748B" },
-  { id: "customer_follow_up", name: "Customer Follow-up", icon: MessageSquare, color: "#EC4899" },
+  { id: "follow_up", name: "Follow-up", icon: MessageSquare, color: "#0891B2" },
+  { id: "demo", name: "Demo", icon: CalendarClock, color: "#3B82F6" },
+  { id: "proposal", name: "Proposal", icon: FileText, color: "#D97706" },
+  { id: "qualification", name: "Qualification", icon: Target, color: "#10B981" },
+  { id: "internal", name: "Internal", icon: Briefcase, color: "#64748B" },
+  { id: "handoff", name: "Handoff", icon: Users, color: "#8B5CF6" },
   { id: "other", name: "Other", icon: FolderOpen, color: "#06B6D4" },
 ];
 
 const PROJECT_COLORS = ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#EC4899", "#EF4444", "#06B6D4", "#F97316"];
-const DEFAULT_TASK_CATEGORY = "roof_inspection";
+const DEFAULT_TASK_CATEGORY = "follow_up";
 
 
 
@@ -305,10 +304,11 @@ const getProjectColor = (key?: string): string => {
 
 const mapApiStatusToTaskStatus = (status?: string): Task["status"] => {
   switch (String(status || "").toUpperCase()) {
+    case "PENDING":
+    case "BACKLOG":
+      return "backlog";
     case "IN_PROGRESS":
       return "in_progress";
-    case "REVIEW":
-      return "in_review";
     case "DONE":
     case "COMPLETED":
       return "completed";
@@ -321,10 +321,10 @@ const mapApiStatusToTaskStatus = (status?: string): Task["status"] => {
 
 const mapTaskStatusToApiStatus = (status?: Task["status"]): string => {
   switch (status) {
+    case "backlog":
+      return "PENDING";
     case "in_progress":
       return "IN_PROGRESS";
-    case "in_review":
-      return "REVIEW";
     case "completed":
       return "DONE";
     case "cancelled":
@@ -336,7 +336,7 @@ const mapTaskStatusToApiStatus = (status?: Task["status"]): string => {
 
 const mapApiPriorityToTaskPriority = (priority?: string): Task["priority"] => {
   const normalized = String(priority || "").toUpperCase();
-  if (normalized === "LOW" || normalized === "MEDIUM" || normalized === "HIGH" || normalized === "URGENT") {
+  if (normalized === "LOW" || normalized === "MEDIUM" || normalized === "HIGH") {
     return normalized.toLowerCase() as Task["priority"];
   }
 
@@ -354,6 +354,8 @@ const mapApiTaskToTask = (task: any): Task => ({
   completedDate: task.completedAt ? new Date(task.completedAt) : undefined,
   projectId: task.project?.id || undefined,
   project: task.project?.name || undefined,
+  referenceDoctype: task.referenceDoctype || "",
+  referenceDocname: task.referenceDocname || "",
   projectColor: getProjectColor(task.project?.id || task.project?.name || task.id),
   category: typeof task.category === "string" && task.category ? task.category : DEFAULT_TASK_CATEGORY,
   tags: Array.isArray(task.tags) ? task.tags : [],
@@ -392,6 +394,8 @@ const buildTaskPayload = (data: Partial<Task>) => ({
   startDate: data.startDate ? data.startDate.toISOString() : null,
   assignedToId: data.assignees?.[0]?.id || null,
   projectId: data.projectId || null,
+  referenceDoctype: data.referenceDoctype || null,
+  referenceDocname: data.referenceDocname || null,
   estimatedHours: typeof data.estimatedTime === "number" ? data.estimatedTime / 60 : null,
   actualMinutes: typeof data.actualTime === "number" ? data.actualTime : null,
   category: data.category || DEFAULT_TASK_CATEGORY,
@@ -1301,6 +1305,8 @@ const TaskFormDialog = ({
     priority: "medium" as Task["priority"],
     category: DEFAULT_TASK_CATEGORY,
     project: "none",
+    referenceDoctype: "" as Task["referenceDoctype"],
+    referenceDocname: "",
     dueDate: undefined as Date | undefined,
     estimatedTime: "",
     tags: "",
@@ -1352,6 +1358,8 @@ const TaskFormDialog = ({
         priority: task.priority,
         category: task.category,
         project: task.projectId || "none",
+        referenceDoctype: task.referenceDoctype || "",
+        referenceDocname: task.referenceDocname || "",
         dueDate: task.dueDate,
         estimatedTime: task.estimatedTime?.toString() || "",
         tags: task.tags?.join(", ") || "",
@@ -1367,6 +1375,8 @@ const TaskFormDialog = ({
         priority: "medium",
         category: DEFAULT_TASK_CATEGORY,
         project: "none",
+        referenceDoctype: "",
+        referenceDocname: "",
         dueDate: undefined,
         estimatedTime: "",
         tags: "",
@@ -1392,6 +1402,8 @@ const TaskFormDialog = ({
       projectId: selectedProject?.id,
       project: selectedProject?.name,
       projectColor: selectedProject?.color,
+      referenceDoctype: formData.referenceDoctype,
+      referenceDocname: formData.referenceDocname.trim(),
       dueDate: formData.dueDate,
       estimatedTime: formData.estimatedTime ? parseInt(formData.estimatedTime) : undefined,
       tags: formData.tags.split(",").map((t) => t.trim()).filter((t) => t),
@@ -1561,6 +1573,37 @@ const TaskFormDialog = ({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          {/* CRM Reference */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-[#475569]">Reference Type</Label>
+              <Select
+                value={formData.referenceDoctype || "none"}
+                onValueChange={(val) => setFormData({ ...formData, referenceDoctype: val === "none" ? "" : val as Task["referenceDoctype"] })}
+              >
+                <SelectTrigger className="h-11 rounded-md">
+                  <SelectValue placeholder="Select reference" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="none" className="rounded-md">No Reference</SelectItem>
+                  <SelectItem value="CRM Lead" className="rounded-md">Lead</SelectItem>
+                  <SelectItem value="CRM Deal" className="rounded-md">Deal</SelectItem>
+                  <SelectItem value="CRM Organization" className="rounded-md">Organization</SelectItem>
+                  <SelectItem value="Contact" className="rounded-md">Contact</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-[#475569]">Reference ID / Name</Label>
+              <Input
+                value={formData.referenceDocname}
+                onChange={(e) => setFormData({ ...formData, referenceDocname: e.target.value })}
+                placeholder="Linked record id or name"
+                className="h-11 rounded-md"
+              />
             </div>
           </div>
 
@@ -2439,8 +2482,8 @@ const TasksPage = () => {
       result = result.filter((t) => t.status === "todo");
     } else if (activeTab === "in_progress") {
       result = result.filter((t) => t.status === "in_progress");
-    } else if (activeTab === "in_review") {
-      result = result.filter((t) => t.status === "in_review");
+    } else if (activeTab === "backlog") {
+      result = result.filter((t) => t.status === "backlog");
     } else if (activeTab === "completed") {
       result = result.filter((t) => t.status === "completed");
     }
@@ -2497,7 +2540,7 @@ const TasksPage = () => {
           else comparison = a.dueDate.getTime() - b.dueDate.getTime();
           break;
         case "priority":
-          const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+          const priorityOrder = { high: 0, medium: 1, low: 2 };
           comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
           break;
         case "created":
@@ -2708,7 +2751,7 @@ const TasksPage = () => {
   // Stats
   const todoCount = tasks.filter((t) => t.status === "todo").length;
   const inProgressCount = tasks.filter((t) => t.status === "in_progress").length;
-  const inReviewCount = tasks.filter((t) => t.status === "in_review").length;
+  const backlogCount = tasks.filter((t) => t.status === "backlog").length;
   const completedCount = tasks.filter((t) => t.status === "completed").length;
 
   return (
@@ -2865,14 +2908,14 @@ const TasksPage = () => {
                         <TabsTrigger value="all" className="rounded-md data-[state=active]:bg-white">
                           All ({filteredTasks.length})
                         </TabsTrigger>
+                        <TabsTrigger value="backlog" className="rounded-md data-[state=active]:bg-white">
+                          Backlog ({backlogCount})
+                        </TabsTrigger>
                         <TabsTrigger value="todo" className="rounded-md data-[state=active]:bg-white">
                           To Do ({todoCount})
                         </TabsTrigger>
                         <TabsTrigger value="in_progress" className="rounded-md data-[state=active]:bg-white">
                           In Progress ({inProgressCount})
-                        </TabsTrigger>
-                        <TabsTrigger value="in_review" className="rounded-md data-[state=active]:bg-white">
-                          In Review ({inReviewCount})
                         </TabsTrigger>
                         <TabsTrigger value="completed" className="rounded-md data-[state=active]:bg-white">
                           Completed ({completedCount})

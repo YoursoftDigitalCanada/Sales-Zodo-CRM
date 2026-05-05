@@ -135,6 +135,9 @@ interface CalendarEvent {
   meetingLink?: string;
   attendees?: Attendee[];
   reminders?: Reminder[];
+  attending?: "Yes" | "No" | "Maybe";
+  referenceDoctype?: "CRM Lead" | "CRM Deal" | "CRM Organization" | "Contact" | "";
+  referenceDocname?: string;
   recurrence?: RecurrenceRule;
   status: "scheduled" | "completed" | "cancelled";
   priority: "low" | "medium" | "high";
@@ -1297,6 +1300,9 @@ const EventFormDialog = ({
     color: "#3B82F6",
     location: "",
     meetingLink: "",
+    attending: "Yes" as CalendarEvent["attending"],
+    referenceDoctype: "" as CalendarEvent["referenceDoctype"],
+    referenceDocname: "",
     priority: "medium" as CalendarEvent["priority"],
     isPrivate: false,
     notes: "",
@@ -1338,6 +1344,9 @@ const EventFormDialog = ({
         color: event.color,
         location: event.location || "",
         meetingLink: event.meetingLink || "",
+        attending: event.attending || "Yes",
+        referenceDoctype: event.referenceDoctype || "",
+        referenceDocname: event.referenceDocname || "",
         priority: event.priority,
         isPrivate: event.isPrivate,
         notes: event.notes || "",
@@ -1357,6 +1366,9 @@ const EventFormDialog = ({
         color: "#3B82F6",
         location: "",
         meetingLink: "",
+        attending: "Yes",
+        referenceDoctype: "",
+        referenceDocname: "",
         priority: "medium",
         isPrivate: false,
         notes: "",
@@ -1381,6 +1393,9 @@ const EventFormDialog = ({
       color: formData.color,
       location: formData.location,
       meetingLink: formData.meetingLink,
+      attending: formData.attending,
+      referenceDoctype: formData.referenceDoctype,
+      referenceDocname: formData.referenceDocname.trim(),
       priority: formData.priority,
       isPrivate: formData.isPrivate,
       notes: formData.notes,
@@ -1578,6 +1593,53 @@ const EventFormDialog = ({
                 onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
                 placeholder="https://meet.google.com/..."
                 className="h-11 pl-10 rounded-md"
+              />
+            </div>
+          </div>
+
+          {/* CRM Event Fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-[#475569]">Attending</Label>
+              <Select
+                value={formData.attending || "Yes"}
+                onValueChange={(val) => setFormData({ ...formData, attending: val as CalendarEvent["attending"] })}
+              >
+                <SelectTrigger className="h-11 rounded-md">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
+                  <SelectItem value="Maybe" className="rounded-md">Maybe</SelectItem>
+                  <SelectItem value="No" className="rounded-md">No</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-[#475569]">Reference Type</Label>
+              <Select
+                value={formData.referenceDoctype || "none"}
+                onValueChange={(val) => setFormData({ ...formData, referenceDoctype: val === "none" ? "" : val as CalendarEvent["referenceDoctype"] })}
+              >
+                <SelectTrigger className="h-11 rounded-md">
+                  <SelectValue placeholder="Select reference" />
+                </SelectTrigger>
+                <SelectContent className="rounded-md">
+                  <SelectItem value="none" className="rounded-md">No Reference</SelectItem>
+                  <SelectItem value="CRM Lead" className="rounded-md">Lead</SelectItem>
+                  <SelectItem value="CRM Deal" className="rounded-md">Deal</SelectItem>
+                  <SelectItem value="CRM Organization" className="rounded-md">Organization</SelectItem>
+                  <SelectItem value="Contact" className="rounded-md">Contact</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 col-span-2">
+              <Label className="text-sm font-medium text-[#475569]">Reference ID / Name</Label>
+              <Input
+                value={formData.referenceDocname}
+                onChange={(e) => setFormData({ ...formData, referenceDocname: e.target.value })}
+                placeholder="Linked record id or name"
+                className="h-11 rounded-md"
               />
             </div>
           </div>
@@ -2059,6 +2121,9 @@ const CalendarPage = () => {
     color: e.color || '#3B82F6',
     location: e.location || undefined,
     meetingLink: e.meetingLink || undefined,
+    attending: e.attending || "Yes",
+    referenceDoctype: e.referenceDoctype || "",
+    referenceDocname: e.referenceDocname || "",
     attendees: e.attendees?.map((a: any) => ({
       id: a.employeeId || a.id,
       name: a.employee
@@ -2171,6 +2236,9 @@ const CalendarPage = () => {
         priority: (data.priority || 'medium').toUpperCase(),
         isPrivate: data.isPrivate || false,
         notes: data.notes || null,
+        attending: data.attending || "Yes",
+        referenceDoctype: data.referenceDoctype || null,
+        referenceDocname: data.referenceDocname || null,
         attendeeIds: data.attendees?.map((a) => a.id) || [],
         leadId: data.leadId || null,
         clientId: data.clientId || null,
@@ -2200,6 +2268,9 @@ const CalendarPage = () => {
       if (data.priority !== undefined) payload.priority = data.priority.toUpperCase();
       if (data.isPrivate !== undefined) payload.isPrivate = data.isPrivate;
       if (data.notes !== undefined) payload.notes = data.notes || null;
+      if (data.attending !== undefined) payload.attending = data.attending || "Yes";
+      if (data.referenceDoctype !== undefined) payload.referenceDoctype = data.referenceDoctype || null;
+      if (data.referenceDocname !== undefined) payload.referenceDocname = data.referenceDocname || null;
       if (data.type || data.category) payload.eventType = toBackendEventType({ ...currentEvent, ...data });
       if (data.attendees) payload.attendeeIds = data.attendees.map((a) => a.id);
       if (data.leadId !== undefined) payload.leadId = data.leadId || null;

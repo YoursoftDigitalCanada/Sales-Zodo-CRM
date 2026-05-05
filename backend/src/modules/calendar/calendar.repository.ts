@@ -40,6 +40,9 @@ export class CalendarRepository {
                 recurrenceRule: data.recurrenceRule,
                 recurrenceEndDate: data.recurrenceEndDate ? new Date(data.recurrenceEndDate) : null,
                 reminderMinutes: data.reminderMinutes,
+                attending: data.attending || 'Yes',
+                referenceDoctype: data.referenceDoctype || null,
+                referenceDocname: data.referenceDocname || null,
                 meetingLink: data.meetingLink,
                 priority: data.priority || 'MEDIUM',
                 isPrivate: data.isPrivate || false,
@@ -66,12 +69,14 @@ export class CalendarRepository {
     }
 
     async findMany(tenantId: string, query: CalendarEventQueryDto) {
-        const { page = 1, limit = 50, startDate, endDate, eventType, category, priority, sortBy = 'startTime', sortOrder = 'asc' } = query;
+        const { page = 1, limit = 50, startDate, endDate, eventType, category, priority, referenceDoctype, referenceDocname, sortBy = 'startTime', sortOrder = 'asc' } = query;
         const where: Prisma.CalendarEventWhereInput = {
             tenantId,
             ...(eventType && { eventType }),
             ...(category && { category }),
             ...(priority && { priority }),
+            ...(referenceDoctype && { referenceDoctype }),
+            ...(referenceDocname && { referenceDocname }),
             ...(startDate && { startTime: { gte: new Date(startDate) } }),
             ...(endDate && { endTime: { lte: new Date(endDate) } }),
         };
@@ -107,6 +112,9 @@ export class CalendarRepository {
                 ...(data.recurrenceRule !== undefined && { recurrenceRule: data.recurrenceRule }),
                 ...(data.recurrenceEndDate !== undefined && { recurrenceEndDate: data.recurrenceEndDate ? new Date(data.recurrenceEndDate) : null }),
                 ...(data.reminderMinutes !== undefined && { reminderMinutes: data.reminderMinutes }),
+                ...(data.attending !== undefined && { attending: data.attending }),
+                ...(data.referenceDoctype !== undefined && { referenceDoctype: data.referenceDoctype }),
+                ...(data.referenceDocname !== undefined && { referenceDocname: data.referenceDocname }),
                 ...(data.meetingLink !== undefined && { meetingLink: data.meetingLink }),
                 ...(data.priority !== undefined && { priority: data.priority }),
                 ...(data.isPrivate !== undefined && { isPrivate: data.isPrivate }),

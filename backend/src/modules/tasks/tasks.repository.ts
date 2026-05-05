@@ -176,6 +176,9 @@ export class TasksRepository {
                     startDate: data.startDate ? new Date(data.startDate as string) : null,
                     projectId: data.projectId || null,
                     clientId: data.clientId || null,
+                    leadId: data.leadId || null,
+                    referenceDoctype: data.referenceDoctype || null,
+                    referenceDocname: data.referenceDocname || null,
                     estimatedTime: data.estimatedHours ? Math.round(data.estimatedHours * 60) : null,
                     actualTime: data.actualMinutes ?? null,
                 },
@@ -240,6 +243,9 @@ export class TasksRepository {
                     ...(data.startDate !== undefined && { startDate: data.startDate ? new Date(data.startDate as string) : null }),
                     ...(data.projectId !== undefined && { projectId: data.projectId }),
                     ...(data.clientId !== undefined && { clientId: data.clientId }),
+                    ...(data.leadId !== undefined && { leadId: data.leadId }),
+                    ...(data.referenceDoctype !== undefined && { referenceDoctype: data.referenceDoctype }),
+                    ...(data.referenceDocname !== undefined && { referenceDocname: data.referenceDocname }),
                     ...(data.estimatedHours !== undefined && { estimatedTime: data.estimatedHours ? Math.round(data.estimatedHours * 60) : null }),
                     ...(data.actualMinutes !== undefined && { actualTime: data.actualMinutes ?? null }),
                 },
@@ -329,7 +335,7 @@ export class TasksRepository {
         const where = mergeWhereWithAccess(baseWhere, buildTaskAccessWhere(dataAccess));
         const tasks = await prisma.task.findMany({ where, include: taskInclude, orderBy: { createdAt: 'desc' } });
 
-        const statuses: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'];
+        const statuses: TaskStatus[] = ['PENDING', 'TODO', 'IN_PROGRESS', 'DONE', 'CANCELLED'];
         return statuses.map(status => ({
             status,
             tasks: tasks.filter(t => t.status === status),

@@ -1570,6 +1570,15 @@ model Client {
   lifecycleStage          ClientLifecycleStage   @default(NEW_CUSTOMER)
   assignedOwnerId         String?
   assignedOwner           Employee?     @relation("AssignedToEmployee", fields: [assignedOwnerId], references: [id], onDelete: SetNull)
+
+  // CRM Organization fields from crm-develop
+  website                 String?
+  noOfEmployees           String?
+  annualRevenue           Decimal?      @db.Decimal(15, 2)
+  exchangeRate            Float?        @default(1)
+  industry                String?
+  territory               String?
+  organizationAddress     String?
   
   // 2️⃣ Business & Tax Details
   gstHstNumber            String?

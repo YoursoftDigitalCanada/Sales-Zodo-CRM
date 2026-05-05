@@ -155,6 +155,7 @@ export function registerRoutes(app: Application): void {
 
   // CRM - Clients & Contacts
   protectedRouter.use('/clients', clientsRoutes);
+  protectedRouter.use('/organizations', clientsRoutes);
   protectedRouter.use('/contacts', contactsRoutes);
   protectedRouter.use('/groups', groupsRoutes);
 

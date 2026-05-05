@@ -14,6 +14,13 @@ export interface CreateClientDto {
     primaryPhone: string;
     status?: ClientStatus;
     assignedOwner?: string | null;
+    website?: string | null;
+    noOfEmployees?: string | null;
+    annualRevenue?: number | null;
+    exchangeRate?: number | null;
+    industry?: string | null;
+    territory?: string | null;
+    organizationAddress?: string | null;
 
     // 2️⃣ Business & Tax Details
     gstHstNumber?: string | null;
@@ -115,6 +122,13 @@ export interface ClientResponseDto {
     primaryPhone: string;
     status: ClientStatus;
     assignedOwner: { id: string; firstName: string; lastName: string } | null;
+    website: string | null;
+    noOfEmployees: string | null;
+    annualRevenue: number | null;
+    exchangeRate: number | null;
+    industry: string | null;
+    territory: string | null;
+    organizationAddress: string | null;
 
     // Business & Tax Details
     gstHstNumber: string | null;
@@ -211,6 +225,13 @@ export function toClientResponseDto(c: ClientWithRelations): ClientResponseDto {
         primaryPhone: c.primaryPhone,
         status: c.status,
         assignedOwner: c.assignedOwner ? { id: c.assignedOwner.id, firstName: c.assignedOwner.user.firstName, lastName: c.assignedOwner.user.lastName } : null,
+        website: (c as any).website ?? null,
+        noOfEmployees: (c as any).noOfEmployees ?? null,
+        annualRevenue: (c as any).annualRevenue ? Number((c as any).annualRevenue) : null,
+        exchangeRate: (c as any).exchangeRate ?? null,
+        industry: (c as any).industry ?? null,
+        territory: (c as any).territory ?? null,
+        organizationAddress: (c as any).organizationAddress ?? null,
 
         // Business & Tax Details
         gstHstNumber: c.gstHstNumber,

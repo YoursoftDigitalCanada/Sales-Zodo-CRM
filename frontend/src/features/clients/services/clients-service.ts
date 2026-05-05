@@ -20,6 +20,13 @@ export interface ClientEntity {
   Designation?: string;
   department?: string;
   primaryEmail?: string;
+  website?: string;
+  noOfEmployees?: string;
+  annualRevenue?: number;
+  exchangeRate?: number;
+  industry?: string;
+  territory?: string;
+  organizationAddress?: string;
   contactEmail?: string;
   ContactEmail?: string;
   email?: string;

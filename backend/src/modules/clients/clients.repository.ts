@@ -22,6 +22,13 @@ export class ClientsRepository {
                 primaryPhone: data.primaryPhone,
                 status: data.status || 'ACTIVE',
                 assignedOwnerId: data.assignedOwner,
+                website: data.website,
+                noOfEmployees: data.noOfEmployees || '1-10',
+                annualRevenue: data.annualRevenue,
+                exchangeRate: data.exchangeRate ?? 1,
+                industry: data.industry,
+                territory: data.territory,
+                organizationAddress: data.organizationAddress,
 
                 // Business & Tax Details
                 gstHstNumber: data.gstHstNumber,
@@ -109,6 +116,9 @@ export class ClientsRepository {
                     { clientName: { contains: search, mode: 'insensitive' as const } },
                     { companyName: { contains: search, mode: 'insensitive' as const } },
                     { primaryEmail: { contains: search, mode: 'insensitive' as const } },
+                    { website: { contains: search, mode: 'insensitive' as const } },
+                    { industry: { contains: search, mode: 'insensitive' as const } },
+                    { territory: { contains: search, mode: 'insensitive' as const } },
                 ],
             }),
         };
@@ -137,6 +147,13 @@ export class ClientsRepository {
                 ...(data.primaryPhone !== undefined && { primaryPhone: data.primaryPhone }),
                 ...(data.status !== undefined && { status: data.status }),
                 ...(data.assignedOwner !== undefined && { assignedOwnerId: data.assignedOwner }),
+                ...(data.website !== undefined && { website: data.website }),
+                ...(data.noOfEmployees !== undefined && { noOfEmployees: data.noOfEmployees }),
+                ...(data.annualRevenue !== undefined && { annualRevenue: data.annualRevenue }),
+                ...(data.exchangeRate !== undefined && { exchangeRate: data.exchangeRate }),
+                ...(data.industry !== undefined && { industry: data.industry }),
+                ...(data.territory !== undefined && { territory: data.territory }),
+                ...(data.organizationAddress !== undefined && { organizationAddress: data.organizationAddress }),
 
                 // Business & Tax Details
                 ...(data.gstHstNumber !== undefined && { gstHstNumber: data.gstHstNumber }),

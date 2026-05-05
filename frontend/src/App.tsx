@@ -86,6 +86,7 @@ import DealsPage from "./pages/Deals";
 import ProjectsPage from "./pages/Projects";
 import ProjectDetailPage from "./pages/ProjectDetail";
 import ClientListPage from "./pages/ClientList";
+import OrganizationsPage from "./pages/Organizations";
 import ClientContactListPage from "./pages/ClientContactList";
 import AddProjectPage from "./pages/AddProject";
 import ProjectCreateWizardPage from "./pages/ProjectCreateWizard";
@@ -641,8 +642,8 @@ const AppRoutes = () => {
         <Route path="/sequences" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><LetterBoxPage /></AccessGuard>} />
         <Route path="/proposals" element={<AccessGuard featureId="finance" permissionModule="quotes" action="view"><QuotesPage /></AccessGuard>} />
         <Route path="/subscriptions" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><InvoicePage /></AccessGuard>} />
-        <Route path="/accounts" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><ClientListPage /></AccessGuard>} />
-        <Route path="/organizations" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><ClientListPage /></AccessGuard>} />
+        <Route path="/accounts" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><OrganizationsPage /></AccessGuard>} />
+        <Route path="/organizations" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><OrganizationsPage /></AccessGuard>} />
         <Route path="/notes" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><NotesPage /></AccessGuard>} />
         <Route path="/call-logs" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><CallLogsPage /></AccessGuard>} />
         <Route path="/data-import" element={<AccessGuard permissionModule="settings" action="view"><DataImportPage /></AccessGuard>} />

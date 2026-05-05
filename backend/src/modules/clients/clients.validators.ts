@@ -24,6 +24,13 @@ const createClientBodySchema = z.object({
         primaryPhone: z.string().trim().min(1).max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE),
         status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
         assignedOwner: z.string().uuid().optional().nullable(),
+        website: z.string().trim().max(255).optional().nullable(),
+        noOfEmployees: z.enum(['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+']).default('1-10'),
+        annualRevenue: z.number().min(0).optional().nullable(),
+        exchangeRate: z.number().positive().optional().nullable(),
+        industry: z.string().max(100).optional().nullable(),
+        territory: z.string().max(100).optional().nullable(),
+        organizationAddress: z.string().max(500).optional().nullable(),
 
         // 2️⃣ Business & Tax Details
         gstHstNumber: z.string().max(50).optional().nullable(),
@@ -107,6 +114,13 @@ const updateClientBodySchema = z.object({
         primaryPhone: z.string().trim().min(1).max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional(),
         status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
         assignedOwner: z.string().uuid().optional().nullable(),
+        website: z.string().trim().max(255).optional().nullable(),
+        noOfEmployees: z.enum(['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+']).optional().nullable(),
+        annualRevenue: z.number().min(0).optional().nullable(),
+        exchangeRate: z.number().positive().optional().nullable(),
+        industry: z.string().max(100).optional().nullable(),
+        territory: z.string().max(100).optional().nullable(),
+        organizationAddress: z.string().max(500).optional().nullable(),
 
         // 2️⃣ Business & Tax Details
         gstHstNumber: z.string().max(50).optional().nullable(),

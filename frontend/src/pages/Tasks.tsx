@@ -134,6 +134,7 @@ import {
   GripVertical,
   Briefcase,
   FolderOpen,
+  FileText,
   Hash,
   AtSign,
   Link as LinkIcon,

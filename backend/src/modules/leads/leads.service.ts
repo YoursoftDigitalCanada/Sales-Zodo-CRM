@@ -18,7 +18,7 @@ import {
   ForbiddenError,
 } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
-import { LeadStatus, LeadTemperature, LeadLifecycleStage, ClientType } from '@prisma/client';
+import { Prisma, LeadStatus, LeadTemperature, LeadLifecycleStage, ClientType } from '@prisma/client';
 import { eventBus } from '../../common/events/event-bus';
 import { prisma } from '../../config/database';
 import { logger } from '../../common/utils/logger';
@@ -178,7 +178,10 @@ export class LeadsService {
     }
 
     const lead = await leadsRepository.create(tenantId, data as any, createdById);
-    const dto = toLeadResponseDto(lead);
+    await this.ensureLeadSalesRecords(tenantId, lead as any, createdById);
+
+    const hydratedLead = await leadsRepository.findById((lead as any).id, tenantId);
+    const dto = toLeadResponseDto(hydratedLead || lead);
 
     // ▸ Timeline: log activity
     await this.logActivity(tenantId, dto.id, 'CREATED', 'Lead created', {
@@ -214,6 +217,316 @@ export class LeadsService {
     logger.debug('[LeadsService] Lead created', { leadId: dto.id, tenantId });
 
     return dto;
+  }
+
+  private async ensureLeadSalesRecords(
+    tenantId: string,
+    lead: any,
+    createdById?: string,
+    options: { logPreparation?: boolean } = {},
+  ): Promise<void> {
+    const { logPreparation = true } = options;
+    const fullName = [lead.firstName, lead.middleName, lead.lastName].filter(Boolean).join(' ').trim();
+    const organizationName = (lead.companyName || lead.organization || fullName || 'New Lead').trim();
+    const phone = lead.phone || lead.mobileNo || '';
+    const email = lead.email || '';
+    const dueDate = lead.followUpDateTime
+      ? new Date(lead.followUpDateTime)
+      : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const clientSearch: Prisma.ClientWhereInput[] = [
+        { clientName: organizationName },
+        { companyName: organizationName },
+      ];
+
+      if (email) {
+        clientSearch.push({ primaryEmail: email });
+      }
+
+      const existingClient = lead.convertedToClientId
+        ? await tx.client.findFirst({ where: { id: lead.convertedToClientId, tenantId } })
+        : await tx.client.findFirst({
+          where: {
+            tenantId,
+            OR: clientSearch,
+          },
+        });
+
+      const client = existingClient || await tx.client.create({
+        data: {
+          tenantId,
+          clientType: 'BUSINESS',
+          clientName: organizationName,
+          companyName: organizationName,
+          primaryEmail: email,
+          primaryPhone: phone,
+          status: 'PROSPECT',
+          lifecycleStage: 'NEW_CUSTOMER',
+          assignedOwnerId: lead.assignedToId || null,
+          website: lead.website || null,
+          noOfEmployees: lead.companySize || null,
+          annualRevenue: lead.annualRevenue || null,
+          industry: lead.industry || null,
+          territory: lead.territory || lead.teamRegion || null,
+          organizationAddress: lead.propertyAddress || null,
+          streetAddress: lead.propertyAddress || null,
+          city: lead.city || null,
+          province: lead.state || null,
+          postalCode: lead.zipCode || null,
+          country: lead.country || null,
+          internalNotes: lead.notes || lead.useCase || null,
+          contactName: fullName || null,
+          position: lead.jobTitle || null,
+          directPhone: phone || null,
+          leadSource: lead.leadSource?.name || lead.leadSourceUTM || null,
+          budgetRange: lead.budgetRange || null,
+          preferredContactMethod: lead.preferredContactMethod || null,
+          nextFollowUp: dueDate,
+        },
+      });
+
+      const contactSearch: Prisma.ContactWhereInput[] = [];
+      if (email) contactSearch.push({ email });
+      if (phone) {
+        contactSearch.push({ mobilePhone: phone }, { officePhone: phone });
+      }
+      if (fullName) contactSearch.push({ contactName: fullName });
+
+      const existingContact = lead.convertedToContactId
+        ? await tx.contact.findFirst({ where: { id: lead.convertedToContactId, tenantId } })
+        : contactSearch.length
+          ? await tx.contact.findFirst({
+            where: {
+              tenantId,
+              OR: contactSearch,
+            },
+          })
+          : null;
+
+      const contact = existingContact
+        ? await tx.contact.update({
+          where: { id: existingContact.id },
+          data: {
+            companyId: existingContact.companyId || client.id,
+            type: existingContact.type || 'LEAD',
+            jobTitle: existingContact.jobTitle || lead.jobTitle || undefined,
+            officePhone: existingContact.officePhone || lead.phone || undefined,
+            mobilePhone: existingContact.mobilePhone || lead.mobileNo || lead.phone || undefined,
+            assignedToId: existingContact.assignedToId || lead.assignedToId || undefined,
+            notes: existingContact.notes || lead.notes || undefined,
+            preferredContactMethod: existingContact.preferredContactMethod || lead.preferredContactMethod || undefined,
+            isPrimaryContact: existingContact.isPrimaryContact || true,
+          },
+        })
+        : await tx.contact.create({
+          data: {
+            tenantId,
+            companyId: client.id,
+            type: 'LEAD',
+            contactName: fullName || organizationName,
+            firstName: lead.firstName || null,
+            lastName: lead.lastName || null,
+            email,
+            officePhone: lead.phone || null,
+            mobilePhone: lead.mobileNo || lead.phone || null,
+            jobTitle: lead.jobTitle || null,
+            relationshipStatus: 'Active',
+            preferredContactMethod: lead.preferredContactMethod || null,
+            assignedToId: lead.assignedToId || null,
+            notes: lead.notes || lead.useCase || null,
+            isPrimaryContact: true,
+          },
+        });
+
+      const existingTask = await tx.task.findFirst({
+        where: {
+          tenantId,
+          leadId: lead.id,
+          referenceDoctype: 'Lead',
+          referenceDocname: lead.id,
+          title: { startsWith: 'Follow up new lead' },
+        },
+      });
+
+      const task = existingTask || await tx.task.create({
+        data: {
+          tenantId,
+          title: `Follow up new lead: ${fullName || organizationName}`,
+          description: [
+            lead.useCase ? `Use case: ${lead.useCase}` : null,
+            lead.productInterest ? `Product interest: ${lead.productInterest}` : null,
+            lead.buyingIntent ? `Buying intent: ${lead.buyingIntent}` : null,
+            lead.budgetRange ? `Budget: ${lead.budgetRange}` : null,
+            lead.purchaseTimeline || lead.workTimeline ? `Timeline: ${lead.purchaseTimeline || lead.workTimeline}` : null,
+          ].filter(Boolean).join('\n') || null,
+          status: 'TODO',
+          priority: lead.temperature === 'HOT' || lead.buyingIntent === 'High' ? 'HIGH' : 'MEDIUM',
+          dueDate,
+          assignedToId: lead.assignedToId || null,
+          createdById: createdById || null,
+          leadId: lead.id,
+          clientId: client.id,
+          referenceDoctype: 'Lead',
+          referenceDocname: lead.id,
+        },
+      });
+
+      await tx.lead.update({
+        where: { id: lead.id },
+        data: {
+          convertedToClientId: client.id,
+          convertedToContactId: contact.id,
+        },
+      });
+
+      return { client, contact, task };
+    });
+
+    if (logPreparation) {
+      await this.logActivity(tenantId, lead.id, 'CREATED', 'Account, contact and follow-up task prepared', {
+        clientId: result.client.id,
+        contactId: result.contact.id,
+        taskId: result.task.id,
+      });
+
+      activityLogger.log({
+        tenantId,
+        entityType: 'Lead',
+        entityId: lead.id,
+        action: 'CREATE',
+        module: 'leads',
+        description: 'Prepared account, contact and follow-up task for new lead',
+        userId: createdById,
+        metadata: {
+          clientId: result.client.id,
+          contactId: result.contact.id,
+          taskId: result.task.id,
+        },
+      });
+    }
+  }
+
+  private async ensureQualifiedLeadDeal(
+    tenantId: string,
+    lead: any,
+    actorUserId?: string,
+  ): Promise<string> {
+    if (!lead.convertedToClientId || !lead.convertedToContactId) {
+      await this.ensureLeadSalesRecords(tenantId, lead, actorUserId, { logPreparation: false });
+      lead = await leadsRepository.findById(lead.id, tenantId);
+    }
+
+    const existingDeal = lead.convertedToDealId
+      ? await prisma.project.findFirst({ where: { id: lead.convertedToDealId, tenantId, deletedAt: null } })
+      : await prisma.project.findFirst({ where: { tenantId, leadId: lead.id, deletedAt: null } });
+
+    if (existingDeal) {
+      return existingDeal.id;
+    }
+
+    const fullName = [lead.firstName, lead.middleName, lead.lastName].filter(Boolean).join(' ').trim();
+    const organizationName = lead.companyName || lead.organization || fullName || 'Qualified Lead';
+    const dealValue = lead.potentialValue || lead.annualRevenue || null;
+    const propertyType = lead.propertyType === 'Commercial'
+      ? 'COMMERCIAL'
+      : lead.propertyType === 'Multi-Family'
+        ? 'MULTI_FAMILY'
+        : 'RESIDENTIAL';
+
+    const deal = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const createdDeal = await tx.project.create({
+        data: {
+          tenantId,
+          leadId: lead.id,
+          clientId: lead.convertedToClientId || null,
+          name: `${organizationName} Deal`,
+          description: lead.notes || lead.useCase || null,
+          projectNumber: await this.generateDealNumber(tx, tenantId),
+          status: 'ACTIVE',
+          priority: lead.temperature === 'HOT' ? 'HIGH' : 'NORMAL',
+          projectType: 'OTHER',
+          propertyType,
+          salesRepId: lead.assignedToId || null,
+          projectManagerId: lead.assignedToId || null,
+          organization: lead.convertedToClientId || null,
+          organizationName,
+          nextStep: lead.nextStep || 'Schedule demo or qualification call',
+          dealStatus: 'Qualification',
+          dealOwnerId: lead.assignedToId || null,
+          probability: 25,
+          expectedDealValue: dealValue,
+          dealValue,
+          expectedClosureDate: lead.followUpDateTime || lead.inspectionAppointmentDate || null,
+          sourceId: lead.leadSourceId || null,
+          leadName: fullName || organizationName,
+          website: lead.website || null,
+          noOfEmployees: lead.companySize || null,
+          jobTitle: lead.jobTitle || null,
+          territory: lead.territory || lead.teamRegion || null,
+          annualRevenue: lead.annualRevenue || null,
+          salutation: lead.salutation || null,
+          firstName: lead.firstName || null,
+          lastName: lead.lastName || null,
+          email: lead.email || null,
+          mobileNo: lead.mobileNo || lead.phone || null,
+          phone: lead.phone || lead.mobileNo || null,
+          gender: lead.gender || null,
+          contactId: lead.convertedToContactId || null,
+          total: dealValue,
+          netTotal: dealValue,
+          currency: 'CAD',
+          jobSiteAddress: lead.propertyAddress || null,
+          jobSiteCity: lead.city || null,
+          jobSiteState: lead.state || null,
+          jobSiteZip: lead.zipCode || null,
+          createdById: lead.createdById || null,
+        },
+      });
+
+      if (lead.convertedToContactId) {
+        await tx.contactDeal.create({
+          data: {
+            tenantId,
+            contactId: lead.convertedToContactId,
+            dealId: createdDeal.id,
+            role: 'Decision Maker',
+            isPrimary: true,
+          },
+        });
+      }
+
+      await tx.lead.update({
+        where: { id: lead.id },
+        data: {
+          convertedToDealId: createdDeal.id,
+        },
+      });
+
+      return createdDeal;
+    });
+
+    await this.logActivity(tenantId, lead.id, 'CONVERTED', 'Qualified lead opened as deal', {
+      dealId: deal.id,
+      dealName: deal.name,
+    });
+
+    activityLogger.log({
+      tenantId,
+      entityType: 'Project',
+      entityId: deal.id,
+      action: 'CREATE',
+      module: 'deals',
+      description: `Created deal from qualified lead: ${deal.name}`,
+      userId: actorUserId,
+      metadata: {
+        leadId: lead.id,
+        clientId: lead.convertedToClientId,
+        contactId: lead.convertedToContactId,
+      },
+    });
+
+    return deal.id;
   }
 
   // ── READ ────────────────────────────────────────────────────────────────
@@ -297,7 +610,13 @@ export class LeadsService {
       }
     }
 
-    const lead = await leadsRepository.update(id, tenantId, data as any);
+    let lead = await leadsRepository.update(id, tenantId, data as any);
+
+    if (data.status === 'QUALIFIED' && existing.status !== 'QUALIFIED') {
+      await this.ensureQualifiedLeadDeal(tenantId, lead as any);
+      lead = await leadsRepository.findById(id, tenantId) || lead;
+    }
+
     const dto = toLeadResponseDto(lead);
 
     // ▸ Timeline: log field changes
@@ -372,7 +691,7 @@ export class LeadsService {
     }
 
     // Update status (and optionally lifecycle stage)
-    const rawLead = await prisma.lead.update({
+    let rawLead = await prisma.lead.update({
       where: { id, tenantId },
       data: updateData,
       include: {
@@ -381,6 +700,18 @@ export class LeadsService {
         tags: { include: { tag: true } },
       },
     });
+
+    if (status === 'QUALIFIED' && oldStatus !== 'QUALIFIED') {
+      await this.ensureQualifiedLeadDeal(tenantId, rawLead);
+      rawLead = await prisma.lead.findFirst({
+        where: { id, tenantId },
+        include: {
+          assignedTo: { include: { user: true } },
+          leadSource: true,
+          tags: { include: { tag: true } },
+        },
+      }) || rawLead;
+    }
 
     const dto = toLeadResponseDto(rawLead);
 

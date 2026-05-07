@@ -94,7 +94,12 @@ export class ProjectsController {
 
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const project = await projectsService.update(req.params.id, this.getTenantId(req), sanitizeBody(req.body));
+      const project = await projectsService.update(
+        req.params.id,
+        this.getTenantId(req),
+        sanitizeBody(req.body),
+        this.getUserId(req),
+      );
       sendSuccess(res, project, 'Project updated');
     } catch (error) {
       next(error);

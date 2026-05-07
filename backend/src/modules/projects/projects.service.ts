@@ -10,6 +10,7 @@ import {
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { DataAccessContext } from '../../common/access/data-access';
 import { liveInvoiceSyncService } from './live-invoice-sync.service';
+import { activityLogger } from '../../common/services/activity-logger.service';
 
 const NOT_FOUND_MESSAGES = new Set([
   'PROJECT_NOT_FOUND',
@@ -152,12 +153,487 @@ export class ProjectsService {
     return this.guarded(() => projectsRepository.getSummaryStats(tenantId, dataAccess));
   }
 
-  async update(id: string, tenantId: string, data: Record<string, any>) {
+  async update(id: string, tenantId: string, data: Record<string, any>, actorUserId?: string) {
     const dto = normalizeProjectDto(data);
     return this.guarded(async () => {
+      const current = await this.getProjectDetailOrThrow(id, tenantId);
+      if (dto.dealStatus === 'Lost' && !(dto.lostReason || (current as any).lostReason)) {
+        throw new BadRequestError('Lost reason is required when a deal is marked Lost', ErrorCodes.VALIDATION_FAILED);
+      }
+
       const project = await projectsRepository.update(id, tenantId, dto);
+      if (dto.dealStatus && dto.dealStatus !== (current as any).dealStatus) {
+        await this.runDealStageAutomation(tenantId, project.id, dto.dealStatus, current as any, actorUserId);
+      }
       await this.syncProjectRevenueState(project.id, tenantId);
       return this.getProjectDetailOrThrow(project.id, tenantId);
+    });
+  }
+
+  private async runDealStageAutomation(
+    tenantId: string,
+    projectId: string,
+    dealStatus: string,
+    previousProject: any,
+    actorUserId?: string,
+  ): Promise<void> {
+    const project = await this.getProjectDetailOrThrow(projectId, tenantId);
+    const normalizedStatus = this.normalizeDealStage(dealStatus);
+
+    if (normalizedStatus === 'demo scheduled') {
+      await this.ensureDemoAutomation(tenantId, project as any, actorUserId);
+      return;
+    }
+
+    if (normalizedStatus === 'proposal sent') {
+      await this.ensureProposalAutomation(tenantId, project as any, actorUserId);
+      return;
+    }
+
+    if (normalizedStatus === 'won') {
+      await this.ensureDealWonAutomation(tenantId, project as any, actorUserId);
+      return;
+    }
+
+    if (normalizedStatus === 'lost') {
+      await this.ensureDealLostAutomation(tenantId, project as any, previousProject, actorUserId);
+    }
+  }
+
+  private normalizeDealStage(value: string | null | undefined): string {
+    return String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  }
+
+  private addDays(date: Date, days: number): Date {
+    const next = new Date(date);
+    next.setDate(next.getDate() + days);
+    return next;
+  }
+
+  private nextBusinessDate(daysFromNow: number, hour = 10): Date {
+    const date = this.addDays(new Date(), daysFromNow);
+    date.setHours(hour, 0, 0, 0);
+    while (date.getDay() === 0 || date.getDay() === 6) {
+      date.setDate(date.getDate() + 1);
+    }
+    return date;
+  }
+
+  private getDealOwner(project: any): string | null {
+    return project.dealOwnerId || project.salesRepId || project.projectManagerId || null;
+  }
+
+  private getDealValue(project: any): number {
+    return toNumber(project.dealValue || project.expectedDealValue || project.contractValue || project.budget || project.total || 0);
+  }
+
+  private async ensureTask(
+    tenantId: string,
+    project: any,
+    input: {
+      key: string;
+      title: string;
+      description?: string;
+      dueDate: Date;
+      priority?: 'LOW' | 'NORMAL' | 'MEDIUM' | 'HIGH' | 'URGENT';
+      clientId?: string | null;
+      leadId?: string | null;
+      actorUserId?: string;
+    },
+  ) {
+    const existing = await prisma.task.findFirst({
+      where: {
+        tenantId,
+        projectId: project.id,
+        referenceDoctype: 'DealAutomation',
+        referenceDocname: `${project.id}:${input.key}`,
+      },
+    });
+
+    if (existing) return existing;
+
+    return prisma.task.create({
+      data: {
+        tenantId,
+        title: input.title,
+        description: input.description || null,
+        status: 'TODO',
+        priority: input.priority || 'MEDIUM',
+        dueDate: input.dueDate,
+        assignedToId: this.getDealOwner(project),
+        createdById: project.createdById || null,
+        projectId: project.id,
+        clientId: input.clientId || project.clientId || null,
+        leadId: input.leadId || project.leadId || null,
+        referenceDoctype: 'DealAutomation',
+        referenceDocname: `${project.id}:${input.key}`,
+      },
+    });
+  }
+
+  private async ensureDemoAutomation(tenantId: string, project: any, actorUserId?: string): Promise<void> {
+    const demoStart = project.expectedClosureDate
+      ? new Date(project.expectedClosureDate)
+      : this.nextBusinessDate(1, 10);
+    if (Number.isNaN(demoStart.getTime())) demoStart.setTime(this.nextBusinessDate(1, 10).getTime());
+    const demoEnd = new Date(demoStart);
+    demoEnd.setHours(demoEnd.getHours() + 1);
+
+    const existingMeeting = await prisma.calendarEvent.findFirst({
+      where: {
+        tenantId,
+        referenceDoctype: 'DealAutomation',
+        referenceDocname: `${project.id}:demo`,
+      },
+    });
+
+    const meeting = existingMeeting || await prisma.calendarEvent.create({
+      data: {
+        tenantId,
+        title: `Demo: ${project.organizationName || project.name}`,
+        description: `Software demo for deal "${project.name}".`,
+        eventType: 'MEETING',
+        status: 'SCHEDULED',
+        startTime: demoStart,
+        endTime: demoEnd,
+        timezone: 'UTC',
+        reminderMinutes: 30,
+        priority: 'HIGH',
+        category: 'DEMO',
+        createdById: project.createdById || null,
+        clientId: project.clientId || null,
+        leadId: project.leadId || null,
+        referenceDoctype: 'DealAutomation',
+        referenceDocname: `${project.id}:demo`,
+      },
+    });
+
+    const followUpDate = this.addDays(demoEnd, 1);
+    await this.ensureTask(tenantId, project, {
+      key: 'demo-follow-up',
+      title: `Follow up after demo: ${project.organizationName || project.name}`,
+      description: `Review demo outcome and confirm next step for "${project.name}".`,
+      dueDate: followUpDate,
+      priority: 'HIGH',
+      actorUserId,
+    });
+
+    activityLogger.log({
+      tenantId,
+      entityType: 'Project',
+      entityId: project.id,
+      action: 'CREATE',
+      module: 'deal-automation',
+      description: `Demo scheduled automation prepared for deal "${project.name}"`,
+      userId: actorUserId,
+      metadata: { meetingId: meeting.id },
+    });
+  }
+
+  private async generateQuoteNumber(tenantId: string): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `QT-${year}-`;
+    const latest = await prisma.quote.findFirst({
+      where: { tenantId, quoteNumber: { startsWith: prefix } },
+      orderBy: { quoteNumber: 'desc' },
+      select: { quoteNumber: true },
+    });
+    const next = latest?.quoteNumber
+      ? Number.parseInt(latest.quoteNumber.replace(prefix, ''), 10) + 1
+      : 1;
+    return `${prefix}${String(Number.isFinite(next) ? next : 1).padStart(4, '0')}`;
+  }
+
+  private async generateProposalNumber(tenantId: string): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `PR-${year}-`;
+    const latest = await prisma.proposal.findFirst({
+      where: { tenantId, proposalNumber: { startsWith: prefix } },
+      orderBy: { proposalNumber: 'desc' },
+      select: { proposalNumber: true },
+    });
+    const next = latest?.proposalNumber
+      ? Number.parseInt(latest.proposalNumber.replace(prefix, ''), 10) + 1
+      : 1;
+    return `${prefix}${String(Number.isFinite(next) ? next : 1).padStart(4, '0')}`;
+  }
+
+  private async generateInvoiceNumber(tenantId: string): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `INV-${year}-`;
+    const latest = await prisma.invoice.findFirst({
+      where: { tenantId, invoiceNumber: { startsWith: prefix } },
+      orderBy: { invoiceNumber: 'desc' },
+      select: { invoiceNumber: true },
+    });
+    const next = latest?.invoiceNumber
+      ? Number.parseInt(latest.invoiceNumber.replace(prefix, ''), 10) + 1
+      : 1;
+    return `${prefix}${String(Number.isFinite(next) ? next : 1).padStart(4, '0')}`;
+  }
+
+  private async ensureProposalAutomation(tenantId: string, project: any, actorUserId?: string): Promise<void> {
+    const total = this.getDealValue(project);
+    const validUntil = this.addDays(new Date(), 30);
+
+    let quote = project.quoteId
+      ? await prisma.quote.findFirst({ where: { id: project.quoteId, tenantId } })
+      : await prisma.quote.findFirst({
+        where: {
+          tenantId,
+          OR: [
+            ...(project.leadId ? [{ leadId: project.leadId }] : []),
+            ...(project.clientId ? [{ clientId: project.clientId }] : []),
+          ],
+          notes: { contains: `Deal:${project.id}` },
+        },
+      });
+
+    if (!quote) {
+      quote = await prisma.quote.create({
+        data: {
+          tenantId,
+          quoteNumber: await this.generateQuoteNumber(tenantId),
+          status: 'SENT',
+          clientId: project.clientId || null,
+          leadId: project.leadId || null,
+          validUntil,
+          currency: 'CAD',
+          subtotal: total,
+          taxAmount: 0,
+          discountAmount: 0,
+          total,
+          notes: `Deal:${project.id}\nAuto-created when deal moved to Proposal Sent.`,
+          terms: 'Proposal valid for 30 days.',
+          createdById: project.createdById || null,
+          sentAt: new Date(),
+          items: {
+            create: [{
+              tenantId,
+              description: `Roofer CRM subscription and onboarding - ${project.organizationName || project.name}`,
+              quantity: 1,
+              unitPrice: total,
+              total,
+              sortOrder: 0,
+            }],
+          },
+        },
+      });
+
+      await prisma.project.update({ where: { id: project.id }, data: { quoteId: quote.id } });
+    }
+
+    if (project.leadId) {
+      const existingProposal = await prisma.proposal.findFirst({
+        where: { tenantId, leadId: project.leadId, quoteId: quote.id },
+      });
+
+      if (!existingProposal) {
+        await prisma.proposal.create({
+          data: {
+            tenantId,
+            proposalNumber: await this.generateProposalNumber(tenantId),
+            status: 'SENT',
+            leadId: project.leadId,
+            quoteId: quote.id,
+            customMessageToClient: `Proposal for ${project.organizationName || project.name}`,
+            scopeOfWork: 'Roofer CRM subscription, setup, team onboarding, and sales support.',
+            termsAndConditions: 'Pricing and terms are valid for 30 days.',
+            createdById: project.createdById || null,
+            sentAt: new Date(),
+          },
+        });
+      }
+    }
+
+    await this.ensureTask(tenantId, project, {
+      key: 'proposal-follow-up',
+      title: `Follow up on proposal: ${project.organizationName || project.name}`,
+      description: `Proposal was sent for deal "${project.name}". Follow up if the client has not replied.`,
+      dueDate: this.nextBusinessDate(2, 10),
+      priority: 'HIGH',
+      actorUserId,
+    });
+
+    activityLogger.log({
+      tenantId,
+      entityType: 'Project',
+      entityId: project.id,
+      action: 'CREATE',
+      module: 'deal-automation',
+      description: `Proposal automation prepared for deal "${project.name}"`,
+      userId: actorUserId,
+      metadata: { quoteId: quote.id },
+    });
+  }
+
+  private async ensureDealWonAutomation(tenantId: string, project: any, actorUserId?: string): Promise<void> {
+    if (!project.clientId) {
+      throw new BadRequestError('A client/account is required before marking a deal Won', ErrorCodes.VALIDATION_FAILED);
+    }
+
+    const total = this.getDealValue(project);
+    const dueDate = this.addDays(new Date(), 14);
+
+    await prisma.client.update({
+      where: { id: project.clientId },
+      data: {
+        status: 'ACTIVE',
+        lifecycleStage: 'ONBOARDING',
+        nextFollowUp: this.addDays(new Date(), 30),
+        internalNotes: [
+          project.client?.internalNotes,
+          `Deal "${project.name}" marked Won on ${new Date().toISOString().slice(0, 10)}. Subscription tracking started for Roofer CRM.`,
+        ].filter(Boolean).join('\n\n'),
+      },
+    });
+
+    if (project.leadId) {
+      await prisma.lead.update({
+        where: { id: project.leadId },
+        data: {
+          status: 'WON',
+          converted: true,
+          convertedAt: new Date(),
+          convertedToClientId: project.clientId,
+          convertedToDealId: project.id,
+          convertedToContactId: project.contactId || undefined,
+        },
+      });
+    }
+
+    const existingInvoice = await prisma.invoice.findFirst({
+      where: { tenantId, projectId: project.id },
+    });
+
+    const invoice = existingInvoice || await prisma.invoice.create({
+      data: {
+        tenantId,
+        invoiceNumber: await this.generateInvoiceNumber(tenantId),
+        clientId: project.clientId,
+        projectId: project.id,
+        issueDate: new Date(),
+        dueDate,
+        currency: 'CAD',
+        status: 'DRAFT',
+        subtotal: total,
+        taxAmount: 0,
+        discountAmount: 0,
+        total,
+        amountPaid: 0,
+        amountDue: total,
+        notes: `Auto-created when deal "${project.name}" was marked Won.`,
+        terms: 'Due on receipt unless otherwise agreed.',
+        createdById: project.createdById || null,
+        items: {
+          create: [{
+            tenantId,
+            description: `Roofer CRM subscription/setup - ${project.organizationName || project.name}`,
+            quantity: 1,
+            unitPrice: total,
+            amount: total,
+            sortOrder: 0,
+          }],
+        },
+      },
+    });
+
+    await this.ensureTask(tenantId, project, {
+      key: 'subscription-setup',
+      title: `Set up subscription: ${project.organizationName || project.name}`,
+      description: 'Create/confirm the customer subscription plan, billing cycle, seats, and renewal date.',
+      dueDate: this.nextBusinessDate(1, 11),
+      priority: 'HIGH',
+      actorUserId,
+    });
+
+    await this.ensureTask(tenantId, project, {
+      key: 'onboarding',
+      title: `Start onboarding: ${project.organizationName || project.name}`,
+      description: 'Welcome the customer, set up Roofer CRM workspace, invite users, and schedule kickoff.',
+      dueDate: this.nextBusinessDate(1, 14),
+      priority: 'HIGH',
+      actorUserId,
+    });
+
+    await this.ensureTask(tenantId, project, {
+      key: 'renewal-reminder',
+      title: `Renewal reminder: ${project.organizationName || project.name}`,
+      description: 'Review account health and prepare renewal conversation.',
+      dueDate: this.addDays(new Date(), 335),
+      priority: 'MEDIUM',
+      actorUserId,
+    });
+
+    await prisma.project.update({
+      where: { id: project.id },
+      data: {
+        status: 'COMPLETED',
+        closedDate: project.closedDate || new Date(),
+      },
+    });
+
+    activityLogger.log({
+      tenantId,
+      entityType: 'Project',
+      entityId: project.id,
+      action: 'STATUS_CHANGE',
+      module: 'deal-automation',
+      description: `Deal won automation completed for "${project.name}"`,
+      userId: actorUserId,
+      metadata: { invoiceId: invoice.id, clientId: project.clientId },
+    });
+  }
+
+  private async ensureDealLostAutomation(
+    tenantId: string,
+    project: any,
+    previousProject: any,
+    actorUserId?: string,
+  ): Promise<void> {
+    await prisma.project.update({
+      where: { id: project.id },
+      data: {
+        status: 'CANCELLED',
+        closedDate: project.closedDate || new Date(),
+      },
+    });
+
+    if (project.leadId) {
+      await prisma.lead.update({
+        where: { id: project.leadId },
+        data: {
+          status: 'LOST',
+          lostReason: project.lostReason || previousProject?.lostReason || 'Not specified',
+          lostNotes: project.lostNotes || previousProject?.lostNotes || null,
+          closedAt: new Date(),
+        },
+      });
+    }
+
+    if (project.expectedClosureDate) {
+      await this.ensureTask(tenantId, project, {
+        key: 'lost-follow-up',
+        title: `Future follow-up for lost deal: ${project.organizationName || project.name}`,
+        description: `Deal was lost. Reason: ${project.lostReason || previousProject?.lostReason || 'Not specified'}. Revisit if timing changes.`,
+        dueDate: new Date(project.expectedClosureDate),
+        priority: 'NORMAL',
+        actorUserId,
+      });
+    }
+
+    activityLogger.log({
+      tenantId,
+      entityType: 'Project',
+      entityId: project.id,
+      action: 'STATUS_CHANGE',
+      module: 'deal-automation',
+      description: `Deal lost automation completed for "${project.name}"`,
+      userId: actorUserId,
+      metadata: {
+        lostReason: project.lostReason || previousProject?.lostReason,
+        followUpDate: project.expectedClosureDate || null,
+      },
     });
   }
 

@@ -48,6 +48,8 @@ import { cn } from "@/lib/utils";
 
 const DEAL_STATUSES = [
   { name: "Qualification", type: "Open", probability: 25, color: "#3B82F6" },
+  { name: "Demo Scheduled", type: "Open", probability: 40, color: "#8B5CF6" },
+  { name: "Proposal Sent", type: "Open", probability: 50, color: "#6366F1" },
   { name: "Negotiation", type: "Open", probability: 60, color: "#F59E0B" },
   { name: "Won", type: "Won", probability: 100, color: "#10B981" },
   { name: "Lost", type: "Lost", probability: 0, color: "#EF4444" },

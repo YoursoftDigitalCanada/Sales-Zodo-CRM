@@ -403,6 +403,19 @@ export default function OrganizationsPage() {
                   <TabsTrigger value="contacts">Contacts {contacts.length}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="details" className="mt-5 grid gap-4 md:grid-cols-2">
+                  <div className="md:col-span-2 rounded-md border border-[#B2F5EA] bg-[#F0FDFA] p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[#0F172A]">Automation Links</p>
+                        <p className="mt-1 text-xs text-[#0F766E]">Accounts are reused from company name and linked to contacts, deals, tasks, proposals, invoices, and subscriptions as the sales flow moves forward.</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                        <span className="rounded-md bg-white px-2.5 py-1 text-[#0F766E]">{contacts.length} Contacts</span>
+                        <span className="rounded-md bg-white px-2.5 py-1 text-[#1D4ED8]">{deals.length} Deals</span>
+                        <span className="rounded-md bg-white px-2.5 py-1 text-[#B45309]">{String(viewing.status || "PROSPECT")}</span>
+                      </div>
+                    </div>
+                  </div>
                   <Detail label="No. of Employees" value={String(viewing.noOfEmployees || "-")} />
                   <Detail label="Annual Revenue" value={formatCurrency(viewing.annualRevenue, String(viewing.currency || "CAD"))} />
                   <Detail label="Industry" value={String(viewing.industry || "-")} />

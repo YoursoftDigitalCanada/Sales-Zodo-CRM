@@ -888,6 +888,33 @@ const LeadDetailPage = () => {
                     </div>
                 )}
 
+                <div className="rounded-xl border border-[#B2F5EA] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]" style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
+                    <div className="mb-3 flex items-center justify-between">
+                        <div>
+                            <h3 className="text-sm font-semibold text-[#0F172A]">Automation Links</h3>
+                            <p className="text-xs text-[#64748B]">New leads prepare the account, primary contact, and first follow-up. A deal is created only after qualification.</p>
+                        </div>
+                        <span className="rounded-full bg-[#F0FDFA] px-2.5 py-1 text-[10px] font-semibold uppercase text-[#0F766E]">Sales flow</span>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-3">
+                        <div className="rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-3">
+                            <p className="text-[11px] font-semibold uppercase text-[#64748B]">Organization</p>
+                            <p className="mt-1 truncate text-sm font-semibold text-[#0F172A]">{lead.convertedToClient?.clientName || lead.companyName || "Preparing account"}</p>
+                            {lead.convertedToClientId ? <Link to={`/client-list/${lead.convertedToClientId}`} className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#0891B2]"><ExternalLink size={12} />Open account</Link> : <p className="mt-2 text-xs text-[#64748B]">Created/reused when lead is saved.</p>}
+                        </div>
+                        <div className="rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-3">
+                            <p className="text-[11px] font-semibold uppercase text-[#64748B]">Primary Contact</p>
+                            <p className="mt-1 truncate text-sm font-semibold text-[#0F172A]">{lead.convertedToContact?.contactName || fullName || "Preparing contact"}</p>
+                            <p className="mt-2 text-xs text-[#64748B]">{lead.convertedToContact?.email || lead.email || "Linked to the organization"}</p>
+                        </div>
+                        <div className="rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-3">
+                            <p className="text-[11px] font-semibold uppercase text-[#64748B]">Deal</p>
+                            <p className="mt-1 truncate text-sm font-semibold text-[#0F172A]">{lead.convertedToDeal?.name || (lead.status === "QUALIFIED" ? "Qualification deal ready" : "Not created yet")}</p>
+                            {lead.convertedToDealId ? <Link to={`/projects/${lead.convertedToDealId}`} className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#0891B2]"><ExternalLink size={12} />Open deal</Link> : <p className="mt-2 text-xs text-[#64748B]">Created only when status becomes Qualified.</p>}
+                        </div>
+                    </div>
+                </div>
+
                 {/* ═══════════ KPI STATS ROW ═══════════ */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4" style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
                     {[

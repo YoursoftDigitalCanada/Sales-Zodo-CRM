@@ -380,7 +380,14 @@ export class LeadsService {
         },
       });
 
-      return { client, contact, task };
+      return {
+        client,
+        contact,
+        task,
+        clientWasCreated: !existingClient,
+        contactWasCreated: !existingContact,
+        taskWasCreated: !existingTask,
+      };
     });
 
     if (logPreparation) {
@@ -402,6 +409,54 @@ export class LeadsService {
           clientId: result.client.id,
           contactId: result.contact.id,
           taskId: result.task.id,
+        },
+      });
+
+      activityLogger.log({
+        tenantId,
+        entityType: 'Client',
+        entityId: result.client.id,
+        action: result.clientWasCreated ? 'CREATE' : 'UPDATE',
+        module: 'lead-automation',
+        description: `Organization prepared from lead: ${organizationName}`,
+        userId: createdById,
+        metadata: {
+          leadId: lead.id,
+          contactId: result.contact.id,
+          taskId: result.task.id,
+          autoCreated: true,
+        },
+      });
+
+      activityLogger.log({
+        tenantId,
+        entityType: 'Contact',
+        entityId: result.contact.id,
+        action: result.contactWasCreated ? 'CREATE' : 'UPDATE',
+        module: 'lead-automation',
+        description: `Primary contact prepared from lead: ${fullName || email || organizationName}`,
+        userId: createdById,
+        metadata: {
+          leadId: lead.id,
+          clientId: result.client.id,
+          taskId: result.task.id,
+          autoCreated: true,
+        },
+      });
+
+      activityLogger.log({
+        tenantId,
+        entityType: 'Task',
+        entityId: result.task.id,
+        action: result.taskWasCreated ? 'CREATE' : 'UPDATE',
+        module: 'lead-automation',
+        description: `First follow-up task prepared for lead: ${fullName || organizationName}`,
+        userId: createdById,
+        metadata: {
+          leadId: lead.id,
+          clientId: result.client.id,
+          contactId: result.contact.id,
+          autoCreated: result.taskWasCreated,
         },
       });
     }
@@ -434,7 +489,7 @@ export class LeadsService {
         ? 'MULTI_FAMILY'
         : 'RESIDENTIAL';
 
-    const deal = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const createdDeal = await tx.project.create({
         data: {
           tenantId,
@@ -503,8 +558,36 @@ export class LeadsService {
         },
       });
 
-      return createdDeal;
+      const existingScheduleDemoTask = await tx.task.findFirst({
+        where: {
+          tenantId,
+          projectId: createdDeal.id,
+          referenceDoctype: 'LeadQualified',
+          referenceDocname: `${lead.id}:schedule-demo`,
+        },
+      });
+
+      const scheduleDemoTask = existingScheduleDemoTask || await tx.task.create({
+          data: {
+            tenantId,
+            title: `Schedule demo: ${organizationName}`,
+            description: `Lead is qualified. Book the Roofer CRM demo and confirm attendees.`,
+            status: 'TODO',
+            priority: 'HIGH',
+            dueDate: lead.followUpDateTime || new Date(Date.now() + 24 * 60 * 60 * 1000),
+            assignedToId: lead.assignedToId || null,
+            createdById: lead.createdById || null,
+            leadId: lead.id,
+            clientId: lead.convertedToClientId || null,
+            projectId: createdDeal.id,
+            referenceDoctype: 'LeadQualified',
+            referenceDocname: `${lead.id}:schedule-demo`,
+          },
+        });
+
+      return { deal: createdDeal, scheduleDemoTask, scheduleDemoTaskWasCreated: !existingScheduleDemoTask };
     });
+    const { deal, scheduleDemoTask, scheduleDemoTaskWasCreated } = result;
 
     await this.logActivity(tenantId, lead.id, 'CONVERTED', 'Qualified lead opened as deal', {
       dealId: deal.id,
@@ -523,6 +606,36 @@ export class LeadsService {
         leadId: lead.id,
         clientId: lead.convertedToClientId,
         contactId: lead.convertedToContactId,
+      },
+    });
+
+    if (lead.convertedToContactId) {
+      activityLogger.log({
+        tenantId,
+        entityType: 'Contact',
+        entityId: lead.convertedToContactId,
+        action: 'UPDATE',
+        module: 'deals',
+        description: `Added as Decision Maker on deal: ${deal.name}`,
+        userId: actorUserId,
+        metadata: { leadId: lead.id, dealId: deal.id, role: 'Decision Maker' },
+      });
+    }
+
+    activityLogger.log({
+      tenantId,
+      entityType: 'Task',
+      entityId: scheduleDemoTask.id,
+      action: scheduleDemoTaskWasCreated ? 'CREATE' : 'UPDATE',
+      module: 'lead-automation',
+      description: `Schedule demo task prepared for qualified lead: ${organizationName}`,
+      userId: actorUserId,
+      metadata: {
+        leadId: lead.id,
+        dealId: deal.id,
+        clientId: lead.convertedToClientId,
+        contactId: lead.convertedToContactId,
+        autoCreated: scheduleDemoTaskWasCreated,
       },
     });
 

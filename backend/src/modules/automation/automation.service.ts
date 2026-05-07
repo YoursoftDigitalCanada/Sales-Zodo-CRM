@@ -109,6 +109,7 @@ export interface AutomationHook<E extends CRMEventName = CRMEventName> {
  */
 export class AutomationService {
     private hooks: AutomationHook[] = [];
+    private renewalMonitorStarted = false;
 
     // ── Public API ─────────────────────────────────────────────────────
 
@@ -139,12 +140,150 @@ export class AutomationService {
 
         // Seed default Kanban stages
         seedProjectStages().catch((err) => logger.error('[Automation] Stage seeder failed', { err: err.message }));
+        this.startCustomerRenewalMonitor();
 
         logger.info('[Automation] Initialized', {
             builtInRules: this.getBuiltInRuleNames(),
             externalHooks: this.hooks.map(h => `${h.event} → ${h.name}`),
             workflowServices: ['EstimationWorkflow', 'ProposalAutomation', 'DealConversion', 'Stage3Workflow', 'Stage4SendWorkflow', 'ProposalReminder', 'Stage5Conversion', 'Stage6ProjectWorkflow'],
         });
+    }
+
+    private startCustomerRenewalMonitor(): void {
+        if (this.renewalMonitorStarted) return;
+        this.renewalMonitorStarted = true;
+
+        const run = () => {
+            this.processUpcomingCustomerRenewals().catch((err) => {
+                logger.error('[Automation] Customer renewal monitor failed', { err });
+            });
+        };
+
+        run();
+        setInterval(run, 24 * 60 * 60 * 1000);
+    }
+
+    private async processUpcomingCustomerRenewals(): Promise<void> {
+        const now = new Date();
+        const horizon = new Date(now);
+        horizon.setDate(horizon.getDate() + 30);
+
+        const subscriptions = await prisma.customerSubscription.findMany({
+            where: {
+                status: { in: ['ACTIVE', 'PENDING_PAYMENT'] },
+                renewalDate: { gte: now, lte: horizon },
+            },
+            include: {
+                client: {
+                    select: {
+                        id: true,
+                        clientName: true,
+                        assignedOwnerId: true,
+                        assignedOwner: { select: { userId: true } },
+                    },
+                },
+                project: { select: { id: true, name: true, leadId: true } },
+            },
+            take: 200,
+        });
+
+        for (const subscription of subscriptions) {
+            const referenceDocname = `renewal:${subscription.id}`;
+            const existingTask = await prisma.task.findFirst({
+                where: {
+                    tenantId: subscription.tenantId,
+                    referenceDoctype: 'CustomerSubscription',
+                    referenceDocname,
+                },
+            });
+
+            if (!existingTask) {
+                const dueDate = new Date(subscription.renewalDate);
+                dueDate.setDate(dueDate.getDate() - 14);
+                const task = await prisma.task.create({
+                    data: {
+                        tenantId: subscription.tenantId,
+                        title: `Renewal follow-up: ${subscription.client.clientName}`,
+                        description: `Customer subscription renews on ${subscription.renewalDate.toISOString().slice(0, 10)}. Review account health and confirm renewal.`,
+                        status: 'TODO',
+                        priority: 'HIGH',
+                        dueDate,
+                        assignedToId: subscription.client.assignedOwnerId || null,
+                        projectId: subscription.projectId || null,
+                        clientId: subscription.clientId,
+                        leadId: subscription.project?.leadId || null,
+                        referenceDoctype: 'CustomerSubscription',
+                        referenceDocname,
+                    },
+                });
+
+                activityLogger.log({
+                    tenantId: subscription.tenantId,
+                    entityType: 'Task',
+                    entityId: task.id,
+                    action: 'CREATE',
+                    module: 'renewals',
+                    description: `Renewal follow-up task created for ${subscription.client.clientName}`,
+                    metadata: {
+                        subscriptionId: subscription.id,
+                        clientId: subscription.clientId,
+                        projectId: subscription.projectId,
+                        renewalDate: subscription.renewalDate,
+                    },
+                });
+            }
+
+            const userIds = new Set<string>();
+            if (subscription.client.assignedOwner?.userId) {
+                userIds.add(subscription.client.assignedOwner.userId);
+            }
+            const admins = await prisma.employee.findMany({
+                where: {
+                    tenantId: subscription.tenantId,
+                    isActive: true,
+                    role: { name: { in: ['Admin', 'Owner'] } },
+                },
+                select: { userId: true },
+            });
+            admins.forEach((admin) => admin.userId && userIds.add(admin.userId));
+
+            for (const userId of userIds) {
+                const notificationKey = `renewal:${subscription.id}:${userId}`;
+                const existingNotification = await prisma.notification.findFirst({
+                    where: {
+                        tenantId: subscription.tenantId,
+                        userId,
+                        metadata: { path: ['automationKey'], equals: notificationKey },
+                    },
+                });
+                if (existingNotification) continue;
+
+                await notificationsService.create({
+                    tenantId: subscription.tenantId,
+                    userId,
+                    title: 'Renewal coming up',
+                    message: `${subscription.client.clientName} renews on ${subscription.renewalDate.toISOString().slice(0, 10)}.`,
+                    type: 'INFO',
+                    actionUrl: `/client-list/${subscription.clientId}`,
+                    actionLabel: 'View account',
+                    metadata: { automationKey: notificationKey, subscriptionId: subscription.id },
+                });
+            }
+
+            activityLogger.log({
+                tenantId: subscription.tenantId,
+                entityType: 'CustomerSubscription',
+                entityId: subscription.id,
+                action: 'UPDATE',
+                module: 'renewals',
+                description: `Renewal follow-up prepared for ${subscription.client.clientName}`,
+                metadata: {
+                    renewalDate: subscription.renewalDate,
+                    clientId: subscription.clientId,
+                    projectId: subscription.projectId,
+                },
+            });
+        }
     }
 
     /**

@@ -190,6 +190,11 @@ export class ProjectsService {
       return;
     }
 
+    if (normalizedStatus === 'demo completed') {
+      await this.ensureDemoCompletedAutomation(tenantId, project as any, actorUserId);
+      return;
+    }
+
     if (normalizedStatus === 'won') {
       await this.ensureDealWonAutomation(tenantId, project as any, actorUserId);
       return;
@@ -227,6 +232,10 @@ export class ProjectsService {
     return toNumber(project.dealValue || project.expectedDealValue || project.contractValue || project.budget || project.total || 0);
   }
 
+  private getDealContactEmail(project: any): string {
+    return String(project.email || project.contact?.email || '').trim();
+  }
+
   private async ensureTask(
     tenantId: string,
     project: any,
@@ -252,7 +261,7 @@ export class ProjectsService {
 
     if (existing) return existing;
 
-    return prisma.task.create({
+    const task = await prisma.task.create({
       data: {
         tenantId,
         title: input.title,
@@ -269,6 +278,24 @@ export class ProjectsService {
         referenceDocname: `${project.id}:${input.key}`,
       },
     });
+
+    activityLogger.log({
+      tenantId,
+      entityType: 'Task',
+      entityId: task.id,
+      action: 'CREATE',
+      module: 'deal-automation',
+      description: input.title,
+      userId: input.actorUserId,
+      metadata: {
+        dealId: project.id,
+        clientId: input.clientId || project.clientId || null,
+        leadId: input.leadId || project.leadId || null,
+        automationKey: input.key,
+      },
+    });
+
+    return task;
   }
 
   private async ensureDemoAutomation(tenantId: string, project: any, actorUserId?: string): Promise<void> {
@@ -308,6 +335,30 @@ export class ProjectsService {
       },
     });
 
+    if (!existingMeeting) {
+      activityLogger.log({
+        tenantId,
+        entityType: 'CalendarEvent',
+        entityId: meeting.id,
+        action: 'CREATE',
+        module: 'deal-automation',
+        description: `Demo meeting created for deal "${project.name}"`,
+        userId: actorUserId,
+        metadata: { dealId: project.id, clientId: project.clientId, leadId: project.leadId },
+      });
+    }
+
+    await this.ensureDemoConfirmationDraft(tenantId, project, meeting, actorUserId);
+
+    await this.ensureTask(tenantId, project, {
+      key: 'demo-preparation',
+      title: `Prepare demo: ${project.organizationName || project.name}`,
+      description: `Prepare demo agenda, pain points, and Roofer CRM workflow for "${project.name}".`,
+      dueDate: this.addDays(demoStart, -1),
+      priority: 'HIGH',
+      actorUserId,
+    });
+
     const followUpDate = this.addDays(demoEnd, 1);
     await this.ensureTask(tenantId, project, {
       key: 'demo-follow-up',
@@ -327,6 +378,84 @@ export class ProjectsService {
       description: `Demo scheduled automation prepared for deal "${project.name}"`,
       userId: actorUserId,
       metadata: { meetingId: meeting.id },
+    });
+  }
+
+  private async ensureDemoConfirmationDraft(
+    tenantId: string,
+    project: any,
+    meeting: any,
+    actorUserId?: string,
+  ): Promise<void> {
+    const recipient = this.getDealContactEmail(project);
+    if (!recipient) return;
+
+    const existing = await prisma.email.findFirst({
+      where: {
+        tenantId,
+        projectId: project.id,
+        status: 'DRAFT',
+        subject: { contains: `Demo confirmation` },
+      },
+    });
+    if (existing) return;
+
+    const email = await prisma.email.create({
+      data: {
+        tenantId,
+        fromAddress: 'sales@zodo.ca',
+        fromName: 'Zodo Sales',
+        toAddresses: [{ email: recipient, name: project.leadName || project.organizationName || project.name }],
+        subject: `Demo confirmation: ${project.organizationName || project.name}`,
+        bodyText: `Hi,\n\nYour Roofer CRM demo is scheduled for ${new Date(meeting.startTime).toLocaleString()}.\n\nWe look forward to showing how Roofer CRM can help your roofing company manage leads, jobs, proposals, and follow-ups.\n\nThanks,\nZodo Sales`,
+        status: 'DRAFT',
+        folder: 'DRAFTS',
+        isRead: true,
+        sentById: project.createdById || null,
+        clientId: project.clientId || null,
+        contactId: project.contactId || null,
+        leadId: project.leadId || null,
+        projectId: project.id,
+        scheduledFor: new Date(meeting.startTime),
+      },
+    });
+
+    activityLogger.log({
+      tenantId,
+      entityType: 'Email',
+      entityId: email.id,
+      action: 'CREATE',
+      module: 'deal-automation',
+      description: `Demo confirmation email drafted for ${recipient}`,
+      userId: actorUserId,
+      metadata: { recipient, meetingId: meeting.id, dealId: project.id },
+    });
+  }
+
+  private async ensureDemoCompletedAutomation(tenantId: string, project: any, actorUserId?: string): Promise<void> {
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { nextStep: 'Send proposal' },
+    });
+
+    await this.ensureTask(tenantId, project, {
+      key: 'send-proposal',
+      title: `Send proposal: ${project.organizationName || project.name}`,
+      description: `Demo completed for "${project.name}". Capture outcome and send proposal.`,
+      dueDate: this.nextBusinessDate(1, 10),
+      priority: 'HIGH',
+      actorUserId,
+    });
+
+    activityLogger.log({
+      tenantId,
+      entityType: 'Project',
+      entityId: project.id,
+      action: 'STATUS_CHANGE',
+      module: 'deal-automation',
+      description: `Demo completed for deal "${project.name}". Next step set to send proposal.`,
+      userId: actorUserId,
+      metadata: { nextStep: 'Send proposal' },
     });
   }
 
@@ -421,6 +550,17 @@ export class ProjectsService {
       });
 
       await prisma.project.update({ where: { id: project.id }, data: { quoteId: quote.id } });
+
+      activityLogger.log({
+        tenantId,
+        entityType: 'Quote',
+        entityId: quote.id,
+        action: 'CREATE',
+        module: 'deal-automation',
+        description: `Quote created for proposal on deal "${project.name}"`,
+        userId: actorUserId,
+        metadata: { dealId: project.id, clientId: project.clientId, leadId: project.leadId, total },
+      });
     }
 
     if (project.leadId) {
@@ -429,7 +569,7 @@ export class ProjectsService {
       });
 
       if (!existingProposal) {
-        await prisma.proposal.create({
+        const proposal = await prisma.proposal.create({
           data: {
             tenantId,
             proposalNumber: await this.generateProposalNumber(tenantId),
@@ -442,6 +582,17 @@ export class ProjectsService {
             createdById: project.createdById || null,
             sentAt: new Date(),
           },
+        });
+
+        activityLogger.log({
+          tenantId,
+          entityType: 'Proposal',
+          entityId: proposal.id,
+          action: 'CREATE',
+          module: 'deal-automation',
+          description: `Proposal created for deal "${project.name}"`,
+          userId: actorUserId,
+          metadata: { dealId: project.id, quoteId: quote.id, leadId: project.leadId },
         });
       }
     }
@@ -474,6 +625,9 @@ export class ProjectsService {
 
     const total = this.getDealValue(project);
     const dueDate = this.addDays(new Date(), 14);
+    const renewalDate = this.addDays(new Date(), 365);
+    const mrr = total > 0 ? total : 0;
+    const arr = mrr * 12;
 
     await prisma.client.update({
       where: { id: project.clientId },
@@ -538,6 +692,51 @@ export class ProjectsService {
       },
     });
 
+    if (!existingInvoice) {
+      activityLogger.log({
+        tenantId,
+        entityType: 'Invoice',
+        entityId: invoice.id,
+        action: 'CREATE',
+        module: 'deal-automation',
+        description: `Invoice created from won deal "${project.name}"`,
+        userId: actorUserId,
+        metadata: { dealId: project.id, clientId: project.clientId, total },
+      });
+    }
+
+    const subscription = await prisma.customerSubscription.upsert({
+      where: {
+        tenantId_clientId_projectId: {
+          tenantId,
+          clientId: project.clientId,
+          projectId: project.id,
+        },
+      },
+      update: {
+        invoiceId: invoice.id,
+        status: 'PENDING_PAYMENT',
+        mrr,
+        arr,
+        renewalDate,
+        notes: `Auto-created from won deal "${project.name}".`,
+      },
+      create: {
+        tenantId,
+        clientId: project.clientId,
+        projectId: project.id,
+        invoiceId: invoice.id,
+        planName: 'Roofer CRM',
+        billingCycle: 'MONTHLY',
+        status: 'PENDING_PAYMENT',
+        mrr,
+        arr,
+        startDate: new Date(),
+        renewalDate,
+        notes: `Auto-created from won deal "${project.name}".`,
+      },
+    });
+
     await this.ensureTask(tenantId, project, {
       key: 'subscription-setup',
       title: `Set up subscription: ${project.organizationName || project.name}`,
@@ -560,7 +759,7 @@ export class ProjectsService {
       key: 'renewal-reminder',
       title: `Renewal reminder: ${project.organizationName || project.name}`,
       description: 'Review account health and prepare renewal conversation.',
-      dueDate: this.addDays(new Date(), 335),
+      dueDate: this.addDays(renewalDate, -30),
       priority: 'MEDIUM',
       actorUserId,
     });
@@ -581,7 +780,18 @@ export class ProjectsService {
       module: 'deal-automation',
       description: `Deal won automation completed for "${project.name}"`,
       userId: actorUserId,
-      metadata: { invoiceId: invoice.id, clientId: project.clientId },
+      metadata: { invoiceId: invoice.id, clientId: project.clientId, subscriptionId: subscription.id },
+    });
+
+    activityLogger.log({
+      tenantId,
+      entityType: 'CustomerSubscription',
+      entityId: subscription.id,
+      action: 'CREATE',
+      module: 'deal-automation',
+      description: `Customer subscription prepared for "${project.organizationName || project.name}"`,
+      userId: actorUserId,
+      metadata: { dealId: project.id, invoiceId: invoice.id, mrr, arr, renewalDate },
     });
   }
 

@@ -421,6 +421,18 @@ const ContactRow = ({
               {contact.department && (
                 <div className="text-xs text-[#475569]">{contact.department}</div>
               )}
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {contact.clientId ? (
+                  <span className="rounded border border-[#B2F5EA] bg-[#F0FDFA] px-1.5 py-0.5 text-[10px] font-medium text-[#0F766E]">
+                    Account linked
+                  </span>
+                ) : null}
+                {contact.dealId ? (
+                  <span className="rounded border border-[#DDD6FE] bg-[#F5F3FF] px-1.5 py-0.5 text-[10px] font-medium text-[#6D28D9]">
+                    Deal linked
+                  </span>
+                ) : null}
+              </div>
             </div>
           </div>
         </td>
@@ -708,6 +720,18 @@ const ContactCard = ({
         <div className="flex items-center gap-2 mt-1">
           <Building2 size={12} className="text-[#475569]" />
           <span className="text-xs text-[#94A3B8]">{contact.clientName}</span>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {contact.clientId ? (
+            <span className="rounded border border-[#B2F5EA] bg-[#F0FDFA] px-1.5 py-0.5 text-[10px] font-medium text-[#0F766E]">
+              Account linked
+            </span>
+          ) : null}
+          {contact.dealId ? (
+            <span className="rounded border border-[#DDD6FE] bg-[#F5F3FF] px-1.5 py-0.5 text-[10px] font-medium text-[#6D28D9]">
+              Deal linked
+            </span>
+          ) : null}
         </div>
       </div>
 

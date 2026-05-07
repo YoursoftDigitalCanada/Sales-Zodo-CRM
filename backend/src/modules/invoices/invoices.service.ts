@@ -981,6 +981,54 @@ export class InvoicesService {
             await clientLifecycleService.reinforceEngagement(clientId, tenantId);
         }
 
+        if (newStatus === 'PAID') {
+            try {
+                const subscription = await prisma.customerSubscription.findFirst({
+                    where: { tenantId, invoiceId: id },
+                });
+
+                if (subscription) {
+                    await prisma.customerSubscription.update({
+                        where: { id: subscription.id },
+                        data: {
+                            status: 'ACTIVE',
+                            activatedAt: subscription.activatedAt || new Date(),
+                        },
+                    });
+
+                    await prisma.client.update({
+                        where: { id: subscription.clientId },
+                        data: {
+                            status: 'ACTIVE',
+                            totalRevenue: { increment: amount },
+                        },
+                    });
+
+                    activityLogger.log({
+                        tenantId,
+                        entityType: 'CustomerSubscription',
+                        entityId: subscription.id,
+                        action: 'STATUS_CHANGE',
+                        module: 'payments',
+                        description: `Subscription activated after payment for invoice "${(existing as any).invoiceNumber || id}"`,
+                        userId: actorUserId,
+                        metadata: {
+                            invoiceId: id,
+                            invoiceNumber: (existing as any).invoiceNumber || '',
+                            amount,
+                            newStatus: 'ACTIVE',
+                        },
+                    });
+                }
+            } catch (err) {
+                logger.warn('[InvoicesService] Failed to activate customer subscription after payment', {
+                    tenantId,
+                    invoiceId: id,
+                    err,
+                });
+            }
+        }
+
         eventBus.emit('invoice.statusChanged', {
             tenantId,
             invoiceId: id,

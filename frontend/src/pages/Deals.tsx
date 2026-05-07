@@ -49,6 +49,7 @@ import { cn } from "@/lib/utils";
 const DEAL_STATUSES = [
   { name: "Qualification", type: "Open", probability: 25, color: "#3B82F6" },
   { name: "Demo Scheduled", type: "Open", probability: 40, color: "#8B5CF6" },
+  { name: "Demo Completed", type: "Open", probability: 45, color: "#0EA5E9" },
   { name: "Proposal Sent", type: "Open", probability: 50, color: "#6366F1" },
   { name: "Negotiation", type: "Open", probability: 60, color: "#F59E0B" },
   { name: "Won", type: "Won", probability: 100, color: "#10B981" },
@@ -622,6 +623,12 @@ export default function DealsPage() {
                       <TableCell>
                         <div className="font-medium text-[#0F172A]">{deal.organization || deal.organizationName || deal.name}</div>
                         <div className="text-xs text-[#64748B]">{deal.nextStep || deal.leadName || "No next step"}</div>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {deal.leadId ? <Badge variant="outline" className="border-[#B2F5EA] bg-[#F0FDFA] text-[10px] text-[#0F766E]">Lead linked</Badge> : null}
+                          {deal.clientId || deal.client ? <Badge variant="outline" className="border-[#BFDBFE] bg-[#EFF6FF] text-[10px] text-[#1D4ED8]">Account linked</Badge> : null}
+                          {deal.contactId ? <Badge variant="outline" className="border-[#DDD6FE] bg-[#F5F3FF] text-[10px] text-[#6D28D9]">Decision contact</Badge> : null}
+                          {deal.quoteId || deal.quote ? <Badge variant="outline" className="border-[#FDE68A] bg-[#FFFBEB] text-[10px] text-[#B45309]">Proposal ready</Badge> : null}
+                        </div>
                       </TableCell>
                       <TableCell><Badge style={{ backgroundColor: `${meta.color}18`, color: meta.color }}>{deal.dealStatus || "Qualification"}</Badge></TableCell>
                       <TableCell>{owner?.name || "Unassigned"}</TableCell>
@@ -672,6 +679,12 @@ export default function DealsPage() {
                       <button key={deal.id} onClick={() => openEdit(deal)} className="w-full rounded-lg border border-[#E2E8F0] bg-white p-3 text-left hover:border-[#0F766E]/40 hover:shadow-sm">
                         <div className="font-medium text-[#0F172A]">{deal.organization || deal.organizationName || deal.name}</div>
                         <div className="mt-1 text-sm text-[#64748B]">{deal.nextStep || "No next step"}</div>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {deal.leadId ? <span className="rounded border border-[#B2F5EA] bg-[#F0FDFA] px-1.5 py-0.5 text-[10px] font-medium text-[#0F766E]">Lead</span> : null}
+                          {deal.clientId || deal.client ? <span className="rounded border border-[#BFDBFE] bg-[#EFF6FF] px-1.5 py-0.5 text-[10px] font-medium text-[#1D4ED8]">Account</span> : null}
+                          {deal.contactId ? <span className="rounded border border-[#DDD6FE] bg-[#F5F3FF] px-1.5 py-0.5 text-[10px] font-medium text-[#6D28D9]">Contact</span> : null}
+                          {deal.quoteId || deal.quote ? <span className="rounded border border-[#FDE68A] bg-[#FFFBEB] px-1.5 py-0.5 text-[10px] font-medium text-[#B45309]">Proposal</span> : null}
+                        </div>
                         <div className="mt-3 flex items-center justify-between text-sm">
                           <span className="font-semibold text-[#0F766E]">{money(deal.dealValue ?? deal.contractValue, String(deal.currency || "CAD"))}</span>
                           <span className="text-[#64748B]">{toNumber(deal.probability ?? status.probability)}%</span>

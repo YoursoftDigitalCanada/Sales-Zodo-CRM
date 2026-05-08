@@ -27,6 +27,17 @@ const NOT_FOUND_MESSAGES = new Set([
   'QUOTE_NOT_FOUND',
 ]);
 
+const DEAL_STAGES = ['Qualification', 'Demo Scheduled', 'Proposal Sent', 'Negotiation', 'Won', 'Lost'] as const;
+
+const DEAL_STAGE_PROBABILITY: Record<string, number> = {
+  Qualification: 25,
+  'Demo Scheduled': 40,
+  'Proposal Sent': 50,
+  Negotiation: 60,
+  Won: 100,
+  Lost: 0,
+};
+
 function mapProjectError(error: unknown): never {
   if (error instanceof NotFoundError || error instanceof BadRequestError || error instanceof ConflictError) {
     throw error;
@@ -88,8 +99,27 @@ export class ProjectsService {
     const dto = normalizeProjectDto(data);
     return this.guarded(async () => {
       const project = await projectsRepository.create(tenantId, dto, createdById);
+      await this.ensureDealContactLink(tenantId, project.id, (project as any).contactId, createdById);
       await this.syncProjectRevenueState(project.id, tenantId);
       return this.getProjectDetailOrThrow(project.id, tenantId);
+    });
+  }
+
+  async createDeal(tenantId: string, data: Record<string, any>, createdById?: string) {
+    const dto = normalizeProjectDto({
+      ...data,
+      dealStatus: this.canonicalDealStage(data.dealStatus || data.stage || 'Qualification'),
+      status: data.status || 'ACTIVE',
+      projectType: data.projectType || 'OTHER',
+      propertyType: data.propertyType || 'COMMERCIAL',
+    });
+
+    return this.guarded(async () => {
+      this.validateDealInput(dto);
+      const deal = await projectsRepository.create(tenantId, dto, createdById);
+      await this.ensureDealContactLink(tenantId, deal.id, (deal as any).contactId, createdById);
+      await this.syncProjectRevenueState(deal.id, tenantId);
+      return this.getProjectDetailOrThrow(deal.id, tenantId);
     });
   }
 
@@ -137,6 +167,33 @@ export class ProjectsService {
     });
   }
 
+  async getDealsByStage(tenantId: string, query: ProjectQueryDto, dataAccess?: DataAccessContext) {
+    return this.guarded(async () => {
+      const { data } = await this.getMany(tenantId, { ...query, limit: query.limit ?? 500 }, dataAccess);
+      const columns = DEAL_STAGES.map((stage) => {
+        const deals = data.filter((deal: any) => this.canonicalDealStage(deal.dealStatus) === stage);
+        return {
+          stage,
+          probability: DEAL_STAGE_PROBABILITY[stage],
+          count: deals.length,
+          value: deals.reduce((sum: number, deal: any) => sum + this.getDealValue(deal), 0),
+          deals,
+        };
+      });
+
+      return {
+        stages: columns,
+        totals: {
+          count: data.length,
+          open: data.filter((deal: any) => !['Won', 'Lost'].includes(this.canonicalDealStage(deal.dealStatus))).length,
+          won: data.filter((deal: any) => this.canonicalDealStage(deal.dealStatus) === 'Won').length,
+          lost: data.filter((deal: any) => this.canonicalDealStage(deal.dealStatus) === 'Lost').length,
+          value: data.reduce((sum: number, deal: any) => sum + this.getDealValue(deal), 0),
+        },
+      };
+    });
+  }
+
   async getKanban(tenantId: string, dataAccess?: DataAccessContext) {
     return this.guarded(() => projectsRepository.getKanban(tenantId, dataAccess));
   }
@@ -157,17 +214,48 @@ export class ProjectsService {
     const dto = normalizeProjectDto(data);
     return this.guarded(async () => {
       const current = await this.getProjectDetailOrThrow(id, tenantId);
-      if (dto.dealStatus === 'Lost' && !(dto.lostReason || (current as any).lostReason)) {
-        throw new BadRequestError('Lost reason is required when a deal is marked Lost', ErrorCodes.VALIDATION_FAILED);
+      if (dto.dealStatus) {
+        dto.dealStatus = this.canonicalDealStage(dto.dealStatus);
       }
+      this.validateDealInput(dto, current as any);
 
       const project = await projectsRepository.update(id, tenantId, dto);
-      if (dto.dealStatus && dto.dealStatus !== (current as any).dealStatus) {
+      await this.ensureDealContactLink(tenantId, project.id, (project as any).contactId, actorUserId);
+      if (dto.dealStatus) {
         await this.runDealStageAutomation(tenantId, project.id, dto.dealStatus, current as any, actorUserId);
       }
       await this.syncProjectRevenueState(project.id, tenantId);
       return this.getProjectDetailOrThrow(project.id, tenantId);
     });
+  }
+
+  async updateDeal(id: string, tenantId: string, data: Record<string, any>, actorUserId?: string) {
+    return this.update(id, tenantId, data, actorUserId);
+  }
+
+  async moveDealStage(id: string, tenantId: string, stage: string, data: Record<string, any> = {}, actorUserId?: string) {
+    const targetStage = this.canonicalDealStage(stage);
+    return this.update(id, tenantId, {
+      ...data,
+      dealStatus: targetStage,
+      probability: data.probability ?? DEAL_STAGE_PROBABILITY[targetStage],
+      status: targetStage === 'Won' ? 'COMPLETED' : targetStage === 'Lost' ? 'CANCELLED' : 'ACTIVE',
+      closedDate: ['Won', 'Lost'].includes(targetStage) ? data.closedDate || new Date() : data.closedDate,
+    }, actorUserId);
+  }
+
+  async markDealWon(id: string, tenantId: string, data: Record<string, any> = {}, actorUserId?: string) {
+    return this.moveDealStage(id, tenantId, 'Won', data, actorUserId);
+  }
+
+  async markDealLost(id: string, tenantId: string, data: Record<string, any> = {}, actorUserId?: string) {
+    if (!data.lostReason) {
+      const current = await this.getProjectDetailOrThrow(id, tenantId);
+      if (!(current as any).lostReason) {
+        throw new BadRequestError('Lost reason is required when a deal is marked Lost', ErrorCodes.VALIDATION_FAILED);
+      }
+    }
+    return this.moveDealStage(id, tenantId, 'Lost', data, actorUserId);
   }
 
   private async runDealStageAutomation(
@@ -207,6 +295,91 @@ export class ProjectsService {
 
   private normalizeDealStage(value: string | null | undefined): string {
     return String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  }
+
+  private canonicalDealStage(value: string | null | undefined): string {
+    const normalized = this.normalizeDealStage(value || 'Qualification');
+    const map: Record<string, string> = {
+      qualification: 'Qualification',
+      qualified: 'Qualification',
+      'demo scheduled': 'Demo Scheduled',
+      'demo booked': 'Demo Scheduled',
+      'demo completed': 'Demo Scheduled',
+      'proposal sent': 'Proposal Sent',
+      proposal: 'Proposal Sent',
+      negotiation: 'Negotiation',
+      won: 'Won',
+      closed: 'Won',
+      lost: 'Lost',
+    };
+    return map[normalized] || 'Qualification';
+  }
+
+  private validateDealInput(data: Record<string, any>, current?: Record<string, any>) {
+    const nextClientId = data.clientId !== undefined ? data.clientId : current?.clientId;
+    const targetStage = data.dealStatus ? this.canonicalDealStage(data.dealStatus) : this.canonicalDealStage(current?.dealStatus);
+    const nextValue = this.getDealValue({ ...current, ...data });
+
+    if (data.clientId === null || data.clientId === '') {
+      throw new BadRequestError('A deal must belong to an Account', ErrorCodes.VALIDATION_FAILED);
+    }
+
+    if (!nextClientId && data.dealStatus) {
+      throw new BadRequestError('A deal must belong to an Account', ErrorCodes.VALIDATION_FAILED);
+    }
+
+    if (targetStage === 'Won' && nextValue <= 0) {
+      throw new BadRequestError('Won deals must have a deal value', ErrorCodes.VALIDATION_FAILED);
+    }
+
+    if (targetStage === 'Lost' && !(data.lostReason || current?.lostReason)) {
+      throw new BadRequestError('Lost reason is required when a deal is marked Lost', ErrorCodes.VALIDATION_FAILED);
+    }
+  }
+
+  private async ensureDealContactLink(
+    tenantId: string,
+    dealId: string,
+    contactId?: string | null,
+    actorUserId?: string,
+  ) {
+    if (!contactId) return null;
+
+    const existing = await prisma.contactDeal.findFirst({
+      where: { tenantId, contactId, dealId },
+    });
+    if (existing) {
+      if (!existing.isPrimary || existing.role !== 'Decision Maker') {
+        return prisma.contactDeal.update({
+          where: { id: existing.id },
+          data: { isPrimary: true, role: existing.role || 'Decision Maker' },
+        });
+      }
+      return existing;
+    }
+
+    const link = await prisma.contactDeal.create({
+      data: {
+        tenantId,
+        contactId,
+        dealId,
+        role: 'Decision Maker',
+        isPrimary: true,
+      },
+    });
+
+    activityLogger.log({
+      tenantId,
+      entityType: 'Project',
+      entityId: dealId,
+      action: 'UPDATE',
+      module: 'deals',
+      description: 'Primary contact linked to deal',
+      userId: actorUserId,
+      metadata: { contactId },
+    });
+
+    return link;
   }
 
   private addDays(date: Date, days: number): Date {

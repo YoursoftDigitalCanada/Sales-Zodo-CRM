@@ -38,14 +38,21 @@ router.get('/kanban', requirePermission(PERMISSIONS.PROJECTS_VIEW), projectsCont
 router.get('/calendar', requirePermission(PERMISSIONS.PROJECTS_VIEW), projectsController.getCalendar.bind(projectsController));
 router.get('/map', requirePermission(PERMISSIONS.PROJECTS_VIEW), projectsController.getMap.bind(projectsController));
 router.get('/stats/summary', requirePermission(PERMISSIONS.PROJECTS_VIEW), projectsController.getSummaryStats.bind(projectsController));
+router.get('/pipeline/deals/by-stage', requirePermission(PERMISSIONS.PROJECTS_VIEW), validate(projectQuerySchema), projectsController.getDealsByStage.bind(projectsController));
 
 router.post('/', requirePermission(PERMISSIONS.PROJECTS_CREATE), validate(createProjectSchema), projectsController.create.bind(projectsController));
+router.post('/pipeline/deals', requirePermission(PERMISSIONS.PROJECTS_CREATE), validate(genericBodySchema), projectsController.createDeal.bind(projectsController));
 router.post('/from-quote/:quoteId', requirePermission(PERMISSIONS.PROJECTS_CREATE), validate(quoteIdSchema), projectsController.createFromQuote.bind(projectsController));
 
 router.use('/:id', requireAccessibleProject());
 
 router.get('/:id', requirePermission(PERMISSIONS.PROJECTS_VIEW), validate(projectIdSchema), projectsController.getById.bind(projectsController));
+router.get('/:id/deal-detail', requirePermission(PERMISSIONS.PROJECTS_VIEW), validate(projectIdSchema), projectsController.getDealDetail.bind(projectsController));
 router.put('/:id', requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(projectIdSchema), validate(updateProjectSchema), projectsController.update.bind(projectsController));
+router.put('/:id/deal', requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(projectIdSchema), validate(genericBodySchema), projectsController.updateDeal.bind(projectsController));
+router.patch('/:id/deal-stage', requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(projectIdSchema), validate(genericBodySchema), projectsController.moveDealStage.bind(projectsController));
+router.patch('/:id/mark-won', requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(projectIdSchema), validate(genericBodySchema), projectsController.markDealWon.bind(projectsController));
+router.patch('/:id/mark-lost', requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(projectIdSchema), validate(genericBodySchema), projectsController.markDealLost.bind(projectsController));
 router.patch('/:id/stage', requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(projectIdSchema), validate(stageUpdateSchema), projectsController.updateStage.bind(projectsController));
 router.patch('/:id/status', requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(projectIdSchema), validate(statusUpdateSchema), projectsController.updateStatus.bind(projectsController));
 router.patch('/:id/assign', requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(projectIdSchema), validate(assignManagerSchema), projectsController.assignProjectManager.bind(projectsController));

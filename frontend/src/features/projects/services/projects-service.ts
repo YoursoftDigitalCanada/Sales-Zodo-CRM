@@ -253,9 +253,39 @@ export async function createProject(data: CreateProjectDto): Promise<ProjectEnti
   return extractApiData<ProjectEntity>(response.data);
 }
 
+export async function createDeal(data: CreateProjectDto): Promise<ProjectEntity> {
+  const response = await api.post("/projects/pipeline/deals", data);
+  return extractApiData<ProjectEntity>(response.data);
+}
+
 export async function updateProject(projectId: string | number, data: UpdateProjectDto): Promise<ProjectEntity> {
   const response = await api.put(`/projects/${projectId}`, data);
   return extractApiData<ProjectEntity>(response.data);
+}
+
+export async function updateDeal(projectId: string | number, data: UpdateProjectDto): Promise<ProjectEntity> {
+  const response = await api.put(`/projects/${projectId}/deal`, data);
+  return extractApiData<ProjectEntity>(response.data);
+}
+
+export async function moveDealStage(projectId: string | number, data: UpdateProjectDto & { stage?: string }): Promise<ProjectEntity> {
+  const response = await api.patch(`/projects/${projectId}/deal-stage`, data);
+  return extractApiData<ProjectEntity>(response.data);
+}
+
+export async function markDealWon(projectId: string | number, data: UpdateProjectDto): Promise<ProjectEntity> {
+  const response = await api.patch(`/projects/${projectId}/mark-won`, data);
+  return extractApiData<ProjectEntity>(response.data);
+}
+
+export async function markDealLost(projectId: string | number, data: UpdateProjectDto): Promise<ProjectEntity> {
+  const response = await api.patch(`/projects/${projectId}/mark-lost`, data);
+  return extractApiData<ProjectEntity>(response.data);
+}
+
+export async function getDealsByStage(params?: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const response = await api.get("/projects/pipeline/deals/by-stage", { params: { limit: 500, ...params } });
+  return extractApiData<Record<string, unknown>>(response.data);
 }
 
 export async function createProjectFromQuote(quoteId: string): Promise<ProjectEntity> {
@@ -271,6 +301,11 @@ export async function updateProjectStatus(projectId: string | number, status: Pr
 export async function updateProjectStage(projectId: string | number, stageId: string, notes?: string): Promise<ProjectEntity> {
   const response = await api.patch(`/projects/${projectId}/stage`, { stageId, notes });
   return extractApiData<ProjectEntity>(response.data);
+}
+
+export async function createProjectTask(projectId: string | number, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const response = await api.post(`/projects/${projectId}/tasks`, data);
+  return extractApiData<Record<string, unknown>>(response.data);
 }
 
 export async function getProjectSummaryStats(): Promise<ProjectSummaryStats> {

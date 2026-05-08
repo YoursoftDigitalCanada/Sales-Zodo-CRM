@@ -25,6 +25,19 @@ export class ProjectsController {
     }
   }
 
+  async createDeal(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const deal = await projectsService.createDeal(
+        this.getTenantId(req),
+        sanitizeBody(req.body),
+        this.getUserId(req),
+      );
+      sendCreated(res, deal, 'Deal created');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async createFromQuote(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const project = await projectsService.createFromQuote(
@@ -42,6 +55,15 @@ export class ProjectsController {
     try {
       const result = await projectsService.getMany(this.getTenantId(req), req.query as any, req.dataAccess);
       sendSuccess(res, result.data, undefined, 200, result.meta);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getDealsByStage(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const data = await projectsService.getDealsByStage(this.getTenantId(req), req.query as any, req.dataAccess);
+      sendSuccess(res, data);
     } catch (error) {
       next(error);
     }
@@ -92,6 +114,15 @@ export class ProjectsController {
     }
   }
 
+  async getDealDetail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const deal = await projectsService.getById(req.params.id, this.getTenantId(req));
+      sendSuccess(res, deal);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const project = await projectsService.update(
@@ -101,6 +132,63 @@ export class ProjectsController {
         this.getUserId(req),
       );
       sendSuccess(res, project, 'Project updated');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateDeal(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const deal = await projectsService.updateDeal(
+        req.params.id,
+        this.getTenantId(req),
+        sanitizeBody(req.body),
+        this.getUserId(req),
+      );
+      sendSuccess(res, deal, 'Deal updated');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async moveDealStage(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const deal = await projectsService.moveDealStage(
+        req.params.id,
+        this.getTenantId(req),
+        req.body.stage || req.body.dealStatus,
+        sanitizeBody(req.body),
+        this.getUserId(req),
+      );
+      sendSuccess(res, deal, 'Deal stage updated');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async markDealWon(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const deal = await projectsService.markDealWon(
+        req.params.id,
+        this.getTenantId(req),
+        sanitizeBody(req.body),
+        this.getUserId(req),
+      );
+      sendSuccess(res, deal, 'Deal marked won');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async markDealLost(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const deal = await projectsService.markDealLost(
+        req.params.id,
+        this.getTenantId(req),
+        sanitizeBody(req.body),
+        this.getUserId(req),
+      );
+      sendSuccess(res, deal, 'Deal marked lost');
     } catch (error) {
       next(error);
     }

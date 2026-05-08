@@ -149,7 +149,38 @@ export class AnalyticsService {
     async getTeamPerformance(tenantId: string) {
         return analyticsRepository.getTeamPerformance(tenantId);
     }
+
+    async getSalesSummary(tenantId: string, query: AnalyticsQueryDto) {
+        return analyticsRepository.getSalesSummary(tenantId, query);
+    }
+
+    async getSalesLeadAnalytics(tenantId: string, query: AnalyticsQueryDto) {
+        return analyticsRepository.getSalesLeadAnalytics(tenantId, query);
+    }
+
+    async getSalesDealAnalytics(tenantId: string, query: AnalyticsQueryDto) {
+        return analyticsRepository.getSalesDealAnalytics(tenantId, query);
+    }
+
+    async getSalesRevenueAnalytics(tenantId: string, query: AnalyticsQueryDto) {
+        return analyticsRepository.getSalesRevenueAnalytics(tenantId, query);
+    }
+
+    async getSalesSubscriptionAnalytics(tenantId: string, query: AnalyticsQueryDto) {
+        return analyticsRepository.getSalesSubscriptionAnalytics(tenantId, query);
+    }
+
+    async getSalesRepPerformance(tenantId: string, query: AnalyticsQueryDto) {
+        return analyticsRepository.getSalesRepPerformance(tenantId, query);
+    }
+
+    async getSalesSourcePerformance(tenantId: string, query: AnalyticsQueryDto) {
+        return analyticsRepository.getSalesSourcePerformance(tenantId, query);
+    }
+
+    async getSalesForecast(tenantId: string, query: AnalyticsQueryDto) {
+        return analyticsRepository.getSalesForecast(tenantId, query);
+    }
 }
 
 export const analyticsService = new AnalyticsService();
-

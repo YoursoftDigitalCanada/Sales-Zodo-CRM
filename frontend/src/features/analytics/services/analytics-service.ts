@@ -97,3 +97,47 @@ export async function getTeamPerformanceApi(): Promise<unknown> {
     const response = await api.get("/analytics/team-performance");
     return response.data?.data || response.data;
 }
+
+export interface SalesAnalyticsFilters {
+    startDate?: string;
+    endDate?: string;
+    salesRepId?: string;
+    leadSourceId?: string;
+    dealStage?: string;
+    plan?: string;
+    accountStatus?: string;
+}
+
+const data = (response: any) => response.data?.data || response.data;
+
+export async function getSalesAnalyticsSummary(params?: SalesAnalyticsFilters): Promise<any> {
+    return data(await api.get("/analytics/summary", { params }));
+}
+
+export async function getSalesLeadAnalytics(params?: SalesAnalyticsFilters): Promise<any> {
+    return data(await api.get("/analytics/leads", { params }));
+}
+
+export async function getSalesDealAnalytics(params?: SalesAnalyticsFilters): Promise<any> {
+    return data(await api.get("/analytics/deals", { params }));
+}
+
+export async function getSalesRevenueAnalytics(params?: SalesAnalyticsFilters): Promise<any> {
+    return data(await api.get("/analytics/revenue", { params }));
+}
+
+export async function getSalesSubscriptionAnalytics(params?: SalesAnalyticsFilters): Promise<any> {
+    return data(await api.get("/analytics/subscriptions", { params }));
+}
+
+export async function getSalesRepPerformance(params?: SalesAnalyticsFilters): Promise<any[]> {
+    return data(await api.get("/analytics/reps", { params })) || [];
+}
+
+export async function getSalesSourcePerformance(params?: SalesAnalyticsFilters): Promise<any[]> {
+    return data(await api.get("/analytics/sources", { params })) || [];
+}
+
+export async function getSalesForecast(params?: SalesAnalyticsFilters): Promise<any> {
+    return data(await api.get("/analytics/forecast", { params }));
+}

@@ -10,6 +10,25 @@ const router = Router();
 router.use(authenticate);
 router.use(loadEmployee);
 
+const salesAnalyticsEndpoints = [
+    ['summary', analyticsController.getSalesSummary],
+    ['leads', analyticsController.getSalesLeads],
+    ['deals', analyticsController.getSalesDeals],
+    ['revenue', analyticsController.getSalesRevenue],
+    ['subscriptions', analyticsController.getSalesSubscriptions],
+    ['reps', analyticsController.getSalesReps],
+    ['sources', analyticsController.getSalesSources],
+    ['forecast', analyticsController.getSalesForecast],
+] as const;
+
+salesAnalyticsEndpoints.forEach(([path, handler]) => {
+    router.get(`/${path}`,
+        requirePermission(PERMISSIONS.ANALYTICS_VIEW),
+        validate(analyticsQuerySchema),
+        handler.bind(analyticsController),
+    );
+});
+
 // ── Dashboard KPIs ──────────────────────────────────────────────────────
 router.get('/dashboard',
     requirePermission(PERMISSIONS.ANALYTICS_VIEW),

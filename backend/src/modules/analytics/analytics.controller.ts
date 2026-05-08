@@ -194,6 +194,62 @@ export class AnalyticsController {
             sendSuccess(res, data);
         } catch (e) { next(e); }
     }
+
+    async getSalesSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const data = await analyticsService.getSalesSummary(req.context.tenantId, req.query as any);
+            sendSuccess(res, data);
+        } catch (e) { next(e); }
+    }
+
+    async getSalesLeads(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const data = await analyticsService.getSalesLeadAnalytics(req.context.tenantId, req.query as any);
+            sendSuccess(res, data);
+        } catch (e) { next(e); }
+    }
+
+    async getSalesDeals(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const data = await analyticsService.getSalesDealAnalytics(req.context.tenantId, req.query as any);
+            sendSuccess(res, data);
+        } catch (e) { next(e); }
+    }
+
+    async getSalesRevenue(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const data = await analyticsService.getSalesRevenueAnalytics(req.context.tenantId, req.query as any);
+            sendSuccess(res, data);
+        } catch (e) { next(e); }
+    }
+
+    async getSalesSubscriptions(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const data = await analyticsService.getSalesSubscriptionAnalytics(req.context.tenantId, req.query as any);
+            sendSuccess(res, data);
+        } catch (e) { next(e); }
+    }
+
+    async getSalesReps(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const data = await analyticsService.getSalesRepPerformance(req.context.tenantId, req.query as any);
+            sendSuccess(res, data);
+        } catch (e) { next(e); }
+    }
+
+    async getSalesSources(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const data = await analyticsService.getSalesSourcePerformance(req.context.tenantId, req.query as any);
+            sendSuccess(res, data);
+        } catch (e) { next(e); }
+    }
+
+    async getSalesForecast(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const data = await analyticsService.getSalesForecast(req.context.tenantId, req.query as any);
+            sendSuccess(res, data);
+        } catch (e) { next(e); }
+    }
 }
 
 export const analyticsController = new AnalyticsController();

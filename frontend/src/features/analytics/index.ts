@@ -13,5 +13,13 @@ export {
     getRevenueVsTarget,
     getActivityMetricsApi,
     getTeamPerformanceApi,
+    getSalesAnalyticsSummary,
+    getSalesLeadAnalytics,
+    getSalesDealAnalytics,
+    getSalesRevenueAnalytics,
+    getSalesSubscriptionAnalytics,
+    getSalesRepPerformance,
+    getSalesSourcePerformance,
+    getSalesForecast,
 } from "./services/analytics-service";
-export type { DashboardKPIs, LeadsReport, RevenueReport, PipelineHealth } from "./services/analytics-service";
+export type { DashboardKPIs, LeadsReport, RevenueReport, PipelineHealth, SalesAnalyticsFilters } from "./services/analytics-service";

@@ -769,7 +769,7 @@ const LeadDetailPage = () => {
 
     const handleConvertSuccess = (result: { clientId: string; dealId?: string }) => {
         setShowConvertDialog(false);
-        navigate(result.dealId ? `/projects/${result.dealId}` : `/client-list/${result.clientId}`);
+        navigate(result.dealId ? `/deals?dealId=${result.dealId}` : `/client-list/${result.clientId}`);
     };
 
     const handleQualifyLead = async () => {
@@ -871,7 +871,7 @@ const LeadDetailPage = () => {
                         <Button variant="outline" size="sm" onClick={() => navigate(`/ai/lead-scoring?leadId=${lead.id}`)} className="hidden lg:inline-flex gap-1.5 text-xs"><Target size={14} />Score Lead</Button>
                         {lead.status !== "QUALIFIED" && lead.status !== "WON" && lead.status !== "LOST" && <Button size="sm" onClick={handleQualifyLead} className="hidden md:inline-flex bg-[#0891B2] text-white hover:bg-[#0E7490] gap-1.5 text-xs"><TrendingUp size={14} />Qualify Lead</Button>}
                         <Button variant="outline" size="sm" onClick={() => navigate(`/tasks?leadId=${lead.id}`)} className="hidden lg:inline-flex gap-1.5 text-xs"><CheckSquare size={14} />Create Task</Button>
-                        <Button variant="outline" size="sm" onClick={() => lead.convertedToDealId ? navigate(`/projects/${lead.convertedToDealId}`) : handleQualifyLead()} className="hidden lg:inline-flex gap-1.5 text-xs"><Calendar size={14} />Schedule Demo</Button>
+                        <Button variant="outline" size="sm" onClick={() => lead.convertedToDealId ? navigate(`/deals?dealId=${lead.convertedToDealId}`) : handleQualifyLead()} className="hidden lg:inline-flex gap-1.5 text-xs"><Calendar size={14} />Schedule Demo</Button>
                         {lead.phone && <a href={`tel:${lead.phone}`} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] transition-all"><Phone size={14} className="text-[#14B8A6]" />Call</a>}
                         {lead.email && <button type="button" onClick={() => setShowComposeEmail(true)} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] transition-all"><Mail size={14} className="text-[#14B8A6]" />Email</button>}
                         <WhatsAppActionButton
@@ -879,7 +879,7 @@ const LeadDetailPage = () => {
                             phoneNumber={lead.phone}
                             className="hidden sm:inline-flex h-auto px-3 py-2"
                         />
-                        {isConverted && lead.convertedToDealId && <Link to={`/projects/${lead.convertedToDealId}`}><Button variant="outline" size="sm" className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50 text-xs"><ExternalLink size={14} />View Deal</Button></Link>}
+                        {isConverted && lead.convertedToDealId && <Link to={`/deals?dealId=${lead.convertedToDealId}`}><Button variant="outline" size="sm" className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50 text-xs"><ExternalLink size={14} />View Deal</Button></Link>}
                         {canConvert && <Button size="sm" onClick={() => setShowConvertDialog(true)} className="bg-green-600 hover:bg-green-700 text-white gap-1.5 text-xs shadow-sm"><ArrowRightLeft size={14} />Convert</Button>}
                     </div>
                 </div>
@@ -904,7 +904,7 @@ const LeadDetailPage = () => {
                         <div className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-green-600" /><div><h3 className="font-semibold text-green-800 text-sm">Lead Converted</h3><p className="text-xs text-green-600">Account, contact, and deal linked on {formatDate(lead.convertedAt)}</p></div></div>
                         <div className="flex items-center gap-2">
                             {lead.convertedToClientId && <Link to={`/client-list/${lead.convertedToClientId}`}><Button variant="outline" size="sm" className="gap-1.5 border-green-300 text-green-700 hover:bg-green-100 text-xs"><ExternalLink size={14} />Account</Button></Link>}
-                            {lead.convertedToDealId && <Link to={`/projects/${lead.convertedToDealId}`}><Button variant="outline" size="sm" className="gap-1.5 border-green-300 text-green-700 hover:bg-green-100 text-xs"><ExternalLink size={14} />Deal</Button></Link>}
+                            {lead.convertedToDealId && <Link to={`/deals?dealId=${lead.convertedToDealId}`}><Button variant="outline" size="sm" className="gap-1.5 border-green-300 text-green-700 hover:bg-green-100 text-xs"><ExternalLink size={14} />Deal</Button></Link>}
                         </div>
                     </div>
                 )}
@@ -931,7 +931,7 @@ const LeadDetailPage = () => {
                         <div className="rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-3">
                             <p className="text-[11px] font-semibold uppercase text-[#64748B]">Deal</p>
                             <p className="mt-1 truncate text-sm font-semibold text-[#0F172A]">{lead.convertedToDeal?.name || (lead.status === "QUALIFIED" ? "Qualification deal ready" : "Not created yet")}</p>
-                            {lead.convertedToDealId ? <Link to={`/projects/${lead.convertedToDealId}`} className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#0891B2]"><ExternalLink size={12} />Open deal</Link> : <p className="mt-2 text-xs text-[#64748B]">Created only when status becomes Qualified.</p>}
+                            {lead.convertedToDealId ? <Link to={`/deals?dealId=${lead.convertedToDealId}`} className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#0891B2]"><ExternalLink size={12} />Open deal</Link> : <p className="mt-2 text-xs text-[#64748B]">Created only when status becomes Qualified.</p>}
                         </div>
                     </div>
                 </div>
@@ -1074,16 +1074,16 @@ const LeadDetailPage = () => {
                     <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 520ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
                             <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#CCFBF1] flex items-center justify-center"><DollarSign size={14} className="text-[#0D9488]" /></div><h3 className="text-sm font-semibold text-[#111827]">Related Deals</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{relatedProjects.length}</span></div>
-                            <button onClick={() => navigate('/projects')} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">View All →</button>
+                            <button onClick={() => navigate('/deals')} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">View All →</button>
                         </div>
                         {loadingProjects ? <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div> :
-                            relatedProjects.length === 0 ? <div className="text-center py-8"><DollarSign size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No projects linked to this lead yet</p></div> :
+                            relatedProjects.length === 0 ? <div className="text-center py-8"><DollarSign size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No deals linked to this lead yet</p></div> :
                                 <div className="space-y-2">{relatedProjects.slice(0, 4).map((project: any) => {
                                     const status = String(project.status || 'PENDING').toUpperCase();
                                     const statusColor = status === 'COMPLETED' ? 'bg-[#DCFCE7] text-[#166534]' : status === 'ON_HOLD' ? 'bg-[#FEF3C7] text-[#92400E]' : status === 'CANCELLED' ? 'bg-[#FEE2E2] text-[#991B1B]' : 'bg-[#DBEAFE] text-[#1E40AF]';
                                     const value = Number(project.contractValue || project.budget || 0);
                                     return (
-                                        <div key={project.id} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors cursor-pointer" onClick={() => navigate(`/projects/${project.id}`)}>
+                                        <div key={project.id} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors cursor-pointer" onClick={() => navigate(`/deals?dealId=${project.id}`)}>
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-sm font-medium text-[#111827] truncate">{project.name}</p>
                                                 <div className="flex items-center gap-2 mt-1 text-xs text-[#6B7280]">
@@ -1101,11 +1101,11 @@ const LeadDetailPage = () => {
                     {/* CARD 6: Related Tasks */}
                     <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 600ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
-                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center"><CheckSquare size={14} className="text-[#EA580C]" /></div><h3 className="text-sm font-semibold text-[#111827]">Project Tasks</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{relatedTasks.length}</span></div>
+                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center"><CheckSquare size={14} className="text-[#EA580C]" /></div><h3 className="text-sm font-semibold text-[#111827]">Deal Tasks</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{relatedTasks.length}</span></div>
                             <button onClick={() => navigate('/tasks')} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">{openRelatedTasks} open</button>
                         </div>
                         {loadingTasks ? <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div> :
-                            relatedTasks.length === 0 ? <div className="text-center py-8"><CheckSquare size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No project tasks linked to this lead yet</p></div> :
+                            relatedTasks.length === 0 ? <div className="text-center py-8"><CheckSquare size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No deal tasks linked to this lead yet</p></div> :
                                 <div className="space-y-2">{relatedTasks.slice(0, 4).map((task: any) => (
                                     <div key={task.id} className="py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors">
                                         <div className="flex items-center justify-between gap-2">
@@ -1177,7 +1177,7 @@ const LeadDetailPage = () => {
                                             <div className="flex items-center gap-2"><Badge variant="outline" className="text-[10px]">{insp.inspectionType || "General"}</Badge>{insp.overallCondition && <Badge variant="outline" className="text-[10px]">{insp.overallCondition}</Badge>}</div>
                                             <div className="flex items-center gap-3 mt-1 text-xs text-[#6B7280]"><span>{insp.inspectionDate ? formatDate(insp.inspectionDate) : '—'}</span>{insp.inspectorName && <span>with {insp.inspectorName}</span>}{insp.totalEstimate && <span className="font-medium text-[#111827]">${Number(insp.totalEstimate).toLocaleString()}</span>}</div>
                                         </div>
-                                        <div className="flex gap-1"><button onClick={() => { setEditingInspection(insp); setShowInspectionDialog(true); }} className="p-1 rounded hover:bg-[#E5E7EB]"><Pencil size={12} className="text-[#6B7280]" /></button><button onClick={() => handleDeleteInspection(insp.id)} className="p-1 rounded hover:bg-[#FEE2E2]"><Trash2 size={12} className="text-[#EF4444]" /></button></div>
+                                        <button onClick={() => navigate('/meetings')} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">Open</button>
                                     </div>
                                 ))}</div>}
                     </div>

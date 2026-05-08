@@ -2812,7 +2812,7 @@ const ClientContactListPage = () => {
                     <h3 className="text-sm font-semibold text-[#0F172A]">Linked Records</h3>
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
                       <LinkedContactBox label="Organization" value={viewingContact.clientName || "Not linked"} action={viewingContact.clientId ? () => navigate(`/client-list/${viewingContact.clientId}`) : undefined} />
-                      <LinkedContactBox label="Primary Deal" value={viewingContact.dealName || "Not linked"} action={viewingContact.dealId ? () => navigate(`/projects/${viewingContact.dealId}`) : undefined} />
+                      <LinkedContactBox label="Primary Deal" value={viewingContact.dealName || "Not linked"} action={viewingContact.dealId ? () => navigate(`/deals?dealId=${viewingContact.dealId}`) : undefined} />
                       <LinkedContactBox label="Tasks" value="Open Tasks" action={() => navigate(`/tasks?contactId=${viewingContact.id}`)} />
                       <LinkedContactBox label="Meetings" value="Calendar" action={() => navigate("/calendar")} />
                       <LinkedContactBox label="Emails" value={viewingContact.contactEmail || "Mailbox"} action={() => navigate("/letterbox")} />

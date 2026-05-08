@@ -895,14 +895,14 @@ export function Sidebar({
       <aside
         className={cn(
           "fixed top-0 left-0 h-screen z-[46] transition-all duration-300 flex flex-col bg-white border-r border-[rgba(15,23,42,0.06)]",
-          collapsed ? "w-20" : "w-72",
+          collapsed ? "w-16" : "w-56",
           isMobile && !mobileOpen && "-translate-x-full",
           isMobile && mobileOpen && "translate-x-0 shadow-2xl",
         )}
       >
 
         {/* Header */}
-        <div className="relative flex h-16 items-center justify-between px-4 border-b border-[rgba(15,23,42,0.06)] flex-shrink-0">
+        <div className="relative flex h-14 items-center justify-between px-3 border-b border-[rgba(15,23,42,0.06)] flex-shrink-0">
           <AnimatePresence mode="wait">
             {!collapsed ? (
               <motion.div
@@ -912,7 +912,7 @@ export function Sidebar({
                 className="flex flex-1 items-center"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
+                  <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
                     {brandLogoUrl ? (
                       <img
                         src={brandLogoUrl}
@@ -924,8 +924,8 @@ export function Sidebar({
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[#0F172A]">{brandName}</p>
-                    <p className="truncate text-[10px] uppercase tracking-[0.18em] text-[#94A3B8]">Workspace CRM</p>
+                    <p className="truncate text-[13px] font-semibold text-[#0F172A]">{brandName}</p>
+                    <p className="truncate text-[10px] text-[#94A3B8]">CRM</p>
                   </div>
                 </div>
               </motion.div>
@@ -935,7 +935,7 @@ export function Sidebar({
                 animate={{ opacity: 1, scale: 1 }}
                 className="mx-auto"
               >
-                <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
+                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
                   {brandLogoUrl ? (
                     <img
                       src={brandLogoUrl}
@@ -961,16 +961,16 @@ export function Sidebar({
               setCollapsed(!collapsed);
             }}
             className={cn(
-              "p-2 rounded-md hover:bg-[#F1F5F9]/20 text-[#475569] hover:text-[#6637F4] transition-all",
+              "p-1.5 rounded-md hover:bg-[#F1F5F9]/20 text-[#475569] hover:text-[#159A62] transition-all",
               collapsed && "mx-auto"
             )}
           >
-            {collapsed ? <Menu size={20} /> : <X size={20} />}
+            {collapsed ? <Menu size={17} /> : <X size={17} />}
           </motion.button>
         </div>
 
         {/* Navigation */}
-        <nav className="relative flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
+        <nav className="relative flex-1 overflow-y-auto p-3 space-y-0.5 custom-scrollbar">
           {visibleNavigationItems.map((item, index) => {
             // Header
             if (item.isHeader) {
@@ -979,14 +979,14 @@ export function Sidebar({
                   key={index}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="pt-6 pb-2 first:pt-0"
+                  className="pt-4 pb-1 first:pt-0"
                 >
-                  <p className="px-3 text-[10px] font-semibold text-[#475569] uppercase tracking-[0.15em]">
+                  <p className="px-2 text-[10px] font-medium text-[#64748B]">
                     {item.title}
                   </p>
                 </motion.div>
               ) : (
-                <div key={index} className="my-3 mx-2 border-t border-[rgba(15,23,42,0.06)]" />
+                <div key={index} className="my-2 mx-2 border-t border-[rgba(15,23,42,0.06)]" />
               );
             }
 
@@ -1004,9 +1004,9 @@ export function Sidebar({
                     whileHover={{ x: collapsed ? 0 : 4 }}
                     onClick={() => !collapsed && toggleSubmenu(item.title)}
                     className={cn(
-                      "flex items-center justify-between w-full gap-3 px-3 py-2 rounded-lg transition-all group relative",
+                      "flex items-center justify-between w-full gap-2 px-2.5 py-1.5 rounded-md transition-all group relative",
                       hasActiveChild
-                        ? "bg-[#F0EEFF] text-[#6637F4]"
+                        ? "bg-[#EAF7EF] text-[#159A62]"
                         : "text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A]",
                       collapsed && "justify-center px-3"
                     )}
@@ -1018,12 +1018,12 @@ export function Sidebar({
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "transition-colors",
-                        hasActiveChild ? "text-[#6637F4]" : "text-[#94A3B8] group-hover:text-[#475569]"
+                        hasActiveChild ? "text-[#159A62]" : "text-[#64748B] group-hover:text-[#475569]"
                       )}>
-                        {Icon && <Icon size={18} strokeWidth={1.75} />}
+                        {Icon && <Icon size={14} strokeWidth={1.9} />}
                       </div>
                       {!collapsed && (
-                        <span className="font-medium text-sm">{item.title}</span>
+                        <span className="font-medium text-[13px]">{item.title}</span>
                       )}
                     </div>
                     {!collapsed && (
@@ -1093,9 +1093,9 @@ export function Sidebar({
                                 <Link
                                   to={subItem.path}
                                   className={cn(
-                                    "flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm transition-all group/sub",
+                                    "flex items-center justify-between gap-2 px-3 py-1.5 rounded-md text-[12px] transition-all group/sub",
                                     isActive(subItem.path)
-                                      ? "bg-[#6637F4]/10 text-[#6637F4] font-medium"
+                                      ? "bg-[#EAF7EF] text-[#159A62] font-medium"
                                       : "text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A]"
                                   )}
                                 >
@@ -1104,8 +1104,8 @@ export function Sidebar({
                                       className={cn(
                                         "h-1.5 w-1.5 transition-all",
                                         isActive(subItem.path)
-                                          ? "fill-[#6637F4] scale-125"
-                                          : "fill-[#64748B] group-hover/sub:fill-[#6637F4]"
+                                          ? "fill-[#159A62] scale-125"
+                                          : "fill-[#64748B] group-hover/sub:fill-[#159A62]"
                                       )}
                                     />
                                     <span>{subItem.title}</span>
@@ -1171,9 +1171,9 @@ export function Sidebar({
                   <Link
                     to={item.path || "#"}
                     className={cn(
-                      "flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-all group relative",
+                      "flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md transition-all group relative",
                       isActive(item.path!)
-                        ? "bg-[#F0EEFF] text-[#6637F4]"
+                        ? "bg-[#EAF7EF] text-[#159A62]"
                         : "text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A]",
                       collapsed && "justify-center px-3"
                     )}
@@ -1182,22 +1182,22 @@ export function Sidebar({
                     {isActive(item.path!) && (
                       <motion.div
                         layoutId="activeIndicator"
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 bg-[#6637F4] rounded-r-full"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#159A62] rounded-r-full"
                       />
                     )}
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
                       <div className={cn(
                         "transition-colors",
-                        isActive(item.path!) ? "text-[#6637F4]" : "text-[#94A3B8] group-hover:text-[#475569]"
+                        isActive(item.path!) ? "text-[#159A62]" : "text-[#64748B] group-hover:text-[#475569]"
                       )}>
-                        {Icon && <Icon size={18} strokeWidth={1.75} />}
+                        {Icon && <Icon size={14} strokeWidth={1.9} />}
                         {collapsed && item.badge && (
                           <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
                         )}
                       </div>
                       {!collapsed && (
-                        <span className="font-medium text-sm">{item.title}</span>
+                        <span className="font-medium text-[13px]">{item.title}</span>
                       )}
                     </div>
 
@@ -1249,9 +1249,9 @@ export function Sidebar({
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mx-4 mb-4"
+              className="mx-3 mb-3"
             >
-              <div className="rounded-md bg-white border border-[rgba(15,23,42,0.06)] p-4 relative">
+              <div className="rounded-lg bg-white border border-[rgba(15,23,42,0.06)] p-3 relative">
                 <button
                   onClick={() => setUpgradeDismissed(true)}
                   className="absolute top-2 right-2 p-1 rounded-md text-[#94A3B8] hover:text-[#0F172A] hover:bg-[#F1F5F9] transition-colors"
@@ -1276,7 +1276,7 @@ export function Sidebar({
         })()}
 
         {/* User Footer */}
-        <div className="relative p-4 border-t border-[rgba(15,23,42,0.06)] flex-shrink-0">
+        <div className="relative p-3 border-t border-[rgba(15,23,42,0.06)] flex-shrink-0">
           <AnimatePresence>
             {!collapsed ? (
               <motion.div
@@ -1288,17 +1288,17 @@ export function Sidebar({
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="w-full flex items-center gap-3 p-3 rounded-md bg-white hover:bg-[#F1F5F9] transition-colors group"
+                  className="w-full flex items-center gap-2.5 p-2 rounded-lg bg-white hover:bg-[#F1F5F9] transition-colors group"
                 >
                   <div className="relative">
                     {getAvatar() ? (
                       <img
                         src={getAvatar()}
                         alt={getFullName()}
-                        className="h-9 w-9 rounded-md object-cover"
+                        className="h-8 w-8 rounded-lg object-cover"
                       />
                     ) : (
-                      <div className="h-9 w-9 rounded-md bg-[#6637F4] flex items-center justify-center text-white font-bold text-sm">
+                      <div className="h-8 w-8 rounded-lg bg-[#EAF7EF] flex items-center justify-center text-[#159A62] font-bold text-[11px]">
                         {getInitials()}
                       </div>
                     )}
@@ -1309,10 +1309,10 @@ export function Sidebar({
                     />
                   </div>
                   <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-medium text-[#0F172A] truncate">
+                    <p className="text-[12px] font-medium text-[#0F172A] truncate">
                       {getFullName()}
                     </p>
-                    <p className="text-xs text-[#475569] truncate">{getEmail()}</p>
+                    <p className="text-[10px] text-[#64748B] truncate">{getEmail()}</p>
                   </div>
                   <motion.div
                     animate={{ rotate: showUserMenu ? 180 : 0 }}
@@ -1412,7 +1412,7 @@ export function Sidebar({
 
         {/* Version Badge */}
         {!collapsed && (
-          <div className="px-4 pb-4">
+          <div className="px-3 pb-3">
             <div className="px-3 py-1.5 rounded-md bg-white border border-[rgba(15,23,42,0.06)]">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-[#94A3B8]">Version</span>
@@ -1431,7 +1431,7 @@ export function Sidebar({
         <div
           className={cn(
             "flex-shrink-0 transition-all duration-300 hide-mobile",
-            collapsed ? "w-20" : "w-72"
+            collapsed ? "w-16" : "w-56"
           )}
         />
       )}

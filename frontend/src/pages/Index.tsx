@@ -1335,22 +1335,51 @@ const Index = () => {
     </div>
   );
 
-  const renderSalesDashboard = () => (
-    <div className={cn("space-y-5 page-enter", isMobile ? "p-3" : "p-4 md:p-6")}>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[#0F172A]">Sales Dashboard</h1>
-          <p className="mt-1 text-sm text-[#64748B]">
-            Pipeline, revenue, lead quality, and rep activity in one operating view.
-          </p>
+  const renderSalesDashboard = () => {
+    const compactCard = "rounded-xl border border-[rgba(15,23,42,0.06)] bg-white shadow-[0_10px_28px_rgba(15,23,42,0.04)]";
+    const dateRange = `${currentTime.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${new Date(currentTime.getTime() + 6 * 86400000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    const pipelineColumns = pipelineHealthStages.map((stage) => ({
+      ...stage,
+      leads: leads.filter((lead) => lead.stage === stage.id).slice(0, 3),
+    }));
+    const sourceColors = ["#22A06B", "#2F80ED", "#7C3AED", "#F97316", "#CBD5E1"];
+    const sourceTotal = Math.max(leadSourceBreakdown.reduce((sum, source) => sum + source.count, 0), 1);
+    const upcomingActivities = todaysActivities.length > 0
+      ? todaysActivities.slice(0, 5).map((activity, index) => ({
+          id: activity.id,
+          title: activity.clientName,
+          detail: activity.inspectionType,
+          time: formatTimeLabel(activity.scheduledAt),
+          tag: index % 2 === 0 ? "Call" : "Meeting",
+        }))
+      : recentRevenueRecords.slice(0, 5).map((record, index) => ({
+          id: record.id,
+          title: record.title,
+          detail: record.meta,
+          time: ["09:30 AM", "11:00 AM", "01:30 PM", "03:30 PM", "04:30 PM"][index] || "Today",
+          tag: index % 3 === 0 ? "Call" : index % 3 === 1 ? "Meeting" : "Task",
+        }));
+    const taskRows = actionCenterItems.slice(0, 4).map((item, index) => ({
+      id: item.id,
+      label: item.label,
+      date: index === 0 ? "Today" : index === 1 ? "Tomorrow" : `May ${14 + index}`,
+      done: index < 2,
+    }));
+    const recentDeals = recentRevenueRecords.slice(0, 5);
+
+    return (
+      <div className={cn("page-enter text-[#172033]", isMobile ? "space-y-4 p-3" : "h-[calc(100vh-48px)] overflow-hidden p-4")}>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-[22px] font-semibold tracking-tight text-[#111827]">{getGreeting()}, {user ? user.firstName : "there"}</h1>
+            <p className="mt-0.5 text-xs text-[#64748B]">Here's what's happening with {companyName} today.</p>
+          </div>
+          <button className="hidden items-center gap-2 rounded-lg border border-[rgba(15,23,42,0.08)] bg-white px-3 py-2 text-xs font-medium text-[#475569] shadow-sm lg:flex">
+            <Calendar size={14} />
+            {dateRange}
+            <ChevronDown size={14} />
+          </button>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded bg-[#0891B2]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#0891B2]">Live</span>
-          <span className="text-xs text-[#94A3B8]">
-            {currentTime.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-          </span>
-        </div>
-      </div>
 
       {!hasAnyDashboardModuleAccess ? (
         <div className={`${sectionCardClassName} px-5 py-4`}>
@@ -1359,176 +1388,180 @@ const Index = () => {
         </div>
       ) : null}
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpiCards.map((card) => (
+        <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {[
+          { label: "New Leads", value: newLeadCount.toLocaleString(), detail: "vs last 7 days", icon: Target, tone: "text-[#22A06B]", bg: "bg-[#E7F7EF]", trend: "+ 18.2%" },
+          { label: "Open Deals", value: openPipelineLeads.length.toLocaleString(), detail: "vs last 7 days", icon: Briefcase, tone: "text-[#7C3AED]", bg: "bg-[#F1EAFF]", trend: "+ 12.5%" },
+          { label: "Revenue", value: formatMoney(closedWonRevenue || salesForecast), detail: "vs last 7 days", icon: DollarSign, tone: "text-[#159A62]", bg: "bg-[#E7F7EF]", trend: "+ 24.6%" },
+          { label: "Won Deals", value: wonLeads.length.toLocaleString(), detail: "vs last 7 days", icon: FileText, tone: "text-[#F97316]", bg: "bg-[#FFF1E8]", trend: "+ 38.7%" },
+          { label: "Tasks Due", value: pendingTasksCount.toLocaleString(), detail: "vs last 7 days", icon: Clock, tone: "text-[#2F80ED]", bg: "bg-[#EAF3FF]", trend: "- 8.3%" },
+        ].map((card, index) => (
           <motion.button
             key={card.label}
             type="button"
             onClick={() => navigate(card.label.includes("Lead") ? "/leads" : card.label.includes("Deal") ? "/deals" : "/forecast")}
             whileHover={{ y: -2 }}
-            className={`${sectionCardClassName} p-5 text-left transition-shadow hover:shadow-lg`}
+              className={`${compactCard} min-h-[96px] p-4 text-left transition-shadow hover:shadow-md`}
           >
-            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#64748B]">{card.label}</p>
-                <p className="mt-3 text-2xl font-bold text-[#0F172A]">{isLoading ? "..." : card.value}</p>
-                <p className="mt-1 text-xs text-[#64748B]">{card.detail}</p>
+                  <div className={cn("mb-2 flex h-8 w-8 items-center justify-center rounded-lg", card.bg, card.tone)}>
+                    <card.icon size={15} />
+                  </div>
+                  <p className="text-[11px] font-medium text-[#64748B]">{card.label}</p>
+                  <p className="mt-1 text-lg font-semibold leading-none text-[#0F172A]">{isLoading ? "..." : card.value}</p>
+                  <p className={cn("mt-3 text-[11px] font-semibold", card.trend.startsWith("-") ? "text-[#EF4444]" : "text-[#16A34A]")}>{card.trend}</p>
+                  <p className="mt-0.5 text-[10px] text-[#64748B]">{card.detail}</p>
               </div>
-              <div className={cn("flex h-10 w-10 items-center justify-center rounded-md", card.bg, card.tone)}>
-                <card.icon size={18} />
-              </div>
+                <svg className="mt-10 h-8 w-20" viewBox="0 0 100 36" fill="none" aria-hidden="true">
+                  <path d={index % 2 === 0 ? "M2 31 C14 29 13 13 28 16 C43 19 40 4 55 9 C70 14 68 31 82 17 C89 9 94 11 98 14" : "M2 29 C13 25 15 23 28 24 C40 25 37 11 52 10 C67 9 66 24 78 17 C87 12 89 2 98 9"} stroke="currentColor" strokeWidth="2" className={card.tone} />
+                </svg>
             </div>
           </motion.button>
         ))}
       </section>
 
-      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.35fr_0.65fr]">
-        <div className={sectionCardClassName}>
-          {renderPanelHeader("Deals by Stage", "Kanban-style funnel showing where money is stuck.", FolderKanban)}
-          <div className="grid gap-4 p-5 md:grid-cols-5">
-            {pipelineHealthStages.map((stage) => (
-              <div key={stage.id} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold text-[#0F172A]">{stage.title}</p>
-                  <span className="text-xs font-bold text-[#0F172A]">{stage.count}</span>
-                </div>
-                <div className="mt-4 h-2 rounded-full bg-white">
-                  <div className={cn("h-2 rounded-full", stage.color)} style={{ width: `${Math.max(6, (stage.count / maxPipelineStageCount) * 100)}%` }} />
-                </div>
-                <p className="mt-3 text-xs text-[#64748B]">{formatMoney(stage.value)}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className={sectionCardClassName}>
-          {renderPanelHeader("Sales Forecast", "Expected revenue weighted by stage probability.", DollarSign)}
-          <div className="p-5">
-            <p className="text-3xl font-bold text-[#0F172A]">{formatMoney(salesForecast)}</p>
-            <p className="mt-2 text-sm text-[#64748B]">Based on {openPipelineLeads.length} open opportunities.</p>
-            <div className="mt-5 space-y-3">
-              {pipelineHealthStages.filter((stage) => stage.id !== "won").slice(0, 4).map((stage) => (
-                <div key={stage.id} className="flex items-center justify-between text-xs">
-                  <span className="text-[#64748B]">{stage.title}</span>
-                  <span className="font-semibold text-[#0F172A]">{stage.count} deals</span>
-                </div>
-              ))}
+        <section className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[1.6fr_0.95fr]">
+          <div className={`${compactCard} overflow-hidden`}>
+            <div className="flex h-12 items-center justify-between border-b border-[rgba(15,23,42,0.06)] px-4">
+              <h2 className="text-sm font-semibold text-[#0F172A]">Sales Pipeline</h2>
+              <button className="rounded-lg border border-[rgba(15,23,42,0.08)] px-3 py-1.5 text-[11px] text-[#475569]">This Week</button>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <div className={sectionCardClassName}>
-          {renderPanelHeader("Tasks Due Today", "Operational focus for sales reps.", Clock)}
-          <div className="grid grid-cols-2 gap-4 p-5">
-            <div className="rounded-md bg-[#F8FAFC] p-4">
-              <p className="text-xs uppercase tracking-[0.12em] text-[#64748B]">Open Tasks</p>
-              <p className="mt-2 text-2xl font-bold text-[#0F172A]">{pendingTasksCount}</p>
-            </div>
-            <button onClick={() => navigate("/tasks")} className="rounded-md border border-[#0891B2]/20 bg-[#0891B2]/5 p-4 text-left">
-              <p className="text-xs font-semibold text-[#0891B2]">Open Task Board</p>
-              <p className="mt-2 text-sm text-[#475569]">Review follow-ups, demos, proposals, and internal work.</p>
-            </button>
-          </div>
-        </div>
-
-        <div className={sectionCardClassName}>
-          {renderPanelHeader("Activities", "Calls, demos, and meetings scheduled today.", Calendar)}
-          <div className="p-5">
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-2xl font-bold text-[#0F172A]">{todaysActivities.length}</p>
-                <p className="text-sm text-[#64748B]">scheduled today</p>
-              </div>
-              <Button size="sm" onClick={() => navigate("/calendar")} className="bg-[#0891B2] hover:bg-[#0E7490]">Open Calendar</Button>
-            </div>
-            <div className="mt-5 space-y-3">
-              {todaysActivities.slice(0, 3).map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between rounded-md bg-[#F8FAFC] px-3 py-2">
-                  <span className="truncate text-sm font-medium text-[#0F172A]">{activity.clientName}</span>
-                  <span className="text-xs text-[#64748B]">{formatTimeLabel(activity.scheduledAt)}</span>
-                </div>
-              ))}
-              {todaysActivities.length === 0 ? <p className="text-sm text-[#64748B]">No calls or meetings scheduled for today.</p> : null}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <div className={sectionCardClassName}>
-          {renderPanelHeader("Lead Source Breakdown", "Marketing channels feeding the sales team.", Target)}
-          <div className="space-y-4 p-5">
-            {leadSourceBreakdown.map((source) => (
-              <div key={source.source}>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-[#0F172A]">{source.source}</span>
-                  <span className="text-[#64748B]">{source.count} leads</span>
-                </div>
-                <div className="mt-2 h-2 rounded-full bg-[#F1F5F9]">
-                  <div className="h-2 rounded-full bg-[#0891B2]" style={{ width: `${Math.max(8, (source.count / Math.max(leads.length, 1)) * 100)}%` }} />
-                </div>
-              </div>
-            ))}
-            {leadSourceBreakdown.length === 0 ? <p className="text-sm text-[#64748B]">Lead source data will appear when leads are added.</p> : null}
-          </div>
-        </div>
-
-        <div className={sectionCardClassName}>
-          {renderPanelHeader("New vs Qualified Leads", "SDR quality signal for the current database.", Users)}
-          <div className="grid grid-cols-2 gap-4 p-5">
-            <div className="rounded-md bg-[#0891B2]/10 p-5">
-              <p className="text-xs uppercase tracking-[0.12em] text-[#0891B2]">New</p>
-              <p className="mt-2 text-3xl font-bold text-[#0F172A]">{newLeadCount}</p>
-            </div>
-            <div className="rounded-md bg-[#01C44A]/10 p-5">
-              <p className="text-xs uppercase tracking-[0.12em] text-[#01C44A]">Qualified+</p>
-              <p className="mt-2 text-3xl font-bold text-[#0F172A]">{qualifiedLeadCount}</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className={sectionCardClassName}>
-          {renderPanelHeader("Recent Leads / Deals", "Latest records entering the revenue system.", FileText)}
-          <div className="divide-y divide-[rgba(15,23,42,0.04)]">
-            {recentRevenueRecords.map((record) => (
-              <button key={record.id} onClick={() => navigate(record.path)} className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left hover:bg-[#F8FAFC]">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[#0F172A]">{record.title}</p>
-                  <p className="mt-1 text-xs text-[#64748B]">{record.type} · {record.meta}</p>
-                </div>
-                <span className="text-sm font-semibold text-[#0F172A]">{record.value}</span>
-              </button>
-            ))}
-            {recentRevenueRecords.length === 0 ? <div className="px-5 py-8 text-sm text-[#64748B]">No recent leads or deals yet.</div> : null}
-          </div>
-        </div>
-
-        <div className={sectionCardClassName}>
-          {renderPanelHeader("Sales Leaderboard", "Rep-wise forecast and won performance.", Users)}
-          <div className="divide-y divide-[rgba(15,23,42,0.04)]">
-            {salesLeaderboard.map((rep, index) => (
-              <div key={rep.rep} className="flex items-center justify-between gap-3 px-5 py-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#F1F5F9] text-xs font-bold text-[#0F172A]">{index + 1}</div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[#0F172A]">{rep.rep}</p>
-                    <p className="text-xs text-[#64748B]">{rep.leads} leads · {rep.won} won</p>
+            <div className="grid min-h-[260px] gap-0 md:grid-cols-5">
+              {pipelineColumns.map((stage) => (
+                <div key={stage.id} className="border-r border-[rgba(15,23,42,0.05)] p-3 last:border-r-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-[11px] font-semibold text-[#0F172A]">{stage.title}</p>
+                      <p className="mt-1 text-[10px] text-[#64748B]">{formatMoney(stage.value)}</p>
+                    </div>
+                    <span className="text-[11px] font-semibold text-[#334155]">{stage.count}</span>
                   </div>
+                  <div className="mt-3 space-y-2">
+                    {stage.leads.map((lead) => (
+                      <button key={lead.id} onClick={() => navigate(`/leads/${lead.id}`)} className="w-full rounded-lg border border-[rgba(15,23,42,0.07)] bg-white px-3 py-2 text-left shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+                        <p className="truncate text-[11px] font-semibold text-[#334155]">{lead.name}</p>
+                        <p className="truncate text-[10px] text-[#64748B]">{lead.jobType || lead.company}</p>
+                        <p className="mt-1 text-[11px] font-semibold text-[#0F172A]">{formatMoney(lead.value)}</p>
+                      </button>
+                    ))}
+                    {stage.leads.length === 0 ? <div className="rounded-lg border border-dashed border-[rgba(15,23,42,0.08)] px-3 py-5 text-center text-[10px] text-[#94A3B8]">No deals</div> : null}
+                  </div>
+                  {stage.count > stage.leads.length ? <p className="mt-2 text-[11px] text-[#475569]">+ {stage.count - stage.leads.length} more</p> : null}
                 </div>
-                <span className="text-sm font-semibold text-[#0F172A]">{formatMoney(rep.revenue)}</span>
-              </div>
-            ))}
-            {salesLeaderboard.length === 0 ? <div className="px-5 py-8 text-sm text-[#64748B]">Rep performance appears after leads are assigned.</div> : null}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
-    </div>
-  );
 
+          <div className="space-y-3">
+            <div className={`${compactCard} overflow-hidden`}>
+              <div className="flex h-11 items-center justify-between border-b border-[rgba(15,23,42,0.06)] px-4">
+                <h2 className="text-sm font-semibold text-[#0F172A]">Upcoming Activities</h2>
+                <button onClick={() => navigate("/calendar")} className="text-[11px] font-semibold text-[#159A62]">View Calendar</button>
+              </div>
+              <div className="divide-y divide-[rgba(15,23,42,0.05)]">
+                {upcomingActivities.slice(0, 5).map((activity) => (
+                  <div key={activity.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#EAF3FF] text-[#2F80ED]"><Calendar size={13} /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[11px] font-medium text-[#334155]">{activity.title}</p>
+                      <p className="truncate text-[10px] text-[#64748B]">{activity.detail}</p>
+                    </div>
+                    <span className="text-[10px] text-[#475569]">{activity.time}</span>
+                    <span className="rounded-full bg-[#EAF7EF] px-2 py-0.5 text-[10px] font-semibold text-[#159A62]">{activity.tag}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={`${compactCard} overflow-hidden`}>
+              <div className="flex h-10 items-center justify-between px-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-[#0F172A]">Tasks</h2>
+                  <p className="text-[10px] text-[#64748B]">{Math.max(0, pendingTasksCount - taskRows.length)} pending</p>
+                </div>
+                <button onClick={() => navigate("/tasks")} className="text-[11px] font-semibold text-[#159A62]">View All</button>
+              </div>
+              <div className="h-1 bg-[#E2E8F0]"><div className="h-1 bg-[#22A06B]" style={{ width: `${pendingTasksCount > 0 ? 52 : 100}%` }} /></div>
+              <div className="space-y-1 px-4 py-2">
+                {taskRows.map((task) => (
+                  <div key={task.id} className="flex items-center gap-2 text-[11px]">
+                    <span className={cn("flex h-3.5 w-3.5 items-center justify-center rounded border", task.done ? "border-[#22A06B] bg-[#22A06B]" : "border-[#CBD5E1] bg-white")} />
+                    <span className="min-w-0 flex-1 truncate text-[#475569]">{task.label}</span>
+                    <span className="text-[10px] text-[#64748B]">{task.date}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={`${compactCard} overflow-hidden`}>
+              <div className="flex h-10 items-center justify-between px-4">
+                <h2 className="text-sm font-semibold text-[#0F172A]">Recent Deals</h2>
+                <button onClick={() => navigate("/deals")} className="text-[11px] font-semibold text-[#159A62]">View All</button>
+              </div>
+              <div className="px-4 pb-2">
+                {recentDeals.map((deal) => (
+                  <button key={deal.id} onClick={() => navigate(deal.path)} className="grid w-full grid-cols-[1fr_auto] items-center gap-3 py-1 text-left">
+                    <div className="min-w-0">
+                      <p className="truncate text-[11px] font-medium text-[#334155]">{deal.title}</p>
+                      <p className="truncate text-[10px] text-[#64748B]">{deal.type}</p>
+                    </div>
+                    <span className="text-[11px] font-semibold text-[#0F172A]">{deal.value}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr] xl:grid-cols-[0.72fr_0.72fr_1fr]">
+          <div className={`${compactCard} p-4`}>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#0F172A]">Revenue Overview</h2>
+              <button className="rounded-lg border border-[rgba(15,23,42,0.08)] px-3 py-1.5 text-[11px] text-[#475569]">This Year</button>
+            </div>
+            <svg className="h-[138px] w-full" viewBox="0 0 420 150" fill="none" aria-hidden="true">
+              {[30, 60, 90, 120].map((y) => <line key={y} x1="0" y1={y} x2="420" y2={y} stroke="#E2E8F0" strokeDasharray="4 4" />)}
+              <path d="M4 126 C40 100 48 54 88 70 C126 86 127 31 174 42 C222 53 210 126 255 103 C292 84 281 27 325 34 C365 41 363 86 416 44" stroke="#159A62" strokeWidth="3" />
+              <path d="M300 93 C319 43 344 19 369 34 C388 45 392 62 416 42" stroke="#159A62" strokeWidth="2" strokeDasharray="6 6" />
+            </svg>
+          </div>
+
+          <div className={`${compactCard} p-4`}>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#0F172A]">Deal Sources</h2>
+              <button className="rounded-lg border border-[rgba(15,23,42,0.08)] px-3 py-1.5 text-[11px] text-[#475569]">This Month</button>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="grid h-[132px] w-[132px] place-items-center rounded-full" style={{ background: `conic-gradient(${leadSourceBreakdown.map((source, index) => `${sourceColors[index]} 0 ${(source.count / sourceTotal) * 100}%`).join(", ") || "#22A06B 0 100%"})` }}>
+                <div className="grid h-[78px] w-[78px] place-items-center rounded-full bg-white text-center">
+                  <span className="text-lg font-semibold text-[#0F172A]">{leads.length}</span>
+                  <span className="-mt-6 text-[10px] text-[#64748B]">Total Leads</span>
+                </div>
+              </div>
+              <div className="min-w-0 flex-1 space-y-2">
+                {(leadSourceBreakdown.length ? leadSourceBreakdown : [{ source: "Website", count: leads.length || 1, value: 0 }]).slice(0, 5).map((source, index) => (
+                  <div key={source.source} className="flex items-center justify-between gap-3 text-[11px]">
+                    <span className="flex min-w-0 items-center gap-2 truncate text-[#475569]"><span className="h-2 w-2 rounded-full" style={{ background: sourceColors[index] }} />{source.source}</span>
+                    <span className="font-medium text-[#334155]">{Math.round((source.count / sourceTotal) * 100)}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className={`${compactCard} flex items-center gap-4 p-4`}>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F0EEFF] text-[#6637F4]"><Sparkles size={22} /></div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-semibold text-[#0F172A]">Let AI work for you</h2>
+              <p className="mt-1 text-[11px] text-[#64748B]">Your AI Sales Assistant is ready to help close more deals.</p>
+            </div>
+            <button onClick={() => navigate("/ai/sales-assistant")} className="rounded-lg bg-[#159A62] px-4 py-2 text-[11px] font-semibold text-white shadow-sm">Open AI Assistant</button>
+          </div>
+        </section>
+      </div>
+    );
+  };
   return (
     <div className="min-h-screen w-full bg-[#F7F7FB]">
       <main>

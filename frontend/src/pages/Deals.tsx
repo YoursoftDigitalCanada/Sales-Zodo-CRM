@@ -7,12 +7,14 @@ import {
   CircleDollarSign,
   Clock,
   FileText,
+  GitBranch,
   Kanban,
   List,
   Mail,
   MessageSquare,
   MoreHorizontal,
   Pencil,
+  Phone,
   Plus,
   Search,
   StickyNote,
@@ -576,8 +578,12 @@ function DealDetailDialog({
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => window.location.assign(`/mail?dealId=${current.id}`)} variant="outline"><Mail size={14} className="mr-2" />Send Email</Button>
+          <Button size="sm" onClick={() => window.location.assign(`/calls?dealId=${current.id}`)} variant="outline"><Phone size={14} className="mr-2" />Log Call</Button>
           <Button size="sm" onClick={() => onStageAction(current, "Demo Scheduled")} variant="outline"><CalendarDays size={14} className="mr-2" />Schedule Demo</Button>
           <Button size="sm" onClick={() => onStageAction(current, "Proposal Sent")} variant="outline"><FileText size={14} className="mr-2" />Send Proposal</Button>
+          <Button size="sm" onClick={() => window.location.assign(`/notes?dealId=${current.id}`)} variant="outline"><StickyNote size={14} className="mr-2" />Add Note</Button>
+          <Button size="sm" onClick={() => window.location.assign(`/sequences?targetType=Deal&targetId=${current.id}`)} variant="outline"><GitBranch size={14} className="mr-2" />Start Sequence</Button>
           <Button size="sm" onClick={() => onStageAction(current, "Won")} className="bg-[#0F766E] hover:bg-[#115E59]"><CheckCircle2 size={14} className="mr-2" />Mark Won</Button>
           <Button size="sm" onClick={() => onStageAction(current, "Lost")} variant="outline">Mark Lost</Button>
           <Button size="sm" onClick={() => onEdit(current)} variant="outline"><Pencil size={14} className="mr-2" />Edit</Button>

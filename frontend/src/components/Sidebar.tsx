@@ -281,6 +281,13 @@ const navigationItems: NavigationItem[] = [
     featureId: "letterbox",
     permissionModule: "emails",
   },
+  {
+    title: "Email Templates",
+    icon: Mail,
+    path: "/email-templates",
+    featureId: "letterbox",
+    permissionModule: "emails",
+  },
 
   { title: "Finance", isHeader: true },
   {

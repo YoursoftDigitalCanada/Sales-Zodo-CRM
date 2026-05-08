@@ -54,6 +54,7 @@ import foldersRoutes from '../modules/folders/folders.routes';
 
 // Communication modules
 import emailsRoutes from '../modules/emails/emails.routes';
+import engagementRoutes from '../modules/engagement/engagement.routes';
 import chatRoutes from '../modules/chat/chat.routes';
 
 // System modules
@@ -189,6 +190,7 @@ export function registerRoutes(app: Application): void {
 
   // Communication
   protectedRouter.use('/emails', emailsRoutes);
+  protectedRouter.use('/engagement', engagementRoutes);
   protectedRouter.use('/chat', chatRoutes);
 
   // System

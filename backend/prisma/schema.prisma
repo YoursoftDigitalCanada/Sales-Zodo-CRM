@@ -720,6 +720,10 @@ model Tenant {
   payments              InvoicePayment[]
   customerSubscriptions CustomerSubscription[]
   pricingPlans          PricingPlan[]
+  emailTemplates        EmailTemplate[]
+  salesSequences        SalesSequence[]
+  salesSequenceEnrollments SalesSequenceEnrollment[]
+  salesCalls            SalesCall[]
   quotes                Quote[]
   quoteItems            QuoteItem[]
   contracts             Contract[]
@@ -3602,6 +3606,98 @@ model PricingPlan {
   @@unique([tenantId, planName])
   @@index([tenantId])
   @@index([isActive])
+}
+
+model EmailTemplate {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  templateName String
+  subject     String
+  body        String   @db.Text
+  category    String   @default("Cold Outreach")
+  variables   String[] @default(["contactName", "companyName", "repName", "proposalLink", "planName"])
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, templateName])
+  @@index([tenantId])
+  @@index([category])
+  @@index([isActive])
+}
+
+model SalesSequence {
+  id            String   @id @default(uuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sequenceName  String
+  targetType    String   @default("Lead")
+  status        String   @default("DRAFT")
+  steps         Json     @default("[]")
+  ownerId       String?
+  startDate     DateTime?
+  stopCondition String   @default("reply received")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  enrollments   SalesSequenceEnrollment[]
+
+  @@unique([tenantId, sequenceName])
+  @@index([tenantId])
+  @@index([status])
+  @@index([targetType])
+  @@index([ownerId])
+}
+
+model SalesSequenceEnrollment {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sequenceId  String
+  sequence    SalesSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  targetType  String
+  targetId    String
+  status      String   @default("ACTIVE")
+  currentStep Int      @default(0)
+  startedAt   DateTime @default(now())
+  stoppedAt   DateTime?
+  stopReason  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, sequenceId, targetType, targetId])
+  @@index([tenantId])
+  @@index([sequenceId])
+  @@index([targetType, targetId])
+  @@index([status])
+}
+
+model SalesCall {
+  id            String   @id @default(uuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadId        String?
+  contactId     String?
+  projectId     String?
+  clientId      String?
+  callerId      String?
+  direction     String   @default("Outbound")
+  outcome       String
+  duration      Int?
+  callNotes     String?  @db.Text
+  nextAction    String?
+  followUpDate  DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([leadId])
+  @@index([contactId])
+  @@index([projectId])
+  @@index([clientId])
+  @@index([callerId])
+  @@index([outcome])
+  @@index([followUpDate])
 }
 
 // ============================================================================

@@ -155,7 +155,10 @@ import ProfilePage from "./pages/Profile";
 
 // Notifications
 import NotificationsPage from "./pages/Notifications";
-import { CallLogsPage, DataImportPage, NotesPage } from "./pages/crm/CrmDevelopModulePage";
+import { DataImportPage, NotesPage } from "./pages/crm/CrmDevelopModulePage";
+import CallsPage from "./pages/Calls";
+import SequencesPage from "./pages/Sequences";
+import EmailTemplatesPage from "./pages/EmailTemplates";
 
 // Support
 import SupportPage from "./pages/Support";
@@ -642,7 +645,6 @@ const AppRoutes = () => {
         <Route path="/deals" element={<AccessGuard featureId="projects" permissionModule="projects" action="view"><DealsPage /></AccessGuard>} />
         <Route path="/pipeline" element={<AccessGuard featureId="kanban" permissionModule="projects" action="view"><KanbanPage /></AccessGuard>} />
         <Route path="/meetings" element={<AccessGuard featureId="calendar" permissionModule="calendar" action="view"><CalendarPage /></AccessGuard>} />
-        <Route path="/sequences" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><LetterBoxPage /></AccessGuard>} />
         <Route path="/proposals" element={<AccessGuard featureId="finance" permissionModule="quotes" action="view"><QuotesPage /></AccessGuard>} />
         <Route path="/subscriptions" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><SubscriptionsPage /></AccessGuard>} />
         <Route path="/pricing-plans" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><PricingPlansPage /></AccessGuard>} />
@@ -650,8 +652,10 @@ const AppRoutes = () => {
         <Route path="/accounts" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><OrganizationsPage /></AccessGuard>} />
         <Route path="/organizations" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><OrganizationsPage /></AccessGuard>} />
         <Route path="/notes" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><NotesPage /></AccessGuard>} />
-        <Route path="/calls" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><CallLogsPage /></AccessGuard>} />
-        <Route path="/call-logs" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><CallLogsPage /></AccessGuard>} />
+        <Route path="/calls" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><CallsPage /></AccessGuard>} />
+        <Route path="/call-logs" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><CallsPage /></AccessGuard>} />
+        <Route path="/sequences" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><SequencesPage /></AccessGuard>} />
+        <Route path="/email-templates" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><EmailTemplatesPage /></AccessGuard>} />
         <Route path="/data-import" element={<AccessGuard permissionModule="settings" action="view"><DataImportPage /></AccessGuard>} />
         <Route path="/mail" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><LetterBoxPage /></AccessGuard>} />
         <Route path="/letterbox" element={<Navigate to="/mail" replace />} />

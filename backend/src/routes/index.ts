@@ -76,6 +76,7 @@ import permissionsRoutes from '../modules/permissions/permissions.routes';
 // AI modules
 import roofEstimatorRoutes from '../modules/roof-estimator/roof-estimator.routes';
 import copilotRoutes from '../modules/copilot/copilot.routes';
+import salesAIRoutes from '../modules/sales-ai/sales-ai.routes';
 import eagleViewRoutes from '../modules/eagleview/eagleview.routes';
 import { eagleViewWebhookRouter } from '../modules/eagleview/eagleview.routes';
 import constructionEstimatorRoutes from '../modules/construction-estimator/construction-estimator.routes';
@@ -216,6 +217,7 @@ export function registerRoutes(app: Application): void {
   // AI Modules
   protectedRouter.use('/roof-estimator', roofEstimatorRoutes);
   protectedRouter.use('/copilot', copilotRoutes);
+  protectedRouter.use('/ai', salesAIRoutes);
   protectedRouter.use('/eagleview', eagleViewRoutes);
   protectedRouter.use('/construction-estimator', constructionEstimatorRoutes);
 

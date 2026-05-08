@@ -219,7 +219,7 @@ export default function AnalyticsPage() {
                 <ChartCard title="Pipeline Value by Stage">
                   {(deals.byStage || []).length ? <ResponsiveContainer width="100%" height={260}><BarChart data={deals.byStage}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="stage" tick={{ fontSize: 11 }} /><YAxis tickFormatter={(value) => `$${Number(value) / 1000}k`} /><Tooltip formatter={(value) => money(value)} /><Bar dataKey="value" fill="#0891B2" radius={[6, 6, 0, 0]} /></BarChart></ResponsiveContainer> : <EmptyState label="No deal pipeline data yet." />}
                 </ChartCard>
-                <ChartCard title="Sales Insights">
+                <ChartCard title="AI Forecast/Risk Insights">
                   {insights.length ? <div className="space-y-3">{insights.map((item, index) => <div key={index} className="flex items-start gap-3 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-3"><AlertTriangle className={item.tone === "warning" ? "text-[#D97706]" : "text-[#0891B2]"} size={18} /><p className="text-sm text-[#334155]">{item.label}</p></div>)}</div> : <EmptyState label="No urgent sales insights for this filter." />}
                 </ChartCard>
               </div>

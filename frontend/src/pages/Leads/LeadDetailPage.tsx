@@ -35,12 +35,12 @@ import {
     type LeadDetailNavigationState,
 } from "@/features/leads/lead-detail-navigation";
 import {
-    ArrowLeft, Loader2, Mail, Phone, MapPin, Building2, Globe, Briefcase,
+    ArrowLeft, Loader2, Mail, Phone, MapPin, Building2, Globe, Briefcase, Target,
     Tag, Calendar, Clock, DollarSign, TrendingUp, Thermometer, User, Users,
     FileText, MessageSquare, CheckSquare, Activity, MoreHorizontal,
     UserPlus, ArrowRightLeft, Star, Pencil, Send, ExternalLink, Flame, Search, Plus, Trash2, Eye,
     Snowflake, Zap, X, CheckCircle2, Home, Wrench, Shield, HardHat,
-    ClipboardList, Banknote, AlertTriangle, FolderOpen, Download
+    ClipboardList, Banknote, AlertTriangle, FolderOpen, Download, Sparkles
 } from "lucide-react";
 
 // ── Interfaces ──────────────────────────────────────────────────────────
@@ -867,6 +867,8 @@ const LeadDetailPage = () => {
                         </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/ai/sales-assistant?leadId=${lead.id}`)} className="hidden lg:inline-flex gap-1.5 text-xs"><Sparkles size={14} />Ask AI</Button>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/ai/lead-scoring?leadId=${lead.id}`)} className="hidden lg:inline-flex gap-1.5 text-xs"><Target size={14} />Score Lead</Button>
                         {lead.status !== "QUALIFIED" && lead.status !== "WON" && lead.status !== "LOST" && <Button size="sm" onClick={handleQualifyLead} className="hidden md:inline-flex bg-[#0891B2] text-white hover:bg-[#0E7490] gap-1.5 text-xs"><TrendingUp size={14} />Qualify Lead</Button>}
                         <Button variant="outline" size="sm" onClick={() => navigate(`/tasks?leadId=${lead.id}`)} className="hidden lg:inline-flex gap-1.5 text-xs"><CheckSquare size={14} />Create Task</Button>
                         <Button variant="outline" size="sm" onClick={() => lead.convertedToDealId ? navigate(`/projects/${lead.convertedToDealId}`) : handleQualifyLead()} className="hidden lg:inline-flex gap-1.5 text-xs"><Calendar size={14} />Schedule Demo</Button>

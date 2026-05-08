@@ -17,6 +17,7 @@ import {
   Phone,
   Plus,
   Search,
+  Sparkles,
   StickyNote,
   Target,
   Trash2,
@@ -578,6 +579,9 @@ function DealDetailDialog({
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => window.location.assign(`/ai/sales-assistant?dealId=${current.id}`)} variant="outline"><Sparkles size={14} className="mr-2" />Ask AI</Button>
+          <Button size="sm" onClick={() => window.location.assign(`/ai/deal-insights?dealId=${current.id}`)} variant="outline"><Target size={14} className="mr-2" />AI Insight</Button>
+          <Button size="sm" onClick={() => window.location.assign(`/ai/email-generator?dealId=${current.id}`)} variant="outline"><Mail size={14} className="mr-2" />Generate Email</Button>
           <Button size="sm" onClick={() => window.location.assign(`/mail?dealId=${current.id}`)} variant="outline"><Mail size={14} className="mr-2" />Send Email</Button>
           <Button size="sm" onClick={() => window.location.assign(`/calls?dealId=${current.id}`)} variant="outline"><Phone size={14} className="mr-2" />Log Call</Button>
           <Button size="sm" onClick={() => onStageAction(current, "Demo Scheduled")} variant="outline"><CalendarDays size={14} className="mr-2" />Schedule Demo</Button>

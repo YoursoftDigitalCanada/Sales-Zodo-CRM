@@ -28,6 +28,7 @@ import { automationService } from './modules/automation/automation.service';
 import { leadSourceSyncScheduler } from './modules/lead-sources/lead-source-sync.scheduler';
 import { billingService } from './modules/billing/billing.service';
 import { engagementService } from './modules/engagement/engagement.service';
+import { salesAIService } from './modules/sales-ai/sales-ai.service';
 
 /**
  * Create and configure Express application
@@ -154,6 +155,7 @@ export function createApp(): Application {
   automationService.initialize();
   billingService.initializeProposalAcceptedHandler();
   engagementService.initializeAutomation();
+  salesAIService.initializeAutomation();
 
   // =========================================================================
   // LIFECYCLE CRON (daily AT_RISK evaluation per tenant)

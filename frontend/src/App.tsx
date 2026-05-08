@@ -127,6 +127,10 @@ import RoofEstimator from "./pages/RoofEstimator";
 import RoofEstimatorWizard from "./pages/RoofEstimatorWizard";
 import RoofEstimatorPolygonEditor from "./pages/RoofEstimatorPolygonEditor";
 import ConstructionEstimator from "./pages/ConstructionEstimator";
+import AISalesAssistantPage from "./pages/ai/AISalesAssistant";
+import AIEmailGeneratorPage from "./pages/ai/AIEmailGenerator";
+import AILeadScoringPage from "./pages/ai/AILeadScoring";
+import AIDealInsightsPage from "./pages/ai/AIDealInsights";
 
 // Inspections
 import InspectionList from "./pages/Inspections/InspectionList";
@@ -659,10 +663,10 @@ const AppRoutes = () => {
         <Route path="/data-import" element={<AccessGuard permissionModule="settings" action="view"><DataImportPage /></AccessGuard>} />
         <Route path="/mail" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><LetterBoxPage /></AccessGuard>} />
         <Route path="/letterbox" element={<Navigate to="/mail" replace />} />
-        <Route path="/ai/sales-assistant" element={<AccessGuard featureId="aiAssistant"><Index /></AccessGuard>} />
-        <Route path="/ai/email-generator" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><LetterBoxPage /></AccessGuard>} />
-        <Route path="/ai/lead-scoring" element={<AccessGuard featureId="aiAssistant" permissionModule="leads" action="view"><AllLeads /></AccessGuard>} />
-        <Route path="/ai/deal-insights" element={<AccessGuard featureId="aiAssistant" permissionModule="projects" action="view"><DealsPage /></AccessGuard>} />
+        <Route path="/ai/sales-assistant" element={<AccessGuard featureId="aiAssistant"><AISalesAssistantPage /></AccessGuard>} />
+        <Route path="/ai/email-generator" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><AIEmailGeneratorPage /></AccessGuard>} />
+        <Route path="/ai/lead-scoring" element={<AccessGuard featureId="aiAssistant" permissionModule="leads" action="view"><AILeadScoringPage /></AccessGuard>} />
+        <Route path="/ai/deal-insights" element={<AccessGuard featureId="aiAssistant" permissionModule="projects" action="view"><AIDealInsightsPage /></AccessGuard>} />
         <Route path="/forecast" element={<AccessGuard featureId="analytics" permissionModule="analytics" action="view"><AnalyticsPage /></AccessGuard>} />
         <Route
           path="/leads"

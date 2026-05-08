@@ -1496,6 +1496,26 @@ const Index = () => {
 
             <div className={`${compactCard} overflow-hidden`}>
               <div className="flex h-10 items-center justify-between px-4">
+                <h2 className="text-sm font-semibold text-[#0F172A]">AI Insights</h2>
+                <button onClick={() => navigate("/ai/sales-assistant")} className="text-[11px] font-semibold text-[#159A62]">Ask AI</button>
+              </div>
+              <div className="space-y-2 px-4 pb-3">
+                {[
+                  `${hotLeads.length} hot leads need attention`,
+                  `${leads.filter((lead) => lead.isStalled).length} stuck deals need follow-up`,
+                  `${pendingTasksCount} open follow-ups remain`,
+                  `${openPipelineLeads.slice(0, 3).length} deals should have next action checked`,
+                ].map((insight) => (
+                  <button key={insight} onClick={() => navigate("/ai/sales-assistant")} className="flex w-full items-center gap-2 rounded-lg bg-[#F8FAFC] px-3 py-2 text-left text-[11px] text-[#475569] hover:bg-[#ECFEFF]">
+                    <Sparkles size={13} className="text-[#0891B2]" />
+                    {insight}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className={`${compactCard} overflow-hidden`}>
+              <div className="flex h-10 items-center justify-between px-4">
                 <h2 className="text-sm font-semibold text-[#0F172A]">Recent Deals</h2>
                 <button onClick={() => navigate("/deals")} className="text-[11px] font-semibold text-[#159A62]">View All</button>
               </div>

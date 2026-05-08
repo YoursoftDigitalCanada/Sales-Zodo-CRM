@@ -102,6 +102,9 @@ import SignupPage from "./pages/Signup";
 import UsersPage from "@/pages/Users";
 import InvoicePage from "./pages/Invoice";
 import InvoiceDetailPage from "./pages/InvoiceDetail";
+import SubscriptionsPage from "./pages/Subscriptions";
+import PricingPlansPage from "./pages/PricingPlans";
+import PaymentsPage from "./pages/Payments";
 // import ExpensesPage from "./pages/Expenses";
 
 // import EcommercePage from "./pages/Ecommerce";
@@ -641,7 +644,9 @@ const AppRoutes = () => {
         <Route path="/meetings" element={<AccessGuard featureId="calendar" permissionModule="calendar" action="view"><CalendarPage /></AccessGuard>} />
         <Route path="/sequences" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><LetterBoxPage /></AccessGuard>} />
         <Route path="/proposals" element={<AccessGuard featureId="finance" permissionModule="quotes" action="view"><QuotesPage /></AccessGuard>} />
-        <Route path="/subscriptions" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><InvoicePage /></AccessGuard>} />
+        <Route path="/subscriptions" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><SubscriptionsPage /></AccessGuard>} />
+        <Route path="/pricing-plans" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><PricingPlansPage /></AccessGuard>} />
+        <Route path="/payments" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><PaymentsPage /></AccessGuard>} />
         <Route path="/accounts" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><OrganizationsPage /></AccessGuard>} />
         <Route path="/organizations" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><OrganizationsPage /></AccessGuard>} />
         <Route path="/notes" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><NotesPage /></AccessGuard>} />

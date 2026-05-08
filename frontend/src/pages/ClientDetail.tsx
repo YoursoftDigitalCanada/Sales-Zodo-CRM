@@ -14,6 +14,7 @@ import { getProjects } from "@/features/projects/services/projects-service";
 import { getFiles, getDownloadUrl } from "@/features/files/services/files-service";
 import { getEmails } from "@/features/emails/services/emails-service";
 import { getInvoices } from "@/features/invoices/services/invoice-service";
+import { getPayments, getSubscriptions } from "@/features/billing/services/billing-service";
 import { getLeads } from "@/features/leads";
 import { getAllInspections, deleteInspection, type InspectionEntity } from "@/features/leads/services/inspections-service";
 import InspectionEditor from "@/components/inspections/InspectionEditor";
@@ -261,6 +262,8 @@ const ClientDetailPage = () => {
   const [emails, setEmails] = useState<any[]>([]);
   const [loadingEmails, setLoadingEmails] = useState(false);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [inspections, setInspections] = useState<InspectionEntity[]>([]);
   const [loadingInspections, setLoadingInspections] = useState(false);
@@ -397,7 +400,17 @@ const ClientDetailPage = () => {
   }, [id, relatedLeadId]);
 
   const fetchInvoices = useCallback(async () => {
-    try { setLoadingInvoices(true); const data = await getInvoices({ clientId: id! }); setInvoices(Array.isArray(data) ? data : []); }
+    try {
+      setLoadingInvoices(true);
+      const [invoiceData, subscriptionData, paymentData] = await Promise.all([
+        getInvoices({ clientId: id! }),
+        getSubscriptions({ clientId: id! }),
+        getPayments({ clientId: id! }),
+      ]);
+      setInvoices(Array.isArray(invoiceData) ? invoiceData : []);
+      setSubscriptions(Array.isArray(subscriptionData?.data) ? subscriptionData.data : []);
+      setPayments(Array.isArray(paymentData) ? paymentData : []);
+    }
     catch { } finally { setLoadingInvoices(false); }
   }, [id]);
 
@@ -757,6 +770,8 @@ const ClientDetailPage = () => {
               {[
                 { label: "Total Revenue", value: fmtCurrency(totalRevenue, client.currency), bold: true },
                 { label: "Open Invoices", value: openInvoices.length.toString() },
+                { label: "Subscriptions", value: subscriptions.length.toString(), bold: subscriptions.some((s) => String(s.status).toUpperCase() === "ACTIVE") },
+                { label: "Payments", value: payments.length.toString() },
                 { label: "Overdue Invoices", value: overdueInvoices.length.toString(), danger: overdueInvoices.length > 0 },
                 { label: "Outstanding Amount", value: fmtCurrency(outstandingAmount, client.currency), danger: outstandingAmount > 0 },
                 { label: "Lifetime Value", value: fmtCurrency(totalRevenue + paidInvoices.reduce((s: number, i: any) => s + (Number(i.total) || 0), 0), client.currency) },

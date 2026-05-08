@@ -26,6 +26,7 @@ import { setupSwagger } from './config/swagger';
 // Automation engine
 import { automationService } from './modules/automation/automation.service';
 import { leadSourceSyncScheduler } from './modules/lead-sources/lead-source-sync.scheduler';
+import { billingService } from './modules/billing/billing.service';
 
 /**
  * Create and configure Express application
@@ -150,6 +151,7 @@ export function createApp(): Application {
   // =========================================================================
 
   automationService.initialize();
+  billingService.initializeProposalAcceptedHandler();
 
   // =========================================================================
   // LIFECYCLE CRON (daily AT_RISK evaluation per tenant)

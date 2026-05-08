@@ -35,6 +35,7 @@ import pipelineRoutes from '../modules/pipeline/pipeline.routes';
 
 // Finance modules
 import invoicesRoutes from '../modules/invoices/invoices.routes';
+import billingRoutes from '../modules/billing/billing.routes';
 import quotesRoutes from '../modules/quotes/quotes.routes';
 import quotesPublicRoutes from '../modules/quotes/quotes.public-routes';
 // DRAFT — re-enable next year
@@ -173,6 +174,7 @@ export function registerRoutes(app: Application): void {
 
   // Finance
   protectedRouter.use('/invoices', invoicesRoutes);
+  protectedRouter.use('/billing', billingRoutes);
   protectedRouter.use('/quotes', quotesRoutes);
   // DRAFT — re-enable next year
   // protectedRouter.use('/expenses', expensesRoutes);

@@ -70,6 +70,7 @@ import {
   Star,
   CalendarOff,
   UserCheck,
+  BadgeDollarSign,
   type LucideIcon,
 } from "lucide-react";
 import { AUTH_ACCESS_UPDATED_EVENT, AUTH_STORAGE_KEYS } from "@/features/auth/lib/auth-storage";
@@ -307,6 +308,13 @@ const navigationItems: NavigationItem[] = [
     title: "Subscriptions",
     icon: CreditCard,
     path: "/subscriptions",
+    featureId: "finance",
+    permissionModule: "invoices",
+  },
+  {
+    title: "Pricing Plans",
+    icon: BadgeDollarSign,
+    path: "/pricing-plans",
     featureId: "finance",
     permissionModule: "invoices",
   },

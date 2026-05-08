@@ -800,11 +800,11 @@ const ClientDetailPage = () => {
             )}
           </DashCard>
 
-          {/* ── CARD 6: Inspections ── */}
+          {/* ── CARD 6: Meetings ── */}
           <DashCard delay={600}>
             <CardHeader
               icon={<div className="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center"><ClipboardList size={14} className="text-[#F97316]" /></div>}
-              title="Inspections"
+              title="Meetings"
               count={inspections.length}
               actionLabel="+ New"
               action={() => {
@@ -817,9 +817,9 @@ const ClientDetailPage = () => {
             ) : inspections.length === 0 ? (
               <EmptyState
                 icon={<ClipboardList size={20} className="text-[#9CA3AF]" />}
-                title="No inspections yet"
-                subtitle="Add an inspection for this client and keep the history in one place."
-                cta="Add Inspection"
+                title="No meetings yet"
+                subtitle="Add a demo or follow-up meeting and keep the history in one place."
+                cta="Add Meeting"
                 onCta={() => {
                   setEditingInspection(null);
                   setShowInspectionDialog(true);
@@ -835,7 +835,7 @@ const ClientDetailPage = () => {
                       className="min-w-0 flex-1 text-left"
                     >
                       <p className="truncate text-sm font-medium text-[#111827]">
-                        {inspection.inspectionType || "Inspection"}
+                        {inspection.inspectionType || "Meeting"}
                       </p>
                       <p className="mt-0.5 text-[10px] text-[#9CA3AF]">
                         {fmtDate(inspection.inspectionDate || inspection.createdAt)} · {inspection.inspectorName || "Unassigned"}
@@ -846,7 +846,7 @@ const ClientDetailPage = () => {
                         type="button"
                         onClick={() => navigate(`/inspections/${inspection.id}`)}
                         className="rounded-md p-1 text-[#6B7280] hover:bg-[#E0F2FE] hover:text-[#0369A1]"
-                        aria-label="Open inspection"
+                        aria-label="Open meeting"
                       >
                         <FileText size={14} />
                       </button>
@@ -857,7 +857,7 @@ const ClientDetailPage = () => {
                           setShowInspectionDialog(true);
                         }}
                         className="rounded-md p-1 text-[#6B7280] hover:bg-[#E5E7EB]"
-                        aria-label="Edit inspection"
+                        aria-label="Edit meeting"
                       >
                         <Pencil size={14} />
                       </button>
@@ -865,7 +865,7 @@ const ClientDetailPage = () => {
                         type="button"
                         onClick={() => void handleDeleteInspection(inspection.id)}
                         className="rounded-md p-1 text-[#EF4444] hover:bg-[#FEE2E2]"
-                        aria-label="Delete inspection"
+                        aria-label="Delete meeting"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -1059,10 +1059,10 @@ const ClientDetailPage = () => {
             <div className="flex items-start justify-between gap-4 border-b p-5">
               <div>
                 <h3 className="text-lg font-semibold text-[#111827]">
-                  {editingInspection ? "Edit Inspection" : "New Inspection"}
+                  {editingInspection ? "Edit Meeting" : "New Meeting"}
                 </h3>
                 <p className="mt-1 text-sm text-[#6B7280]">
-                  Use the same inspection workflow as the standalone inspections module.
+                  Capture demo notes, attendees, outcomes, and follow-up context for this account.
                 </p>
               </div>
               <Button

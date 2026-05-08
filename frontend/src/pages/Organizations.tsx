@@ -102,6 +102,12 @@ export default function OrganizationsPage() {
   const [viewing, setViewing] = useState<Organization | null>(null);
   const [deals, setDeals] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [meetings, setMeetings] = useState<any[]>([]);
+  const [proposals, setProposals] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [emails, setEmails] = useState<any[]>([]);
   const [linkedLoading, setLinkedLoading] = useState(false);
   const [form, setForm] = useState<OrgForm>(emptyForm);
 
@@ -132,9 +138,21 @@ export default function OrganizationsPage() {
     Promise.all([
       api.get("/projects", { params: { clientId: viewing.id, limit: 100 } }).catch(() => ({ data: { data: [] } })),
       api.get("/contacts", { params: { companyId: viewing.id, limit: 100 } }).catch(() => ({ data: { data: [] } })),
-    ]).then(([dealRes, contactRes]) => {
+      api.get("/leads", { params: { convertedToClientId: viewing.id, limit: 100 } }).catch(() => ({ data: { data: [] } })),
+      api.get("/tasks", { params: { clientId: viewing.id, limit: 100 } }).catch(() => ({ data: { data: [] } })),
+      api.get("/calendar", { params: { limit: 200 } }).catch(() => ({ data: { data: [] } })),
+      api.get("/quotes", { params: { clientId: viewing.id, limit: 100 } }).catch(() => ({ data: { data: [] } })),
+      api.get("/invoices", { params: { clientId: viewing.id, limit: 100 } }).catch(() => ({ data: { data: [] } })),
+      api.get("/emails", { params: { clientId: viewing.id, limit: 50 } }).catch(() => ({ data: { data: [] } })),
+    ]).then(([dealRes, contactRes, leadRes, taskRes, meetingRes, proposalRes, invoiceRes, emailRes]) => {
       setDeals(dealRes.data?.data?.data || dealRes.data?.data || []);
       setContacts(contactRes.data?.data?.data || contactRes.data?.data || []);
+      setLeads(leadRes.data?.data?.data || leadRes.data?.data || []);
+      setTasks(taskRes.data?.data?.data || taskRes.data?.data || []);
+      setMeetings((meetingRes.data?.data?.data || meetingRes.data?.data || []).filter((item: any) => item.clientId === viewing.id));
+      setProposals(proposalRes.data?.data?.data || proposalRes.data?.data || []);
+      setInvoices(invoiceRes.data?.data?.data || invoiceRes.data?.data || []);
+      setEmails(emailRes.data?.data?.data || emailRes.data?.data || []);
     }).finally(() => setLinkedLoading(false));
   }, [viewing]);
 
@@ -399,8 +417,10 @@ export default function OrganizationsPage() {
               <Tabs defaultValue="details" className="p-5">
                 <TabsList className="rounded-md">
                   <TabsTrigger value="details">Details</TabsTrigger>
+                  <TabsTrigger value="leads">Leads {leads.length}</TabsTrigger>
                   <TabsTrigger value="deals">Deals {deals.length}</TabsTrigger>
                   <TabsTrigger value="contacts">Contacts {contacts.length}</TabsTrigger>
+                  <TabsTrigger value="activity">Activity</TabsTrigger>
                 </TabsList>
                 <TabsContent value="details" className="mt-5 grid gap-4 md:grid-cols-2">
                   <div className="md:col-span-2 rounded-md border border-[#B2F5EA] bg-[#F0FDFA] p-4">
@@ -412,6 +432,7 @@ export default function OrganizationsPage() {
                       <div className="flex flex-wrap gap-2 text-xs font-semibold">
                         <span className="rounded-md bg-white px-2.5 py-1 text-[#0F766E]">{contacts.length} Contacts</span>
                         <span className="rounded-md bg-white px-2.5 py-1 text-[#1D4ED8]">{deals.length} Deals</span>
+                        <span className="rounded-md bg-white px-2.5 py-1 text-[#6D28D9]">{tasks.length} Tasks</span>
                         <span className="rounded-md bg-white px-2.5 py-1 text-[#B45309]">{String(viewing.status || "PROSPECT")}</span>
                       </div>
                     </div>
@@ -426,11 +447,24 @@ export default function OrganizationsPage() {
                   <Detail label="Phone" value={viewing.primaryPhone || "-"} />
                   <div className="md:col-span-2"><Detail label="Address" value={String(viewing.organizationAddress || "-")} /></div>
                 </TabsContent>
+                <TabsContent value="leads" className="mt-5">
+                  <LinkedTable loading={linkedLoading} rows={leads} columns={["firstName", "lastName", "status", "leadSource", "updatedAt"]} empty="No linked leads. Create or import a lead for this account." />
+                </TabsContent>
                 <TabsContent value="deals" className="mt-5">
                   <LinkedTable loading={linkedLoading} rows={deals} columns={["name", "status", "contractValue", "updatedAt"]} empty="No linked deals." />
                 </TabsContent>
                 <TabsContent value="contacts" className="mt-5">
                   <LinkedTable loading={linkedLoading} rows={contacts} columns={["contactName", "email", "officePhone", "roleInBuyingProcess"]} empty="No linked contacts." />
+                </TabsContent>
+                <TabsContent value="activity" className="mt-5 space-y-5">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <LinkedTable loading={linkedLoading} rows={tasks} columns={["title", "status", "priority", "dueDate"]} empty="No tasks. Create a follow-up task." />
+                    <LinkedTable loading={linkedLoading} rows={meetings} columns={["title", "eventType", "startTime", "status"]} empty="No meetings. Schedule a demo or follow-up." />
+                    <LinkedTable loading={linkedLoading} rows={proposals} columns={["quoteNumber", "status", "total", "validUntil"]} empty="No proposals. Create one from a qualified deal." />
+                    <LinkedTable loading={linkedLoading} rows={invoices} columns={["invoiceNumber", "status", "total", "amountDue"]} empty="No invoices yet." />
+                    <LinkedTable loading={linkedLoading} rows={emails} columns={["subject", "status", "fromAddress", "createdAt"]} empty="No emails linked." />
+                    <LinkedTable loading={linkedLoading} rows={invoices.flatMap((invoice: any) => invoice.payments || [])} columns={["amount", "paymentMethod", "paymentDate", "reference"]} empty="No payments yet." />
+                  </div>
                 </TabsContent>
               </Tabs>
             </>

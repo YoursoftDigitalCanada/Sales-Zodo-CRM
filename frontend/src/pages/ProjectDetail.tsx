@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   AlertCircle,
@@ -32,8 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getFiles, type FileResponse } from "@/features/files/services/files-service";
-import { RoofingStageRail } from "@/features/projects/components/RoofingStageRail";
-import { getProjectById, type ProjectEntity } from "@/features/projects/services/projects-service";
+import { getProjectById, updateProject, type ProjectEntity } from "@/features/projects/services/projects-service";
 import {
   ROOFING_TASK_SUGGESTIONS,
   buildRoofingFileBuckets,
@@ -64,6 +63,7 @@ import {
 } from "@/features/projects/roofing-operations";
 import { createTask, getTasks, type TaskEntity } from "@/features/tasks/services/tasks-service";
 import { getEmployees } from "@/features/users/services/users-service";
+import { getCalendarEvents, type CalendarEventEntity } from "@/features/calendar/services/calendar-service";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 
@@ -158,6 +158,48 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function RelationLine({ title, meta }: { title: string; meta?: string }) {
+  return (
+    <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-3 py-2">
+      <p className="truncate text-sm font-semibold text-[#0F172A]">{title}</p>
+      {meta ? <p className="mt-0.5 truncate text-xs text-[#64748B]">{meta}</p> : null}
+    </div>
+  );
+}
+
+function RelationshipBox({
+  title,
+  count,
+  empty,
+  cta,
+  onCta,
+  children,
+}: {
+  title: string;
+  count: number;
+  empty: string;
+  cta: string;
+  onCta: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-[#0F172A]">{title}</h3>
+        <Badge className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-2 py-0.5 text-xs text-[#475569]">{count}</Badge>
+      </div>
+      {count > 0 ? <div className="space-y-2">{children}</div> : (
+        <div className="rounded-md border border-dashed border-[#CBD5E1] bg-white px-4 py-5 text-center">
+          <p className="text-sm text-[#64748B]">{empty}</p>
+          <button type="button" onClick={onCta} className="mt-2 text-xs font-semibold text-[#0891B2] hover:text-[#0E7490]">
+            {cta}
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function getLiveProjectInvoice(project: ProjectEntity | null): Record<string, unknown> | null {
   if (!project || !Array.isArray(project.invoices) || project.invoices.length === 0) return null;
   const invoices = project.invoices as Array<Record<string, unknown>>;
@@ -201,6 +243,7 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<ProjectEntity | null>(null);
   const [tasks, setTasks] = useState<TaskEntity[]>([]);
   const [files, setFiles] = useState<FileResponse[]>([]);
+  const [meetings, setMeetings] = useState<CalendarEventEntity[]>([]);
   const [employees, setEmployees] = useState<Record<string, unknown>[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(false);
@@ -260,11 +303,26 @@ export default function ProjectDetailPage() {
     }
   }, [id]);
 
+  const fetchMeetings = useCallback(async () => {
+    if (!id) return;
+    try {
+      const direct = await getCalendarEvents({
+        referenceDoctype: "DealAutomation",
+        referenceDocname: `${id}:demo`,
+        limit: 20,
+      });
+      setMeetings(Array.isArray(direct) ? direct : []);
+    } catch {
+      setMeetings([]);
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchProject();
     fetchTasks();
     fetchFiles();
-  }, [fetchFiles, fetchProject, fetchTasks]);
+    fetchMeetings();
+  }, [fetchFiles, fetchMeetings, fetchProject, fetchTasks]);
 
   useEffect(() => {
     getEmployees()
@@ -288,8 +346,8 @@ export default function ProjectDetailPage() {
       });
 
       toast({
-        title: "Roofing task created",
-        description: `"${newTask.title}" was added to this job.`,
+        title: "Task created",
+        description: `"${newTask.title}" was added to this deal.`,
       });
       setShowAddTask(false);
       setNewTask({
@@ -336,6 +394,23 @@ export default function ProjectDetailPage() {
     return status === "DONE" || status === "COMPLETED";
   }).length;
 
+  const moveDealStage = async (dealStatus: string) => {
+    if (!id) return;
+    try {
+      await updateProject(id, { dealStatus } as any);
+      toast({ title: "Deal updated", description: `Stage moved to ${dealStatus}.` });
+      await fetchProject();
+      await fetchTasks();
+      await fetchMeetings();
+    } catch (error: any) {
+      toast({
+        title: "Stage update failed",
+        description: error?.response?.data?.message || "Could not update this deal.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const groupedFiles = useMemo(() => {
     if (!project) return [];
     return groupFilesByCategory(buildRoofingFileBuckets(project, files as Array<Record<string, unknown>>));
@@ -375,13 +450,13 @@ export default function ProjectDetailPage() {
             <div className="flex h-14 w-14 items-center justify-center rounded-md bg-[#FEE2E2] text-[#B91C1C]">
               <AlertCircle className="h-6 w-6" />
             </div>
-            <h2 className="mt-5 text-xl font-semibold text-[#0F172A]">Roofing job not found</h2>
+            <h2 className="mt-5 text-xl font-semibold text-[#0F172A]">Deal not found</h2>
             <p className="mt-2 text-sm text-[#64748B]">
               The project may have been deleted or the link is no longer valid.
             </p>
             <Button className="mt-5 rounded-md" variant="outline" onClick={() => navigate("/projects")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Operations Board
+              Back to Deals
             </Button>
           </CardContent>
         </Card>
@@ -406,8 +481,7 @@ export default function ProjectDetailPage() {
     : Array.isArray(project.teamMembers)
       ? (project.teamMembers as Array<Record<string, unknown>>)
       : [];
-  const crewSummary = getCrewSummary(project);
-  const hasCrewAssignment = crewSummary !== "No crew assigned";
+  const salesOwnerSummary = members.length > 0 ? members.slice(0, 2).map((member) => getMemberName(member)).join(", ") : "Unassigned";
   const materialCost = Array.isArray(project.projectMaterials)
     ? project.projectMaterials.reduce((sum, item) => sum + toNumber(item.totalCost ?? item.unitCost), 0)
     : 0;
@@ -419,6 +493,11 @@ export default function ProjectDetailPage() {
     : 0;
   const currencyCode = project.currency || "USD";
   const liveInvoice = getLiveProjectInvoice(project);
+  const dealStatus = readText(project.dealStatus) || readText(project.status) || "Qualification";
+  const linkedContacts = Array.isArray(project.contacts) ? project.contacts as Array<Record<string, unknown>> : [];
+  const emails = Array.isArray(project.emails) ? project.emails as Array<Record<string, unknown>> : [];
+  const subscriptions = Array.isArray(project.customerSubscriptions) ? project.customerSubscriptions as Array<Record<string, unknown>> : [];
+  const primaryProposal = project.quote || null;
   const liveInvoiceItems = getInvoiceItems(liveInvoice);
   const liveInvoiceStatus = readText(liveInvoice?.status).toUpperCase() || "DRAFT";
   const liveInvoiceSubtotal = toNumber(liveInvoice?.subtotal);
@@ -427,7 +506,7 @@ export default function ProjectDetailPage() {
   const liveInvoiceAmountPaid = toNumber(liveInvoice?.amountPaid);
   const liveInvoiceAmountDue = toNumber(liveInvoice?.amountDue);
   const liveInvoiceTaxRate = toNumber(liveInvoice?.taxRate ?? project.quote?.taxRate);
-  const isCompletedJob = readText(project.status).toUpperCase() === "COMPLETED" || Boolean(project.isCompleted);
+  const isWonDeal = readText(project.status).toUpperCase() === "COMPLETED" || dealStatus === "Won" || Boolean(project.isCompleted);
   const billingSearchText = buildProjectBillingSearchText(project, liveInvoiceItems);
   const missedBillingAmount = (() => {
     const labor = Array.isArray(project.projectLaborEntries)
@@ -455,7 +534,7 @@ export default function ProjectDetailPage() {
           .reduce((sum, expense) => sum + toNumber(expense.amount ?? expense.totalAmount), 0)
       : 0;
 
-    if (skippedLabor > 0) rows.push({ label: "Labor not marked billable", value: skippedLabor });
+    if (skippedLabor > 0) rows.push({ label: "Service cost not billed", value: skippedLabor });
     if (skippedAddons > 0) rows.push({ label: "Add-ons not included yet", value: skippedAddons });
     return rows;
   })();
@@ -465,10 +544,10 @@ export default function ProjectDetailPage() {
       suggestions.push("Add disposal fee?");
     }
     if (Array.isArray(project.projectInspections) && project.projectInspections.length > 0 && !textHasKeyword(billingSearchText, ["inspection"])) {
-      suggestions.push("Include inspection charge?");
+      suggestions.push("Include discovery call charge?");
     }
     if (permit.label !== "Not Required" && !textHasKeyword(billingSearchText, ["permit"])) {
-      suggestions.push("Bill permit fee?");
+      suggestions.push("Bill setup fee?");
     }
     return suggestions.slice(0, 3);
   })();
@@ -479,7 +558,7 @@ export default function ProjectDetailPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Button variant="outline" className="rounded-md" onClick={() => navigate("/projects")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Operations Board
+            Back to Deals
           </Button>
 
           <Button
@@ -488,7 +567,7 @@ export default function ProjectDetailPage() {
             onClick={() => navigate(`/projects/${id}/edit`)}
           >
             <Pencil className="mr-2 h-4 w-4" />
-            Edit Job
+            Edit Deal
           </Button>
         </div>
 
@@ -497,11 +576,11 @@ export default function ProjectDetailPage() {
             <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
               <div className="max-w-3xl">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className={cn("rounded-md border px-2.5 py-1 text-xs font-medium", stageMeta.border, stageMeta.softBg, stageMeta.accentText)}>
-                    {stageMeta.label}
+                  <Badge className="rounded-md border border-[#B2F5EA] bg-[#F0FDFA] px-2.5 py-1 text-xs font-medium text-[#0F766E]">
+                    Deal
                   </Badge>
                   <Badge className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-2.5 py-1 text-xs font-medium text-[#334155]">
-                    {getProjectJobType(project)}
+                    Deal Stage: {dealStatus}
                   </Badge>
                   <Badge className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white px-2.5 py-1 text-xs font-medium text-[#334155]">
                     Priority: {getProjectPriorityLabel(project)}
@@ -509,7 +588,7 @@ export default function ProjectDetailPage() {
                   {stageKey === "production" ? (
                     <Badge className="rounded-md border border-[#BBF7D0] bg-[#F0FDF4] px-2.5 py-1 text-xs font-medium text-[#166534]">
                       <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                      Production Live
+                      Active Opportunity
                     </Badge>
                   ) : null}
                 </div>
@@ -521,7 +600,23 @@ export default function ProjectDetailPage() {
                 </p>
 
                 <div className="mt-5">
-                  <RoofingStageRail currentStage={stageKey} />
+                  <div className="flex flex-wrap gap-2">
+                    {["Qualification", "Demo Scheduled", "Demo Completed", "Proposal Sent", "Negotiation", "Won", "Lost"].map((stage) => (
+                      <button
+                        key={stage}
+                        type="button"
+                        onClick={() => moveDealStage(stage)}
+                        className={cn(
+                          "rounded-md border px-3 py-1.5 text-xs font-semibold transition",
+                          dealStatus === stage
+                            ? "border-[#0891B2] bg-[#F0FDFA] text-[#0F766E]"
+                            : "border-[rgba(15,23,42,0.08)] bg-white text-[#475569] hover:border-[#0891B2]/40",
+                        )}
+                      >
+                        {stage}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -556,11 +651,65 @@ export default function ProjectDetailPage() {
                 <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
                     <MapPin className="h-3.5 w-3.5" />
-                    Job Site
+                    Account
                   </div>
-                  <p className="mt-2 text-base font-semibold text-[#0F172A]">{getProjectSite(project)}</p>
+                  <p className="mt-2 text-base font-semibold text-[#0F172A]">{getProjectClientName(project)}</p>
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6 rounded-md border-[rgba(15,23,42,0.08)] shadow-sm">
+          <CardHeader className="pb-2">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <CardTitle className="text-lg font-semibold text-[#0F172A]">Deal Relationships</CardTitle>
+                <p className="mt-1 text-sm text-[#64748B]">Account, contacts, tasks, meetings, proposal, invoice, subscription, and timeline for this opportunity.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" className="rounded-md" onClick={() => moveDealStage("Demo Scheduled")}>Schedule Demo</Button>
+                <Button variant="outline" className="rounded-md" onClick={() => moveDealStage("Proposal Sent")}>Send Proposal</Button>
+                <Button className="rounded-md bg-[#0891B2] hover:bg-[#0E7490]" onClick={() => moveDealStage("Won")}>Mark Won</Button>
+                <Button variant="outline" className="rounded-md text-red-600" onClick={() => moveDealStage("Lost")}>Mark Lost</Button>
+                <Button variant="outline" className="rounded-md" onClick={() => setShowAddTask(true)}>Create Task</Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4 rounded-md border border-[#B2F5EA] bg-[#F0FDFA] p-4">
+              <div className="grid gap-3 md:grid-cols-4">
+                <DetailRow label="Deal Value" value={formatCurrency(contractValue || toNumber(project.dealValue || project.expectedDealValue), currencyCode)} />
+                <DetailRow label="Probability" value={`${toNumber(project.probability)}%`} />
+                <DetailRow label="Close Date" value={formatTimelineDate(readText(project.expectedClosureDate || project.closedDate))} />
+                <DetailRow label="Next Action" value={readText(project.nextStep) || getNextAction(project)} />
+              </div>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-3">
+              <RelationshipBox title="Account" count={project.client ? 1 : 0} empty="No account linked" cta="Open Account" onCta={() => project.client?.id && navigate(`/client-list/${project.client.id}`)}>
+                {project.client ? <p className="text-sm font-semibold text-[#0F172A]">{getProjectClientName(project)}</p> : null}
+              </RelationshipBox>
+              <RelationshipBox title="Linked Contacts" count={linkedContacts.length} empty="No contacts linked" cta="Add Contact" onCta={() => navigate("/contacts")}>
+                {linkedContacts.slice(0, 4).map((row) => {
+                  const contact = row.contact as Record<string, unknown> | undefined;
+                  return <RelationLine key={readText(row.id)} title={readText(contact?.contactName) || "Contact"} meta={readText(row.role) || readText(contact?.roleInBuyingProcess) || "Stakeholder"} />;
+                })}
+              </RelationshipBox>
+              <RelationshipBox title="Meetings" count={meetings.length} empty="No meetings scheduled" cta="Schedule Demo" onCta={() => moveDealStage("Demo Scheduled")}>
+                {meetings.slice(0, 4).map((meeting) => <RelationLine key={String(meeting.id)} title={readText(meeting.title) || "Meeting"} meta={formatTimelineDate(readText(meeting.startTime))} />)}
+              </RelationshipBox>
+              <RelationshipBox title="Emails" count={emails.length} empty="No emails linked" cta="Send Email" onCta={() => navigate("/letterbox")}>
+                {emails.slice(0, 4).map((email) => <RelationLine key={readText(email.id)} title={readText(email.subject) || "(No subject)"} meta={readText(email.status) || "Email"} />)}
+              </RelationshipBox>
+              <RelationshipBox title="Proposal" count={primaryProposal ? 1 : 0} empty="No proposal created" cta="Send Proposal" onCta={() => moveDealStage("Proposal Sent")}>
+                {primaryProposal ? <RelationLine title={readText(primaryProposal.quoteNumber) || "Proposal"} meta={formatCurrency(toNumber(primaryProposal.total), currencyCode)} /> : null}
+              </RelationshipBox>
+              <RelationshipBox title="Invoices" count={Array.isArray(project.invoices) ? project.invoices.length : 0} empty="No invoice yet" cta="Open Finance" onCta={() => navigate("/invoice")}>
+                {(Array.isArray(project.invoices) ? project.invoices : []).slice(0, 4).map((invoice: any) => <RelationLine key={readText(invoice.id)} title={readText(invoice.invoiceNumber) || "Invoice"} meta={`${readText(invoice.status) || "Draft"} · ${formatCurrency(toNumber(invoice.total), currencyCode)}`} />)}
+              </RelationshipBox>
+              <RelationshipBox title="Subscriptions" count={subscriptions.length} empty="No subscription yet" cta="Mark Won" onCta={() => moveDealStage("Won")}>
+                {subscriptions.slice(0, 4).map((sub) => <RelationLine key={readText(sub.id)} title={readText(sub.planName) || "Subscription"} meta={`${readText(sub.status) || "Pending"} · Renewal ${formatTimelineDate(readText(sub.renewalDate))}`} />)}
+              </RelationshipBox>
             </div>
           </CardContent>
         </Card>
@@ -583,24 +732,24 @@ export default function ProjectDetailPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold text-[#0F172A]">Financial Visibility</CardTitle>
             <p className="text-sm text-[#64748B]">
-              Keep contract value, actual spend, and profitability visible while the job moves through the board.
+              Keep deal value, expected revenue, and billing visibility connected as the opportunity moves through the pipeline.
             </p>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            <StatCard label="Contract Value" value={formatCurrency(contractValue, currencyCode)} supporting="Booked revenue for this job" />
+            <StatCard label="Deal Value" value={formatCurrency(contractValue, currencyCode)} supporting="Expected or booked revenue" />
             <StatCard
               label="Estimated Cost"
               value={formatCurrency(toNumber(project.estimatedCost), currencyCode)}
-              supporting="Expected production spend"
+              supporting="Expected delivery cost"
             />
-            <StatCard label="Actual Cost" value={formatCurrency(actualCost, currencyCode)} supporting="Materials, labor, and expenses" />
+            <StatCard label="Actual Cost" value={formatCurrency(actualCost, currencyCode)} supporting="Costs attached to this deal" />
             <StatCard label="Gross Profit" value={formatCurrency(grossProfit, currencyCode)} supporting="Revenue minus actual cost" accent={grossProfit >= 0} />
             <StatCard label="Profit Margin" value={`${profitMargin.toFixed(1)}%`} supporting="Margin on contract value" accent={profitMargin >= 20} />
 
             <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 shadow-sm md:col-span-2 xl:col-span-5">
               <div className="grid gap-3 md:grid-cols-3">
-                <DetailRow label="Material Cost" value={formatCurrency(materialCost, currencyCode)} />
-                <DetailRow label="Labor Cost" value={formatCurrency(laborCost, currencyCode)} />
+                <DetailRow label="Implementation Cost" value={formatCurrency(materialCost, currencyCode)} />
+                <DetailRow label="Service Cost" value={formatCurrency(laborCost, currencyCode)} />
                 <DetailRow label="Other Expenses" value={formatCurrency(expenseCost, currencyCode)} />
               </div>
             </div>
@@ -611,7 +760,7 @@ export default function ProjectDetailPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold text-[#0F172A]">Invoice Preview</CardTitle>
             <p className="text-sm text-[#64748B]">
-              This job continuously builds the invoice draft in the background so billing is ready when the roof is done.
+              When a deal is won, billing and subscription records stay visible here.
             </p>
           </CardHeader>
           <CardContent className="grid gap-4 xl:grid-cols-[0.9fr,1.1fr]">
@@ -625,12 +774,12 @@ export default function ProjectDetailPage() {
                         {liveInvoice ? liveInvoiceStatus.replace(/_/g, " ") : "Draft pending"}
                       </Badge>
                       <Badge className="rounded-md border border-[#BBF7D0] bg-[#F0FDF4] px-2.5 py-1 text-xs font-medium text-[#166534]">
-                        {isCompletedJob ? "Ready for review" : "Auto-sync active"}
+                        {isWonDeal ? "Ready for review" : "Auto-sync active"}
                       </Badge>
                     </div>
                   </div>
 
-                  {isCompletedJob && liveInvoice ? (
+                  {isWonDeal && liveInvoice ? (
                     <Button
                       className="rounded-md"
                       onClick={() =>
@@ -649,16 +798,16 @@ export default function ProjectDetailPage() {
                       onClick={() => navigate(`/projects/${id}/edit`)}
                     >
                       <Pencil className="mr-2 h-4 w-4" />
-                      Update Job Costs
+                      Update Deal Costs
                     </Button>
                   )}
                 </div>
 
                 <div className="mt-4 space-y-1">
                   <DetailRow label="Client" value={getProjectClientName(project)} />
-                  <DetailRow label="Job Site" value={getProjectSite(project)} />
+                  <DetailRow label="Account" value={getProjectClientName(project)} />
                   <DetailRow label="Linked Quote" value={readText(project.quote?.quoteNumber) || "No estimate linked"} />
-                  <DetailRow label="Sync Mode" value={isCompletedJob ? "Locked on completion" : "Live with every job update"} />
+                  <DetailRow label="Sync Mode" value={isWonDeal ? "Locked after win" : "Live with every deal update"} />
                 </div>
               </div>
 
@@ -671,7 +820,7 @@ export default function ProjectDetailPage() {
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-[#0F172A]">You forgot to bill {formatCurrency(missedBillingAmount, currencyCode)}</p>
                       <p className="mt-1 text-sm text-[#64748B]">
-                        Some labor or add-ons are still outside the live invoice draft.
+                        Some service costs or add-ons are still outside the live invoice draft.
                       </p>
                       <div className="mt-3 space-y-2">
                         {missedBillingRows.map((row) => (
@@ -691,7 +840,7 @@ export default function ProjectDetailPage() {
                 <div className="rounded-md border border-[#BBF7D0] bg-[#F0FDF4] p-4 shadow-sm">
                   <p className="text-sm font-semibold text-[#0F172A]">Billing coverage looks clean</p>
                   <p className="mt-1 text-sm text-[#64748B]">
-                    Materials, billable labor, and selected add-ons are flowing into the invoice draft automatically.
+                    Billable services and selected add-ons are flowing into the invoice draft automatically.
                   </p>
                 </div>
               )}
@@ -723,7 +872,7 @@ export default function ProjectDetailPage() {
                   <FileText className="mx-auto h-8 w-8 text-[#94A3B8]" />
                   <h3 className="mt-4 text-lg font-semibold text-[#0F172A]">Invoice draft is being prepared</h3>
                   <p className="mt-2 text-sm text-[#64748B]">
-                    Link this job to a client estimate and the invoice preview will appear here automatically.
+                    Link this deal to a proposal and the invoice preview will appear here automatically.
                   </p>
                 </div>
               ) : (
@@ -732,7 +881,7 @@ export default function ProjectDetailPage() {
                     <div>
                       <p className="text-sm font-semibold text-[#0F172A]">{readText(liveInvoice.invoiceNumber) || "Draft invoice"}</p>
                       <p className="mt-1 text-xs text-[#64748B]">
-                        {isCompletedJob ? "Final values are locked and ready for client review." : "Updates as materials, labor, and add-ons change."}
+                        {isWonDeal ? "Final values are locked and ready for customer review." : "Updates as deal services and add-ons change."}
                       </p>
                     </div>
                     <Badge className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-2.5 py-1 text-xs font-medium text-[#334155]">
@@ -785,9 +934,9 @@ export default function ProjectDetailPage() {
         <div ref={tasksRef}>
         <Card className="mt-6 rounded-md border-[rgba(15,23,42,0.08)] shadow-sm hover:shadow-lg transition-all">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold text-[#0F172A]">Production</CardTitle>
+            <CardTitle className="text-lg font-semibold text-[#0F172A]">Sales Execution</CardTitle>
             <p className="text-sm text-[#64748B]">
-              Crew readiness, permit and insurance checkpoints, and field execution details for this roofing job.
+              Ownership, demo readiness, proposal checkpoints, and next steps for this deal.
             </p>
           </CardHeader>
           <CardContent className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
@@ -795,73 +944,69 @@ export default function ProjectDetailPage() {
               <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 shadow-sm">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
                   <Users className="h-3.5 w-3.5" />
-                  Crew Assigned
+                  Sales Owner
                 </div>
-                <p className="mt-2 text-lg font-semibold text-[#0F172A]">{crewSummary}</p>
-                <p className="mt-1 text-xs text-[#64748B]">
-                  {hasCrewAssignment
-                    ? "Crew assignment captured for this job"
-                    : "Assign a crew when production is ready"}
-                </p>
+                <p className="mt-2 text-lg font-semibold text-[#0F172A]">{salesOwnerSummary}</p>
+                <p className="mt-1 text-xs text-[#64748B]">Keep one clear owner accountable for the next action.</p>
               </div>
 
               <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 shadow-sm">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
                   <HardHat className="h-3.5 w-3.5" />
-                  Work Status
+                  Deal Status
                 </div>
                 <p className="mt-2 text-lg font-semibold text-[#0F172A]">{workStatus}</p>
                 <p className="mt-1 text-xs text-[#64748B]">
-                  {stageKey === "production" ? "This job is currently in field operations." : "Move the job to Production when crews are scheduled."}
+                  {readText(project.nextStep) || "Update the next action before the next customer touch."}
                 </p>
               </div>
 
               <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
                   <ShieldEllipsis className="h-3.5 w-3.5" />
-                  Permit
+                  Proposal
                 </div>
-                <div className={cn("mt-3 inline-flex rounded-md border px-2.5 py-1 text-xs font-medium", getIndicatorToneClasses(permit.tone))}>
-                  {permit.label}
+                <div className="mt-3 inline-flex rounded-md border border-[#B2F5EA] bg-[#F0FDFA] px-2.5 py-1 text-xs font-medium text-[#0F766E]">
+                  {readText(project.quote?.status) || "Not created"}
                 </div>
                 <div className="mt-4 space-y-2 text-sm text-[#475569]">
-                  <DetailRow label="Permit Number" value={readText(project.permitNumber) || "Not captured"} />
-                  <DetailRow label="Submitted" value={formatTimelineDate(project.permitPulledDate)} />
-                  <DetailRow label="Approved" value={formatTimelineDate(project.permitApprovedDate)} />
+                  <DetailRow label="Proposal" value={readText(project.quote?.quoteNumber) || "Not created"} />
+                  <DetailRow label="Sent" value={formatTimelineDate(readText((project.quote as any)?.sentAt))} />
+                  <DetailRow label="Status" value={readText(project.quote?.status) || "Not captured"} />
                 </div>
               </div>
 
               <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
                   <ShieldCheck className="h-3.5 w-3.5" />
-                  Insurance
+                  Success Readiness
                 </div>
                 <div className={cn("mt-3 inline-flex rounded-md border px-2.5 py-1 text-xs font-medium", getIndicatorToneClasses(insurance.tone))}>
-                  {insurance.label}
+                  {subscriptions.length ? "Subscription prepared" : "Waiting for win"}
                 </div>
                 <div className="mt-4 space-y-2 text-sm text-[#475569]">
-                  <DetailRow label="Carrier" value={readText(project.insuranceCompany) || "Not needed"} />
-                  <DetailRow label="Claim #" value={readText(project.claimNumber) || "Not captured"} />
-                  <DetailRow label="Policy #" value={readText(project.policyNumber) || "Not captured"} />
+                  <DetailRow label="Subscription" value={subscriptions[0] ? readText(subscriptions[0].planName) || "Roofer CRM" : "Not created"} />
+                  <DetailRow label="Invoice" value={liveInvoice ? readText(liveInvoice.invoiceNumber) || "Draft" : "Not created"} />
+                  <DetailRow label="Status" value={subscriptions[0] ? readText(subscriptions[0].status) : "Not active"} />
                 </div>
               </div>
             </div>
 
             <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-[#0F172A]">Field Snapshot</h3>
+              <h3 className="text-sm font-semibold text-[#0F172A]">Deal Snapshot</h3>
               <div className="mt-4 space-y-1">
                 <DetailRow label="Start Date" value={formatTimelineDate(startDate)} />
-                <DetailRow label="Target Finish" value={formatTimelineDate(dueDate)} />
-                <DetailRow label="Job Site" value={getProjectSite(project)} />
-                <DetailRow label="Roof Type" value={readText(project.roofType) || "Not captured"} />
-                <DetailRow label="Manufacturer" value={readText(project.shingleManufacturer) || "Not captured"} />
-                <DetailRow label="Color" value={readText(project.shingleColor) || "Not captured"} />
+                <DetailRow label="Close Date" value={formatTimelineDate(dueDate)} />
+                <DetailRow label="Account" value={getProjectClientName(project)} />
+                <DetailRow label="Stage" value={dealStatus} />
+                <DetailRow label="Probability" value={`${toNumber(project.probability)}%`} />
+                <DetailRow label="Value" value={formatCurrency(contractValue, currencyCode)} />
               </div>
 
               <div className="mt-5 rounded-md border border-[#E0F2FE] bg-[#F0F9FF] p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0E7490]">Overview</p>
                 <p className="mt-2 text-sm text-[#0F172A]">
-                  {stageMeta.description}. Current next step: <span className="font-semibold">{getNextAction(project)}</span>.
+                  Current next step: <span className="font-semibold">{readText(project.nextStep) || getNextAction(project)}</span>.
                 </p>
               </div>
 
@@ -889,12 +1034,12 @@ export default function ProjectDetailPage() {
               <div>
                 <CardTitle className="text-lg font-semibold text-[#0F172A]">Tasks</CardTitle>
                 <p className="mt-1 text-sm text-[#64748B]">
-                  Roofing-specific work items for inspection, permit coordination, installation, and closeout.
+                  Sales work items for follow-up, demos, proposals, onboarding, and renewals.
                 </p>
               </div>
               <Button className="rounded-md bg-[#0E7490] hover:bg-[#155E75]" onClick={() => setShowAddTask(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                Add Roofing Task
+                Add Task
               </Button>
             </div>
           </CardHeader>
@@ -918,21 +1063,21 @@ export default function ProjectDetailPage() {
               <StatCard
                 label="Completion"
                 value={`${displayTasks.length ? Math.round((doneTasks / displayTasks.length) * 100) : 0}%`}
-                supporting="Task completion across this job"
+                supporting="Task completion across this deal"
               />
             </div>
 
             {loadingTasks ? (
               <div className="flex items-center justify-center py-12 text-sm text-[#64748B]">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin text-[#0E7490]" />
-                Loading roofing tasks...
+                Loading tasks...
               </div>
             ) : displayTasks.length === 0 ? (
               <div className="rounded-md border border-dashed border-[#D7E3EA] bg-[#F8FAFC] px-6 py-14 text-center">
                 <CheckSquare className="mx-auto h-8 w-8 text-[#94A3B8]" />
-                <h3 className="mt-4 text-lg font-semibold text-[#0F172A]">No tasks on this job yet</h3>
+                <h3 className="mt-4 text-lg font-semibold text-[#0F172A]">No tasks on this deal yet</h3>
                 <p className="mt-2 text-sm text-[#64748B]">
-                  Start with inspection, permit submission, or material ordering so the crew has a clear next step.
+                  Start with a follow-up, demo preparation, proposal reminder, or onboarding task.
                 </p>
               </div>
             ) : (
@@ -983,14 +1128,14 @@ export default function ProjectDetailPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold text-[#0F172A]">Files</CardTitle>
             <p className="text-sm text-[#64748B]">
-              Documents are grouped the way a roofing team expects: inspection, contract, permit, insurance, and operations.
+              Documents connected to this deal, including proposals, contracts, onboarding files, and billing records.
             </p>
           </CardHeader>
           <CardContent>
             {loadingFiles ? (
               <div className="flex items-center justify-center py-12 text-sm text-[#64748B]">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin text-[#0E7490]" />
-                Loading job files...
+                Loading deal files...
               </div>
             ) : (
               <div className="grid gap-4 xl:grid-cols-2">
@@ -1053,7 +1198,7 @@ export default function ProjectDetailPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold text-[#0F172A]">Activity Timeline</CardTitle>
             <p className="text-sm text-[#64748B]">
-              A running history of updates, task changes, and activity around this roofing job.
+              A running history of updates, task changes, and activity around this deal.
             </p>
           </CardHeader>
           <CardContent>
@@ -1097,9 +1242,9 @@ export default function ProjectDetailPage() {
       <Dialog open={showAddTask} onOpenChange={setShowAddTask}>
         <DialogContent className="rounded-md sm:max-w-[560px]">
           <DialogHeader>
-            <DialogTitle>Add Roofing Task</DialogTitle>
+            <DialogTitle>Add Task</DialogTitle>
             <DialogDescription>
-              Use roofing-friendly task names so the field team knows exactly what comes next on this job.
+              Create a clear sales task so the owner knows the next step.
             </DialogDescription>
           </DialogHeader>
 
@@ -1121,7 +1266,7 @@ export default function ProjectDetailPage() {
               <Label htmlFor="task-title">Task Name</Label>
               <Input
                 id="task-title"
-                placeholder="Inspection"
+                placeholder="Follow up with decision maker"
                 value={newTask.title}
                 onChange={(event) => setNewTask((current) => ({ ...current, title: event.target.value }))}
                 className="rounded-md"
@@ -1132,7 +1277,7 @@ export default function ProjectDetailPage() {
               <Label htmlFor="task-description">Description</Label>
               <Textarea
                 id="task-description"
-                placeholder="Add notes for the crew, permit runner, or office team..."
+                placeholder="Add notes for the sales rep, account owner, or success team..."
                 value={newTask.description}
                 onChange={(event) => setNewTask((current) => ({ ...current, description: event.target.value }))}
                 className="rounded-md"

@@ -41,6 +41,22 @@ const projectDetailInclude = {
   },
   lead: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
   stage: true,
+  contacts: {
+    include: {
+      contact: {
+        select: {
+          id: true,
+          contactName: true,
+          email: true,
+          officePhone: true,
+          mobilePhone: true,
+          jobTitle: true,
+          roleInBuyingProcess: true,
+        },
+      },
+    },
+    orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
+  },
   projectTasks: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }], take: 200 },
   projectMaterials: { orderBy: { createdAt: 'desc' }, take: 200 },
   projectLaborEntries: { orderBy: { date: 'desc' }, take: 500 },
@@ -79,6 +95,8 @@ const projectDetailInclude = {
     orderBy: { createdAt: 'desc' },
   },
   payments: { orderBy: { paymentDate: 'desc' } },
+  emails: { orderBy: { createdAt: 'desc' }, take: 50 },
+  customerSubscriptions: { orderBy: { createdAt: 'desc' }, take: 10 },
   _count: {
     select: {
       projectTasks: true,

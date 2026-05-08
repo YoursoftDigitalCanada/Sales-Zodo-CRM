@@ -772,6 +772,22 @@ const LeadDetailPage = () => {
         navigate(result.dealId ? `/projects/${result.dealId}` : `/client-list/${result.clientId}`);
     };
 
+    const handleQualifyLead = async () => {
+        if (!id || !lead) return;
+        try {
+            const updatedLead = await updateLead(id, { status: "QUALIFIED" } as any);
+            applyLeadState(updatedLead as LeadData);
+            await fetchProjects();
+            toast({ title: "Lead qualified", description: "A qualification deal and schedule-demo task will be prepared automatically." });
+        } catch (error: any) {
+            toast({
+                title: "Could not qualify lead",
+                description: error?.response?.data?.message || "Please try again.",
+                variant: "destructive",
+            });
+        }
+    };
+
     // ── Loading / Error ───────────────────────────────────────────────────
 
     if (isLoading) {
@@ -851,6 +867,9 @@ const LeadDetailPage = () => {
                         </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                        {lead.status !== "QUALIFIED" && lead.status !== "WON" && lead.status !== "LOST" && <Button size="sm" onClick={handleQualifyLead} className="hidden md:inline-flex bg-[#0891B2] text-white hover:bg-[#0E7490] gap-1.5 text-xs"><TrendingUp size={14} />Qualify Lead</Button>}
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/tasks?leadId=${lead.id}`)} className="hidden lg:inline-flex gap-1.5 text-xs"><CheckSquare size={14} />Create Task</Button>
+                        <Button variant="outline" size="sm" onClick={() => lead.convertedToDealId ? navigate(`/projects/${lead.convertedToDealId}`) : handleQualifyLead()} className="hidden lg:inline-flex gap-1.5 text-xs"><Calendar size={14} />Schedule Demo</Button>
                         {lead.phone && <a href={`tel:${lead.phone}`} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] transition-all"><Phone size={14} className="text-[#14B8A6]" />Call</a>}
                         {lead.email && <button type="button" onClick={() => setShowComposeEmail(true)} className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#374151] hover:bg-[#F9FAFB] transition-all"><Mail size={14} className="text-[#14B8A6]" />Email</button>}
                         <WhatsAppActionButton

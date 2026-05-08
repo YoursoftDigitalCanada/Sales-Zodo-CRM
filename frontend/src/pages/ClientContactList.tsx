@@ -39,6 +39,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { NotificationBell } from "@/components/NotificationBell";
+import { ActivityTimeline } from "@/components/ActivityTimeline";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -179,6 +180,26 @@ interface ColumnConfig {
 interface User {
   firstName: string;
   lastName: string;
+}
+
+function ContactDetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3 border-b border-[rgba(15,23,42,0.06)] py-2 last:border-b-0">
+      <span className="text-[#64748B]">{label}</span>
+      <span className="text-right font-medium text-[#0F172A]">{value}</span>
+    </div>
+  );
+}
+
+function LinkedContactBox({ label, value, action }: { label: string; value: string; action?: () => void }) {
+  const content = (
+    <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-3 text-left">
+      <p className="text-[11px] font-semibold uppercase text-[#64748B]">{label}</p>
+      <p className="mt-1 line-clamp-2 text-sm font-semibold text-[#0F172A]">{value}</p>
+      {action ? <p className="mt-2 text-xs font-semibold text-[#0891B2]">Open</p> : null}
+    </div>
+  );
+  return action ? <button type="button" onClick={action}>{content}</button> : content;
 }
 
 // ============================================
@@ -1598,6 +1619,7 @@ const ClientContactListPage = () => {
   // Dialogs
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [viewingContact, setViewingContact] = useState<Contact | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -1983,16 +2005,7 @@ const ClientContactListPage = () => {
   };
 
   const openContactClientDetail = (contact: Contact) => {
-    if (!contact.clientId) {
-      toast({
-        title: "Client not linked",
-        description: "This contact is not linked to a client record yet.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    navigate(`/client-list/${contact.clientId}`);
+    setViewingContact(contact);
   };
 
   const openAddDialog = () => {
@@ -2754,6 +2767,68 @@ const ClientContactListPage = () => {
           </>
         ) : null}
       </main>
+
+      <Dialog open={Boolean(viewingContact)} onOpenChange={() => setViewingContact(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md sm:max-w-[920px]">
+          {viewingContact ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-[#0F172A]">{viewingContact.contactPerson || "Contact"}</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 md:grid-cols-[0.9fr,1.1fr]">
+                <section className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4">
+                  <h3 className="text-sm font-semibold text-[#0F172A]">Contact Profile</h3>
+                  <div className="mt-3 space-y-2 text-sm">
+                    <ContactDetailRow label="Email" value={viewingContact.contactEmail || "-"} />
+                    <ContactDetailRow label="Phone" value={viewingContact.contactNo || viewingContact.mobile || "-"} />
+                    <ContactDetailRow label="Job Title" value={viewingContact.designation || "-"} />
+                    <ContactDetailRow label="Department" value={viewingContact.department || "-"} />
+                    <ContactDetailRow label="Preferred Method" value={viewingContact.preferredContactMethod || "-"} />
+                    <ContactDetailRow label="Time Zone" value={viewingContact.timeZone || "-"} />
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {["Decision Maker", "Influencer", "User", "Gatekeeper"].map((role) => (
+                      <span
+                        key={role}
+                        className={cn(
+                          "rounded-md border px-2.5 py-1 text-xs font-semibold",
+                          viewingContact.roleInBuyingProcess === role
+                            ? "border-[#0891B2] bg-[#F0FDFA] text-[#0F766E]"
+                            : "border-[rgba(15,23,42,0.06)] bg-white text-[#64748B]",
+                        )}
+                      >
+                        {role}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" onClick={() => handleSendEmail(viewingContact)}><Mail className="mr-1.5 h-4 w-4" />Send Email</Button>
+                    <Button size="sm" variant="outline" onClick={() => handleCall(viewingContact)}><Phone className="mr-1.5 h-4 w-4" />Call</Button>
+                    <Button size="sm" onClick={() => openEditDialog(viewingContact)} className="bg-[#0891B2] hover:bg-[#0E7490]"><Pencil className="mr-1.5 h-4 w-4" />Edit</Button>
+                  </div>
+                </section>
+                <section className="space-y-4">
+                  <div className="rounded-md border border-[#B2F5EA] bg-[#F0FDFA] p-4">
+                    <h3 className="text-sm font-semibold text-[#0F172A]">Linked Records</h3>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <LinkedContactBox label="Organization" value={viewingContact.clientName || "Not linked"} action={viewingContact.clientId ? () => navigate(`/client-list/${viewingContact.clientId}`) : undefined} />
+                      <LinkedContactBox label="Primary Deal" value={viewingContact.dealName || "Not linked"} action={viewingContact.dealId ? () => navigate(`/projects/${viewingContact.dealId}`) : undefined} />
+                      <LinkedContactBox label="Tasks" value="Open Tasks" action={() => navigate(`/tasks?contactId=${viewingContact.id}`)} />
+                      <LinkedContactBox label="Meetings" value="Calendar" action={() => navigate("/calendar")} />
+                      <LinkedContactBox label="Emails" value={viewingContact.contactEmail || "Mailbox"} action={() => navigate("/letterbox")} />
+                      <LinkedContactBox label="Notes" value={viewingContact.notes || "No notes yet"} />
+                    </div>
+                  </div>
+                  <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4">
+                    <h3 className="mb-3 text-sm font-semibold text-[#0F172A]">Activity Timeline</h3>
+                    <ActivityTimeline entityType="Contact" entityId={viewingContact.id} />
+                  </div>
+                </section>
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       {/* ============================================ */}
       {/* ADD/EDIT CONTACT DIALOG */}

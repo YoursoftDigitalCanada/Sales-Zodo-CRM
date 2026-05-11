@@ -59,6 +59,7 @@ import { cn } from "@/lib/utils";
 const DEAL_STATUSES = [
   { name: "Qualification", type: "Open", probability: 25, color: "#2563EB" },
   { name: "Demo Scheduled", type: "Open", probability: 40, color: "#7C3AED" },
+  { name: "Demo Completed", type: "Open", probability: 45, color: "#0D9488" },
   { name: "Proposal Sent", type: "Open", probability: 50, color: "#4F46E5" },
   { name: "Negotiation", type: "Open", probability: 60, color: "#D97706" },
   { name: "Won", type: "Won", probability: 100, color: "#059669" },
@@ -181,7 +182,6 @@ const dateLabel = (value?: string | null) => {
 
 const normalizeStage = (stage?: string | null) => {
   const value = String(stage || "Qualification").trim();
-  if (value === "Demo Completed") return "Demo Scheduled";
   return DEAL_STATUSES.some((item) => item.name === value) ? value : "Qualification";
 };
 

@@ -27,11 +27,12 @@ const NOT_FOUND_MESSAGES = new Set([
   'QUOTE_NOT_FOUND',
 ]);
 
-const DEAL_STAGES = ['Qualification', 'Demo Scheduled', 'Proposal Sent', 'Negotiation', 'Won', 'Lost'] as const;
+const DEAL_STAGES = ['Qualification', 'Demo Scheduled', 'Demo Completed', 'Proposal Sent', 'Negotiation', 'Won', 'Lost'] as const;
 
 const DEAL_STAGE_PROBABILITY: Record<string, number> = {
   Qualification: 25,
   'Demo Scheduled': 40,
+  'Demo Completed': 45,
   'Proposal Sent': 50,
   Negotiation: 60,
   Won: 100,
@@ -115,6 +116,7 @@ export class ProjectsService {
     });
 
     return this.guarded(async () => {
+      await this.attachDealContactFromPayload(tenantId, dto);
       this.validateDealInput(dto);
       const deal = await projectsRepository.create(tenantId, dto, createdById);
       await this.ensureDealContactLink(tenantId, deal.id, (deal as any).contactId, createdById);
@@ -131,6 +133,10 @@ export class ProjectsService {
         throw new NotFoundError('Project not found', ErrorCodes.RESOURCE_NOT_FOUND);
       }
       await this.syncProjectRevenueState(projectId, tenantId);
+      const detail = await this.getProjectDetailOrThrow(projectId, tenantId);
+      if (this.canonicalDealStage((detail as any).dealStatus) === 'Won') {
+        await this.ensureDealWonAutomation(tenantId, detail as any, userId);
+      }
       return this.getProjectDetailOrThrow(projectId, tenantId);
     });
   }
@@ -217,6 +223,7 @@ export class ProjectsService {
       if (dto.dealStatus) {
         dto.dealStatus = this.canonicalDealStage(dto.dealStatus);
       }
+      await this.attachDealContactFromPayload(tenantId, dto, current as any);
       this.validateDealInput(dto, current as any);
 
       const project = await projectsRepository.update(id, tenantId, dto);
@@ -304,7 +311,8 @@ export class ProjectsService {
       qualified: 'Qualification',
       'demo scheduled': 'Demo Scheduled',
       'demo booked': 'Demo Scheduled',
-      'demo completed': 'Demo Scheduled',
+      'demo completed': 'Demo Completed',
+      'demo done': 'Demo Completed',
       'proposal sent': 'Proposal Sent',
       proposal: 'Proposal Sent',
       negotiation: 'Negotiation',
@@ -326,6 +334,12 @@ export class ProjectsService {
 
     if (!nextClientId && data.dealStatus) {
       throw new BadRequestError('A deal must belong to an Account', ErrorCodes.VALIDATION_FAILED);
+    }
+
+    const nextContactId = data.contactId !== undefined ? data.contactId : current?.contactId;
+    const hasKnownDealContacts = Array.isArray(current?.contacts) && current.contacts.length > 0;
+    if (!nextContactId && !hasKnownDealContacts) {
+      throw new BadRequestError('A deal must have at least one Contact', ErrorCodes.VALIDATION_FAILED);
     }
 
     if (targetStage === 'Won' && nextValue <= 0) {
@@ -382,6 +396,54 @@ export class ProjectsService {
     return link;
   }
 
+  private async attachDealContactFromPayload(tenantId: string, data: Record<string, any>, current?: Record<string, any>) {
+    if (data.contactId || current?.contactId) return;
+    const clientId = data.clientId || current?.clientId;
+    if (!clientId) return;
+
+    const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ').trim() || data.leadName || data.contactName;
+    const email = String(data.email || '').trim();
+    const phone = String(data.phone || data.mobileNo || '').trim();
+    if (!fullName && !email && !phone) return;
+    if (!email) {
+      throw new BadRequestError('A new deal Contact requires an email address, or select an existing Contact', ErrorCodes.VALIDATION_FAILED);
+    }
+
+    const existing = await prisma.contact.findFirst({
+      where: {
+        tenantId,
+        OR: [
+          { email },
+          ...(phone ? [{ mobilePhone: phone }, { officePhone: phone }] : []),
+        ],
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const contact = existing || await prisma.contact.create({
+      data: {
+        tenantId,
+        companyId: clientId,
+        type: 'LEAD',
+        contactName: fullName || email,
+        firstName: data.firstName || null,
+        lastName: data.lastName || null,
+        email,
+        officePhone: data.phone || null,
+        mobilePhone: data.mobileNo || data.phone || null,
+        jobTitle: data.jobTitle || null,
+        relationshipStatus: 'Active',
+        assignedToId: data.dealOwnerId || data.salesRepId || data.projectManagerId || null,
+        isPrimaryContact: true,
+      },
+    });
+
+    if (!contact.companyId) {
+      await prisma.contact.update({ where: { id_tenantId: { id: contact.id, tenantId } }, data: { companyId: clientId } });
+    }
+    data.contactId = contact.id;
+  }
+
   private addDays(date: Date, days: number): Date {
     const next = new Date(date);
     next.setDate(next.getDate() + days);
@@ -403,6 +465,39 @@ export class ProjectsService {
 
   private getDealValue(project: any): number {
     return toNumber(project.dealValue || project.expectedDealValue || project.contractValue || project.budget || project.total || 0);
+  }
+
+  private async calculateWonDealBilling(tenantId: string, project: any, fallbackTotal: number) {
+    const custom = ((project.customFields as any) || {}) as Record<string, any>;
+    const requestedPlanName = custom.pricingPlanName || custom.planName || project.planName || 'Professional';
+    const plan = await prisma.pricingPlan.findFirst({
+      where: {
+        tenantId,
+        isActive: true,
+        OR: [
+          { id: custom.pricingPlanId || '' },
+          { planName: String(requestedPlanName) },
+        ],
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    const billingCycle = String(custom.billingCycle || project.billingCycle || 'MONTHLY').toUpperCase().startsWith('ANNUAL')
+      ? 'ANNUAL'
+      : 'MONTHLY';
+    const setupFee = toNumber(custom.setupFee ?? plan?.setupFee ?? 0);
+    const monthlyPrice = toNumber(custom.monthlyPrice ?? plan?.monthlyPrice ?? (billingCycle === 'MONTHLY' ? fallbackTotal : 0));
+    const annualPrice = toNumber(custom.annualPrice ?? plan?.annualPrice ?? (billingCycle === 'ANNUAL' ? fallbackTotal : monthlyPrice * 12));
+    const mrr = billingCycle === 'ANNUAL' ? annualPrice / 12 : monthlyPrice;
+    const arr = billingCycle === 'ANNUAL' ? annualPrice : mrr * 12;
+
+    return {
+      planName: plan?.planName || String(requestedPlanName || 'Professional'),
+      billingCycle,
+      setupFee,
+      seats: Number.parseInt(String(custom.seats || plan?.seatLimit || 1), 10) || 1,
+      mrr: Math.max(0, Math.round(mrr * 100) / 100),
+      arr: Math.max(0, Math.round(arr * 100) / 100),
+    };
   }
 
   private getDealContactEmail(project: any): string {
@@ -580,7 +675,7 @@ export class ProjectsService {
         fromName: 'Zodo Sales',
         toAddresses: [{ email: recipient, name: project.leadName || project.organizationName || project.name }],
         subject: `Demo confirmation: ${project.organizationName || project.name}`,
-        bodyText: `Hi,\n\nYour Roofer CRM demo is scheduled for ${new Date(meeting.startTime).toLocaleString()}.\n\nWe look forward to showing how Roofer CRM can help your roofing company manage leads, jobs, proposals, and follow-ups.\n\nThanks,\nZodo Sales`,
+        bodyText: `Hi,\n\nYour Roofer CRM demo is scheduled for ${new Date(meeting.startTime).toLocaleString()}.\n\nWe look forward to showing how Roofer CRM can help your roofing company manage leads, accounts, proposals, and follow-ups.\n\nThanks,\nZodo Sales`,
         status: 'DRAFT',
         folder: 'DRAFTS',
         isRead: true,
@@ -736,38 +831,46 @@ export class ProjectsService {
       });
     }
 
-    if (project.leadId) {
-      const existingProposal = await prisma.proposal.findFirst({
-        where: { tenantId, leadId: project.leadId, quoteId: quote.id },
+    const existingProposal = await prisma.proposal.findFirst({
+      where: {
+        tenantId,
+        quoteId: quote.id,
+        OR: [
+          ...(project.leadId ? [{ leadId: project.leadId }] : []),
+          { customMessageToClient: { contains: `Deal:${project.id}` } },
+        ],
+      },
+    });
+
+    if (!existingProposal) {
+      const proposal = await prisma.proposal.create({
+        data: {
+          tenantId,
+          proposalNumber: await this.generateProposalNumber(tenantId),
+          status: 'SENT',
+          leadId: project.leadId || null,
+          quoteId: quote.id,
+          clientId: project.clientId || null,
+          contactId: project.contactId || null,
+          projectId: project.id,
+          customMessageToClient: `Deal:${project.id}\nProposal for ${project.organizationName || project.client?.clientName || project.name}`,
+          scopeOfWork: 'Roofer CRM subscription, setup, team onboarding, and sales support.',
+          termsAndConditions: 'Pricing and terms are valid for 30 days.',
+          createdById: project.createdById || null,
+          sentAt: new Date(),
+        },
       });
 
-      if (!existingProposal) {
-        const proposal = await prisma.proposal.create({
-          data: {
-            tenantId,
-            proposalNumber: await this.generateProposalNumber(tenantId),
-            status: 'SENT',
-            leadId: project.leadId,
-            quoteId: quote.id,
-            customMessageToClient: `Proposal for ${project.organizationName || project.name}`,
-            scopeOfWork: 'Roofer CRM subscription, setup, team onboarding, and sales support.',
-            termsAndConditions: 'Pricing and terms are valid for 30 days.',
-            createdById: project.createdById || null,
-            sentAt: new Date(),
-          },
-        });
-
-        activityLogger.log({
-          tenantId,
-          entityType: 'Proposal',
-          entityId: proposal.id,
-          action: 'CREATE',
-          module: 'deal-automation',
-          description: `Proposal created for deal "${project.name}"`,
-          userId: actorUserId,
-          metadata: { dealId: project.id, quoteId: quote.id, leadId: project.leadId },
-        });
-      }
+      activityLogger.log({
+        tenantId,
+        entityType: 'Proposal',
+        entityId: proposal.id,
+        action: 'CREATE',
+        module: 'deal-automation',
+        description: `Proposal created for deal "${project.name}"`,
+        userId: actorUserId,
+        metadata: { dealId: project.id, quoteId: quote.id, leadId: project.leadId, clientId: project.clientId, contactId: project.contactId },
+      });
     }
 
     await this.ensureTask(tenantId, project, {
@@ -798,12 +901,12 @@ export class ProjectsService {
 
     const total = this.getDealValue(project);
     const dueDate = this.addDays(new Date(), 14);
-    const renewalDate = this.addDays(new Date(), 365);
-    const mrr = total > 0 ? total : 0;
-    const arr = mrr * 12;
+    const billing = await this.calculateWonDealBilling(tenantId, project, total);
+    const renewalDate = this.addDays(new Date(), billing.billingCycle === 'ANNUAL' ? 365 : 30);
+    const { mrr, arr } = billing;
 
     await prisma.client.update({
-      where: { id: project.clientId },
+      where: { id_tenantId: { id: project.clientId, tenantId } },
       data: {
         status: 'ACTIVE',
         lifecycleStage: 'ONBOARDING',
@@ -817,7 +920,7 @@ export class ProjectsService {
 
     if (project.leadId) {
       await prisma.lead.update({
-        where: { id: project.leadId },
+        where: { id_tenantId: { id: project.leadId, tenantId } },
         data: {
           status: 'WON',
           converted: true,
@@ -890,14 +993,14 @@ export class ProjectsService {
         invoiceId: invoice.id,
         contactId: project.contactId || null,
         quoteId: project.quoteId || null,
-        status: 'PENDING_PAYMENT',
-        mrr,
-        arr,
-        seats: 1,
-        setupFee: 0,
-        discountAmount: 0,
-        taxRate: 0,
-        paymentTerms: 'Due on receipt',
+          status: 'PENDING_PAYMENT',
+          mrr,
+          arr,
+          seats: billing.seats,
+          setupFee: billing.setupFee,
+          discountAmount: 0,
+          taxRate: 0,
+          paymentTerms: 'Due on receipt',
         ownerId: this.getDealOwner(project),
         renewalDate,
         notes: `Auto-created from won deal "${project.name}".`,
@@ -910,13 +1013,13 @@ export class ProjectsService {
         subscriptionNumber: `SUB-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
         contactId: project.contactId || null,
         quoteId: project.quoteId || null,
-        planName: 'Roofer CRM',
-        billingCycle: 'MONTHLY',
+        planName: billing.planName,
+        billingCycle: billing.billingCycle,
         status: 'PENDING_PAYMENT',
         mrr,
         arr,
-        seats: 1,
-        setupFee: 0,
+        seats: billing.seats,
+        setupFee: billing.setupFee,
         discountAmount: 0,
         taxRate: 0,
         paymentTerms: 'Due on receipt',
@@ -1001,7 +1104,7 @@ export class ProjectsService {
 
     if (project.leadId) {
       await prisma.lead.update({
-        where: { id: project.leadId },
+        where: { id_tenantId: { id: project.leadId, tenantId } },
         data: {
           status: 'LOST',
           lostReason: project.lostReason || previousProject?.lostReason || 'Not specified',

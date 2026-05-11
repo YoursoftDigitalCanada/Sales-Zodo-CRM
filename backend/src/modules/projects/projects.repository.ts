@@ -253,12 +253,12 @@ export class ProjectsRepository {
     }
 
     if (!['SIGNED', 'ACCEPTED'].includes(String(quote.status))) {
-      throw new Error('Only signed estimates can be converted into jobs');
+      throw new Error('Only signed proposals can be converted into deals');
     }
 
     const name = quote.client?.clientName
-      ? `${quote.client.clientName} - Roofing Project`
-      : `Quote ${quote.quoteNumber} - Roofing Project`;
+      ? `${quote.client.clientName} - Roofer CRM Deal`
+      : `Proposal ${quote.quoteNumber} - Roofer CRM Deal`;
 
     const project = await this.create(
       tenantId,
@@ -268,30 +268,17 @@ export class ProjectsRepository {
         clientId: quote.clientId,
         quoteId: quote.id,
         leadId: quote.leadId,
-        status: 'APPROVED',
-        projectType: 'REPLACEMENT',
-        propertyType: 'RESIDENTIAL',
+        status: 'ACTIVE',
+        projectType: 'OTHER',
+        propertyType: 'COMMERCIAL',
+        dealStatus: 'Won',
+        probability: 100,
         contractValue: toNumber(quote.total),
-        estimatedCost: toNumber(quote.total) * 0.65,
+        estimatedCost: 0,
         budget: toNumber(quote.total),
       },
       userId,
     );
-
-    if (quote.items.length > 0) {
-      await prisma.projectMaterial.createMany({
-        data: quote.items.map((item) => ({
-          tenantId,
-          projectId: project.id,
-          name: item.description,
-          category: 'ROOFING',
-          quantityNeeded: item.quantity,
-          unit: 'each',
-          unitCost: item.unitPrice,
-          totalCost: item.total,
-        })),
-      });
-    }
 
     if ((quote as any).signedPdfFileId) {
       await prisma.file.updateMany({

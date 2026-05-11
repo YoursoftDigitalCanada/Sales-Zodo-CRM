@@ -112,6 +112,7 @@ enum LeadSourceStatus {
 }
 
 enum ClientLifecycleStage {
+  PROSPECT        // Pre-sale account created from a lead
   NEW_CUSTOMER   // Just converted from lead
   ONBOARDING     // Going through setup / first project
   ACTIVE         // Engaged, recurring work
@@ -1691,6 +1692,7 @@ model Client {
   contracts               Contract[]
   userAccesses            UserAccess[]   @relation("UserAccessClient")
   customerSubscriptions   CustomerSubscription[]
+  proposals               Proposal[]
 
   @@index([tenantId])
   @@index([status])
@@ -1760,6 +1762,7 @@ model Contact {
   emails                Email[]
   convertedLeads        Lead[]       @relation("LeadConvertedContact")
   deals                 ContactDeal[]
+  proposals             Proposal[]
 }
 
 model ContactDeal {
@@ -2163,6 +2166,7 @@ model Project {
   jobCompletion   JobCompletion?
   userAccesses    UserAccess[]   @relation("UserAccessProject")
   customerSubscriptions CustomerSubscription[]
+  proposals       Proposal[]
 
   @@unique([tenantId, code])
   @@unique([tenantId, projectNumber])
@@ -4987,10 +4991,16 @@ model Proposal {
   status                ProposalStatus  @default(DRAFT)
 
   // Links
-  leadId                String
-  lead                  Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId                String?
+  lead                  Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
   quoteId               String
   quote                 Quote           @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  clientId              String?
+  client                Client?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  contactId             String?
+  contact               Contact?        @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  projectId             String?
+  project               Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
   roofEstimateId        String?
   roofEstimate          RoofEstimate?   @relation(fields: [roofEstimateId], references: [id], onDelete: SetNull)
 
@@ -5034,6 +5044,9 @@ model Proposal {
   @@index([tenantId])
   @@index([leadId])
   @@index([quoteId])
+  @@index([clientId])
+  @@index([contactId])
+  @@index([projectId])
   @@index([status])
 }
 
@@ -5046,7 +5059,7 @@ model SignedContract {
 
   // References
   proposalId      String
-  leadId          String
+  leadId          String?
   clientId        String?
 
   // E-Signature Data

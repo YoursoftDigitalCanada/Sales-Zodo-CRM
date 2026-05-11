@@ -1,0 +1,13 @@
+ALTER TABLE "Proposal" ALTER COLUMN "leadId" DROP NOT NULL;
+ALTER TABLE "Proposal" ADD COLUMN IF NOT EXISTS "clientId" TEXT;
+ALTER TABLE "Proposal" ADD COLUMN IF NOT EXISTS "contactId" TEXT;
+ALTER TABLE "Proposal" ADD COLUMN IF NOT EXISTS "projectId" TEXT;
+ALTER TABLE "Proposal" DROP CONSTRAINT IF EXISTS "Proposal_leadId_fkey";
+ALTER TABLE "Proposal" ADD CONSTRAINT "Proposal_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Proposal" ADD CONSTRAINT "Proposal_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Proposal" ADD CONSTRAINT "Proposal_contactId_fkey" FOREIGN KEY ("contactId") REFERENCES "Contact"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Proposal" ADD CONSTRAINT "Proposal_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+CREATE INDEX IF NOT EXISTS "Proposal_clientId_idx" ON "Proposal"("clientId");
+CREATE INDEX IF NOT EXISTS "Proposal_contactId_idx" ON "Proposal"("contactId");
+CREATE INDEX IF NOT EXISTS "Proposal_projectId_idx" ON "Proposal"("projectId");
+ALTER TABLE "SignedContract" ALTER COLUMN "leadId" DROP NOT NULL;

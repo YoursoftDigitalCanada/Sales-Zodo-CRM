@@ -1,0 +1,1 @@
+ALTER TYPE "ClientLifecycleStage" ADD VALUE IF NOT EXISTS 'PROSPECT';

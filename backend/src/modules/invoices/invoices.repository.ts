@@ -186,7 +186,16 @@ export class InvoicesRepository {
         const invoice = await prisma.invoice.findFirst({ where: { id, tenantId } });
         if (!invoice) throw new Error('Invoice not found or access denied');
 
-        const nextAmountPaid = Number(invoice.amountPaid || 0) + Number(data.amount || 0);
+        const paymentAmount = Number(data.amount || 0);
+        if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+            throw new Error('Payment amount must be greater than zero');
+        }
+        const currentBalance = Number(invoice.amountDue ?? invoice.total ?? 0);
+        if (paymentAmount > currentBalance) {
+            throw new Error('Payment cannot exceed invoice balance');
+        }
+
+        const nextAmountPaid = Number(invoice.amountPaid || 0) + paymentAmount;
         const invoiceTotal = Number(invoice.total || 0);
         const nextAmountDue = Math.max(invoiceTotal - nextAmountPaid, 0);
 
@@ -197,7 +206,7 @@ export class InvoicesRepository {
                     clientId: invoice.clientId,
                     projectId: invoice.projectId,
                     tenantId,
-                    amount: Number(data.amount),
+                    amount: paymentAmount,
                     paymentMethod: data.paymentMethod,
                     paymentDate: data.paymentDate ? new Date(data.paymentDate) : new Date(),
                     reference: data.reference ?? null,

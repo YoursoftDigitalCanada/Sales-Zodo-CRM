@@ -34,6 +34,7 @@ export interface CreateTaskDto {
     projectId?: string | null;
     clientId?: string | null;
     leadId?: string | null;
+    contactId?: string | null;
     referenceDoctype?: string | null;
     referenceDocname?: string | null;
     estimatedHours?: number | null;
@@ -56,6 +57,7 @@ export interface TaskQueryDto {
     assignedToId?: string;
     projectId?: string;
     clientId?: string;
+    contactId?: string;
     sortBy?: 'title' | 'createdAt' | 'dueDate' | 'priority';
     sortOrder?: 'asc' | 'desc';
 }

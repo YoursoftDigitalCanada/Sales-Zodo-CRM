@@ -262,7 +262,7 @@ export class LeadsService {
           primaryEmail: email,
           primaryPhone: phone,
           status: 'PROSPECT',
-          lifecycleStage: 'NEW_CUSTOMER',
+          lifecycleStage: 'PROSPECT',
           assignedOwnerId: lead.assignedToId || null,
           website: lead.website || null,
           noOfEmployees: lead.companySize || null,
@@ -291,7 +291,7 @@ export class LeadsService {
       if (phone) {
         contactSearch.push({ mobilePhone: phone }, { officePhone: phone });
       }
-      if (fullName) contactSearch.push({ contactName: fullName });
+      if (fullName) contactSearch.push({ AND: [{ contactName: fullName }, { companyId: client.id }] });
 
       const existingContact = lead.convertedToContactId
         ? await tx.contact.findFirst({ where: { id: lead.convertedToContactId, tenantId } })
@@ -303,6 +303,18 @@ export class LeadsService {
             },
           })
           : null;
+
+      const accountPrimaryContact = existingContact
+        ? await tx.contact.findFirst({
+          where: {
+            tenantId,
+            companyId: client.id,
+            isPrimaryContact: true,
+            id: { not: existingContact.id },
+          },
+          select: { id: true },
+        })
+        : null;
 
       const contact = existingContact
         ? await tx.contact.update({
@@ -316,7 +328,7 @@ export class LeadsService {
             assignedToId: existingContact.assignedToId || lead.assignedToId || undefined,
             notes: existingContact.notes || lead.notes || undefined,
             preferredContactMethod: existingContact.preferredContactMethod || lead.preferredContactMethod || undefined,
-            isPrimaryContact: existingContact.isPrimaryContact || true,
+            isPrimaryContact: existingContact.isPrimaryContact || !accountPrimaryContact,
           },
         })
         : await tx.contact.create({

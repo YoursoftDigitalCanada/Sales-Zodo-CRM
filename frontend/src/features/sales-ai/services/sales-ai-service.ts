@@ -10,7 +10,7 @@ export async function queryCRM(query: string) {
   return unwrap(await api.post("/ai/query-crm", { query }));
 }
 
-export async function scoreLead(payload: { leadId: string; autoUpdate?: boolean }) {
+export async function scoreLead(payload: { leadId: string; autoUpdate?: boolean; confirmUpdate?: boolean }) {
   return unwrap(await api.post("/ai/score-lead", payload));
 }
 
@@ -18,7 +18,7 @@ export async function generateEmail(payload: Record<string, unknown>) {
   return unwrap(await api.post("/ai/generate-email", payload));
 }
 
-export async function getDealInsights(payload: { dealId: string }) {
+export async function getDealInsights(payload: { dealId: string; confirmUpdate?: boolean }) {
   return unwrap(await api.post("/ai/deal-insights", payload));
 }
 

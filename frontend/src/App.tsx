@@ -83,13 +83,9 @@ import CreateInvoice from "./components/invoices/CreateInvoice";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import DealsPage from "./pages/Deals";
-import ProjectsPage from "./pages/Projects";
-import ProjectDetailPage from "./pages/ProjectDetail";
 import ClientListPage from "./pages/ClientList";
 import OrganizationsPage from "./pages/Organizations";
 import ClientContactListPage from "./pages/ClientContactList";
-import AddProjectPage from "./pages/AddProject";
-import ProjectCreateWizardPage from "./pages/ProjectCreateWizard";
 import KanbanPage from "./pages/Kanban";
 import AddClientPage from "./pages/AddClient";
 import LetterBoxPage from "./pages/LetterBoxPage";
@@ -131,11 +127,6 @@ import AISalesAssistantPage from "./pages/ai/AISalesAssistant";
 import AIEmailGeneratorPage from "./pages/ai/AIEmailGenerator";
 import AILeadScoringPage from "./pages/ai/AILeadScoring";
 import AIDealInsightsPage from "./pages/ai/AIDealInsights";
-
-// Inspections
-import InspectionList from "./pages/Inspections/InspectionList";
-import InspectionDetail from "./pages/Inspections/InspectionDetail";
-import InspectionForm from "./pages/Inspections/InspectionForm";
 
 // Help Center
 import HelpCenterPage from "./pages/HelpCenter";
@@ -285,6 +276,9 @@ const isPublicPath = (pathname: string): boolean => {
     return true;
   }
   if (pathname.startsWith("/quote/")) {
+    return true;
+  }
+  if (pathname.startsWith("/proposal/sign/")) {
     return true;
   }
   if (pathname.startsWith("/estimate/sign/")) {
@@ -625,6 +619,7 @@ const AppRoutes = () => {
         <Route path="/signin" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/quote/:token" element={<PublicQuoteView />} />
+        <Route path="/proposal/sign/:token" element={<PublicQuoteView />} />
         <Route path="/estimate/sign/:token" element={<PublicQuoteView />} />
 
         {/* ========== DASHBOARD ========== */}
@@ -709,31 +704,9 @@ const AppRoutes = () => {
           }
         />
 
-        {/* ========== INSPECTION ROUTES ========== */}
-        <Route
-          path="/inspections"
-          element={
-            <AccessGuard featureId="leads" permissionModule="leads" action="view">
-              <InspectionList />
-            </AccessGuard>
-          }
-        />
-        <Route
-          path="/inspections/new"
-          element={
-            <AccessGuard featureId="leads" permissionModule="leads" action="create">
-              <InspectionForm />
-            </AccessGuard>
-          }
-        />
-        <Route
-          path="/inspections/:id"
-          element={
-            <AccessGuard featureId="leads" permissionModule="leads" action="view">
-              <InspectionDetail />
-            </AccessGuard>
-          }
-        />
+        <Route path="/inspections" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/inspections/new" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/inspections/:id" element={<Navigate to="/dashboard" replace />} />
 
         {/* ========== CLIENT ROUTES ========== */}
         <Route
@@ -794,47 +767,11 @@ const AppRoutes = () => {
           }
         />
 
-        {/* ========== PROJECT ROUTES ========== */}
-        <Route
-          path="/projects"
-          element={
-            <AccessGuard featureId="projects" permissionModule="projects" action="view">
-              <ProjectsPage />
-            </AccessGuard>
-          }
-        />
-        <Route
-          path="/projects/add"
-          element={
-            <AccessGuard featureId="projects" permissionModule="projects" action="create">
-              <ProjectCreateWizardPage />
-            </AccessGuard>
-          }
-        />
-        <Route
-          path="/projects/:id"
-          element={
-            <AccessGuard featureId="projects" permissionModule="projects" action="view">
-              <ProjectDetailPage />
-            </AccessGuard>
-          }
-        />
-        <Route
-          path="/projects/:id/edit"
-          element={
-            <AccessGuard featureId="projects" permissionModule="projects" action="update">
-              <ProjectCreateWizardPage />
-            </AccessGuard>
-          }
-        />
-        <Route
-          path="/kanban"
-          element={
-            <AccessGuard featureId="kanban" permissionModule="projects" action="view">
-              <KanbanPage />
-            </AccessGuard>
-          }
-        />
+        <Route path="/projects" element={<Navigate to="/deals" replace />} />
+        <Route path="/projects/add" element={<Navigate to="/deals?create=1" replace />} />
+        <Route path="/projects/:id" element={<Navigate to="/deals" replace />} />
+        <Route path="/projects/:id/edit" element={<Navigate to="/deals" replace />} />
+        <Route path="/kanban" element={<Navigate to="/pipeline" replace />} />
 
         {/* ✅ Time Tracking Route */}
         <Route
@@ -849,14 +786,6 @@ const AppRoutes = () => {
         {/* ========== FINANCE ROUTES ========== */}
         <Route
           path="/invoice"
-          element={
-            <AccessGuard featureId="finance" permissionModule="invoices" action="view">
-              <InvoicePage />
-            </AccessGuard>
-          }
-        />
-        <Route
-          path="/payments"
           element={
             <AccessGuard featureId="finance" permissionModule="invoices" action="view">
               <InvoicePage />

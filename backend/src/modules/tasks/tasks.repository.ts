@@ -177,8 +177,8 @@ export class TasksRepository {
                     projectId: data.projectId || null,
                     clientId: data.clientId || null,
                     leadId: data.leadId || null,
-                    referenceDoctype: data.referenceDoctype || null,
-                    referenceDocname: data.referenceDocname || null,
+                    referenceDoctype: data.contactId ? 'Contact' : data.referenceDoctype || null,
+                    referenceDocname: data.contactId ? data.contactId : data.referenceDocname || null,
                     estimatedTime: data.estimatedHours ? Math.round(data.estimatedHours * 60) : null,
                     actualTime: data.actualMinutes ?? null,
                 },
@@ -207,7 +207,7 @@ export class TasksRepository {
     }
 
     async findMany(tenantId: string, query: TaskQueryDto, dataAccess?: DataAccessContext) {
-        const { page = 1, limit = 20, search, status, priority, assignedToId, projectId, clientId, sortBy = 'createdAt', sortOrder = 'desc' } = query;
+        const { page = 1, limit = 20, search, status, priority, assignedToId, projectId, clientId, contactId, sortBy = 'createdAt', sortOrder = 'desc' } = query;
         const baseWhere: Prisma.TaskWhereInput = {
             tenantId,
             parentTaskId: null,
@@ -216,6 +216,7 @@ export class TasksRepository {
             ...(assignedToId && { assignedToId }),
             ...(projectId && { projectId }),
             ...(clientId && { clientId }),
+            ...(contactId && { referenceDoctype: 'Contact', referenceDocname: contactId }),
             ...(search && { title: { contains: search, mode: 'insensitive' as const } }),
         };
         const where = mergeWhereWithAccess(baseWhere, buildTaskAccessWhere(dataAccess));
@@ -244,8 +245,12 @@ export class TasksRepository {
                     ...(data.projectId !== undefined && { projectId: data.projectId }),
                     ...(data.clientId !== undefined && { clientId: data.clientId }),
                     ...(data.leadId !== undefined && { leadId: data.leadId }),
-                    ...(data.referenceDoctype !== undefined && { referenceDoctype: data.referenceDoctype }),
-                    ...(data.referenceDocname !== undefined && { referenceDocname: data.referenceDocname }),
+                    ...(data.contactId !== undefined
+                        ? { referenceDoctype: data.contactId ? 'Contact' : null, referenceDocname: data.contactId || null }
+                        : {
+                            ...(data.referenceDoctype !== undefined && { referenceDoctype: data.referenceDoctype }),
+                            ...(data.referenceDocname !== undefined && { referenceDocname: data.referenceDocname }),
+                        }),
                     ...(data.estimatedHours !== undefined && { estimatedTime: data.estimatedHours ? Math.round(data.estimatedHours * 60) : null }),
                     ...(data.actualMinutes !== undefined && { actualTime: data.actualMinutes ?? null }),
                 },

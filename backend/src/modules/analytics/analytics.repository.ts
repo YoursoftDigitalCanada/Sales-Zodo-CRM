@@ -735,7 +735,7 @@ export class AnalyticsRepository {
             total: deals.length,
             byStage: [...grouped.values()].map((row) => ({ stage: row.stage, count: row.count, value: Math.round(row.value * 100) / 100, averageProbability: row.count ? Math.round((row.probabilityTotal / row.count) * 10) / 10 : 0 })),
             pipelineValueByStage: [...grouped.values()].map((row) => ({ stage: row.stage, value: Math.round(row.value * 100) / 100 })),
-            averageProbability: deals.length ? Math.round((deals.reduce((sum, deal) => sum + this.dealProbability(deal), 0) / deals.length) * 10) / 10 : 0,
+            averageProbability: openDeals.length ? Math.round((openDeals.reduce((sum, deal) => sum + this.dealProbability(deal), 0) / openDeals.length) * 10) / 10 : 0,
             closingThisWeek: openDeals.filter((deal) => deal.expectedClosureDate && deal.expectedClosureDate >= now && deal.expectedClosureDate <= weekEnd),
             closingThisMonth: openDeals.filter((deal) => deal.expectedClosureDate && deal.expectedClosureDate >= now && deal.expectedClosureDate <= monthEnd).length,
             staleDeals: openDeals.filter((deal) => (activityMap.get(deal.id) || deal.updatedAt) < staleCutoff).map((deal) => ({ id: deal.id, name: deal.name, account: deal.client?.clientName || deal.organizationName, value: this.dealValue(deal), lastActivityAt: activityMap.get(deal.id) || deal.updatedAt })),
@@ -748,7 +748,7 @@ export class AnalyticsRepository {
 
     async getSalesRevenueAnalytics(tenantId: string, query: AnalyticsQueryDto & Record<string, any> = {}) {
         const date = this.scopedDate(query, 'createdAt');
-        const paidDate = this.scopedDate(query, 'paidAt');
+        const paidDate = this.scopedDate(query, 'paymentDate');
         const [wonDeals, invoices, payments] = await Promise.all([
             prisma.project.findMany({ where: { ...this.dealWhere(tenantId, query), OR: [{ dealStatus: { equals: 'Won', mode: 'insensitive' } }, { status: 'COMPLETED' }] }, select: { dealValue: true, expectedDealValue: true, contractValue: true, budget: true, total: true, salesRepId: true, dealOwnerId: true, sourceId: true } }),
             prisma.invoice.findMany({ where: { tenantId, ...date, ...(query.accountStatus ? { client: { status: query.accountStatus } } : {}) }, select: { total: true, amountDue: true, status: true, project: { select: { salesRepId: true, dealOwnerId: true, sourceId: true } } } }),

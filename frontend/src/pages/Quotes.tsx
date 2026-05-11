@@ -61,7 +61,6 @@ import {
 import { createProjectFromQuote } from "@/features/projects";
 import { getClients, type ClientEntity } from "@/features/clients/services/clients-service";
 import { getLeads, type LeadEntity } from "@/features/leads/services/leads-service";
-import { getEstimates, type RoofEstimate } from "@/features/roof-estimator";
 
 const mobileQuoteTabs = [
   { value: "all", label: "All" },
@@ -420,7 +419,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
   const [formData, setFormData] = useState({
     title: "", clientId: "", clientName: "", clientEmail: "", clientCompany: "",
     leadId: "", leadName: "", projectName: "",
-    description: "", notes: "", terms: "A material deposit is due before scheduling. Remaining balance is due upon substantial completion. Proposal valid for 14 days unless otherwise noted.",
+    description: "", notes: "", terms: "Subscription billing starts after acceptance unless otherwise agreed. Setup fees are due on the first invoice. Proposal valid for 30 days unless otherwise noted.",
     validUntil: "", priority: "medium" as Quote["priority"], status: "draft" as Quote["status"],
     items: [{ id: "new-1", description: "", quantity: 1, rate: 0, amount: 0 }] as QuoteItem[],
     discount: 0, tax: 13,
@@ -429,18 +428,15 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
   const [clients, setClients] = useState<ClientEntity[]>([]);
   const [leads, setLeads] = useState<LeadEntity[]>([]);
   const [recipientSearch, setRecipientSearch] = useState("");
-  const [roofEstimates, setRoofEstimates] = useState<RoofEstimate[]>([]);
-  const [selectedEstimateId, setSelectedEstimateId] = useState<string>("");
 
   useEffect(() => {
     if (isOpen) {
       getClients().then(setClients).catch(() => { });
       getLeads().then(setLeads).catch(() => { });
-      getEstimates().then(setRoofEstimates).catch(() => { });
     }
   }, [isOpen]);
 
-  useState(() => {
+  useEffect(() => {
     if (quote) {
       setFormData({
         title: quote.title, clientId: quote.clientId || "", clientName: quote.clientName,
@@ -454,9 +450,8 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
         discount: quote.discount, tax: quote.tax,
       });
       if (quote.leadId) setRecipientType("lead");
-      if (quote.roofEstimateId) setSelectedEstimateId(quote.roofEstimateId);
     }
-  });
+  }, [quote]);
 
   const updateItem = (index: number, field: keyof QuoteItem, value: string | number) => {
     setFormData(prev => {
@@ -501,7 +496,6 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
       validUntil: validUntilDate, priority: formData.priority, status: formData.status,
       items: formData.items, subtotal, tax: taxAmount, discount: formData.discount, total,
       currency: "CAD",
-      roofEstimateId: selectedEstimateId || undefined,
     });
     onClose();
   };
@@ -527,11 +521,11 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div><Label className="text-xs text-[#475569]">Proposal Title *</Label>
                 <Input value={formData.title} onChange={e => setFormData(p => ({ ...p, title: e.target.value }))}
-                  placeholder="e.g. Asphalt Shingle Roof Replacement" className="mt-1 rounded-md" required />
+                  placeholder="e.g. Roofer CRM Professional Plan" className="mt-1 rounded-md" required />
               </div>
               <div><Label className="text-xs text-[#475569]">Deal Name</Label>
                 <Input value={formData.projectName} onChange={e => setFormData(p => ({ ...p, projectName: e.target.value }))}
-                  placeholder="e.g. Johnson Residence Roof Replacement" className="mt-1 rounded-md" />
+                  placeholder="e.g. ABC Roofing CRM rollout" className="mt-1 rounded-md" />
               </div>
             </div>
 
@@ -787,33 +781,6 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
               </div>
             </div>
 
-            {/* Roof Estimate Attachment */}
-            {(() => {
-              const selectedRecipientId = recipientType === "client" ? formData.clientId : formData.leadId;
-              const filteredEstimates = selectedRecipientId
-                ? roofEstimates.filter(e => e.clientId === selectedRecipientId)
-                : roofEstimates;
-              return filteredEstimates.length > 0 ? (
-                <div>
-                  <Label className="text-xs text-[#475569] mb-1.5 block">📎 Attach Proposal Attachment</Label>
-                  <Select value={selectedEstimateId} onValueChange={setSelectedEstimateId}>
-                    <SelectTrigger className="rounded-md">
-                      <SelectValue placeholder="Select an attachment (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No attachment</SelectItem>
-                      {filteredEstimates.map(est => (
-                        <SelectItem key={est.id} value={est.id}>
-                          {est.address} — {est.roofAreaSqft.toFixed(0)} sq ft — ${est.totalEstimate.toFixed(0)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-[10px] text-[#94A3B8] mt-1">This PDF will be attached when the proposal is sent via email.</p>
-                </div>
-              ) : null;
-            })()}
-
             {/* Notes & Terms */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div><Label className="text-xs text-[#475569]">Notes</Label>
@@ -893,7 +860,7 @@ const QuoteDetailDialog = ({ isOpen, onClose, quote, onEdit, onDelete, onSend, o
           </div>
           {(quote.publicToken || quote.signedBy) && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              {quote.publicToken && <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Share Link</p><p className="text-sm font-medium text-[#0F172A] break-all">{`${window.location.origin}/estimate/sign/${quote.publicToken}`}</p></div>}
+          {quote.publicToken && <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Share Link</p><p className="text-sm font-medium text-[#0F172A] break-all">{`${window.location.origin}/proposal/sign/${quote.publicToken}`}</p></div>}
               {quote.signedBy && <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Signed By</p><p className="text-sm font-medium text-[#0F172A]">{quote.signedBy}</p></div>}
             </div>
           )}
@@ -1249,7 +1216,7 @@ const QuotesPage = () => {
       const project = await createProjectFromQuote(quoteId);
       setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, linkedProjectId: project.id } : q));
       toast({ title: "Converted to Deal", description: "Signed proposal has been converted into a deal." });
-      navigate(`/projects/${project.id}`);
+      navigate(`/deals?dealId=${project.id}`);
     } catch (err) {
       console.error("Failed to convert proposal into deal:", err);
       toast({ title: "Error", description: "Failed to convert proposal into a deal", variant: "destructive" });

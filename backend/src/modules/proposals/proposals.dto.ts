@@ -20,7 +20,7 @@ export interface ProposalResponseDto {
     id: string;
     proposalNumber: string;
     status: ProposalStatus;
-    leadId: string;
+    leadId: string | null;
     leadName: string;
     propertyAddress: string | null;
     quoteId: string;
@@ -55,7 +55,7 @@ export function toProposalResponseDto(p: ProposalWithRelations): ProposalRespons
         leadId: p.leadId,
         leadName: p.lead
             ? `${p.lead.firstName} ${p.lead.lastName}`.trim()
-            : 'Unknown',
+            : 'Direct deal proposal',
         propertyAddress: p.lead?.propertyAddress || null,
         quoteId: p.quoteId,
         quoteNumber: p.quote?.quoteNumber || '',

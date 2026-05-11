@@ -197,14 +197,16 @@ export class ProposalsService {
         });
 
         // Load lead info
-        const lead = await prisma.lead.findUnique({
-            where: { id: proposal.leadId },
-            select: { firstName: true, lastName: true, propertyAddress: true },
-        });
+        const lead = proposal.leadId
+            ? await prisma.lead.findUnique({
+                where: { id: proposal.leadId },
+                select: { firstName: true, lastName: true, propertyAddress: true },
+            })
+            : null;
 
         const leadName = lead
             ? `${lead.firstName} ${lead.lastName}`.trim()
-            : 'Unknown';
+            : 'Direct deal proposal';
 
         // Generate PDF
         const { buffer, fileName } = generateProposalPdfBuffer({
@@ -274,24 +276,26 @@ export class ProposalsService {
         const p = proposal as any;
 
         // Load lead for name resolution
-        const lead = await prisma.lead.findUnique({
-            where: { id: proposal.leadId },
-            select: {
-                firstName: true,
-                lastName: true,
-                assignedToId: true,
-                assignedTo: { select: { userId: true } },
-            },
-        });
+        const lead = proposal.leadId
+            ? await prisma.lead.findUnique({
+                where: { id: proposal.leadId },
+                select: {
+                    firstName: true,
+                    lastName: true,
+                    assignedToId: true,
+                    assignedTo: { select: { userId: true } },
+                },
+            })
+            : null;
 
         const leadName = lead
             ? `${lead.firstName} ${lead.lastName}`.trim()
-            : 'Unknown';
+            : 'Direct deal proposal';
 
         // Emit proposal.generated event for downstream automations
         eventBus.emit('proposal.generated', {
             tenantId,
-            leadId: proposal.leadId,
+            leadId: proposal.leadId || '',
             leadName,
             proposalId: proposal.id,
             quoteId: proposal.quoteId,
@@ -327,18 +331,20 @@ export class ProposalsService {
         }
 
         // Load lead data for email/phone/name
-        const lead = await prisma.lead.findUnique({
-            where: { id: proposal.leadId },
-            select: {
-                firstName: true,
-                lastName: true,
-                email: true,
-                phone: true,
-                propertyAddress: true,
-                assignedToId: true,
-                assignedTo: { select: { userId: true } },
-            },
-        });
+        const lead = proposal.leadId
+            ? await prisma.lead.findUnique({
+                where: { id: proposal.leadId },
+                select: {
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    phone: true,
+                    propertyAddress: true,
+                    assignedToId: true,
+                    assignedTo: { select: { userId: true } },
+                },
+            })
+            : null;
         if (!lead) throw new BadRequestError('Lead not found for this proposal');
 
         const leadName = `${lead.firstName} ${lead.lastName}`.trim();
@@ -356,7 +362,7 @@ export class ProposalsService {
         // Generate signed JWT token for secure proposal link
         const tokenPayload = {
             proposalId: proposal.id,
-            leadId: proposal.leadId,
+            leadId: proposal.leadId || '',
             type: 'proposal_access',
         };
         const publicToken = jwt.sign(tokenPayload, config.jwt.accessSecret, {
@@ -387,7 +393,7 @@ export class ProposalsService {
         eventBus.emit('proposal.sent', {
             tenantId,
             proposalId: proposal.id,
-            leadId: proposal.leadId,
+            leadId: proposal.leadId || '',
             leadName,
             leadEmail,
             leadPhone,
@@ -400,7 +406,7 @@ export class ProposalsService {
             proposalLink,
             total: p.quote ? Number(p.quote.total) : 0,
             salesRepId,
-            ownerUserId: lead.assignedTo?.userId || undefined,
+            ownerUserId: lead?.assignedTo?.userId || undefined,
             recipientEmail: leadEmail,
         });
 
@@ -455,23 +461,25 @@ export class ProposalsService {
 
         // Emit proposal.viewed event on first view
         if (isFirstView) {
-            const lead = await prisma.lead.findUnique({
-                where: { id: proposal.leadId },
-                select: {
-                    firstName: true,
-                    lastName: true,
-                    assignedTo: { select: { userId: true } },
-                },
-            });
+            const lead = proposal.leadId
+                ? await prisma.lead.findUnique({
+                    where: { id: proposal.leadId },
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        assignedTo: { select: { userId: true } },
+                    },
+                })
+                : null;
 
             const leadName = lead
                 ? `${lead.firstName} ${lead.lastName}`.trim()
-                : 'Unknown';
+                : 'Direct deal proposal';
 
             eventBus.emit('proposal.viewed', {
                 tenantId: proposal.tenantId,
                 proposalId: proposal.id,
-                leadId: proposal.leadId,
+                leadId: proposal.leadId || '',
                 leadName,
                 ownerUserId: lead?.assignedTo?.userId || undefined,
                 viewCount: newViewCount,
@@ -534,17 +542,19 @@ export class ProposalsService {
         });
 
         // Get lead details for the enhanced event
-        const lead = await prisma.lead.findUnique({
-            where: { id: proposal.leadId },
-            select: {
-                firstName: true,
-                lastName: true,
-                email: true,
-                phone: true,
-                assignedTo: { select: { userId: true } },
-                assignedToId: true,
-            },
-        });
+        const lead = proposal.leadId
+            ? await prisma.lead.findUnique({
+                where: { id: proposal.leadId },
+                select: {
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    phone: true,
+                    assignedTo: { select: { userId: true } },
+                    assignedToId: true,
+                },
+            })
+            : null;
 
         const leadName = lead ? `${lead.firstName} ${lead.lastName}` : '';
 
@@ -552,7 +562,7 @@ export class ProposalsService {
         eventBus.emit('proposal.accepted', {
             tenantId: proposal.tenantId,
             proposalId: proposal.id,
-            leadId: proposal.leadId,
+            leadId: proposal.leadId || '',
             leadName,
             quoteId: proposal.quoteId,
             quoteNumber: (proposal as any).quote?.quoteNumber || '',
@@ -592,7 +602,7 @@ export class ProposalsService {
 
         eventBus.emit('proposal.declined', {
             tenantId: proposal.tenantId,
-            leadId: proposal.leadId,
+            leadId: proposal.leadId || '',
             quoteId: proposal.quoteId,
             quoteNumber: (proposal as any).quote?.quoteNumber || '',
             ownerUserId: undefined,

@@ -39,7 +39,7 @@ interface RecipientProfile {
 export class QuotesService {
     private buildPublicLink(token: string) {
         const frontendUrl = config.frontend.url.replace(/\/$/, '');
-        return `${frontendUrl}/estimate/sign/${token}`;
+        return `${frontendUrl}/proposal/sign/${token}`;
     }
 
     private formatCurrency(value: number | string, currency = 'CAD') {

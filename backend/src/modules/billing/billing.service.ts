@@ -3,6 +3,7 @@ import { BadRequestError, NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { eventBus } from '../../common/events/event-bus';
+import { logger } from '../../common/utils/logger';
 
 const prismaAny = prisma as any;
 
@@ -71,12 +72,28 @@ export class BillingService {
             tenantId: event.tenantId,
             OR: [
               { quoteId: event.quoteId },
-              { leadId: event.leadId },
+              ...(event.leadId ? [{ leadId: event.leadId }] : []),
             ],
           },
           orderBy: { updatedAt: 'desc' },
         });
         if (!deal?.clientId) return;
+        await prisma.project.update({
+          where: { id: deal.id },
+          data: {
+            dealStatus: 'Won',
+            status: 'COMPLETED',
+            probability: 100,
+            closedDate: new Date(),
+          },
+        }).catch((error) => {
+          logger.warn('[Billing] Unable to mark deal won after proposal acceptance', {
+            tenantId: event.tenantId,
+            proposalId: event.proposalId,
+            dealId: deal.id,
+            error: (error as Error)?.message || String(error),
+          });
+        });
         await this.createSubscription(event.tenantId, {
           clientId: deal.clientId,
           projectId: deal.id,
@@ -89,8 +106,23 @@ export class BillingService {
           ownerId: (deal as any).dealOwnerId || (deal as any).salesRepId || event.salesRepId || null,
           notes: `Auto-created after proposal ${event.quoteNumber} was accepted.`,
         }, event.ownerUserId);
-      } catch {
-        // Proposal acceptance should never fail because billing automation is delayed or already complete.
+      } catch (error) {
+        logger.error('[Billing] Proposal accepted automation failed', {
+          tenantId: event.tenantId,
+          proposalId: event.proposalId,
+          quoteId: event.quoteId,
+          leadId: event.leadId,
+          error: (error as Error)?.message || String(error),
+        });
+        activityLogger.log({
+          tenantId: event.tenantId,
+          entityType: 'Proposal',
+          entityId: event.proposalId,
+          action: 'UPDATE',
+          module: 'billing',
+          description: 'Billing automation failed after proposal acceptance. Subscription/invoice needs review.',
+          metadata: { quoteId: event.quoteId, leadId: event.leadId, error: (error as Error)?.message || String(error) },
+        });
       }
     });
   }
@@ -471,9 +503,10 @@ export class BillingService {
   }
 
   async createRenewalReminders(tenantId: string, days = 30, actorUserId?: string) {
+    const now = new Date();
     const until = addDays(new Date(), days);
     const subscriptions = await prisma.customerSubscription.findMany({
-      where: { tenantId, status: { notIn: ['CANCELLED', 'EXPIRED'] }, renewalDate: { lte: until } },
+      where: { tenantId, status: { notIn: ['CANCELLED', 'EXPIRED'] }, renewalDate: { gte: now, lte: until } },
       include: SUBSCRIPTION_INCLUDE,
     });
     const created = [];

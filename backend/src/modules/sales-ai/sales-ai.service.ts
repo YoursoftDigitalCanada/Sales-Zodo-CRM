@@ -116,7 +116,7 @@ export class SalesAIService {
     const recommendedNextAction = score >= 75 ? 'Call today and book a Roofer CRM demo.' : score >= 45 ? 'Send a personalized follow-up and qualify budget/timeline.' : 'Run a light nurture sequence and gather missing qualification data.';
 
     const result = { score, temperature, reasons, recommendedNextAction, engagement: { tasks, emails, calls, meetings }, aiAvailable: llmAdapterService.isAvailable() };
-    if (data.autoUpdate !== false) {
+    if (data.confirmUpdate === true || data.autoUpdate === true) {
       await prisma.lead.update({ where: { id: lead.id }, data: { leadScore: score, temperature: temperature as any, nextStep: recommendedNextAction } });
       await this.log(tenantId, 'Lead', lead.id, 'AI lead score updated', userId, result);
     }
@@ -181,8 +181,10 @@ export class SalesAIService {
     const nextBestAction = riskLevel === 'High' ? 'Call the decision maker and send a direct recap with a demo/proposal decision deadline.' : riskLevel === 'Medium' ? 'Create a follow-up task and send a value-based email.' : 'Continue the planned next step.';
     const suggestedEmail = await this.generateEmail(tenantId, { ...data, templateType: deal.dealStatus === 'Proposal Sent' ? 'proposal follow-up' : 'demo follow-up', tone: 'Professional', goal: nextBestAction }, userId).catch(() => null);
     const result = { riskLevel, stuckReason, nextBestAction, suggestedEmail: suggestedEmail?.body || this.fallbackEmail('follow-up', 'Professional', { accountName: deal.client?.clientName, dealName: deal.name }), callScript: `Hi, this is ${data.repName || 'the Zodo team'}. I wanted to reconnect on ${deal.name} and confirm the next step for Roofer CRM.`, lastActivityAt: lastActivity?.createdAt || null, openTasks: openTasks.length, proposalStatus: deal.quote?.status || null, aiAvailable: llmAdapterService.isAvailable() };
-    await prisma.project.update({ where: { id: deal.id }, data: { customFields: { ...((deal.customFields as any) || {}), aiDealInsight: result } as any } });
-    await this.log(tenantId, 'Project', deal.id, 'AI deal insight generated', userId, result);
+    if (data.confirmUpdate === true) {
+      await prisma.project.update({ where: { id: deal.id }, data: { customFields: { ...((deal.customFields as any) || {}), aiDealInsight: result } as any } });
+      await this.log(tenantId, 'Project', deal.id, 'AI deal insight generated', userId, result);
+    }
     return result;
   }
 
@@ -204,7 +206,7 @@ export class SalesAIService {
       suggestions.push(score.recommendedNextAction);
     }
     if (data.dealId || data.projectId) {
-      const insight = await this.dealInsights(tenantId, data, userId);
+      const insight = await this.dealInsights(tenantId, { ...data, confirmUpdate: false }, userId);
       suggestions.push(insight.nextBestAction);
     }
     if (!suggestions.length) suggestions.push('Create a follow-up task, send a concise value email, and schedule the next conversation.');

@@ -2,7 +2,7 @@ import axios from 'axios';
 import { LeadSource, LeadStatus, LeadTemperature, Prisma } from '@prisma/client';
 import { prisma } from '../../config/database';
 import { logger } from '../../common/utils/logger';
-import { UnauthorizedError } from '../../common/errors/HttpErrors';
+import { ForbiddenError, UnauthorizedError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { leadsService } from '../leads/leads.service';
 import { CreateLeadDto } from '../leads/leads.dto';
@@ -193,6 +193,9 @@ export class LeadSourceSyncService {
     });
     if (!source) {
       throw new Error('Lead source not found');
+    }
+    if (!source.isActive || String(source.status).toUpperCase() !== 'ACTIVE') {
+      throw new ForbiddenError('Lead source is not active', ErrorCodes.TENANT_ACCESS_DENIED);
     }
     this.assertWebhookSecret(source, headers, querySecret);
 
@@ -562,11 +565,14 @@ export class LeadSourceSyncService {
 
   private assertWebhookSecret(source: LeadSource, headers: HeaderBag, querySecret?: string): void {
     const requiredSecret = source.webhookSecret;
-    if (!requiredSecret) return;
+    if (!requiredSecret) {
+      throw new UnauthorizedError('Webhook secret is required for this lead source', ErrorCodes.AUTH_TOKEN_INVALID);
+    }
 
     const headerSecret =
       this.getHeader(headers, 'x-webhook-secret')
       || this.getHeader(headers, 'x-api-key')
+      || this.getHeader(headers, 'x-lead-source-secret')
       || this.extractBearer(this.getHeader(headers, 'authorization'));
     const providedSecret = headerSecret || querySecret;
 

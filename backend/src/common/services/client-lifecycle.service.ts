@@ -9,6 +9,7 @@ import { eventBus } from '../events/event-bus';
  * unless a special transition is explicitly allowed.
  */
 const PROGRESSION_ORDER: ClientLifecycleStage[] = [
+    'PROSPECT',
     'NEW_CUSTOMER',
     'ONBOARDING',
     'ACTIVE',

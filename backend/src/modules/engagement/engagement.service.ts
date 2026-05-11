@@ -25,6 +25,193 @@ function entityFromTarget(targetType: string, targetId: string) {
   return { entityType: targetType, entityId: targetId };
 }
 
+const EMAIL_TEMPLATE_VARIABLES = ['contactName', 'companyName', 'repName', 'proposalLink', 'planName'];
+
+const DEFAULT_SALES_EMAIL_TEMPLATES = [
+  {
+    templateName: 'Cold Outreach - Roofer CRM Demo',
+    category: 'Cold Outreach',
+    subject: 'Quick idea for {{companyName}}',
+    body: `Hi {{contactName}},
+
+I noticed {{companyName}} may be managing roofing leads, follow-ups, proposals, and customer communication across multiple tools.
+
+Roofer CRM helps roofing companies keep sales activity in one place: leads, deals, proposals, tasks, subscriptions, and team follow-up.
+
+Would you be open to a 15-minute demo this week to see if it fits your process?
+
+Best,
+{{repName}}`,
+  },
+  {
+    templateName: 'Cold Outreach - Lead Tracking Pain',
+    category: 'Cold Outreach',
+    subject: 'Are roofing leads slipping through the cracks?',
+    body: `Hi {{contactName}},
+
+Many roofing teams lose revenue because leads are not followed up fast enough or deal status is not visible to the owner.
+
+Roofer CRM gives {{companyName}} a simple sales pipeline, lead tracking, reminders, proposals, and reporting built around roofing sales.
+
+Would it make sense to compare your current process with Roofer CRM?
+
+Thanks,
+{{repName}}`,
+  },
+  {
+    templateName: 'Referral Introduction',
+    category: 'Cold Outreach',
+    subject: 'Intro to Roofer CRM for {{companyName}}',
+    body: `Hi {{contactName}},
+
+I am reaching out because Roofer CRM is built for roofing companies that want a cleaner way to track leads, follow-ups, proposals, and revenue.
+
+If {{companyName}} is looking to improve sales visibility or reduce missed follow-ups, I can show you the system in a short walkthrough.
+
+Would tomorrow or later this week work?
+
+Best,
+{{repName}}`,
+  },
+  {
+    templateName: 'Demo Confirmation',
+    category: 'Demo Follow-up',
+    subject: 'Confirmed: Roofer CRM demo for {{companyName}}',
+    body: `Hi {{contactName}},
+
+Thanks for booking a Roofer CRM demo.
+
+On the call, I will show how {{companyName}} can manage leads, contacts, deals, proposals, tasks, and sales reporting in one place.
+
+Please bring any questions about your current sales process, team workflow, or follow-up tracking.
+
+Talk soon,
+{{repName}}`,
+  },
+  {
+    templateName: 'Demo Follow-up - Next Steps',
+    category: 'Demo Follow-up',
+    subject: 'Next steps after the Roofer CRM demo',
+    body: `Hi {{contactName}},
+
+Thanks for taking time to review Roofer CRM for {{companyName}}.
+
+Based on our conversation, the main fit areas are lead follow-up, pipeline visibility, proposal tracking, and keeping the sales team accountable.
+
+The next step is to confirm users, plan, and rollout timing. Would you like me to send over a proposal?
+
+Best,
+{{repName}}`,
+  },
+  {
+    templateName: 'No-show Demo Recovery',
+    category: 'Demo Follow-up',
+    subject: 'Should we reschedule the Roofer CRM demo?',
+    body: `Hi {{contactName}},
+
+Looks like we missed each other for the Roofer CRM demo.
+
+No problem. If improving lead tracking and sales follow-up is still a priority for {{companyName}}, I can reschedule for another time this week.
+
+What time works better?
+
+Thanks,
+{{repName}}`,
+  },
+  {
+    templateName: 'Proposal Sent',
+    category: 'Proposal Follow-up',
+    subject: 'Proposal for {{companyName}}',
+    body: `Hi {{contactName}},
+
+I sent the Roofer CRM proposal for {{companyName}} here:
+
+{{proposalLink}}
+
+It includes the recommended {{planName}} plan, implementation details, and next steps for getting your team started.
+
+Please reply with any questions, or we can review it together on a quick call.
+
+Best,
+{{repName}}`,
+  },
+  {
+    templateName: 'Proposal Follow-up - 2 Days',
+    category: 'Proposal Follow-up',
+    subject: 'Any questions on the Roofer CRM proposal?',
+    body: `Hi {{contactName}},
+
+Just checking in on the Roofer CRM proposal for {{companyName}}.
+
+Do you have any questions about pricing, setup, users, or rollout timing?
+
+If everything looks good, I can help you move to the next step and prepare onboarding.
+
+Best,
+{{repName}}`,
+  },
+  {
+    templateName: 'Negotiation Follow-up',
+    category: 'Proposal Follow-up',
+    subject: 'Finalizing Roofer CRM for {{companyName}}',
+    body: `Hi {{contactName}},
+
+I wanted to follow up on the remaining items for Roofer CRM.
+
+From my side, the key next steps are confirming the {{planName}} plan, user count, billing cycle, and onboarding date.
+
+What would you like to adjust before we finalize?
+
+Best,
+{{repName}}`,
+  },
+  {
+    templateName: 'Renewal Reminder - 30 Days',
+    category: 'Renewal',
+    subject: 'Upcoming Roofer CRM renewal for {{companyName}}',
+    body: `Hi {{contactName}},
+
+Your Roofer CRM renewal for {{companyName}} is coming up soon.
+
+I wanted to check in early to confirm your team is set for the next billing period and see if you need any changes to users, plan, or support.
+
+Would you like to review the account together?
+
+Best,
+{{repName}}`,
+  },
+  {
+    templateName: 'Renewal Value Check-in',
+    category: 'Renewal',
+    subject: 'How is Roofer CRM working for {{companyName}}?',
+    body: `Hi {{contactName}},
+
+Before the upcoming renewal, I wanted to check how Roofer CRM is working for {{companyName}}.
+
+Are leads, tasks, proposals, and reporting giving your team the visibility you expected?
+
+If there is anything we can improve before renewal, I am happy to help.
+
+Best,
+{{repName}}`,
+  },
+  {
+    templateName: 'Re-engagement - Still Interested',
+    category: 'Re-engagement',
+    subject: 'Still considering Roofer CRM?',
+    body: `Hi {{contactName}},
+
+We spoke earlier about Roofer CRM for {{companyName}}, and I wanted to see if improving your sales process is still on the table.
+
+If timing was not right before, we can restart with a short demo or updated proposal.
+
+Should I keep this open or close the loop for now?
+
+Best,
+{{repName}}`,
+  },
+];
+
 export class EngagementService {
   private initialized = false;
 
@@ -63,7 +250,31 @@ export class EngagementService {
     });
   }
 
+  private async ensureDefaultEmailTemplates(tenantId: string) {
+    const existing = await db.emailTemplate.findMany({
+      where: { tenantId },
+      select: { templateName: true, category: true },
+    });
+    const existingKeys = new Set(existing.map((template: any) => `${template.category}:${template.templateName}`.toLowerCase()));
+    const missing = DEFAULT_SALES_EMAIL_TEMPLATES.filter((template) => !existingKeys.has(`${template.category}:${template.templateName}`.toLowerCase()));
+
+    if (!missing.length) return;
+
+    await db.emailTemplate.createMany({
+      data: missing.map((template) => ({
+        tenantId,
+        templateName: template.templateName,
+        subject: template.subject,
+        body: template.body,
+        category: template.category,
+        variables: EMAIL_TEMPLATE_VARIABLES,
+        isActive: true,
+      })),
+    });
+  }
+
   async listTemplates(tenantId: string, query: Record<string, any> = {}) {
+    await this.ensureDefaultEmailTemplates(tenantId);
     return db.emailTemplate.findMany({ where: { tenantId, ...(query.active === 'true' ? { isActive: true } : {}), ...(query.category ? { category: query.category } : {}) }, orderBy: { updatedAt: 'desc' } });
   }
 
@@ -76,7 +287,7 @@ export class EngagementService {
         subject: data.subject,
         body: data.body,
         category: norm(data.category, 'Cold Outreach'),
-        variables: Array.isArray(data.variables) ? data.variables : ['contactName', 'companyName', 'repName', 'proposalLink', 'planName'],
+        variables: Array.isArray(data.variables) ? data.variables : EMAIL_TEMPLATE_VARIABLES,
         isActive: data.isActive !== false,
       },
     });

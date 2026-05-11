@@ -40,10 +40,11 @@ export const ROUTE_MODULE_MAP: Record<string, readonly string[]> = {
     'timeline': ['tasks'],
 
     // Finance
-    'invoices': ['finance'],
-    'quotes': ['finance'],
+    'invoices': ['finance', 'invoices'],
+    'billing': ['finance', 'invoices', 'payments', 'subscriptions'],
+    'quotes': ['finance', 'quotes', 'proposals'],
     'contracts': ['finance'],
-    'proposals': ['finance'],
+    'proposals': ['finance', 'quotes', 'proposals'],
     'services': ['finance'],
     'expenses': ['finance'],
     'bookings': ['finance'],

@@ -159,36 +159,37 @@ export class AnalyticsRepository {
         const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
+        const paidPaymentWhere = { tenantId, status: { in: ['SUCCESSFUL', 'PAID'] } };
         const [total, thisMonth, lastMonth, outstanding] = await Promise.all([
-            prisma.invoice.aggregate({
-                where: { tenantId, status: 'PAID' },
-                _sum: { total: true },
+            prisma.invoicePayment.aggregate({
+                where: paidPaymentWhere,
+                _sum: { amount: true },
             }),
-            prisma.invoice.aggregate({
-                where: { tenantId, status: 'PAID', paidAt: { gte: thisMonthStart } },
-                _sum: { total: true },
+            prisma.invoicePayment.aggregate({
+                where: { ...paidPaymentWhere, paymentDate: { gte: thisMonthStart } },
+                _sum: { amount: true },
             }),
-            prisma.invoice.aggregate({
-                where: { tenantId, status: 'PAID', paidAt: { gte: lastMonthStart, lt: thisMonthStart } },
-                _sum: { total: true },
+            prisma.invoicePayment.aggregate({
+                where: { ...paidPaymentWhere, paymentDate: { gte: lastMonthStart, lt: thisMonthStart } },
+                _sum: { amount: true },
             }),
             prisma.invoice.aggregate({
                 where: { tenantId, status: { in: ['SENT', 'OVERDUE'] } },
-                _sum: { total: true },
+                _sum: { amountDue: true },
             }),
         ]);
 
-        const thisMonthTotal = Number(thisMonth._sum.total) || 0;
-        const lastMonthTotal = Number(lastMonth._sum.total) || 0;
+        const thisMonthTotal = Number(thisMonth._sum.amount) || 0;
+        const lastMonthTotal = Number(lastMonth._sum.amount) || 0;
         const growth = lastMonthTotal > 0
             ? Math.round(((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100)
             : 0;
 
         return {
-            total: Number(total._sum.total) || 0,
+            total: Number(total._sum.amount) || 0,
             thisMonth: thisMonthTotal,
             lastMonth: lastMonthTotal,
-            outstanding: Number(outstanding._sum.total) || 0,
+            outstanding: Number(outstanding._sum.amountDue) || 0,
             growth,
         };
     }
@@ -208,15 +209,15 @@ export class AnalyticsRepository {
 
         const results = await Promise.all(
             months.map(async (m) => {
-                const agg = await prisma.invoice.aggregate({
+                const agg = await prisma.invoicePayment.aggregate({
                     where: {
                         tenantId,
-                        status: 'PAID',
-                        paidAt: { gte: m.start, lte: m.end },
+                        status: { in: ['SUCCESSFUL', 'PAID'] },
+                        paymentDate: { gte: m.start, lte: m.end },
                     },
-                    _sum: { total: true },
+                    _sum: { amount: true },
                 });
-                return { month: m.label, revenue: Number(agg._sum.total) || 0 };
+                return { month: m.label, revenue: Number(agg._sum.amount) || 0 };
             }),
         );
 
@@ -424,14 +425,14 @@ export class AnalyticsRepository {
             months.push({ label, start, end });
         }
 
-        // Revenue from paid invoices
+        // Revenue from actual payments
         const revenueResults = await Promise.all(
             months.map(async (m) => {
-                const agg = await prisma.invoice.aggregate({
-                    where: { tenantId, status: 'PAID', paidAt: { gte: m.start, lte: m.end } },
-                    _sum: { total: true },
+                const agg = await prisma.invoicePayment.aggregate({
+                    where: { tenantId, status: { in: ['SUCCESSFUL', 'PAID'] }, paymentDate: { gte: m.start, lte: m.end } },
+                    _sum: { amount: true },
                 });
-                return Number(agg._sum.total) || 0;
+                return Number(agg._sum.amount) || 0;
             }),
         );
 

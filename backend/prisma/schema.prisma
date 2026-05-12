@@ -751,6 +751,10 @@ model Tenant {
   constructionEstimates ConstructionEstimate[]
   supportTickets        SupportTicket[]
   wallets               Wallet[]
+  websiteAnalyticsSites WebsiteAnalyticsSite[]
+  websiteVisitors       WebsiteVisitor[]
+  websiteSessions       WebsiteSession[]
+  websiteEvents         WebsiteEvent[]
 
   @@index([status])
   @@index([slug])
@@ -5604,4 +5608,121 @@ model TicketMessage {
   createdAt   DateTime      @default(now())
 
   @@index([ticketId])
+}
+
+// ============================================================================
+// WEBSITE ANALYTICS MODULE
+// ============================================================================
+
+model WebsiteAnalyticsSite {
+  id              String           @id @default(uuid())
+  tenantId        String
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name            String
+  domain          String
+  trackingKey     String           @unique
+  isActive        Boolean          @default(true)
+  privacySettings Json             @default("{}")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  visitors        WebsiteVisitor[]
+  sessions        WebsiteSession[]
+  events          WebsiteEvent[]
+
+  @@index([tenantId])
+  @@index([domain])
+  @@index([trackingKey])
+  @@index([tenantId, domain])
+}
+
+model WebsiteVisitor {
+  id          String               @id @default(uuid())
+  tenantId    String
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId      String
+  site        WebsiteAnalyticsSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  anonymousId String
+  firstSeenAt DateTime             @default(now())
+  lastSeenAt  DateTime             @default(now())
+  metadata    Json                 @default("{}")
+
+  sessions    WebsiteSession[]
+  events      WebsiteEvent[]
+
+  @@unique([siteId, anonymousId])
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([anonymousId])
+  @@index([tenantId, siteId])
+  @@index([tenantId, siteId, lastSeenAt])
+}
+
+model WebsiteSession {
+  id             String               @id @default(uuid())
+  tenantId       String
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId         String
+  site           WebsiteAnalyticsSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  visitorId      String
+  visitor        WebsiteVisitor       @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  sessionKey     String               @unique
+  startedAt      DateTime             @default(now())
+  endedAt        DateTime?
+  durationMs     Int?
+  entryUrl       String
+  exitUrl        String?
+  referrer       String?
+  country        String?
+  browser        String?
+  os             String?
+  device         String?
+  userAgent      String?
+  ipHash         String?
+  pageCount      Int                  @default(0)
+  eventCount     Int                  @default(0)
+  hasJsError     Boolean              @default(false)
+  metadata       Json                 @default("{}")
+
+  events         WebsiteEvent[]
+
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([visitorId])
+  @@index([sessionKey])
+  @@index([startedAt])
+  @@index([tenantId, siteId])
+  @@index([tenantId, siteId, startedAt])
+}
+
+model WebsiteEvent {
+  id             String               @id @default(uuid())
+  tenantId       String
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId         String
+  site           WebsiteAnalyticsSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        WebsiteSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  visitorId      String?
+  visitor        WebsiteVisitor?      @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+  type           String
+  url            String
+  path           String?
+  title          String?
+  x              Int?
+  y              Int?
+  scrollY        Int?
+  viewportWidth  Int?
+  viewportHeight Int?
+  payload        Json                 @default("{}")
+  createdAt      DateTime             @default(now())
+
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([sessionId])
+  @@index([visitorId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([tenantId, siteId, createdAt])
+  @@index([tenantId, siteId, type])
 }

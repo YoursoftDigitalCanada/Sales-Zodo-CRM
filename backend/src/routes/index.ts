@@ -60,6 +60,7 @@ import chatRoutes from '../modules/chat/chat.routes';
 // System modules
 import settingsRoutes from '../modules/settings/settings.routes';
 import analyticsRoutes from '../modules/analytics/analytics.routes';
+import websiteAnalyticsRoutes, { websiteAnalyticsPublicRoutes } from '../modules/website-analytics/website-analytics.routes';
 import auditRoutes from '../modules/audit/audit.routes';
 import sessionsRoutes from '../modules/sessions/sessions.routes';
 import reportsRoutes from '../modules/reports/reports.routes';
@@ -120,6 +121,7 @@ export function registerRoutes(app: Application): void {
   apiRouter.use('/public', (req, _res, next) => requestContextStore.run(req, next));
   apiRouter.use('/public', quotesPublicRoutes);
   apiRouter.use('/public', proposalsPublicRoutes);
+  apiRouter.use('/public/website-analytics', websiteAnalyticsPublicRoutes);
   apiRouter.use('/webhooks/leads', leadSourceWebhooksRoutes);
   apiRouter.use('/webhooks', eagleViewWebhookRouter);
 
@@ -197,6 +199,7 @@ export function registerRoutes(app: Application): void {
   // System
   protectedRouter.use('/settings', settingsRoutes);
   protectedRouter.use('/analytics', analyticsRoutes);
+  protectedRouter.use('/website-analytics', websiteAnalyticsRoutes);
   protectedRouter.use('/audit-logs', auditRoutes);
   protectedRouter.use('/sessions', sessionsRoutes);
   protectedRouter.use('/reports', reportsRoutes);
@@ -292,6 +295,7 @@ export function registerRoutes(app: Application): void {
         // System
         settings: `${apiPrefix}/settings`,
         analytics: `${apiPrefix}/analytics`,
+        websiteAnalytics: `${apiPrefix}/website-analytics`,
         auditLogs: `${apiPrefix}/audit-logs`,
         sessions: `${apiPrefix}/sessions`,
         tags: `${apiPrefix}/tags`,

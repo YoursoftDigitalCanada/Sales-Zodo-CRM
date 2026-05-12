@@ -140,6 +140,7 @@ import SettingsPage from "./pages/settings/SettingsPage";
 
 // Analytics
 import AnalyticsPage from "./pages/analytics/AnalyticsPage";
+import WebsiteAnalyticsPage from "./pages/WebsiteAnalytics";
 
 // Reports
 import ReportsPage from "./pages/reports/ReportsPage";
@@ -663,6 +664,7 @@ const AppRoutes = () => {
         <Route path="/ai/lead-scoring" element={<AccessGuard featureId="aiAssistant" permissionModule="leads" action="view"><AILeadScoringPage /></AccessGuard>} />
         <Route path="/ai/deal-insights" element={<AccessGuard featureId="aiAssistant" permissionModule="projects" action="view"><AIDealInsightsPage /></AccessGuard>} />
         <Route path="/forecast" element={<AccessGuard featureId="analytics" permissionModule="analytics" action="view"><AnalyticsPage /></AccessGuard>} />
+        <Route path="/website-analytics" element={<AccessGuard featureId="analytics" permissionModule="analytics" action="view"><WebsiteAnalyticsPage /></AccessGuard>} />
         <Route
           path="/leads"
           element={

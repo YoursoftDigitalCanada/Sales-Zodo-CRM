@@ -407,6 +407,14 @@ const navigationItems: NavigationItem[] = [
     featureId: "analytics",
     permissionModule: "analytics",
   },
+  {
+    title: "Website Analytics",
+    icon: Globe,
+    path: "/website-analytics",
+    featureId: "analytics",
+    permissionModule: "analytics",
+    isNew: true,
+  },
 
   { title: "Settings", isHeader: true },
   {

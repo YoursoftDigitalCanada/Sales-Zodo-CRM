@@ -13,9 +13,15 @@ const bodySchema = z.object({ body: z.object({}).passthrough() }).passthrough();
 export const websiteAnalyticsPublicRoutes = Router();
 
 websiteAnalyticsPublicRoutes.get('/tracker.js', websiteAnalyticsController.tracker.bind(websiteAnalyticsController));
+websiteAnalyticsPublicRoutes.get('/vendor/rrweb-record.js', websiteAnalyticsController.vendorRecorder.bind(websiteAnalyticsController));
+websiteAnalyticsPublicRoutes.get('/shared-recordings/:shareToken', websiteAnalyticsController.getSharedRecording.bind(websiteAnalyticsController));
+websiteAnalyticsPublicRoutes.get('/shared-recordings/:shareToken/chunks', websiteAnalyticsController.getSharedRecordingChunks.bind(websiteAnalyticsController));
 websiteAnalyticsPublicRoutes.post('/session/start', rateLimiter({ windowMs: 60 * 1000, max: 600 }), validate(bodySchema), websiteAnalyticsController.startSession.bind(websiteAnalyticsController));
 websiteAnalyticsPublicRoutes.post('/session/end', rateLimiter({ windowMs: 60 * 1000, max: 600 }), validate(bodySchema), websiteAnalyticsController.endSession.bind(websiteAnalyticsController));
 websiteAnalyticsPublicRoutes.post('/collect', rateLimiter({ windowMs: 60 * 1000, max: 1200 }), validate(bodySchema), websiteAnalyticsController.collect.bind(websiteAnalyticsController));
+websiteAnalyticsPublicRoutes.post('/recordings/start', rateLimiter({ windowMs: 60 * 1000, max: 300 }), validate(bodySchema), websiteAnalyticsController.startRecording.bind(websiteAnalyticsController));
+websiteAnalyticsPublicRoutes.post('/recordings/chunk', rateLimiter({ windowMs: 60 * 1000, max: 900 }), validate(bodySchema), websiteAnalyticsController.uploadRecordingChunk.bind(websiteAnalyticsController));
+websiteAnalyticsPublicRoutes.post('/recordings/end', rateLimiter({ windowMs: 60 * 1000, max: 300 }), validate(bodySchema), websiteAnalyticsController.endRecording.bind(websiteAnalyticsController));
 
 const router = Router();
 
@@ -30,5 +36,12 @@ router.get('/sites/:id/snippet', requirePermission(PERMISSIONS.ANALYTICS_VIEW), 
 router.get('/sessions', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listSessions.bind(websiteAnalyticsController));
 router.get('/sessions/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getSession.bind(websiteAnalyticsController));
 router.get('/events', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listEvents.bind(websiteAnalyticsController));
+router.get('/recordings', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listRecordings.bind(websiteAnalyticsController));
+router.get('/recordings/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getRecording.bind(websiteAnalyticsController));
+router.get('/recordings/:id/chunks', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getRecordingChunks.bind(websiteAnalyticsController));
+router.patch('/recordings/:id/favorite', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), validate(bodySchema), websiteAnalyticsController.setRecordingFavorite.bind(websiteAnalyticsController));
+router.patch('/recordings/:id/labels', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), validate(bodySchema), websiteAnalyticsController.setRecordingLabels.bind(websiteAnalyticsController));
+router.post('/recordings/:id/share', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), websiteAnalyticsController.enableRecordingShare.bind(websiteAnalyticsController));
+router.delete('/recordings/:id/share', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), websiteAnalyticsController.disableRecordingShare.bind(websiteAnalyticsController));
 
 export default router;

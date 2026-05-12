@@ -141,6 +141,7 @@ import SettingsPage from "./pages/settings/SettingsPage";
 // Analytics
 import AnalyticsPage from "./pages/analytics/AnalyticsPage";
 import WebsiteAnalyticsPage from "./pages/WebsiteAnalytics";
+import SharedRecordingPage from "./pages/SharedRecording";
 
 // Reports
 import ReportsPage from "./pages/reports/ReportsPage";
@@ -622,6 +623,7 @@ const AppRoutes = () => {
         <Route path="/quote/:token" element={<PublicQuoteView />} />
         <Route path="/proposal/sign/:token" element={<PublicQuoteView />} />
         <Route path="/estimate/sign/:token" element={<PublicQuoteView />} />
+        <Route path="/shared-recording/:token" element={<SharedRecordingPage />} />
 
         {/* ========== DASHBOARD ========== */}
         <Route

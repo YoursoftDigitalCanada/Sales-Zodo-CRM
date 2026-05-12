@@ -755,6 +755,8 @@ model Tenant {
   websiteVisitors       WebsiteVisitor[]
   websiteSessions       WebsiteSession[]
   websiteEvents         WebsiteEvent[]
+  websiteRecordings     WebsiteRecording[]
+  websiteRecordingChunks WebsiteRecordingChunk[]
 
   @@index([status])
   @@index([slug])
@@ -5629,6 +5631,7 @@ model WebsiteAnalyticsSite {
   visitors        WebsiteVisitor[]
   sessions        WebsiteSession[]
   events          WebsiteEvent[]
+  recordings      WebsiteRecording[]
 
   @@index([tenantId])
   @@index([domain])
@@ -5649,6 +5652,7 @@ model WebsiteVisitor {
 
   sessions    WebsiteSession[]
   events      WebsiteEvent[]
+  recordings  WebsiteRecording[]
 
   @@unique([siteId, anonymousId])
   @@index([tenantId])
@@ -5685,6 +5689,8 @@ model WebsiteSession {
   metadata       Json                 @default("{}")
 
   events         WebsiteEvent[]
+  recordings     WebsiteRecording[]
+  recordingChunks WebsiteRecordingChunk[]
 
   @@index([tenantId])
   @@index([siteId])
@@ -5725,4 +5731,61 @@ model WebsiteEvent {
   @@index([createdAt])
   @@index([tenantId, siteId, createdAt])
   @@index([tenantId, siteId, type])
+}
+
+model WebsiteRecording {
+  id          String                  @id @default(uuid())
+  tenantId    String
+  tenant      Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId      String
+  site        WebsiteAnalyticsSite    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  sessionId   String
+  session     WebsiteSession          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  visitorId   String?
+  visitor     WebsiteVisitor?         @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+  status      String                  @default("RECORDING")
+  eventCount  Int                     @default(0)
+  durationMs  Int?
+  startedAt   DateTime                @default(now())
+  endedAt     DateTime?
+  sizeBytes   Int                     @default(0)
+  isFavorite  Boolean                 @default(false)
+  labels      Json                    @default("[]")
+  summary     String?                 @db.Text
+  shareToken  String?                 @unique
+  shareEnabled Boolean                @default(false)
+  metadata    Json                    @default("{}")
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  chunks      WebsiteRecordingChunk[]
+
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([sessionId])
+  @@index([visitorId])
+  @@index([tenantId, siteId, createdAt])
+  @@index([tenantId, sessionId])
+}
+
+model WebsiteRecordingChunk {
+  id          String             @id @default(uuid())
+  tenantId    String
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  recordingId String
+  recording   WebsiteRecording   @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  sessionId   String
+  session     WebsiteSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sequence    Int
+  storagePath String
+  checksum    String?
+  eventCount  Int
+  sizeBytes   Int
+  createdAt   DateTime           @default(now())
+
+  @@unique([recordingId, sequence])
+  @@index([tenantId])
+  @@index([recordingId])
+  @@index([sessionId])
+  @@index([tenantId, recordingId])
 }

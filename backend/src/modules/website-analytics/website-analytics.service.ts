@@ -2,11 +2,13 @@ import crypto from 'crypto';
 import { prisma } from '../../config/database';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
+import { recordingStorageService } from './recording-storage.service';
 
 const db = prisma as any;
 const MAX_EVENTS_PER_BATCH = 50;
 const MAX_BODY_BYTES = 120_000;
 const MAX_PAYLOAD_BYTES = 20_000;
+const MAX_RRWEB_EVENTS_PER_CHUNK = 500;
 
 function cleanString(value: unknown, max = 500): string | null {
   if (typeof value !== 'string') return null;
@@ -42,6 +44,23 @@ function toInt(value: unknown): number | null {
 
 function trackingKey() {
   return `ys_${crypto.randomBytes(18).toString('base64url')}`;
+}
+
+function shareToken() {
+  return crypto.randomBytes(24).toString('base64url');
+}
+
+function defaultPrivacySettings(input?: Record<string, unknown>) {
+  return {
+    maskInputs: true,
+    recordingsEnabled: true,
+    maskAllInputs: true,
+    respectDoNotTrack: true,
+    maskSelectors: [],
+    blockSelectors: [],
+    retentionDays: 30,
+    ...(input || {}),
+  };
 }
 
 function hashIp(ip: string | undefined) {
@@ -100,7 +119,7 @@ export class WebsiteAnalyticsService {
         name,
         domain,
         trackingKey: trackingKey(),
-        privacySettings: safePayload(data.privacySettings, { maskInputs: true }),
+        privacySettings: defaultPrivacySettings(safePayload(data.privacySettings)),
       },
     });
     return this.withMetrics(site);
@@ -122,7 +141,10 @@ export class WebsiteAnalyticsService {
     }
     if (data.domain !== undefined) update.domain = cleanDomain(data.domain);
     if (data.isActive !== undefined) update.isActive = Boolean(data.isActive);
-    if (data.privacySettings !== undefined) update.privacySettings = safePayload(data.privacySettings, { maskInputs: true });
+    if (data.privacySettings !== undefined) {
+      const current = await db.websiteAnalyticsSite.findFirst({ where: { id, tenantId }, select: { privacySettings: true } });
+      update.privacySettings = defaultPrivacySettings({ ...(current?.privacySettings || {}), ...safePayload(data.privacySettings) });
+    }
     const site = await db.websiteAnalyticsSite.update({ where: { id }, data: update });
     return this.withMetrics(site);
   }
@@ -180,6 +202,220 @@ export class WebsiteAnalyticsService {
     });
   }
 
+  async listRecordings(tenantId: string, query: Record<string, unknown>) {
+    const where: Record<string, any> = { tenantId };
+    if (query.siteId) where.siteId = String(query.siteId);
+    if (query.isFavorite !== undefined) where.isFavorite = String(query.isFavorite) === 'true';
+    if (query.label) where.labels = { array_contains: [String(query.label)] };
+    if (query.minDuration || query.maxDuration) {
+      where.durationMs = {};
+      if (query.minDuration) where.durationMs.gte = Number(query.minDuration);
+      if (query.maxDuration) where.durationMs.lte = Number(query.maxDuration);
+    }
+    if (query.startDate || query.endDate) {
+      where.createdAt = {};
+      if (query.startDate) where.createdAt.gte = new Date(String(query.startDate));
+      if (query.endDate) where.createdAt.lte = new Date(String(query.endDate));
+    }
+    const sessionWhere: Record<string, unknown> = {};
+    if (query.hasJsError !== undefined) sessionWhere.hasJsError = String(query.hasJsError) === 'true';
+    if (query.browser) sessionWhere.browser = String(query.browser);
+    if (query.device) sessionWhere.device = String(query.device);
+    if (query.country) sessionWhere.country = String(query.country);
+    if (Object.keys(sessionWhere).length) where.session = sessionWhere;
+
+    return db.websiteRecording.findMany({
+      where,
+      orderBy: { startedAt: 'desc' },
+      take: Math.min(Number(query.limit || 100), 500),
+      include: {
+        site: { select: { id: true, name: true, domain: true } },
+        session: { select: { id: true, entryUrl: true, exitUrl: true, referrer: true, browser: true, os: true, device: true, country: true, hasJsError: true, pageCount: true, eventCount: true } },
+        visitor: { select: { id: true, anonymousId: true } },
+        _count: { select: { chunks: true } },
+      },
+    });
+  }
+
+  async getRecording(id: string, tenantId: string) {
+    const recording = await db.websiteRecording.findFirst({
+      where: { id, tenantId },
+      include: {
+        site: { select: { id: true, name: true, domain: true } },
+        session: {
+          include: {
+            events: { orderBy: { createdAt: 'asc' }, take: 500 },
+          },
+        },
+        visitor: true,
+        chunks: { orderBy: { sequence: 'asc' }, select: { id: true, sequence: true, eventCount: true, sizeBytes: true, createdAt: true } },
+      },
+    });
+    if (!recording) throw new NotFoundError('Recording not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return recording;
+  }
+
+  async getRecordingChunks(id: string, tenantId: string) {
+    const recording = await db.websiteRecording.findFirst({
+      where: { id, tenantId },
+      include: { chunks: { orderBy: { sequence: 'asc' } } },
+    });
+    if (!recording) throw new NotFoundError('Recording not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    const chunks = [];
+    for (const chunk of recording.chunks) {
+      chunks.push({ sequence: chunk.sequence, events: await recordingStorageService.readChunk(chunk.storagePath) });
+    }
+    return { recordingId: recording.id, chunks };
+  }
+
+  async setRecordingFavorite(id: string, tenantId: string, data: Record<string, unknown>) {
+    await this.getRecording(id, tenantId);
+    return db.websiteRecording.update({ where: { id }, data: { isFavorite: Boolean(data.isFavorite) } });
+  }
+
+  async setRecordingLabels(id: string, tenantId: string, data: Record<string, unknown>) {
+    await this.getRecording(id, tenantId);
+    const labels = Array.isArray(data.labels)
+      ? data.labels.map((item) => cleanString(item, 40)).filter(Boolean).slice(0, 12)
+      : [];
+    return db.websiteRecording.update({ where: { id }, data: { labels } });
+  }
+
+  async enableRecordingShare(id: string, tenantId: string) {
+    await this.getRecording(id, tenantId);
+    const recording = await db.websiteRecording.update({
+      where: { id },
+      data: { shareEnabled: true, shareToken: shareToken() },
+    });
+    return { shareToken: recording.shareToken, shareEnabled: recording.shareEnabled };
+  }
+
+  async disableRecordingShare(id: string, tenantId: string) {
+    await this.getRecording(id, tenantId);
+    return db.websiteRecording.update({ where: { id }, data: { shareEnabled: false, shareToken: null } });
+  }
+
+  async getSharedRecording(token: string) {
+    const recording = await db.websiteRecording.findFirst({
+      where: { shareToken: token, shareEnabled: true },
+      include: {
+        site: { select: { id: true, name: true, domain: true } },
+        session: { select: { entryUrl: true, exitUrl: true, browser: true, os: true, device: true, country: true, startedAt: true, endedAt: true, durationMs: true } },
+      },
+    });
+    if (!recording) throw new NotFoundError('Shared recording not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return recording;
+  }
+
+  async getSharedRecordingChunks(token: string) {
+    const recording = await db.websiteRecording.findFirst({
+      where: { shareToken: token, shareEnabled: true },
+      include: { chunks: { orderBy: { sequence: 'asc' } } },
+    });
+    if (!recording) throw new NotFoundError('Shared recording not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    const chunks = [];
+    for (const chunk of recording.chunks) {
+      chunks.push({ sequence: chunk.sequence, events: await recordingStorageService.readChunk(chunk.storagePath) });
+    }
+    return { recordingId: recording.id, chunks };
+  }
+
+  async startRecording(data: Record<string, unknown>) {
+    const site = await this.getActiveSite(data.trackingKey);
+    const privacy = defaultPrivacySettings(site.privacySettings || {});
+    if (privacy.recordingsEnabled === false) {
+      throw new ForbiddenError('Recordings are disabled for this site', ErrorCodes.AUTH_TOKEN_INVALID);
+    }
+    const session = await this.getPublicSession(site, data.sessionKey);
+    const existing = await db.websiteRecording.findFirst({
+      where: { tenantId: site.tenantId, siteId: site.id, sessionId: session.id },
+    });
+    if (existing) return existing;
+    return db.websiteRecording.create({
+      data: {
+        tenantId: site.tenantId,
+        siteId: site.id,
+        sessionId: session.id,
+        visitorId: session.visitorId || null,
+        status: 'RECORDING',
+        startedAt: new Date(),
+        metadata: safePayload(data.metadata),
+      },
+    });
+  }
+
+  async uploadRecordingChunk(data: Record<string, unknown>) {
+    const site = await this.getActiveSite(data.trackingKey);
+    const session = await this.getPublicSession(site, data.sessionKey);
+    const recording = await db.websiteRecording.findFirst({
+      where: { tenantId: site.tenantId, siteId: site.id, sessionId: session.id },
+    });
+    if (!recording) throw new NotFoundError('Recording not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    if (jsonSize(data) > recordingStorageService.maxChunkBytes) {
+      throw new BadRequestError('Recording chunk payload is too large', ErrorCodes.VALIDATION_FAILED);
+    }
+    const sequence = Math.max(1, Number(data.sequence || 1));
+    const events = Array.isArray(data.events) ? data.events.slice(0, MAX_RRWEB_EVENTS_PER_CHUNK) : [];
+    if (!events.length) throw new BadRequestError('Recording chunk must include events', ErrorCodes.VALIDATION_FAILED);
+    const stored = await recordingStorageService.writeChunk({
+      tenantId: site.tenantId,
+      siteId: site.id,
+      sessionId: session.id,
+      sequence,
+      events,
+    });
+    const chunk = await db.websiteRecordingChunk.upsert({
+      where: { recordingId_sequence: { recordingId: recording.id, sequence } },
+      create: {
+        tenantId: site.tenantId,
+        recordingId: recording.id,
+        sessionId: session.id,
+        sequence,
+        storagePath: stored.storagePath,
+        checksum: stored.checksum,
+        eventCount: events.length,
+        sizeBytes: stored.sizeBytes,
+      },
+      update: {
+        storagePath: stored.storagePath,
+        checksum: stored.checksum,
+        eventCount: events.length,
+        sizeBytes: stored.sizeBytes,
+      },
+    });
+    const totals = await db.websiteRecordingChunk.aggregate({
+      where: { recordingId: recording.id },
+      _sum: { eventCount: true, sizeBytes: true },
+    });
+    await db.websiteRecording.update({
+      where: { id: recording.id },
+      data: {
+        eventCount: totals._sum.eventCount || events.length,
+        sizeBytes: totals._sum.sizeBytes || stored.sizeBytes,
+        status: 'RECORDING',
+      },
+    });
+    return { recordingId: recording.id, chunkId: chunk.id, sequence, accepted: events.length };
+  }
+
+  async endRecording(data: Record<string, unknown>) {
+    const site = await this.getActiveSite(data.trackingKey);
+    const session = await this.getPublicSession(site, data.sessionKey);
+    const recording = await db.websiteRecording.findFirst({
+      where: { tenantId: site.tenantId, siteId: site.id, sessionId: session.id },
+    });
+    if (!recording) throw new NotFoundError('Recording not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    const endedAt = new Date();
+    return db.websiteRecording.update({
+      where: { id: recording.id },
+      data: {
+        status: recording.eventCount > 0 ? 'READY' : 'FAILED',
+        endedAt,
+        durationMs: duration(recording.startedAt, endedAt),
+      },
+    });
+  }
+
   async startSession(data: Record<string, unknown>, headers: Record<string, any> = {}, remoteAddress?: string) {
     const site = await this.getActiveSite(data.trackingKey);
     const anonymousId = this.requirePublicId(data.anonymousId, 'anonymousId');
@@ -222,7 +458,17 @@ export class WebsiteAnalyticsService {
       },
       })
       : await db.websiteSession.create({ data: sessionData });
-    return { siteId: site.id, tenantId: site.tenantId, visitorId: visitor.id, sessionId: session.id, sessionKey };
+    return {
+      siteId: site.id,
+      tenantId: site.tenantId,
+      visitorId: visitor.id,
+      sessionId: session.id,
+      sessionKey,
+      site: {
+        id: site.id,
+        privacySettings: defaultPrivacySettings(site.privacySettings || {}),
+      },
+    };
   }
 
   async endSession(data: Record<string, unknown>) {
@@ -273,6 +519,13 @@ export class WebsiteAnalyticsService {
     return TRACKER_SCRIPT;
   }
 
+  async vendorScript() {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const vendorPath = path.join(process.cwd(), 'node_modules', 'rrweb', 'dist', 'record', 'rrweb-record.min.js');
+    return fs.readFile(vendorPath, 'utf8');
+  }
+
   private async withMetrics(site: any) {
     const [sessions, visitors, pageViews, errors, avg] = await Promise.all([
       db.websiteSession.count({ where: { tenantId: site.tenantId, siteId: site.id } }),
@@ -300,6 +553,13 @@ export class WebsiteAnalyticsService {
     if (!site) throw new ForbiddenError('Unknown tracking key', ErrorCodes.AUTH_TOKEN_INVALID);
     if (!site.isActive) throw new ForbiddenError('Tracking site is inactive', ErrorCodes.AUTH_TOKEN_INVALID);
     return site;
+  }
+
+  private async getPublicSession(site: any, sessionKeyValue: unknown) {
+    const sessionKey = this.requirePublicId(sessionKeyValue, 'sessionKey');
+    const session = await db.websiteSession.findFirst({ where: { sessionKey, tenantId: site.tenantId, siteId: site.id } });
+    if (!session) throw new NotFoundError('Website session not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return session;
   }
 
   private requirePublicId(value: unknown, field: string) {
@@ -349,6 +609,6 @@ export class WebsiteAnalyticsService {
   }
 }
 
-const TRACKER_SCRIPT = `(function(){try{if(window.__YSAnalytics)return;window.__YSAnalytics=true;var s=document.currentScript;var key=s&&s.getAttribute("data-tracking-key");if(!key||localStorage.getItem("ys_analytics_opt_out")==="1")return;var base=(s&&s.src?s.src:"").replace(/\\/tracker\\.js.*$/,"");var anon=localStorage.getItem("ys_analytics_visitor");if(!anon){anon="v_"+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("ys_analytics_visitor",anon)}var sk=sessionStorage.getItem("ys_analytics_session");if(!sk){sk="s_"+Math.random().toString(36).slice(2)+Date.now().toString(36);sessionStorage.setItem("ys_analytics_session",sk)}var q=[];var timer=null;function meta(el){if(!el||!el.tagName)return{};var tag=String(el.tagName).toLowerCase();var safe=!/input|textarea|select/i.test(tag)&&!el.isContentEditable;var text=safe?(el.innerText||el.textContent||"").replace(/\\s+/g," ").trim().slice(0,80):"";return{tagName:tag,id:el.id||"",className:String(el.className||"").slice(0,160),text:text}}function common(e){return Object.assign({trackingKey:key,anonymousId:anon,sessionKey:sk,url:location.href,path:location.pathname,title:document.title,referrer:document.referrer,viewportWidth:innerWidth,viewportHeight:innerHeight,userAgent:navigator.userAgent},e||{})}function send(events,beacon){if(!events.length)return;var body=JSON.stringify(common({events:events}));if(beacon&&navigator.sendBeacon){try{var ok=navigator.sendBeacon(base+"/collect",new Blob([body],{type:"application/json"}));if(ok)return}catch(_){}}fetch(base+"/collect",{method:"POST",headers:{"Content-Type":"application/json"},body:body,keepalive:true}).catch(function(){})}function flush(){var batch=q.splice(0,50);send(batch,false);if(q.length)schedule()}function schedule(){if(timer)return;timer=setTimeout(function(){timer=null;flush()},1500)}function push(e){q.push(Object.assign({createdAt:new Date().toISOString()},e));schedule()}function page(){push({type:"page_view",url:location.href,path:location.pathname,title:document.title})}fetch(base+"/session/start",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(common({url:location.href})),keepalive:true}).catch(function(){});page();["pushState","replaceState"].forEach(function(n){var o=history[n];history[n]=function(){var r=o.apply(this,arguments);setTimeout(page,0);return r}});addEventListener("popstate",page);addEventListener("click",function(e){push({type:"click",x:e.clientX,y:e.clientY,payload:{element:meta(e.target)}})},true);var lastScroll=0;addEventListener("scroll",function(){var now=Date.now();if(now-lastScroll<1200)return;lastScroll=now;push({type:"scroll",scrollY:scrollY,payload:{depth:Math.round((scrollY+innerHeight)/Math.max(document.body.scrollHeight,1)*100)}})},{passive:true});var lastMove=0;addEventListener("mousemove",function(e){var now=Date.now();if(now-lastMove<2000)return;lastMove=now;push({type:"mouse_move",x:e.clientX,y:e.clientY})},{passive:true});addEventListener("error",function(e){push({type:"js_error",payload:{message:String(e.message||"").slice(0,300),source:e.filename||"",line:e.lineno||0,column:e.colno||0}})});addEventListener("unhandledrejection",function(e){push({type:"unhandled_rejection",payload:{message:String(e.reason&&e.reason.message||e.reason||"").slice(0,300)}})});addEventListener("beforeunload",function(){send(q.splice(0,50),true);navigator.sendBeacon&&navigator.sendBeacon(base+"/session/end",new Blob([JSON.stringify(common({url:location.href}))],{type:"application/json"}))})}catch(_){}})();`;
+const TRACKER_SCRIPT = `(function(){try{if(window.__YSAnalytics)return;window.__YSAnalytics=true;var s=document.currentScript;var key=s&&s.getAttribute("data-tracking-key");if(!key||localStorage.getItem("ys_analytics_opt_out")==="1")return;var base=(s&&s.src?s.src:"").replace(/\\/tracker\\.js.*$/,"");var anon=localStorage.getItem("ys_analytics_visitor");if(!anon){anon="v_"+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("ys_analytics_visitor",anon)}var sk=sessionStorage.getItem("ys_analytics_session");if(!sk){sk="s_"+Math.random().toString(36).slice(2)+Date.now().toString(36);sessionStorage.setItem("ys_analytics_session",sk)}var q=[],rq=[],timer=null,rtimer=null,rseq=1,recording=false,recordingId=null,privacy={recordingsEnabled:true,maskAllInputs:true,respectDoNotTrack:true,maskSelectors:[],blockSelectors:[]};function post(url,payload,beacon){var body=JSON.stringify(payload);if(beacon&&navigator.sendBeacon){try{if(navigator.sendBeacon(url,new Blob([body],{type:"application/json"})))return Promise.resolve({})}catch(_){}}return fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:body,keepalive:!!beacon}).then(function(r){return r.json().catch(function(){return{}})}).catch(function(){return{}})}function meta(el){if(!el||!el.tagName)return{};var tag=String(el.tagName).toLowerCase();var safe=!/input|textarea|select/i.test(tag)&&!el.isContentEditable;var text=safe?(el.innerText||el.textContent||"").replace(/\\s+/g," ").trim().slice(0,80):"";return{tagName:tag,id:el.id||"",className:String(el.className||"").slice(0,160),text:text}}function common(e){return Object.assign({trackingKey:key,anonymousId:anon,sessionKey:sk,url:location.href,path:location.pathname,title:document.title,referrer:document.referrer,viewportWidth:innerWidth,viewportHeight:innerHeight,userAgent:navigator.userAgent},e||{})}function send(events,beacon){if(!events.length)return;post(base+"/collect",common({events:events}),beacon)}function flush(){var batch=q.splice(0,50);send(batch,false);if(q.length)schedule()}function schedule(){if(timer)return;timer=setTimeout(function(){timer=null;flush()},1500)}function push(e){q.push(Object.assign({createdAt:new Date().toISOString()},e));schedule()}function page(){push({type:"page_view",url:location.href,path:location.pathname,title:document.title})}function flushRecording(beacon){if(!recording||!rq.length)return;var batch=rq.splice(0,300);post(base+"/recordings/chunk",common({recordingId:recordingId,sequence:rseq++,events:batch}),beacon)}function scheduleRecording(){if(rtimer)return;rtimer=setTimeout(function(){rtimer=null;flushRecording(false)},3000)}function loadScript(src,cb){var el=document.createElement("script");el.async=true;el.src=src;el.onload=cb;el.onerror=function(){};(document.head||document.documentElement).appendChild(el)}function startRecording(){if(recording||privacy.recordingsEnabled===false)return;if(privacy.respectDoNotTrack!==false&&(navigator.doNotTrack==="1"||window.doNotTrack==="1"))return;post(base+"/recordings/start",common({metadata:{source:"tracker"}}),false).then(function(res){recording=true;recordingId=res.data&&res.data.id||res.id||null;function begin(){if(!window.rrweb||!window.rrweb.record)return;window.rrweb.record({emit:function(ev){rq.push(ev);if(rq.length>=120)flushRecording(false);else scheduleRecording()},maskAllInputs:privacy.maskAllInputs!==false,maskInputOptions:{password:true,email:true,tel:true,text:privacy.maskAllInputs!==false},maskTextSelector:'[data-ys-mask],'+(privacy.maskSelectors||[]).join(','),blockSelector:'[data-ys-ignore],'+(privacy.blockSelectors||[]).join(',')})}if(window.rrweb&&window.rrweb.record)begin();else loadScript(base+"/vendor/rrweb-record.js",begin)})}post(base+"/session/start",common({url:location.href}),false).then(function(res){var site=res.data&&res.data.site||res.site;if(site&&site.privacySettings)privacy=Object.assign(privacy,site.privacySettings);startRecording()});page();["pushState","replaceState"].forEach(function(n){var o=history[n];history[n]=function(){var r=o.apply(this,arguments);setTimeout(page,0);return r}});addEventListener("popstate",page);addEventListener("click",function(e){push({type:"click",x:e.clientX,y:e.clientY,payload:{element:meta(e.target)}})},true);var lastScroll=0;addEventListener("scroll",function(){var now=Date.now();if(now-lastScroll<1200)return;lastScroll=now;push({type:"scroll",scrollY:scrollY,payload:{depth:Math.round((scrollY+innerHeight)/Math.max(document.body.scrollHeight,1)*100)}})},{passive:true});var lastMove=0;addEventListener("mousemove",function(e){var now=Date.now();if(now-lastMove<2000)return;lastMove=now;push({type:"mouse_move",x:e.clientX,y:e.clientY})},{passive:true});addEventListener("error",function(e){push({type:"js_error",payload:{message:String(e.message||"").slice(0,300),source:e.filename||"",line:e.lineno||0,column:e.colno||0}})});addEventListener("unhandledrejection",function(e){push({type:"unhandled_rejection",payload:{message:String(e.reason&&e.reason.message||e.reason||"").slice(0,300)}})});function endAll(){send(q.splice(0,50),true);flushRecording(true);post(base+"/recordings/end",common({recordingId:recordingId}),true);post(base+"/session/end",common({url:location.href}),true)}addEventListener("pagehide",endAll);addEventListener("beforeunload",endAll)}catch(_){}})();`;
 
 export const websiteAnalyticsService = new WebsiteAnalyticsService();

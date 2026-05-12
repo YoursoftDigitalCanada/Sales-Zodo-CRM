@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   createWebsiteAnalyticsSite,
   getWebsiteAnalyticsSites,
@@ -70,6 +71,7 @@ export default function WebsiteAnalyticsPage() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedRecordingId, setSelectedRecordingId] = useState<string | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
+  const [activeTab, setActiveTab] = useState("websites");
   const playerRef = useRef<HTMLDivElement | null>(null);
 
   const sitesQuery = useQuery({ queryKey: ["website-analytics", "sites"], queryFn: getWebsiteAnalyticsSites });
@@ -227,80 +229,91 @@ export default function WebsiteAnalyticsPage() {
           <MetricCard label="Avg Duration" value={formatDuration(averageDuration)} icon={Clock} />
         </section>
 
-        <section className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
-          <div className="space-y-5">
-            <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-              <div className="mb-4 flex items-center gap-2">
-                <Plus size={18} className="text-[#0891B2]" />
-                <h2 className="text-sm font-semibold text-[#0F172A]">Add Website</h2>
-              </div>
-              <div className="space-y-3">
-                <div className="space-y-2"><Label>Name</Label><Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="Roofer CRM website" /></div>
-                <div className="space-y-2"><Label>Domain</Label><Input value={form.domain} onChange={(event) => setForm((current) => ({ ...current, domain: event.target.value }))} placeholder="example.com" /></div>
-                <Button disabled={createMutation.isPending} onClick={() => createMutation.mutate(form)} className="w-full bg-[#0891B2] hover:bg-[#0E7490]">Create Tracking Site</Button>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-              <h2 className="text-sm font-semibold text-[#0F172A]">Websites</h2>
-              <div className="mt-3 space-y-2">
-                {sites.length === 0 ? <p className="rounded-md bg-[#F8FAFC] p-4 text-sm text-[#64748B]">No websites connected yet.</p> : null}
-                {sites.map((site: WebsiteAnalyticsSite) => (
-                  <button key={site.id} onClick={() => { setSelectedSiteId(site.id); setSnippet(""); }} className={`w-full rounded-md border p-3 text-left transition ${activeSiteId === site.id ? "border-[#0891B2] bg-[#ECFEFF]" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-[#0F172A]">{site.name}</span>
-                      <Badge variant={site.isActive ? "default" : "secondary"}>{site.isActive ? "Active" : "Inactive"}</Badge>
-                    </div>
-                    <p className="mt-1 text-xs text-[#64748B]">{site.domain}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
+          <div className="rounded-lg border border-[#E2E8F0] bg-white p-2">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-4">
+              <TabsTrigger value="websites" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Globe2 size={16} />Websites</TabsTrigger>
+              <TabsTrigger value="privacy" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Eye size={16} />Privacy & Tracking</TabsTrigger>
+              <TabsTrigger value="sessions" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Sessions</TabsTrigger>
+              <TabsTrigger value="recordings" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><MousePointerClick size={16} />Recordings</TabsTrigger>
+            </TabsList>
           </div>
 
-          <div className="space-y-5">
-            <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-sm font-semibold text-[#0F172A]">Tracking Snippet</h2>
-                  <p className="text-xs text-[#64748B]">{selectedSite ? `Install this on ${selectedSite.domain}.` : "Create a website to generate a script."}</p>
+          <TabsContent value="websites" className="mt-0 space-y-5">
+            <section className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
+              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <Plus size={18} className="text-[#0891B2]" />
+                  <h2 className="text-sm font-semibold text-[#0F172A]">Add Website</h2>
                 </div>
-                <div className="flex gap-2">
+                <div className="space-y-3">
+                  <div className="space-y-2"><Label>Name</Label><Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="Roofer CRM website" /></div>
+                  <div className="space-y-2"><Label>Domain</Label><Input value={form.domain} onChange={(event) => setForm((current) => ({ ...current, domain: event.target.value }))} placeholder="example.com" /></div>
+                  <Button disabled={createMutation.isPending} onClick={() => createMutation.mutate(form)} className="w-full bg-[#0891B2] hover:bg-[#0E7490]">Create Tracking Site</Button>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                <h2 className="text-sm font-semibold text-[#0F172A]">Websites</h2>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {sites.length === 0 ? <p className="rounded-md bg-[#F8FAFC] p-4 text-sm text-[#64748B] md:col-span-2">No websites connected yet.</p> : null}
+                  {sites.map((site: WebsiteAnalyticsSite) => (
+                    <button key={site.id} onClick={() => { setSelectedSiteId(site.id); setSnippet(""); }} className={`w-full rounded-md border p-3 text-left transition ${activeSiteId === site.id ? "border-[#0891B2] bg-[#ECFEFF]" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-[#0F172A]">{site.name}</span>
+                        <Badge variant={site.isActive ? "default" : "secondary"}>{site.isActive ? "Active" : "Inactive"}</Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-[#64748B]">{site.domain}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </TabsContent>
+
+          <TabsContent value="privacy" className="mt-0 space-y-5">
+            <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
+              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                <h2 className="text-sm font-semibold text-[#0F172A]">Tracking Snippet</h2>
+                <p className="mt-1 text-xs text-[#64748B]">{selectedSite ? `Install this on ${selectedSite.domain}.` : "Create a website to generate a script."}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
                   <Button variant="outline" disabled={!activeSiteId || snippetMutation.isPending} onClick={() => activeSiteId && snippetMutation.mutate(activeSiteId)}>Generate</Button>
                   <Button variant="outline" disabled={!snippet} onClick={copySnippet} className="gap-2"><Copy size={16} />Copy</Button>
                 </div>
+                <Textarea readOnly value={snippet || "Tracking snippet will appear here."} className="mt-4 min-h-[132px] font-mono text-xs" />
               </div>
-              <Textarea readOnly value={snippet || "Tracking snippet will appear here."} className="mt-4 min-h-[96px] font-mono text-xs" />
-            </div>
 
-            <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-              <h2 className="text-sm font-semibold text-[#0F172A]">Privacy & Recording Settings</h2>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {[
-                  ["recordingsEnabled", "Record sessions"],
-                  ["maskAllInputs", "Mask all inputs"],
-                  ["respectDoNotTrack", "Respect Do Not Track"],
-                ].map(([key, label]) => (
-                  <label key={key} className="flex items-center justify-between rounded-md border border-[#E2E8F0] px-3 py-2 text-sm">
-                    <span>{label}</span>
-                    <input type="checkbox" checked={privacy[key] !== false} onChange={(event) => updatePrivacy({ [key]: event.target.checked })} />
-                  </label>
-                ))}
-                <div className="space-y-2">
-                  <Label>Retention Days</Label>
-                  <Input type="number" value={privacy.retentionDays || 30} onChange={(event) => updatePrivacy({ retentionDays: Number(event.target.value || 30) })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Mask Selectors</Label>
-                  <Input value={(privacy.maskSelectors || []).join(", ")} onChange={(event) => updatePrivacy({ maskSelectors: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} placeholder=".private, [data-secret]" />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Block Selectors</Label>
-                  <Input value={(privacy.blockSelectors || []).join(", ")} onChange={(event) => updatePrivacy({ blockSelectors: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} placeholder=".billing-card, iframe" />
+              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                <h2 className="text-sm font-semibold text-[#0F172A]">Privacy & Recording Settings</h2>
+                <div className="mt-4 grid gap-3">
+                  {[
+                    ["recordingsEnabled", "Record sessions"],
+                    ["maskAllInputs", "Mask all inputs"],
+                    ["respectDoNotTrack", "Respect Do Not Track"],
+                  ].map(([key, label]) => (
+                    <label key={key} className="flex items-center justify-between rounded-md border border-[#E2E8F0] px-3 py-2 text-sm">
+                      <span>{label}</span>
+                      <input type="checkbox" checked={privacy[key] !== false} onChange={(event) => updatePrivacy({ [key]: event.target.checked })} />
+                    </label>
+                  ))}
+                  <div className="space-y-2">
+                    <Label>Retention Days</Label>
+                    <Input type="number" value={privacy.retentionDays || 30} onChange={(event) => updatePrivacy({ retentionDays: Number(event.target.value || 30) })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Mask Selectors</Label>
+                    <Input value={(privacy.maskSelectors || []).join(", ")} onChange={(event) => updatePrivacy({ maskSelectors: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} placeholder=".private, [data-secret]" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Block Selectors</Label>
+                    <Input value={(privacy.blockSelectors || []).join(", ")} onChange={(event) => updatePrivacy({ blockSelectors: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} placeholder=".billing-card, iframe" />
+                  </div>
                 </div>
               </div>
-            </div>
+            </section>
+          </TabsContent>
 
+          <TabsContent value="sessions" className="mt-0">
             <div className="rounded-lg border border-[#E2E8F0] bg-white">
               <div className="border-b border-[#E2E8F0] p-5">
                 <h2 className="text-sm font-semibold text-[#0F172A]">Sessions</h2>
@@ -332,7 +345,9 @@ export default function WebsiteAnalyticsPage() {
                 </table>
               </div>
             </div>
+          </TabsContent>
 
+          <TabsContent value="recordings" className="mt-0">
             <div className="rounded-lg border border-[#E2E8F0] bg-white">
               <div className="border-b border-[#E2E8F0] p-5">
                 <h2 className="text-sm font-semibold text-[#0F172A]">Session Recordings</h2>
@@ -366,8 +381,8 @@ export default function WebsiteAnalyticsPage() {
                 </table>
               </div>
             </div>
-          </div>
-        </section>
+          </TabsContent>
+        </Tabs>
       </main>
 
       <Sheet open={Boolean(selectedSessionId)} onOpenChange={(open) => !open && setSelectedSessionId(null)}>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import rrwebPlayer from "rrweb-player";
 import "rrweb-player/dist/style.css";
-import { Activity, AlertTriangle, Clock, Copy, Eye, Globe2, MousePointerClick, Plus, RefreshCw, Search, Share2, Star, Tags } from "lucide-react";
+import { Activity, AlertTriangle, Bot, Clock, Copy, Eye, Globe2, MessageSquare, MousePointerClick, Plus, RefreshCw, Search, Share2, Sparkles, Star, Tags } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   analyzeWebsiteBehaviorSession,
   analyzeWebsiteJourneys,
+  createWebsiteAiConversation,
+  createWebsiteAiMessage,
   createWebsiteFunnel,
   createWebsiteAnalyticsSegment,
   createWebsiteSessionTag,
@@ -20,6 +22,10 @@ import {
   createWebsiteAnalyticsSite,
   deleteWebsiteAnalyticsSegment,
   deleteWebsiteSessionTag,
+  generateWebsiteAiInsight,
+  getWebsiteAiConversations,
+  getWebsiteAiInsights,
+  getWebsiteAiMessages,
   getWebsiteBehaviorIssue,
   getWebsiteBehaviorIssues,
   getWebsiteBehaviorSignals,
@@ -43,10 +49,16 @@ import {
   setWebsiteRecordingLabels,
   shareWebsiteRecording,
   runWebsiteFunnel,
+  summarizeWebsiteAiRecording,
+  summarizeWebsiteAiSession,
+  updateWebsiteAiInsightStatus,
   updateWebsiteBehaviorIssueStatus,
   updateWebsiteAnalyticsSegment,
   updateWebsiteAnalyticsSite,
   type WebsiteAnalyticsSegment,
+  type WebsiteAiConversation,
+  type WebsiteAiInsight,
+  type WebsiteAiMessage,
   type WebsiteBehaviorSignal,
   type WebsiteFunnel,
   type WebsiteFunnelRun,
@@ -155,6 +167,9 @@ export default function WebsiteAnalyticsPage() {
   const [selectedFunnelId, setSelectedFunnelId] = useState<string>("");
   const [selectedRunId, setSelectedRunId] = useState<string>("");
   const [selectedJourneyId, setSelectedJourneyId] = useState<string | null>(null);
+  const [aiFilters, setAiFilters] = useState({ type: "all", severity: "all", status: "GENERATED" });
+  const [selectedAiConversationId, setSelectedAiConversationId] = useState<string>("");
+  const [aiPrompt, setAiPrompt] = useState("");
   const playerRef = useRef<HTMLDivElement | null>(null);
 
   const sitesQuery = useQuery({ queryKey: ["website-analytics", "sites"], queryFn: getWebsiteAnalyticsSites });
@@ -285,6 +300,32 @@ export default function WebsiteAnalyticsPage() {
     queryKey: ["website-analytics", "recording", selectedRecordingId, "chunks"],
     queryFn: () => getWebsiteRecordingChunks(selectedRecordingId!),
     enabled: Boolean(selectedRecordingId),
+  });
+  const aiInsightParams = {
+    siteId: activeSiteId,
+    ...(filters.dateFrom ? { dateFrom: `${filters.dateFrom}T00:00:00` } : {}),
+    ...(filters.dateTo ? { dateTo: `${filters.dateTo}T23:59:59` } : {}),
+    ...(aiFilters.type !== "all" ? { type: aiFilters.type } : {}),
+    ...(aiFilters.severity !== "all" ? { severity: aiFilters.severity } : {}),
+    ...(aiFilters.status !== "all" ? { status: aiFilters.status } : {}),
+  };
+  const aiInsightsQuery = useQuery({
+    queryKey: ["website-analytics", "ai-insights", aiInsightParams],
+    queryFn: () => getWebsiteAiInsights(aiInsightParams),
+    enabled: Boolean(activeSiteId),
+  });
+  const aiConversationsQuery = useQuery({
+    queryKey: ["website-analytics", "ai-conversations", activeSiteId],
+    queryFn: () => getWebsiteAiConversations({ siteId: activeSiteId }),
+    enabled: Boolean(activeSiteId),
+  });
+  const selectedAiConversation = selectedAiConversationId
+    ? (aiConversationsQuery.data || []).find((item) => item.id === selectedAiConversationId)
+    : (aiConversationsQuery.data || [])[0];
+  const aiMessagesQuery = useQuery({
+    queryKey: ["website-analytics", "ai-messages", selectedAiConversation?.id],
+    queryFn: () => getWebsiteAiMessages(selectedAiConversation!.id),
+    enabled: Boolean(selectedAiConversation?.id),
   });
 
   const createMutation = useMutation({
@@ -426,6 +467,60 @@ export default function WebsiteAnalyticsPage() {
       toast({ title: "Session analyzed", description: `${result.signalCount} behavior signals found.` });
     },
   });
+  const generateAiInsightMutation = useMutation({
+    mutationFn: (type: string) => generateWebsiteAiInsight({
+      type,
+      siteId: activeSiteId,
+      filters: analyticsFilters,
+      dateFrom: filters.dateFrom ? `${filters.dateFrom}T00:00:00` : undefined,
+      dateTo: filters.dateTo ? `${filters.dateTo}T23:59:59` : undefined,
+    }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "ai-insights"] });
+      toast({ title: "AI insight generated" });
+    },
+  });
+  const updateAiInsightMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "GENERATED" | "DISMISSED" | "ARCHIVED" }) => updateWebsiteAiInsightStatus(id, status),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "ai-insights"] });
+    },
+  });
+  const createAiConversationMutation = useMutation({
+    mutationFn: () => createWebsiteAiConversation({ siteId: activeSiteId, filters: analyticsFilters, title: "Website analytics chat" }),
+    onSuccess: async (conversation) => {
+      setSelectedAiConversationId(conversation.id);
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "ai-conversations"] });
+    },
+  });
+  const sendAiMessageMutation = useMutation({
+    mutationFn: async () => {
+      const content = aiPrompt.trim();
+      if (!content) throw new Error("Message is required");
+      const conversation = selectedAiConversation || await createWebsiteAiConversation({ siteId: activeSiteId, filters: analyticsFilters, title: content.slice(0, 80) });
+      setSelectedAiConversationId(conversation.id);
+      return createWebsiteAiMessage(conversation.id, { content });
+    },
+    onSuccess: async () => {
+      setAiPrompt("");
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "ai-conversations"] });
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "ai-messages"] });
+    },
+  });
+  const sessionAiSummaryMutation = useMutation({
+    mutationFn: summarizeWebsiteAiSession,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "ai-insights"] });
+      toast({ title: "Session AI summary generated" });
+    },
+  });
+  const recordingAiSummaryMutation = useMutation({
+    mutationFn: summarizeWebsiteAiRecording,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "ai-insights"] });
+      toast({ title: "Recording AI summary generated" });
+    },
+  });
 
   const totals = useMemo(() => {
     return sites.reduce(
@@ -450,6 +545,9 @@ export default function WebsiteAnalyticsPage() {
   const behaviorIssues = behaviorIssuesQuery.data || [];
   const behaviorSignals = behaviorSignalsQuery.data || [];
   const selectedIssue = issueDetailQuery.data;
+  const aiInsights = aiInsightsQuery.data || [];
+  const aiConversations = aiConversationsQuery.data || [];
+  const aiMessages = aiMessagesQuery.data || [];
   const funnels = funnelsQuery.data || [];
   const journeyAggregates = journeyAggregatesQuery.data || [];
   const journeyPaths = journeyPathsQuery.data || [];
@@ -655,7 +753,7 @@ export default function WebsiteAnalyticsPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
           <div className="rounded-lg border border-[#E2E8F0] bg-white p-2">
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-7">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-8">
               <TabsTrigger value="websites" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Globe2 size={16} />Websites</TabsTrigger>
               <TabsTrigger value="privacy" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Eye size={16} />Privacy & Tracking</TabsTrigger>
               <TabsTrigger value="sessions" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Sessions</TabsTrigger>
@@ -663,6 +761,7 @@ export default function WebsiteAnalyticsPage() {
               <TabsTrigger value="heatmaps" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Heatmaps</TabsTrigger>
               <TabsTrigger value="behavior" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><AlertTriangle size={16} />Behavior</TabsTrigger>
               <TabsTrigger value="funnels" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Funnels</TabsTrigger>
+              <TabsTrigger value="ai" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Sparkles size={16} />AI Insights</TabsTrigger>
             </TabsList>
           </div>
 
@@ -1178,6 +1277,119 @@ export default function WebsiteAnalyticsPage() {
               </div>
             </section>
           </TabsContent>
+
+          <TabsContent value="ai" className="mt-0 space-y-5">
+            <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+              <div className="space-y-5">
+                <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                      <h2 className="flex items-center gap-2 text-sm font-semibold text-[#0F172A]"><Sparkles size={16} />AI Insights</h2>
+                      <p className="mt-1 text-xs text-[#64748B]">Evidence-based summaries from sessions, behavior issues, heatmaps, funnels, and journeys.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" disabled={!activeSiteId || generateAiInsightMutation.isPending} onClick={() => generateAiInsightMutation.mutate("TREND_SUMMARY")}>Trend Summary</Button>
+                      <Button variant="outline" disabled={!activeSiteId || generateAiInsightMutation.isPending} onClick={() => generateAiInsightMutation.mutate("RECOMMENDATION")}>Recommendations</Button>
+                      <Button disabled={!activeSiteId || generateAiInsightMutation.isPending} onClick={() => generateAiInsightMutation.mutate("BEHAVIOR_INSIGHT")} className="bg-[#0891B2] hover:bg-[#0E7490]">Generate Insight</Button>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <div className="space-y-1">
+                      <Label>Type</Label>
+                      <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={aiFilters.type} onChange={(event) => setAiFilters((current) => ({ ...current, type: event.target.value }))}>
+                        <option value="all">All</option>
+                        {["RECORDING_SUMMARY", "SESSION_SUMMARY", "HEATMAP_INSIGHT", "BEHAVIOR_INSIGHT", "FUNNEL_INSIGHT", "JOURNEY_INSIGHT", "TREND_SUMMARY", "RECOMMENDATION"].map((type) => <option key={type} value={type}>{formatBehaviorType(type)}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Severity</Label>
+                      <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={aiFilters.severity} onChange={(event) => setAiFilters((current) => ({ ...current, severity: event.target.value }))}>
+                        <option value="all">All</option>
+                        <option value="HIGH">High</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="LOW">Low</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Status</Label>
+                      <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={aiFilters.status} onChange={(event) => setAiFilters((current) => ({ ...current, status: event.target.value }))}>
+                        <option value="all">All</option>
+                        <option value="GENERATED">Generated</option>
+                        <option value="DISMISSED">Dismissed</option>
+                        <option value="ARCHIVED">Archived</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {aiInsights.map((insight: WebsiteAiInsight) => (
+                    <article key={insight.id} className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline">{formatBehaviorType(insight.type)}</Badge>
+                            {insight.severity ? <Badge variant={severityBadgeVariant(insight.severity) as any}>{insight.severity}</Badge> : null}
+                            {typeof insight.confidence === "number" ? <Badge variant="secondary">{Math.round(insight.confidence * 100)}% confidence</Badge> : null}
+                          </div>
+                          <h3 className="mt-3 text-base font-semibold text-[#0F172A]">{insight.title}</h3>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" disabled={updateAiInsightMutation.isPending} onClick={() => updateAiInsightMutation.mutate({ id: insight.id, status: "DISMISSED" })}>Dismiss</Button>
+                          <Button size="sm" variant="outline" disabled={updateAiInsightMutation.isPending} onClick={() => updateAiInsightMutation.mutate({ id: insight.id, status: "ARCHIVED" })}>Archive</Button>
+                        </div>
+                      </div>
+                      <p className="mt-3 whitespace-pre-line text-sm leading-6 text-[#334155]">{insight.summary}</p>
+                      {(insight.recommendations || []).length ? (
+                        <div className="mt-4 rounded-md bg-[#F8FAFC] p-3">
+                          <p className="text-xs font-semibold uppercase text-[#64748B]">Recommendations</p>
+                          <ul className="mt-2 space-y-1 text-sm text-[#334155]">
+                            {(insight.recommendations || []).map((item, index) => <li key={`${item}-${index}`}>• {item}</li>)}
+                          </ul>
+                        </div>
+                      ) : null}
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {insight.sourceType && insight.sourceId ? <Badge variant="outline">{insight.sourceType}: {insight.sourceId.slice(0, 8)}</Badge> : null}
+                        {((insight.evidence?.citations || insight.evidence || []) as any[]).slice?.(0, 6)?.map((citation: any, index: number) => <Badge key={`${citation.type}-${citation.id}-${index}`} variant="secondary">{citation.type || "Source"} {String(citation.id || "").slice(0, 8)}</Badge>)}
+                      </div>
+                    </article>
+                  ))}
+                  {aiInsights.length === 0 ? <p className="rounded-lg border border-[#E2E8F0] bg-white p-8 text-center text-sm text-[#64748B] lg:col-span-2">No AI insights yet. Generate a trend summary or inspect a session/recording to create the first one.</p> : null}
+                </div>
+              </div>
+
+              <aside className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="flex items-center gap-2 text-sm font-semibold text-[#0F172A]"><MessageSquare size={16} />AI Chat</h2>
+                    <p className="mt-1 text-xs text-[#64748B]">Ask questions using the selected site, date range, and segment context.</p>
+                  </div>
+                  <Button size="sm" variant="outline" disabled={!activeSiteId || createAiConversationMutation.isPending} onClick={() => createAiConversationMutation.mutate()}>New</Button>
+                </div>
+                <div className="mt-4 space-y-2">
+                  <Label>Conversation</Label>
+                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={selectedAiConversation?.id || ""} onChange={(event) => setSelectedAiConversationId(event.target.value)}>
+                    {aiConversations.length === 0 ? <option value="">Start a chat</option> : null}
+                    {aiConversations.map((conversation: WebsiteAiConversation) => <option key={conversation.id} value={conversation.id}>{conversation.title || formatDate(conversation.createdAt)}</option>)}
+                  </select>
+                </div>
+                <div className="mt-4 h-[440px] space-y-3 overflow-y-auto rounded-md bg-[#F8FAFC] p-3">
+                  {aiMessages.map((message: WebsiteAiMessage) => (
+                    <div key={message.id} className={`rounded-lg border p-3 text-sm ${message.role === "USER" ? "border-[#BAE6FD] bg-white" : "border-[#E2E8F0] bg-[#ECFEFF]"}`}>
+                      <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-[#64748B]">{message.role === "USER" ? "You" : <><Bot size={13} />AI Analyst</>}</p>
+                      <p className="whitespace-pre-line text-[#334155]">{message.content}</p>
+                      {(message.citations || []).length ? <div className="mt-2 flex flex-wrap gap-1">{message.citations?.slice(0, 5).map((citation: any, index: number) => <Badge key={`${citation.type}-${citation.id}-${index}`} variant="outline">{citation.type} {String(citation.id).slice(0, 8)}</Badge>)}</div> : null}
+                    </div>
+                  ))}
+                  {aiMessages.length === 0 ? <div className="rounded-lg border border-dashed border-[#CBD5E1] bg-white p-5 text-sm text-[#64748B]">Try: “Why are users dropping off?” or “Which recordings should I watch first?”</div> : null}
+                </div>
+                <div className="mt-4 space-y-2">
+                  <Textarea value={aiPrompt} onChange={(event) => setAiPrompt(event.target.value)} placeholder="Ask about drop-offs, rage clicks, recordings, funnels, or pages..." className="min-h-[92px]" />
+                  <Button disabled={!activeSiteId || !aiPrompt.trim() || sendAiMessageMutation.isPending} onClick={() => sendAiMessageMutation.mutate()} className="w-full bg-[#0891B2] hover:bg-[#0E7490]">Ask AI</Button>
+                </div>
+              </aside>
+            </section>
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -1211,7 +1423,10 @@ export default function WebsiteAnalyticsPage() {
                   <Input value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} placeholder="Add tag" />
                   <Button variant="outline" disabled={!tagDraft.trim()} onClick={() => tagMutation.mutate({ sessionId: sessionDetail.id, name: tagDraft })}>Add</Button>
                 </div>
-                <Button variant="outline" className="mt-4" disabled={analyzeSessionMutation.isPending} onClick={() => analyzeSessionMutation.mutate(sessionDetail.id)}>Analyze Behavior</Button>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button variant="outline" disabled={analyzeSessionMutation.isPending} onClick={() => analyzeSessionMutation.mutate(sessionDetail.id)}>Analyze Behavior</Button>
+                  <Button variant="outline" disabled={sessionAiSummaryMutation.isPending} onClick={() => sessionAiSummaryMutation.mutate(sessionDetail.id)} className="gap-2"><Sparkles size={14} />Generate AI Summary</Button>
+                </div>
               </div>
               <div className="space-y-3">
                 {(sessionDetail.events || []).map((event) => (
@@ -1258,6 +1473,7 @@ export default function WebsiteAnalyticsPage() {
                   <div className="flex gap-2">
                     <Button variant="outline" onClick={() => favoriteMutation.mutate({ id: recordingDetail.id, isFavorite: !recordingDetail.isFavorite })} className="gap-2"><Star size={16} />{recordingDetail.isFavorite ? "Unfavorite" : "Favorite"}</Button>
                     <Button variant="outline" onClick={() => shareMutation.mutate(recordingDetail.id)} className="gap-2"><Share2 size={16} />Share</Button>
+                    <Button variant="outline" disabled={recordingAiSummaryMutation.isPending} onClick={() => recordingAiSummaryMutation.mutate(recordingDetail.id)} className="gap-2"><Sparkles size={16} />AI</Button>
                   </div>
                   <div className="mt-4 space-y-2 text-sm text-[#334155]">
                     <p><span className="font-medium">Site:</span> {recordingDetail.site?.name}</p>

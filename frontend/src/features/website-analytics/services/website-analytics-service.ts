@@ -282,6 +282,42 @@ export interface WebsitePathAggregate {
   avgDurationMs?: number | null;
 }
 
+export interface WebsiteAiInsight {
+  id: string;
+  siteId?: string | null;
+  type: string;
+  title: string;
+  summary: string;
+  severity?: string | null;
+  confidence?: number | null;
+  sourceType?: string | null;
+  sourceId?: string | null;
+  evidence?: any;
+  recommendations?: string[];
+  status: string;
+  createdAt: string;
+}
+
+export interface WebsiteAiConversation {
+  id: string;
+  siteId?: string | null;
+  title?: string | null;
+  filters?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  messages?: WebsiteAiMessage[];
+}
+
+export interface WebsiteAiMessage {
+  id: string;
+  conversationId: string;
+  role: "USER" | "ASSISTANT" | "SYSTEM" | string;
+  content: string;
+  citations?: Array<{ type: string; id: string }>;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
 export async function getWebsiteAnalyticsSites(): Promise<WebsiteAnalyticsSite[]> {
   return data(await api.get("/website-analytics/sites")) || [];
 }
@@ -487,4 +523,40 @@ export async function getWebsiteJourneyAggregates(params?: Record<string, unknow
 
 export async function getWebsiteSessionJourney(sessionId: string): Promise<WebsiteJourneyPath> {
   return data(await api.get(`/website-analytics/journeys/sessions/${sessionId}`));
+}
+
+export async function getWebsiteAiInsights(params?: Record<string, unknown>): Promise<WebsiteAiInsight[]> {
+  return data(await api.get("/website-analytics/ai/insights", { params })) || [];
+}
+
+export async function generateWebsiteAiInsight(payload: Record<string, unknown>): Promise<WebsiteAiInsight> {
+  return data(await api.post("/website-analytics/ai/insights/generate", payload));
+}
+
+export async function updateWebsiteAiInsightStatus(id: string, status: "GENERATED" | "DISMISSED" | "ARCHIVED"): Promise<WebsiteAiInsight> {
+  return data(await api.patch(`/website-analytics/ai/insights/${id}/status`, { status }));
+}
+
+export async function summarizeWebsiteAiSession(sessionId: string): Promise<WebsiteAiInsight> {
+  return data(await api.post(`/website-analytics/ai/sessions/${sessionId}/summary`));
+}
+
+export async function summarizeWebsiteAiRecording(recordingId: string): Promise<WebsiteAiInsight> {
+  return data(await api.post(`/website-analytics/ai/recordings/${recordingId}/summary`));
+}
+
+export async function getWebsiteAiConversations(params?: Record<string, unknown>): Promise<WebsiteAiConversation[]> {
+  return data(await api.get("/website-analytics/ai/conversations", { params })) || [];
+}
+
+export async function createWebsiteAiConversation(payload: Record<string, unknown>): Promise<WebsiteAiConversation> {
+  return data(await api.post("/website-analytics/ai/conversations", payload));
+}
+
+export async function getWebsiteAiMessages(conversationId: string): Promise<WebsiteAiMessage[]> {
+  return data(await api.get(`/website-analytics/ai/conversations/${conversationId}/messages`)) || [];
+}
+
+export async function createWebsiteAiMessage(conversationId: string, payload: { content: string }): Promise<{ userMessage: WebsiteAiMessage; assistant: WebsiteAiMessage }> {
+  return data(await api.post(`/website-analytics/ai/conversations/${conversationId}/messages`, payload));
 }

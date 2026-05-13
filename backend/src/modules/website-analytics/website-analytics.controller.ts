@@ -109,6 +109,46 @@ export class WebsiteAnalyticsController {
     websiteAnalyticsService.getSessionJourney(req.params.sessionId, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
   }
 
+  listAiInsights(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listAiInsights(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  generateAiInsight(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.generateAiInsight(req.context.tenantId, sanitizeBody(req.body), (req.context as any).employeeId || (req.context as any).userId).then((data) => sendCreated(res, data, 'AI insight generated')).catch(next);
+  }
+
+  getAiInsight(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.getAiInsight(req.params.id, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  updateAiInsightStatus(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.updateAiInsightStatus(req.params.id, req.context.tenantId, sanitizeBody(req.body)).then((data) => sendSuccess(res, data, 'AI insight updated')).catch(next);
+  }
+
+  summarizeAiSession(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.summarizeAiSession(req.params.sessionId, req.context.tenantId, (req.context as any).employeeId || (req.context as any).userId).then((data) => sendCreated(res, data, 'Session summarized')).catch(next);
+  }
+
+  summarizeAiRecording(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.summarizeAiRecording(req.params.recordingId, req.context.tenantId, (req.context as any).employeeId || (req.context as any).userId).then((data) => sendCreated(res, data, 'Recording summarized')).catch(next);
+  }
+
+  listAiConversations(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listAiConversations(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  createAiConversation(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.createAiConversation(req.context.tenantId, sanitizeBody(req.body), (req.context as any).employeeId || (req.context as any).userId).then((data) => sendCreated(res, data, 'AI conversation created')).catch(next);
+  }
+
+  listAiMessages(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listAiMessages(req.params.id, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  createAiMessage(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.createAiMessage(req.params.id, req.context.tenantId, sanitizeBody(req.body)).then((data) => sendCreated(res, data, 'AI message created')).catch(next);
+  }
+
   listSessions(req: Request, res: Response, next: NextFunction) {
     websiteAnalyticsService.listSessions(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
   }

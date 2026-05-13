@@ -56,6 +56,16 @@ router.get('/journeys/paths', requirePermission(PERMISSIONS.ANALYTICS_VIEW), web
 router.get('/journeys/aggregates', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listJourneyAggregates.bind(websiteAnalyticsController));
 router.get('/journeys/paths/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getJourneyPath.bind(websiteAnalyticsController));
 router.get('/journeys/sessions/:sessionId', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(sessionIdSchema), websiteAnalyticsController.getSessionJourney.bind(websiteAnalyticsController));
+router.get('/ai/insights', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listAiInsights.bind(websiteAnalyticsController));
+router.post('/ai/insights/generate', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(bodySchema), websiteAnalyticsController.generateAiInsight.bind(websiteAnalyticsController));
+router.get('/ai/insights/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getAiInsight.bind(websiteAnalyticsController));
+router.patch('/ai/insights/:id/status', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), validate(bodySchema), websiteAnalyticsController.updateAiInsightStatus.bind(websiteAnalyticsController));
+router.post('/ai/sessions/:sessionId/summary', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(sessionIdSchema), websiteAnalyticsController.summarizeAiSession.bind(websiteAnalyticsController));
+router.post('/ai/recordings/:recordingId/summary', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(z.object({ params: z.object({ recordingId: z.string().uuid() }) }).passthrough()), websiteAnalyticsController.summarizeAiRecording.bind(websiteAnalyticsController));
+router.get('/ai/conversations', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listAiConversations.bind(websiteAnalyticsController));
+router.post('/ai/conversations', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(bodySchema), websiteAnalyticsController.createAiConversation.bind(websiteAnalyticsController));
+router.get('/ai/conversations/:id/messages', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.listAiMessages.bind(websiteAnalyticsController));
+router.post('/ai/conversations/:id/messages', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), validate(bodySchema), websiteAnalyticsController.createAiMessage.bind(websiteAnalyticsController));
 router.get('/sessions', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listSessions.bind(websiteAnalyticsController));
 router.get('/sessions/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getSession.bind(websiteAnalyticsController));
 router.get('/sessions/:id/tags', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.listSessionTags.bind(websiteAnalyticsController));

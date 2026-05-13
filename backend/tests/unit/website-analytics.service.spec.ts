@@ -104,12 +104,46 @@ jest.mock('../../src/config/database', () => ({
       create: jest.fn(),
       update: jest.fn(),
     },
+    websiteAiInsight: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    websiteAiConversation: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    websiteAiMessage: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+    },
   },
 }));
 
 process.env.RECORDING_STORAGE_PATH = '/private/tmp/ys-recording-tests';
 
+jest.mock('../../src/modules/copilot/llm-adapter.service', () => ({
+  llmAdapterService: {
+    isAvailable: jest.fn(() => true),
+    generate: jest.fn(async () => ({
+      text: JSON.stringify({
+        title: 'AI Insight',
+        summary: 'Evidence-based summary',
+        severity: 'MEDIUM',
+        confidence: 0.82,
+        recommendations: ['Review high-friction pages'],
+      }),
+      model: 'mock',
+      tokensUsed: 20,
+    })),
+  },
+}));
+
 import { prisma } from '../../src/config/database';
+import { llmAdapterService } from '../../src/modules/copilot/llm-adapter.service';
 import { websiteAnalyticsService } from '../../src/modules/website-analytics/website-analytics.service';
 import { recordingStorageService } from '../../src/modules/website-analytics/recording-storage.service';
 
@@ -123,6 +157,7 @@ describe('WebsiteAnalyticsService', () => {
     db.websiteEvent.count.mockResolvedValue(0);
     db.websiteSession.aggregate.mockResolvedValue({ _avg: { durationMs: 0 } });
     db.websiteRecordingChunk.aggregate.mockResolvedValue({ _sum: { eventCount: 0, sizeBytes: 0 } });
+    db.websiteHeatmapSnapshot.findMany.mockResolvedValue([]);
     db.websiteHeatmapPoint.createMany.mockResolvedValue({ count: 0 });
     db.websiteBehaviorSignal.findMany.mockResolvedValue([]);
     db.websiteBehaviorSignal.findFirst.mockResolvedValue(null);
@@ -161,6 +196,27 @@ describe('WebsiteAnalyticsService', () => {
     db.websitePathAggregate.findFirst.mockResolvedValue(null);
     db.websitePathAggregate.create.mockImplementation(async ({ data }: any) => ({ id: 'aggregate-1', ...data }));
     db.websitePathAggregate.update.mockImplementation(async ({ where, data }: any) => ({ id: where.id, ...data }));
+    db.websiteAiInsight.findMany.mockResolvedValue([]);
+    db.websiteAiInsight.findFirst.mockResolvedValue(null);
+    db.websiteAiInsight.create.mockImplementation(async ({ data }: any) => ({ id: 'ai-insight-1', createdAt: new Date(), updatedAt: new Date(), ...data }));
+    db.websiteAiInsight.update.mockImplementation(async ({ where, data }: any) => ({ id: where.id, ...data }));
+    db.websiteAiConversation.findMany.mockResolvedValue([]);
+    db.websiteAiConversation.findFirst.mockResolvedValue(null);
+    db.websiteAiConversation.create.mockImplementation(async ({ data }: any) => ({ id: 'conversation-1', createdAt: new Date(), updatedAt: new Date(), ...data }));
+    db.websiteAiConversation.update.mockImplementation(async ({ where, data }: any) => ({ id: where.id, ...data }));
+    db.websiteAiMessage.findMany.mockResolvedValue([]);
+    db.websiteAiMessage.create.mockImplementation(async ({ data }: any) => ({ id: `message-${data.role}`, createdAt: new Date(), ...data }));
+    (llmAdapterService.generate as jest.Mock).mockResolvedValue({
+      text: JSON.stringify({
+        title: 'AI Insight',
+        summary: 'Evidence-based summary',
+        severity: 'MEDIUM',
+        confidence: 0.82,
+        recommendations: ['Review high-friction pages'],
+      }),
+      model: 'mock',
+      tokensUsed: 20,
+    });
   });
 
   it('creates a site under the trusted tenant and ignores spoofed tenantId', async () => {
@@ -881,5 +937,80 @@ describe('WebsiteAnalyticsService', () => {
       name: 'Bad funnel',
       steps: [{ name: 'Bad', type: 'unknown', operator: 'contains', value: 'x' }],
     })).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('generates tenant-scoped AI insights with redacted context', async () => {
+    db.websiteAnalyticsSite.findFirst.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1' });
+    db.websiteSession.findMany.mockResolvedValue([
+      { id: 'session-1', entryUrl: '/pricing', exitUrl: '/signup', browser: 'Chrome', device: 'desktop', country: 'CA', durationMs: 120000, pageCount: 3, eventCount: 8, hasJsError: false },
+    ]);
+    db.websiteIssueGroup.findMany.mockResolvedValue([{ id: 'issue-1', tenantId: 'tenant-1', siteId: 'site-1', type: 'RAGE_CLICK', severity: 'HIGH', occurrenceCount: 4 }]);
+
+    const result = await websiteAnalyticsService.generateAiInsight('tenant-1', {
+      type: 'TREND_SUMMARY',
+      siteId: 'site-1',
+      filters: { email: 'person@example.com', phone: '4165551212' },
+    }, 'user-1');
+
+    expect(result).toMatchObject({ tenantId: 'tenant-1', siteId: 'site-1', type: 'TREND_SUMMARY' });
+    expect(db.websiteSession.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1' }) }));
+    expect(db.websiteAiInsight.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ createdById: 'user-1' }) }));
+    const contextSummary = (llmAdapterService.generate as jest.Mock).mock.calls[0][0].contextSummary;
+    expect(contextSummary).not.toContain('person@example.com');
+    expect(contextSummary).not.toContain('4165551212');
+  });
+
+  it('rejects AI insight generation for another tenant source', async () => {
+    db.websiteSession.findFirst.mockResolvedValue(null);
+    await expect(websiteAnalyticsService.generateAiInsight('tenant-1', {
+      type: 'SESSION_SUMMARY',
+      sourceType: 'SESSION',
+      sourceId: 'session-other',
+    })).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it('rejects cross-tenant AI session and recording summaries', async () => {
+    db.websiteSession.findFirst.mockResolvedValue(null);
+    await expect(websiteAnalyticsService.summarizeAiSession('session-1', 'tenant-2')).rejects.toMatchObject({ statusCode: 404 });
+
+    db.websiteRecording.findFirst.mockResolvedValue(null);
+    await expect(websiteAnalyticsService.summarizeAiRecording('recording-1', 'tenant-2')).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it('lists and updates AI insights within tenant scope', async () => {
+    db.websiteAiInsight.findMany.mockResolvedValue([{ id: 'ai-1', tenantId: 'tenant-1', status: 'GENERATED', type: 'BEHAVIOR_INSIGHT' }]);
+    await websiteAnalyticsService.listAiInsights('tenant-1', { siteId: 'site-1', type: 'BEHAVIOR_INSIGHT', severity: 'HIGH', status: 'GENERATED' });
+    expect(db.websiteAiInsight.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { tenantId: 'tenant-1', siteId: 'site-1', type: 'BEHAVIOR_INSIGHT', severity: 'HIGH', status: 'GENERATED' },
+    }));
+
+    db.websiteAiInsight.findFirst.mockResolvedValue({ id: 'ai-1', tenantId: 'tenant-1' });
+    await websiteAnalyticsService.updateAiInsightStatus('ai-1', 'tenant-1', { status: 'ARCHIVED' });
+    expect(db.websiteAiInsight.update).toHaveBeenCalledWith({ where: { id: 'ai-1' }, data: { status: 'ARCHIVED' } });
+  });
+
+  it('keeps AI chat context tenant-scoped', async () => {
+    db.websiteAiConversation.findFirst.mockResolvedValue({ id: 'conversation-1', tenantId: 'tenant-1', siteId: 'site-1', filters: {} });
+    db.websiteSession.findMany.mockResolvedValue([{ id: 'session-1', entryUrl: '/pricing', pageCount: 1, eventCount: 2, hasJsError: false }]);
+
+    await websiteAnalyticsService.createAiMessage('conversation-1', 'tenant-1', { content: 'Which recordings should I watch first?' });
+
+    expect(db.websiteSession.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1' }) }));
+    expect(db.websiteAiMessage.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ tenantId: 'tenant-1', role: 'USER' }) }));
+    expect(db.websiteAiMessage.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ tenantId: 'tenant-1', role: 'ASSISTANT' }) }));
+  });
+
+  it('bounds AI prompt payload size', async () => {
+    db.websiteSession.findMany.mockResolvedValue(Array.from({ length: 20 }, (_, index) => ({
+      id: `session-${index}`,
+      entryUrl: `/pricing-${index}-${'x'.repeat(2000)}`,
+      pageCount: 3,
+      eventCount: 10,
+      hasJsError: false,
+    })));
+
+    await websiteAnalyticsService.generateAiInsight('tenant-1', { type: 'TREND_SUMMARY' });
+    const contextSummary = (llmAdapterService.generate as jest.Mock).mock.calls[0][0].contextSummary;
+    expect(Buffer.byteLength(contextSummary, 'utf8')).toBeLessThanOrEqual(18000);
   });
 });

@@ -3,11 +3,13 @@ import { prisma } from '../../config/database';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { recordingStorageService } from './recording-storage.service';
+import { llmAdapterService } from '../copilot/llm-adapter.service';
 
 const db = prisma as any;
 const MAX_EVENTS_PER_BATCH = 50;
 const MAX_BODY_BYTES = 120_000;
 const MAX_PAYLOAD_BYTES = 20_000;
+const MAX_AI_CONTEXT_BYTES = 18_000;
 const MAX_RRWEB_EVENTS_PER_CHUNK = 500;
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
@@ -209,6 +211,31 @@ function median(values: number[]) {
   if (!nums.length) return 0;
   const mid = Math.floor(nums.length / 2);
   return nums.length % 2 ? nums[mid] : Math.round((nums[mid - 1] + nums[mid]) / 2);
+}
+
+function redactPII(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return value
+      .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[redacted-email]')
+      .replace(/(?:\+?\d[\d\s().-]{7,}\d)/g, '[redacted-phone]')
+      .slice(0, 2000);
+  }
+  if (Array.isArray(value)) return value.slice(0, 100).map(redactPII);
+  if (value && typeof value === 'object') {
+    const output: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value as Record<string, unknown>).slice(0, 80)) {
+      if (/email|phone|password|token|secret/i.test(key)) output[key] = '[redacted]';
+      else output[key] = redactPII(item);
+    }
+    return output;
+  }
+  return value;
+}
+
+function compactJson(value: unknown, max = MAX_AI_CONTEXT_BYTES) {
+  const redacted = redactPII(value);
+  const text = JSON.stringify(redacted);
+  return text.length > max ? text.slice(0, max) : text;
 }
 
 export class WebsiteAnalyticsService {
@@ -546,6 +573,139 @@ export class WebsiteAnalyticsService {
     const hydrated = await db.websiteSession.findFirst({ where: { id: session.id, tenantId }, include: { events: { orderBy: { createdAt: 'asc' } }, behaviorSignals: true } });
     if (!hydrated) throw new NotFoundError('Website session not found', ErrorCodes.RESOURCE_NOT_FOUND);
     return this.upsertJourneyPath(tenantId, session.siteId, hydrated, this.extractJourneyPath(hydrated));
+  }
+
+  async listAiInsights(tenantId: string, query: Record<string, unknown> = {}) {
+    const where: Record<string, any> = { tenantId };
+    if (query.siteId) where.siteId = String(query.siteId);
+    if (query.type) where.type = String(query.type).toUpperCase();
+    if (query.severity) where.severity = String(query.severity).toUpperCase();
+    if (query.status) where.status = String(query.status).toUpperCase();
+    if (query.sourceType) where.sourceType = String(query.sourceType).toUpperCase();
+    if (query.sourceId) where.sourceId = String(query.sourceId);
+    if (query.dateFrom || query.dateTo) {
+      where.createdAt = {};
+      if (query.dateFrom) where.createdAt.gte = new Date(String(query.dateFrom));
+      if (query.dateTo) where.createdAt.lte = new Date(String(query.dateTo));
+    }
+    return db.websiteAiInsight.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(Number(query.limit || 100), 500),
+      include: { site: { select: { id: true, name: true, domain: true } } },
+    });
+  }
+
+  async generateAiInsight(tenantId: string, data: Record<string, unknown> = {}, createdById?: string | null) {
+    const type = cleanString(data.type, 60)?.toUpperCase() || 'RECOMMENDATION';
+    const sourceType = cleanString(data.sourceType, 60)?.toUpperCase() || null;
+    const sourceId = cleanString(data.sourceId, 120);
+    const siteId = cleanString(data.siteId, 120);
+    if (siteId) await this.getSite(siteId, tenantId);
+    const context = await this.buildAiContext(tenantId, { ...data, siteId, sourceType, sourceId });
+    const ai = await this.generateAiText(type, context, String(data.prompt || 'Generate concise analytics insights and recommendations.'));
+    const parsed = this.parseAiInsight(ai, type, context);
+    return db.websiteAiInsight.create({
+      data: {
+        tenantId,
+        siteId: context.siteId || siteId || null,
+        type,
+        title: parsed.title,
+        summary: parsed.summary,
+        severity: parsed.severity,
+        confidence: parsed.confidence,
+        sourceType,
+        sourceId,
+        filters: safePublicPayload(data.filters || {}),
+        evidence: context.citations,
+        recommendations: parsed.recommendations,
+        status: 'GENERATED',
+        createdById: createdById || cleanString(data.createdById, 120),
+      },
+    });
+  }
+
+  async getAiInsight(id: string, tenantId: string) {
+    const insight = await db.websiteAiInsight.findFirst({ where: { id, tenantId }, include: { site: { select: { id: true, name: true, domain: true } } } });
+    if (!insight) throw new NotFoundError('Website AI insight not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return insight;
+  }
+
+  async updateAiInsightStatus(id: string, tenantId: string, data: Record<string, unknown>) {
+    await this.getAiInsight(id, tenantId);
+    const status = cleanString(data.status, 20)?.toUpperCase();
+    if (!status || !['GENERATED', 'DISMISSED', 'ARCHIVED'].includes(status)) throw new BadRequestError('Valid AI insight status is required', ErrorCodes.VALIDATION_FAILED);
+    return db.websiteAiInsight.update({ where: { id }, data: { status } });
+  }
+
+  async summarizeAiSession(sessionId: string, tenantId: string, createdById?: string | null) {
+    await this.getSession(sessionId, tenantId);
+    return this.generateAiInsight(tenantId, { type: 'SESSION_SUMMARY', sourceType: 'SESSION', sourceId: sessionId }, createdById);
+  }
+
+  async summarizeAiRecording(recordingId: string, tenantId: string, createdById?: string | null) {
+    const recording = await this.getRecording(recordingId, tenantId);
+    return this.generateAiInsight(tenantId, { type: 'RECORDING_SUMMARY', sourceType: 'RECORDING', sourceId: recordingId, siteId: recording.siteId }, createdById);
+  }
+
+  async listAiConversations(tenantId: string, query: Record<string, unknown> = {}) {
+    const where: Record<string, unknown> = { tenantId };
+    if (query.siteId) where.siteId = String(query.siteId);
+    return db.websiteAiConversation.findMany({
+      where,
+      orderBy: { updatedAt: 'desc' },
+      take: Math.min(Number(query.limit || 50), 200),
+      include: { messages: { orderBy: { createdAt: 'desc' }, take: 1 } },
+    });
+  }
+
+  async createAiConversation(tenantId: string, data: Record<string, unknown> = {}, createdById?: string | null) {
+    const siteId = cleanString(data.siteId, 120);
+    if (siteId) await this.getSite(siteId, tenantId);
+    return db.websiteAiConversation.create({
+      data: {
+        tenantId,
+        siteId,
+        title: cleanString(data.title, 160) || 'Website analytics chat',
+        filters: safePublicPayload(data.filters || {}),
+        createdById: createdById || cleanString(data.createdById, 120),
+      },
+    });
+  }
+
+  async listAiMessages(conversationId: string, tenantId: string) {
+    await this.getAiConversation(conversationId, tenantId);
+    return db.websiteAiMessage.findMany({ where: { tenantId, conversationId }, orderBy: { createdAt: 'asc' }, take: 200 });
+  }
+
+  async createAiMessage(conversationId: string, tenantId: string, data: Record<string, unknown> = {}) {
+    const conversation = await this.getAiConversation(conversationId, tenantId);
+    const content = cleanString(data.content || data.message, 4000);
+    if (!content) throw new BadRequestError('Message content is required', ErrorCodes.VALIDATION_FAILED);
+    const userMessage = await db.websiteAiMessage.create({ data: { tenantId, conversationId, role: 'USER', content } });
+    const context = await this.buildAiContext(tenantId, { siteId: conversation.siteId, filters: conversation.filters, prompt: content });
+    const history = await db.websiteAiMessage.findMany({ where: { tenantId, conversationId }, orderBy: { createdAt: 'asc' }, take: 12 });
+    const ai = await llmAdapterService.generate({
+      systemPrompt: this.aiSystemPrompt(),
+      userMessage: content,
+      contextSummary: compactJson(context),
+      history: history.map((msg: any) => ({ role: msg.role === 'ASSISTANT' ? 'assistant' : 'user', content: msg.content })),
+      maxTokens: 800,
+      temperature: 0.25,
+    });
+    const fallback = this.deterministicAiAnswer(content, context);
+    const assistant = await db.websiteAiMessage.create({
+      data: {
+        tenantId,
+        conversationId,
+        role: 'ASSISTANT',
+        content: ai?.text || fallback,
+        citations: context.citations,
+        metadata: { aiAvailable: llmAdapterService.isAvailable(), model: ai?.model || 'deterministic' },
+      },
+    });
+    await db.websiteAiConversation.update({ where: { id: conversationId }, data: { updatedAt: new Date(), title: conversation.title || content.slice(0, 80) } }).catch(() => null);
+    return { userMessage, assistant };
   }
 
   async listSessions(tenantId: string, query: Record<string, unknown>) {
@@ -1522,6 +1682,197 @@ export class WebsiteAnalyticsService {
       if (existing) await db.websitePathAggregate.update({ where: { id: existing.id }, data });
       else await db.websitePathAggregate.create({ data });
     }
+  }
+
+  private async getAiConversation(id: string, tenantId: string) {
+    const conversation = await db.websiteAiConversation.findFirst({ where: { id, tenantId } });
+    if (!conversation) throw new NotFoundError('Website AI conversation not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return conversation;
+  }
+
+  private async buildAiContext(tenantId: string, input: Record<string, any>) {
+    const siteId = cleanString(input.siteId, 120) || null;
+    const filters = await this.resolveFilters(tenantId, { ...(input.filters || {}), ...(siteId ? { siteId } : {}) });
+    const sourceType = cleanString(input.sourceType, 60)?.toUpperCase() || null;
+    const sourceId = cleanString(input.sourceId, 120);
+    const context: Record<string, any> = { tenantId: '[tenant-scoped]', siteId, filters: redactPII(filters), citations: [] as any[] };
+
+    if (sourceType && sourceId) await this.attachAiSourceContext(tenantId, sourceType, sourceId, context);
+
+    const baseWhere = { tenantId, ...(siteId ? { siteId } : {}) };
+    const [sessions, issues, signals, heatmaps, runs, paths, segments] = await Promise.all([
+      db.websiteSession.findMany({ where: this.buildSessionWhere(tenantId, filters), select: { id: true, entryUrl: true, exitUrl: true, browser: true, device: true, country: true, durationMs: true, pageCount: true, eventCount: true, hasJsError: true }, orderBy: { startedAt: 'desc' }, take: 20 }),
+      db.websiteIssueGroup.findMany({ where: baseWhere, orderBy: { occurrenceCount: 'desc' }, take: 10 }),
+      db.websiteBehaviorSignal.findMany({ where: baseWhere, orderBy: { firstSeenAt: 'desc' }, take: 20 }),
+      db.websiteHeatmapSnapshot.findMany({ where: baseWhere, orderBy: { createdAt: 'desc' }, take: 5 }),
+      db.websiteFunnelRun.findMany({ where: baseWhere, orderBy: { createdAt: 'desc' }, take: 5 }),
+      db.websitePathAggregate.findMany({ where: baseWhere, orderBy: { occurrenceCount: 'desc' }, take: 10 }),
+      db.websiteAnalyticsSegment.findMany({ where: { tenantId, ...(siteId ? { siteId } : {}) }, orderBy: { createdAt: 'desc' }, take: 10 }),
+    ]);
+    context.sessions = sessions;
+    context.behaviorIssues = issues;
+    context.behaviorSignals = signals.map((signal: any) => ({ id: signal.id, type: signal.type, severity: signal.severity, path: signal.path, selector: signal.selector, message: signal.message }));
+    context.heatmaps = heatmaps.map((h: any) => ({ id: h.id, path: h.path, clickCount: h.clickCount, avgScrollDepth: h.avgScrollDepth, topClickedAreas: h.metadata?.topClickedAreas || [] }));
+    context.funnelRuns = runs.map((run: any) => ({ id: run.id, funnelId: run.funnelId, conversionRate: run.conversionRate, totalEntrants: run.totalEntrants, totalConversions: run.totalConversions, steps: run.results?.steps || [] }));
+    context.journeyPaths = paths.map((path: any) => ({ id: path.id, steps: path.steps, occurrenceCount: path.occurrenceCount, conversionCount: path.conversionCount }));
+    context.segments = segments.map((segment: any) => ({ id: segment.id, name: segment.name }));
+    context.citations.push(
+      ...sessions.map((item: any) => ({ type: 'SESSION', id: item.id })),
+      ...issues.map((item: any) => ({ type: 'BEHAVIOR_ISSUE', id: item.id })),
+      ...runs.map((item: any) => ({ type: 'FUNNEL_RUN', id: item.id })),
+      ...heatmaps.map((item: any) => ({ type: 'HEATMAP', id: item.id })),
+    );
+    const redactedContext = redactPII(context) as Record<string, any>;
+    if (Buffer.byteLength(JSON.stringify(redactedContext), 'utf8') > MAX_AI_CONTEXT_BYTES) {
+      return {
+        tenantId: '[tenant-scoped]',
+        siteId: redactedContext.siteId,
+        filters: redactedContext.filters,
+        source: redactedContext.source ? { type: redactedContext.source.type, id: redactedContext.source.id, note: 'Source context truncated for prompt safety.' } : undefined,
+        sessions: (redactedContext.sessions || []).slice(0, 8),
+        behaviorIssues: (redactedContext.behaviorIssues || []).slice(0, 8),
+        behaviorSignals: (redactedContext.behaviorSignals || []).slice(0, 8),
+        heatmaps: (redactedContext.heatmaps || []).slice(0, 3),
+        funnelRuns: (redactedContext.funnelRuns || []).slice(0, 3),
+        journeyPaths: (redactedContext.journeyPaths || []).slice(0, 5),
+        segments: (redactedContext.segments || []).slice(0, 5),
+        citations: redactedContext.citations || [],
+        truncated: true,
+      };
+    }
+    return redactedContext;
+  }
+
+  private async attachAiSourceContext(tenantId: string, sourceType: string, sourceId: string, context: Record<string, any>) {
+    if (sourceType === 'SESSION') {
+      const session = await db.websiteSession.findFirst({ where: { id: sourceId, tenantId }, include: { events: { orderBy: { createdAt: 'asc' }, take: 80 }, behaviorSignals: true, tags: true, recordings: { take: 1 } } });
+      if (!session) throw new NotFoundError('Website session not found', ErrorCodes.RESOURCE_NOT_FOUND);
+      context.siteId ||= session.siteId;
+      context.source = { type: sourceType, id: sourceId, session: this.safeSessionTimeline(session) };
+      context.citations.push({ type: 'SESSION', id: sourceId });
+    } else if (sourceType === 'RECORDING') {
+      const recording = await db.websiteRecording.findFirst({ where: { id: sourceId, tenantId }, include: { session: { include: { events: { orderBy: { createdAt: 'asc' }, take: 80 }, behaviorSignals: true } } } });
+      if (!recording) throw new NotFoundError('Recording not found', ErrorCodes.RESOURCE_NOT_FOUND);
+      context.siteId ||= recording.siteId;
+      context.source = { type: sourceType, id: sourceId, recording: { id: recording.id, durationMs: recording.durationMs, eventCount: recording.eventCount, session: this.safeSessionTimeline(recording.session) } };
+      context.citations.push({ type: 'RECORDING', id: sourceId }, { type: 'SESSION', id: recording.sessionId });
+    } else if (sourceType === 'BEHAVIOR_ISSUE') {
+      const issue = await db.websiteIssueGroup.findFirst({ where: { id: sourceId, tenantId } });
+      if (!issue) throw new NotFoundError('Behavior issue not found', ErrorCodes.RESOURCE_NOT_FOUND);
+      context.siteId ||= issue.siteId;
+      context.source = { type: sourceType, id: sourceId, issue };
+      context.citations.push({ type: 'BEHAVIOR_ISSUE', id: sourceId });
+    } else if (sourceType === 'FUNNEL_RUN') {
+      const run = await db.websiteFunnelRun.findFirst({ where: { id: sourceId, tenantId }, include: { funnel: true } });
+      if (!run) throw new NotFoundError('Website funnel run not found', ErrorCodes.RESOURCE_NOT_FOUND);
+      context.siteId ||= run.siteId;
+      context.source = { type: sourceType, id: sourceId, run };
+      context.citations.push({ type: 'FUNNEL_RUN', id: sourceId });
+    } else if (sourceType === 'HEATMAP') {
+      const heatmap = await db.websiteHeatmapSnapshot.findFirst({ where: { id: sourceId, tenantId } });
+      if (!heatmap) throw new NotFoundError('Heatmap snapshot not found', ErrorCodes.RESOURCE_NOT_FOUND);
+      context.siteId ||= heatmap.siteId;
+      context.source = { type: sourceType, id: sourceId, heatmap };
+      context.citations.push({ type: 'HEATMAP', id: sourceId });
+    } else if (sourceType === 'JOURNEY') {
+      const journey = await db.websiteJourneyPath.findFirst({ where: { id: sourceId, tenantId } });
+      if (!journey) throw new NotFoundError('Website journey path not found', ErrorCodes.RESOURCE_NOT_FOUND);
+      context.siteId ||= journey.siteId;
+      context.source = { type: sourceType, id: sourceId, journey };
+      context.citations.push({ type: 'JOURNEY', id: sourceId });
+    }
+  }
+
+  private safeSessionTimeline(session: any) {
+    return {
+      id: session?.id,
+      entryUrl: session?.entryUrl,
+      exitUrl: session?.exitUrl,
+      durationMs: session?.durationMs,
+      pageCount: session?.pageCount,
+      eventCount: session?.eventCount,
+      hasJsError: session?.hasJsError,
+      tags: (session?.tags || []).map((tag: any) => tag.name),
+      behaviorSignals: (session?.behaviorSignals || []).map((signal: any) => ({ id: signal.id, type: signal.type, severity: signal.severity, path: signal.path, selector: signal.selector })),
+      events: (session?.events || []).filter((event: any) => ['page_view', 'custom_event', 'click', 'js_error', 'unhandled_rejection'].includes(event.type)).map((event: any) => ({
+        id: event.id,
+        type: event.type,
+        path: event.path,
+        title: event.title,
+        selector: eventSelector(event),
+        eventName: event.payload?.eventName,
+        message: event.payload?.message,
+        createdAt: event.createdAt,
+      })),
+    };
+  }
+
+  private async generateAiText(type: string, context: any, prompt: string) {
+    const llm = await llmAdapterService.generate({
+      systemPrompt: this.aiSystemPrompt(),
+      userMessage: `${prompt}\nReturn JSON with title, summary, severity, confidence, recommendations.`,
+      contextSummary: compactJson(context),
+      maxTokens: 900,
+      temperature: 0.25,
+    });
+    return llm?.text || '';
+  }
+
+  private aiSystemPrompt() {
+    return `You are an AI analyst for Website Analytics inside Zodo CRM. Use only the supplied tenant-scoped context. Be concise, evidence-based, and actionable. Do not invent data. Do not expose PII. Cite source IDs in recommendations when possible. If data is insufficient, say so. Separate facts from recommendations.`;
+  }
+
+  private parseAiInsight(text: string, type: string, context: any) {
+    try {
+      const json = JSON.parse(text.replace(/^```json/i, '').replace(/```$/i, '').trim());
+      return {
+        title: cleanString(json.title, 160) || this.defaultAiTitle(type),
+        summary: cleanString(json.summary, 3000) || this.deterministicAiAnswer(type, context),
+        severity: cleanString(json.severity, 20)?.toUpperCase() || this.inferSeverity(context),
+        confidence: Number(json.confidence || 0.72),
+        recommendations: Array.isArray(json.recommendations) ? json.recommendations.slice(0, 8).map((item: any) => String(item).slice(0, 300)) : this.defaultRecommendations(context),
+      };
+    } catch {
+      return {
+        title: this.defaultAiTitle(type),
+        summary: text || this.deterministicAiAnswer(type, context),
+        severity: this.inferSeverity(context),
+        confidence: llmAdapterService.isAvailable() ? 0.7 : 0.55,
+        recommendations: this.defaultRecommendations(context),
+      };
+    }
+  }
+
+  private defaultAiTitle(type: string) {
+    return type.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+
+  private deterministicAiAnswer(prompt: string, context: any) {
+    const issueCount = context.behaviorIssues?.length || 0;
+    const sessionCount = context.sessions?.length || 0;
+    const funnel = context.funnelRuns?.[0];
+    const drop = funnel?.steps?.sort?.((a: any, b: any) => (b.dropOffs || 0) - (a.dropOffs || 0))?.[0];
+    return [
+      `Facts: ${sessionCount} recent sessions and ${issueCount} behavior issue groups are in the selected context.`,
+      funnel ? `Latest funnel conversion rate is ${funnel.conversionRate}% from ${funnel.totalEntrants} entrants.` : null,
+      drop ? `Largest funnel drop-off appears at "${drop.name}" with ${drop.dropOffs} drop-offs.` : null,
+      context.source ? `Source reviewed: ${context.source.type} ${context.source.id}.` : null,
+      'Recommendation: review high-severity behavior issues first, then inspect linked recordings for the highest-friction pages.',
+    ].filter(Boolean).join('\n');
+  }
+
+  private inferSeverity(context: any) {
+    if ((context.behaviorIssues || []).some((issue: any) => issue.severity === 'HIGH')) return 'HIGH';
+    if ((context.behaviorSignals || []).some((signal: any) => signal.severity === 'HIGH')) return 'HIGH';
+    return (context.behaviorIssues?.length || 0) > 3 ? 'MEDIUM' : 'LOW';
+  }
+
+  private defaultRecommendations(context: any) {
+    const recs = ['Watch recordings tied to high-severity behavior signals.', 'Prioritize pages with repeated rage clicks, dead clicks, or JS errors.'];
+    const funnel = context.funnelRuns?.[0];
+    if (funnel) recs.push('Review the largest funnel drop-off step and compare sessions that converted versus dropped off.');
+    if (context.heatmaps?.[0]) recs.push('Compare heatmap click concentration with the primary call-to-action placement.');
+    return recs;
   }
 
   private async withMetrics(site: any) {

@@ -258,7 +258,9 @@ export class WebsiteAnalyticsController {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders?.();
+    res.write(': connected\n\n');
     const eventTypes = typeof req.query.eventTypes === 'string'
       ? new Set(req.query.eventTypes.split(',').map((item) => item.trim()).filter(Boolean))
       : new Set<string>();

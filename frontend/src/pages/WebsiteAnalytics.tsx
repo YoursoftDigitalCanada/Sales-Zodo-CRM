@@ -733,6 +733,7 @@ export default function WebsiteAnalyticsPage() {
       void liveOverviewQuery.refetch();
       void liveSessionsQuery.refetch();
     };
+    source.onopen = () => setLiveStatus("connected");
     source.addEventListener("connected", () => setLiveStatus("connected"));
     source.onerror = () => setLiveStatus("disconnected");
     ["overview.updated", "session.started", "session.updated", "session.ended", "event.received", "error.received", "behavior.detected", "recording.started", "recording.ended"].forEach((type) => {

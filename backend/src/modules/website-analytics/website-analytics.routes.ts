@@ -9,6 +9,7 @@ import { websiteAnalyticsController } from './website-analytics.controller';
 
 const idSchema = z.object({ params: z.object({ id: z.string().uuid() }) }).passthrough();
 const sessionIdSchema = z.object({ params: z.object({ sessionId: z.string().uuid() }) }).passthrough();
+const tagIdSchema = z.object({ params: z.object({ id: z.string().uuid(), tagId: z.string().uuid() }) }).passthrough();
 const bodySchema = z.object({ body: z.object({}).passthrough() }).passthrough();
 
 export const websiteAnalyticsPublicRoutes = Router();
@@ -34,8 +35,19 @@ router.get('/sites/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate
 router.put('/sites/:id', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), validate(bodySchema), websiteAnalyticsController.updateSite.bind(websiteAnalyticsController));
 router.delete('/sites/:id', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), websiteAnalyticsController.deactivateSite.bind(websiteAnalyticsController));
 router.get('/sites/:id/snippet', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getSnippet.bind(websiteAnalyticsController));
+router.get('/segments', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listSegments.bind(websiteAnalyticsController));
+router.post('/segments', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(bodySchema), websiteAnalyticsController.createSegment.bind(websiteAnalyticsController));
+router.get('/segments/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getSegment.bind(websiteAnalyticsController));
+router.put('/segments/:id', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), validate(bodySchema), websiteAnalyticsController.updateSegment.bind(websiteAnalyticsController));
+router.delete('/segments/:id', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), websiteAnalyticsController.deleteSegment.bind(websiteAnalyticsController));
+router.get('/filter-options', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.getFilterOptions.bind(websiteAnalyticsController));
 router.get('/sessions', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listSessions.bind(websiteAnalyticsController));
 router.get('/sessions/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getSession.bind(websiteAnalyticsController));
+router.get('/sessions/:id/tags', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.listSessionTags.bind(websiteAnalyticsController));
+router.post('/sessions/:id/tags', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), validate(bodySchema), websiteAnalyticsController.createSessionTag.bind(websiteAnalyticsController));
+router.delete('/sessions/:id/tags/:tagId', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(tagIdSchema), websiteAnalyticsController.deleteSessionTag.bind(websiteAnalyticsController));
+router.get('/visitors/:id/identity', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getVisitorIdentity.bind(websiteAnalyticsController));
+router.put('/visitors/:id/identity', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), validate(bodySchema), websiteAnalyticsController.updateVisitorIdentity.bind(websiteAnalyticsController));
 router.get('/events', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listEvents.bind(websiteAnalyticsController));
 router.get('/heatmaps', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listHeatmaps.bind(websiteAnalyticsController));
 router.post('/heatmaps/snapshots', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(bodySchema), websiteAnalyticsController.createHeatmapSnapshot.bind(websiteAnalyticsController));

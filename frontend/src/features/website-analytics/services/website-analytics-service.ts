@@ -25,6 +25,7 @@ export interface WebsiteAnalyticsSite {
 export interface WebsiteRecording {
   id: string;
   siteId: string;
+  visitorId?: string | null;
   sessionId: string;
   visitorId?: string | null;
   status: string;
@@ -109,6 +110,8 @@ export interface WebsiteSession {
   hasJsError: boolean;
   events?: WebsiteEvent[];
   behaviorSignals?: WebsiteBehaviorSignal[];
+  tags?: WebsiteSessionTag[];
+  visitor?: { id: string; anonymousId: string; identity?: WebsiteVisitorIdentity | null };
 }
 
 export interface WebsiteEvent {
@@ -168,6 +171,50 @@ export interface WebsiteIssueGroup {
   signals?: WebsiteBehaviorSignal[];
 }
 
+export interface WebsiteAnalyticsSegment {
+  id: string;
+  siteId?: string | null;
+  name: string;
+  description?: string | null;
+  filters: Record<string, unknown>;
+  isDefault: boolean;
+  isShared: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WebsiteSessionTag {
+  id: string;
+  sessionId: string;
+  visitorId?: string | null;
+  name: string;
+  color?: string | null;
+  createdAt: string;
+}
+
+export interface WebsiteVisitorIdentity {
+  id: string;
+  visitorId: string;
+  externalUserId?: string | null;
+  emailHash?: string | null;
+  traits?: Record<string, unknown>;
+  firstIdentifiedAt: string;
+  lastIdentifiedAt: string;
+}
+
+export interface WebsiteFilterOptions {
+  countries: string[];
+  browsers: string[];
+  operatingSystems: string[];
+  devices: string[];
+  pages: string[];
+  referrers: string[];
+  tags: string[];
+  labels: string[];
+  customEvents: string[];
+  behaviorTypes: string[];
+}
+
 export async function getWebsiteAnalyticsSites(): Promise<WebsiteAnalyticsSite[]> {
   return data(await api.get("/website-analytics/sites")) || [];
 }
@@ -184,7 +231,7 @@ export async function getWebsiteAnalyticsSnippet(id: string): Promise<{ tracking
   return data(await api.get(`/website-analytics/sites/${id}/snippet`));
 }
 
-export async function getWebsiteSessions(params?: { siteId?: string; limit?: number }): Promise<WebsiteSession[]> {
+export async function getWebsiteSessions(params?: Record<string, unknown>): Promise<WebsiteSession[]> {
   return data(await api.get("/website-analytics/sessions", { params })) || [];
 }
 
@@ -281,4 +328,44 @@ export async function updateWebsiteBehaviorIssueStatus(id: string, status: "OPEN
 
 export async function analyzeWebsiteBehaviorSession(sessionId: string): Promise<{ sessionId: string; signalCount: number; signals: WebsiteBehaviorSignal[] }> {
   return data(await api.post(`/website-analytics/behavior/sessions/${sessionId}/analyze`));
+}
+
+export async function getWebsiteAnalyticsSegments(params?: Record<string, unknown>): Promise<WebsiteAnalyticsSegment[]> {
+  return data(await api.get("/website-analytics/segments", { params })) || [];
+}
+
+export async function createWebsiteAnalyticsSegment(payload: Partial<WebsiteAnalyticsSegment>): Promise<WebsiteAnalyticsSegment> {
+  return data(await api.post("/website-analytics/segments", payload));
+}
+
+export async function updateWebsiteAnalyticsSegment(id: string, payload: Partial<WebsiteAnalyticsSegment>): Promise<WebsiteAnalyticsSegment> {
+  return data(await api.put(`/website-analytics/segments/${id}`, payload));
+}
+
+export async function deleteWebsiteAnalyticsSegment(id: string): Promise<void> {
+  await api.delete(`/website-analytics/segments/${id}`);
+}
+
+export async function getWebsiteFilterOptions(params?: Record<string, unknown>): Promise<WebsiteFilterOptions> {
+  return data(await api.get("/website-analytics/filter-options", { params }));
+}
+
+export async function getWebsiteSessionTags(sessionId: string): Promise<WebsiteSessionTag[]> {
+  return data(await api.get(`/website-analytics/sessions/${sessionId}/tags`)) || [];
+}
+
+export async function createWebsiteSessionTag(sessionId: string, payload: { name: string; color?: string }): Promise<WebsiteSessionTag> {
+  return data(await api.post(`/website-analytics/sessions/${sessionId}/tags`, payload));
+}
+
+export async function deleteWebsiteSessionTag(sessionId: string, tagId: string): Promise<void> {
+  await api.delete(`/website-analytics/sessions/${sessionId}/tags/${tagId}`);
+}
+
+export async function getWebsiteVisitorIdentity(visitorId: string): Promise<WebsiteVisitorIdentity | null> {
+  return data(await api.get(`/website-analytics/visitors/${visitorId}/identity`));
+}
+
+export async function updateWebsiteVisitorIdentity(visitorId: string, payload: { externalUserId?: string; traits?: Record<string, unknown> }): Promise<WebsiteVisitorIdentity> {
+  return data(await api.put(`/website-analytics/visitors/${visitorId}/identity`, payload));
 }

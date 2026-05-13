@@ -12,11 +12,17 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   analyzeWebsiteBehaviorSession,
+  createWebsiteAnalyticsSegment,
+  createWebsiteSessionTag,
   createWebsiteHeatmapSnapshot,
   createWebsiteAnalyticsSite,
+  deleteWebsiteAnalyticsSegment,
+  deleteWebsiteSessionTag,
   getWebsiteBehaviorIssue,
   getWebsiteBehaviorIssues,
   getWebsiteBehaviorSignals,
+  getWebsiteAnalyticsSegments,
+  getWebsiteFilterOptions,
   getWebsiteHeatmapPoints,
   getWebsiteHeatmaps,
   getWebsiteAnalyticsSites,
@@ -30,7 +36,9 @@ import {
   setWebsiteRecordingLabels,
   shareWebsiteRecording,
   updateWebsiteBehaviorIssueStatus,
+  updateWebsiteAnalyticsSegment,
   updateWebsiteAnalyticsSite,
+  type WebsiteAnalyticsSegment,
   type WebsiteBehaviorSignal,
   type WebsiteHeatmapPoint,
   type WebsiteHeatmapSnapshot,
@@ -101,6 +109,26 @@ export default function WebsiteAnalyticsPage() {
   });
   const [selectedHeatmapId, setSelectedHeatmapId] = useState<string>("");
   const [compareHeatmapId, setCompareHeatmapId] = useState<string>("");
+  const [filters, setFilters] = useState({
+    segmentId: "",
+    dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    dateTo: new Date().toISOString().slice(0, 10),
+    country: "",
+    browser: "",
+    os: "",
+    device: "",
+    path: "",
+    referrer: "",
+    externalUserId: "",
+    tags: "",
+    labels: "",
+    hasJsError: "all",
+    hasRecording: "all",
+    isFavorite: "all",
+    behaviorTypes: "",
+  });
+  const [segmentName, setSegmentName] = useState("");
+  const [tagDraft, setTagDraft] = useState("");
   const [behaviorFilters, setBehaviorFilters] = useState({ type: "all", severity: "all", status: "OPEN", path: "" });
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const playerRef = useRef<HTMLDivElement | null>(null);
@@ -109,10 +137,30 @@ export default function WebsiteAnalyticsPage() {
   const sites = sitesQuery.data || [];
   const selectedSite = sites.find((site) => site.id === selectedSiteId) || sites[0];
   const activeSiteId = selectedSite?.id;
+  const analyticsFilters = useMemo(() => ({
+    siteId: activeSiteId,
+    limit: 100,
+    ...(filters.segmentId ? { segmentId: filters.segmentId } : {}),
+    ...(filters.dateFrom ? { dateFrom: `${filters.dateFrom}T00:00:00` } : {}),
+    ...(filters.dateTo ? { dateTo: `${filters.dateTo}T23:59:59` } : {}),
+    ...(filters.country ? { country: filters.country } : {}),
+    ...(filters.browser ? { browser: filters.browser } : {}),
+    ...(filters.os ? { os: filters.os } : {}),
+    ...(filters.device ? { device: filters.device } : {}),
+    ...(filters.path ? { path: filters.path } : {}),
+    ...(filters.referrer ? { referrer: filters.referrer } : {}),
+    ...(filters.externalUserId ? { externalUserId: filters.externalUserId } : {}),
+    ...(filters.tags ? { tags: filters.tags.split(",").map((item) => item.trim()).filter(Boolean) } : {}),
+    ...(filters.labels ? { labels: filters.labels.split(",").map((item) => item.trim()).filter(Boolean) } : {}),
+    ...(filters.hasJsError !== "all" ? { hasJsError: filters.hasJsError } : {}),
+    ...(filters.hasRecording !== "all" ? { hasRecording: filters.hasRecording } : {}),
+    ...(filters.isFavorite !== "all" ? { isFavorite: filters.isFavorite } : {}),
+    ...(filters.behaviorTypes ? { behaviorTypes: filters.behaviorTypes.split(",").map((item) => item.trim()).filter(Boolean) } : {}),
+  }), [activeSiteId, filters]);
 
   const sessionsQuery = useQuery({
-    queryKey: ["website-analytics", "sessions", activeSiteId],
-    queryFn: () => getWebsiteSessions({ siteId: activeSiteId, limit: 100 }),
+    queryKey: ["website-analytics", "sessions", analyticsFilters],
+    queryFn: () => getWebsiteSessions(analyticsFilters),
     enabled: Boolean(activeSiteId),
   });
 
@@ -122,13 +170,23 @@ export default function WebsiteAnalyticsPage() {
     enabled: Boolean(selectedSessionId),
   });
   const recordingsQuery = useQuery({
-    queryKey: ["website-analytics", "recordings", activeSiteId],
-    queryFn: () => getWebsiteRecordings({ siteId: activeSiteId, limit: 100 }),
+    queryKey: ["website-analytics", "recordings", analyticsFilters],
+    queryFn: () => getWebsiteRecordings(analyticsFilters),
     enabled: Boolean(activeSiteId),
   });
   const heatmapsQuery = useQuery({
-    queryKey: ["website-analytics", "heatmaps", activeSiteId],
-    queryFn: () => getWebsiteHeatmaps({ siteId: activeSiteId, limit: 100 }),
+    queryKey: ["website-analytics", "heatmaps", analyticsFilters],
+    queryFn: () => getWebsiteHeatmaps(analyticsFilters),
+    enabled: Boolean(activeSiteId),
+  });
+  const segmentsQuery = useQuery({
+    queryKey: ["website-analytics", "segments", activeSiteId],
+    queryFn: () => getWebsiteAnalyticsSegments({ siteId: activeSiteId }),
+    enabled: Boolean(activeSiteId),
+  });
+  const filterOptionsQuery = useQuery({
+    queryKey: ["website-analytics", "filter-options", activeSiteId, filters.dateFrom, filters.dateTo],
+    queryFn: () => getWebsiteFilterOptions({ siteId: activeSiteId, dateFrom: filters.dateFrom, dateTo: filters.dateTo }),
     enabled: Boolean(activeSiteId),
   });
   const effectiveHeatmapId = selectedHeatmapId || heatmapsQuery.data?.[0]?.id || "";
@@ -143,7 +201,7 @@ export default function WebsiteAnalyticsPage() {
     enabled: Boolean(compareHeatmapId),
   });
   const behaviorQueryParams = {
-    siteId: activeSiteId,
+    ...analyticsFilters,
     limit: 200,
     ...(behaviorFilters.type !== "all" ? { type: behaviorFilters.type } : {}),
     ...(behaviorFilters.severity !== "all" ? { severity: behaviorFilters.severity } : {}),
@@ -229,6 +287,49 @@ export default function WebsiteAnalyticsPage() {
       toast({ title: "Heatmap generated", description: "Snapshot is ready to inspect." });
     },
   });
+  const segmentMutation = useMutation({
+    mutationFn: () => createWebsiteAnalyticsSegment({
+      name: segmentName,
+      siteId: activeSiteId,
+      filters: analyticsFilters,
+      isShared: true,
+    }),
+    onSuccess: async (segment) => {
+      setSegmentName("");
+      setFilters((current) => ({ ...current, segmentId: segment.id }));
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "segments"] });
+      toast({ title: "Segment saved", description: "The current filters are now reusable." });
+    },
+  });
+  const deleteSegmentMutation = useMutation({
+    mutationFn: deleteWebsiteAnalyticsSegment,
+    onSuccess: async () => {
+      setFilters((current) => ({ ...current, segmentId: "" }));
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "segments"] });
+    },
+  });
+  const defaultSegmentMutation = useMutation({
+    mutationFn: ({ id, isDefault }: { id: string; isDefault: boolean }) => updateWebsiteAnalyticsSegment(id, { isDefault } as any),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "segments"] });
+      toast({ title: "Default segment updated" });
+    },
+  });
+  const tagMutation = useMutation({
+    mutationFn: ({ sessionId, name }: { sessionId: string; name: string }) => createWebsiteSessionTag(sessionId, { name }),
+    onSuccess: async () => {
+      setTagDraft("");
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "sessions"] });
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "session", selectedSessionId] });
+    },
+  });
+  const deleteTagMutation = useMutation({
+    mutationFn: ({ sessionId, tagId }: { sessionId: string; tagId: string }) => deleteWebsiteSessionTag(sessionId, tagId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "sessions"] });
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "session", selectedSessionId] });
+    },
+  });
   const issueStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: "OPEN" | "IGNORED" | "RESOLVED" }) => updateWebsiteBehaviorIssueStatus(id, status),
     onSuccess: async () => {
@@ -265,6 +366,8 @@ export default function WebsiteAnalyticsPage() {
   const sessionDetail = sessionDetailQuery.data;
   const recordings = recordingsQuery.data || [];
   const heatmaps = heatmapsQuery.data || [];
+  const segments = segmentsQuery.data || [];
+  const filterOptions = filterOptionsQuery.data;
   const behaviorIssues = behaviorIssuesQuery.data || [];
   const behaviorSignals = behaviorSignalsQuery.data || [];
   const selectedIssue = issueDetailQuery.data;
@@ -398,6 +501,72 @@ export default function WebsiteAnalyticsPage() {
           <MetricCard label="Unique Visitors" value={formatNumber(totals.uniqueVisitors)} icon={Globe2} />
           <MetricCard label="JS Errors" value={formatNumber(totals.jsErrors)} icon={AlertTriangle} />
           <MetricCard label="Avg Duration" value={formatDuration(averageDuration)} icon={Clock} />
+        </section>
+
+        <section className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-[#0F172A]">Filters & Segments</h2>
+              <p className="text-xs text-[#64748B]">Apply one filter set across sessions, recordings, heatmaps, and behavior issues.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Input className="w-48" value={segmentName} onChange={(event) => setSegmentName(event.target.value)} placeholder="Segment name" />
+              <Button variant="outline" disabled={!segmentName.trim() || segmentMutation.isPending} onClick={() => segmentMutation.mutate()}>Save Segment</Button>
+            </div>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+            <div className="space-y-1">
+              <Label>Segment</Label>
+              <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={filters.segmentId} onChange={(event) => setFilters((current) => ({ ...current, segmentId: event.target.value }))}>
+                <option value="">Current filters</option>
+                {segments.map((segment: WebsiteAnalyticsSegment) => <option key={segment.id} value={segment.id}>{segment.isDefault ? "★ " : ""}{segment.name}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1"><Label>Date From</Label><Input type="date" value={filters.dateFrom} onChange={(event) => setFilters((current) => ({ ...current, dateFrom: event.target.value }))} /></div>
+            <div className="space-y-1"><Label>Date To</Label><Input type="date" value={filters.dateTo} onChange={(event) => setFilters((current) => ({ ...current, dateTo: event.target.value }))} /></div>
+            <div className="space-y-1"><Label>Country</Label><Input list="wa-countries" value={filters.country} onChange={(event) => setFilters((current) => ({ ...current, country: event.target.value }))} placeholder="Canada" /></div>
+            <div className="space-y-1"><Label>Browser</Label><Input list="wa-browsers" value={filters.browser} onChange={(event) => setFilters((current) => ({ ...current, browser: event.target.value }))} placeholder="Chrome" /></div>
+            <div className="space-y-1"><Label>Device</Label><Input list="wa-devices" value={filters.device} onChange={(event) => setFilters((current) => ({ ...current, device: event.target.value }))} placeholder="Desktop" /></div>
+            <div className="space-y-1"><Label>OS</Label><Input list="wa-os" value={filters.os} onChange={(event) => setFilters((current) => ({ ...current, os: event.target.value }))} placeholder="macOS" /></div>
+            <div className="space-y-1"><Label>URL / Path</Label><Input list="wa-pages" value={filters.path} onChange={(event) => setFilters((current) => ({ ...current, path: event.target.value }))} placeholder="/pricing" /></div>
+            <div className="space-y-1"><Label>Referrer</Label><Input list="wa-referrers" value={filters.referrer} onChange={(event) => setFilters((current) => ({ ...current, referrer: event.target.value }))} placeholder="google.com" /></div>
+            <div className="space-y-1"><Label>User ID</Label><Input value={filters.externalUserId} onChange={(event) => setFilters((current) => ({ ...current, externalUserId: event.target.value }))} placeholder="user_123" /></div>
+            <div className="space-y-1"><Label>Tags</Label><Input list="wa-tags" value={filters.tags} onChange={(event) => setFilters((current) => ({ ...current, tags: event.target.value }))} placeholder="pricing-interest" /></div>
+            <div className="space-y-1"><Label>Labels</Label><Input list="wa-labels" value={filters.labels} onChange={(event) => setFilters((current) => ({ ...current, labels: event.target.value }))} placeholder="bug, vip" /></div>
+            <div className="space-y-1">
+              <Label>Errors</Label>
+              <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={filters.hasJsError} onChange={(event) => setFilters((current) => ({ ...current, hasJsError: event.target.value }))}>
+                <option value="all">All</option><option value="true">With errors</option><option value="false">No errors</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Recording</Label>
+              <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={filters.hasRecording} onChange={(event) => setFilters((current) => ({ ...current, hasRecording: event.target.value }))}>
+                <option value="all">All</option><option value="true">Available</option><option value="false">Missing</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Favorite</Label>
+              <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={filters.isFavorite} onChange={(event) => setFilters((current) => ({ ...current, isFavorite: event.target.value }))}>
+                <option value="all">All</option><option value="true">Favorites</option><option value="false">Not favorite</option>
+              </select>
+            </div>
+            <div className="space-y-1"><Label>Behavior</Label><Input list="wa-behaviors" value={filters.behaviorTypes} onChange={(event) => setFilters((current) => ({ ...current, behaviorTypes: event.target.value }))} placeholder="RAGE_CLICK" /></div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {filters.segmentId ? <Button variant="outline" onClick={() => defaultSegmentMutation.mutate({ id: filters.segmentId, isDefault: true })}>Mark Default</Button> : null}
+            {filters.segmentId ? <Button variant="outline" onClick={() => deleteSegmentMutation.mutate(filters.segmentId)}>Delete Segment</Button> : null}
+            <Button variant="outline" onClick={() => setFilters((current) => ({ ...current, segmentId: "", country: "", browser: "", os: "", device: "", path: "", referrer: "", externalUserId: "", tags: "", labels: "", hasJsError: "all", hasRecording: "all", isFavorite: "all", behaviorTypes: "" }))}>Clear Filters</Button>
+          </div>
+          <datalist id="wa-countries">{(filterOptions?.countries || []).map((item) => <option key={item} value={item} />)}</datalist>
+          <datalist id="wa-browsers">{(filterOptions?.browsers || []).map((item) => <option key={item} value={item} />)}</datalist>
+          <datalist id="wa-devices">{(filterOptions?.devices || []).map((item) => <option key={item} value={item} />)}</datalist>
+          <datalist id="wa-os">{(filterOptions?.operatingSystems || []).map((item) => <option key={item} value={item} />)}</datalist>
+          <datalist id="wa-pages">{(filterOptions?.pages || []).map((item) => <option key={item} value={item} />)}</datalist>
+          <datalist id="wa-referrers">{(filterOptions?.referrers || []).map((item) => <option key={item} value={item} />)}</datalist>
+          <datalist id="wa-tags">{(filterOptions?.tags || []).map((item) => <option key={item} value={item} />)}</datalist>
+          <datalist id="wa-labels">{(filterOptions?.labels || []).map((item) => <option key={item} value={item} />)}</datalist>
+          <datalist id="wa-behaviors">{(filterOptions?.behaviorTypes || []).map((item) => <option key={item} value={item} />)}</datalist>
         </section>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
@@ -798,6 +967,21 @@ export default function WebsiteAnalyticsPage() {
                 <p><span className="font-medium">Entry:</span> {sessionDetail.entryUrl}</p>
                 <p className="mt-2"><span className="font-medium">Exit:</span> {sessionDetail.exitUrl || "-"}</p>
                 <p className="mt-2"><span className="font-medium">Browser:</span> {sessionDetail.browser || "-"} / {sessionDetail.os || "-"}</p>
+                <p className="mt-2"><span className="font-medium">Visitor:</span> {sessionDetail.visitor?.anonymousId || sessionDetail.visitorId || "-"}</p>
+                <p className="mt-2"><span className="font-medium">User ID:</span> {sessionDetail.visitor?.identity?.externalUserId || "-"}</p>
+                {sessionDetail.visitor?.identity?.traits ? <pre className="mt-3 max-h-32 overflow-auto rounded-md bg-[#F8FAFC] p-3 text-xs text-[#475569]">{JSON.stringify(sessionDetail.visitor.identity.traits, null, 2)}</pre> : null}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(sessionDetail.tags || []).map((tag) => (
+                    <Badge key={tag.id} variant="outline" className="gap-2">
+                      {tag.name}
+                      <button onClick={() => deleteTagMutation.mutate({ sessionId: sessionDetail.id, tagId: tag.id })}>×</button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <Input value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} placeholder="Add tag" />
+                  <Button variant="outline" disabled={!tagDraft.trim()} onClick={() => tagMutation.mutate({ sessionId: sessionDetail.id, name: tagDraft })}>Add</Button>
+                </div>
                 <Button variant="outline" className="mt-4" disabled={analyzeSessionMutation.isPending} onClick={() => analyzeSessionMutation.mutate(sessionDetail.id)}>Analyze Behavior</Button>
               </div>
               <div className="space-y-3">

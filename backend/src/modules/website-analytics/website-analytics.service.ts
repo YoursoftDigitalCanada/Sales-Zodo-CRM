@@ -9,6 +9,7 @@ const MAX_EVENTS_PER_BATCH = 50;
 const MAX_BODY_BYTES = 120_000;
 const MAX_PAYLOAD_BYTES = 20_000;
 const MAX_RRWEB_EVENTS_PER_CHUNK = 500;
+const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 function cleanString(value: unknown, max = 500): string | null {
   if (typeof value !== 'string') return null;
@@ -35,6 +36,25 @@ function safePayload(value: unknown, fallback: Record<string, unknown> = {}) {
   if (!value || typeof value !== 'object') return fallback;
   if (jsonSize(value) > MAX_PAYLOAD_BYTES) return { truncated: true };
   return value as Record<string, unknown>;
+}
+
+function safePublicPayload(value: unknown, maxKeys = 40) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  if (jsonSize(value) > MAX_PAYLOAD_BYTES) {
+    throw new BadRequestError('Analytics payload is too large', ErrorCodes.VALIDATION_FAILED);
+  }
+  const output: Record<string, unknown> = {};
+  for (const [key, rawValue] of Object.entries(value as Record<string, unknown>).slice(0, maxKeys)) {
+    if (DANGEROUS_KEYS.has(key)) {
+      throw new BadRequestError('Payload contains unsafe keys', ErrorCodes.VALIDATION_FAILED);
+    }
+    const safeKey = key.replace(/[^a-zA-Z0-9_.-]/g, '').slice(0, 80);
+    if (!safeKey) continue;
+    if (typeof rawValue === 'string') output[safeKey] = rawValue.slice(0, 500);
+    else if (typeof rawValue === 'number' || typeof rawValue === 'boolean' || rawValue === null) output[safeKey] = rawValue;
+    else if (typeof rawValue === 'object') output[safeKey] = safePayload(rawValue);
+  }
+  return output;
 }
 
 function toInt(value: unknown): number | null {
@@ -158,6 +178,27 @@ function signalSeverity(type: string, countOrMs: number, hasError = false) {
   return 'MEDIUM';
 }
 
+function stringArray(value: unknown) {
+  if (Array.isArray(value)) return value.map((item) => cleanString(item, 100)).filter(Boolean) as string[];
+  const item = cleanString(value, 100);
+  return item ? [item] : [];
+}
+
+function dateRangeWhere(field: string, filters: Record<string, unknown>) {
+  const range: Record<string, Date> = {};
+  const from = filters.dateFrom || filters.startDate;
+  const to = filters.dateTo || filters.endDate;
+  if (from) range.gte = new Date(String(from));
+  if (to) range.lte = new Date(String(to));
+  return Object.keys(range).length ? { [field]: range } : {};
+}
+
+function hashEmail(value: unknown) {
+  const email = cleanString(value, 320)?.toLowerCase();
+  if (!email) return null;
+  return crypto.createHash('sha256').update(email).digest('hex');
+}
+
 export class WebsiteAnalyticsService {
   async listSites(tenantId: string) {
     const sites = await db.websiteAnalyticsSite.findMany({
@@ -225,14 +266,104 @@ export class WebsiteAnalyticsService {
     };
   }
 
-  async listSessions(tenantId: string, query: Record<string, unknown>) {
+  async listSegments(tenantId: string, query: Record<string, unknown> = {}) {
     const where: Record<string, unknown> = { tenantId };
     if (query.siteId) where.siteId = String(query.siteId);
+    return db.websiteAnalyticsSegment.findMany({
+      where,
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+      take: Math.min(Number(query.limit || 100), 500),
+      include: { site: { select: { id: true, name: true, domain: true } } },
+    });
+  }
+
+  async createSegment(tenantId: string, data: Record<string, unknown>, createdById?: string | null) {
+    const name = cleanString(data.name, 120);
+    if (!name) throw new BadRequestError('Segment name is required', ErrorCodes.VALIDATION_FAILED);
+    const siteId = cleanString(data.siteId, 120);
+    if (siteId) await this.getSite(siteId, tenantId);
+    const segment = await db.websiteAnalyticsSegment.create({
+      data: {
+        tenantId,
+        siteId,
+        name,
+        description: cleanString(data.description, 500),
+        filters: safePublicPayload(data.filters || {}),
+        isDefault: Boolean(data.isDefault),
+        isShared: Boolean(data.isShared),
+        createdById: createdById || cleanString(data.createdById, 120),
+      },
+    });
+    if (segment.isDefault) await this.clearOtherDefaultSegments(tenantId, segment.id, siteId);
+    return segment;
+  }
+
+  async getSegment(id: string, tenantId: string) {
+    const segment = await db.websiteAnalyticsSegment.findFirst({ where: { id, tenantId }, include: { site: { select: { id: true, name: true, domain: true } } } });
+    if (!segment) throw new NotFoundError('Website analytics segment not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return segment;
+  }
+
+  async updateSegment(id: string, tenantId: string, data: Record<string, unknown>) {
+    await this.getSegment(id, tenantId);
+    const update: Record<string, unknown> = {};
+    if (data.name !== undefined) {
+      const name = cleanString(data.name, 120);
+      if (!name) throw new BadRequestError('Segment name is required', ErrorCodes.VALIDATION_FAILED);
+      update.name = name;
+    }
+    if (data.description !== undefined) update.description = cleanString(data.description, 500);
+    if (data.filters !== undefined) update.filters = safePublicPayload(data.filters || {});
+    if (data.isDefault !== undefined) update.isDefault = Boolean(data.isDefault);
+    if (data.isShared !== undefined) update.isShared = Boolean(data.isShared);
+    if (data.siteId !== undefined) {
+      const siteId = cleanString(data.siteId, 120);
+      if (siteId) await this.getSite(siteId, tenantId);
+      update.siteId = siteId;
+    }
+    const segment = await db.websiteAnalyticsSegment.update({ where: { id }, data: update });
+    if (segment.isDefault) await this.clearOtherDefaultSegments(tenantId, segment.id, segment.siteId);
+    return segment;
+  }
+
+  async deleteSegment(id: string, tenantId: string) {
+    await this.getSegment(id, tenantId);
+    return db.websiteAnalyticsSegment.delete({ where: { id } });
+  }
+
+  async getFilterOptions(tenantId: string, query: Record<string, unknown> = {}) {
+    const baseWhere: Record<string, any> = { tenantId, ...dateRangeWhere('startedAt', query) };
+    if (query.siteId) baseWhere.siteId = String(query.siteId);
+    const [sessions, events, tags, recordings, signals] = await Promise.all([
+      db.websiteSession.findMany({ where: baseWhere, select: { country: true, browser: true, os: true, device: true, entryUrl: true, referrer: true }, take: 5000 }),
+      db.websiteEvent.findMany({ where: { tenantId, ...(query.siteId ? { siteId: String(query.siteId) } : {}), ...dateRangeWhere('createdAt', query) }, select: { type: true, path: true, url: true, payload: true }, take: 5000 }),
+      db.websiteSessionTag.findMany({ where: { tenantId, ...(query.siteId ? { siteId: String(query.siteId) } : {}) }, select: { name: true }, take: 1000 }),
+      db.websiteRecording.findMany({ where: { tenantId, ...(query.siteId ? { siteId: String(query.siteId) } : {}) }, select: { labels: true }, take: 1000 }),
+      db.websiteBehaviorSignal.findMany({ where: { tenantId, ...(query.siteId ? { siteId: String(query.siteId) } : {}) }, select: { type: true }, take: 1000 }),
+    ]);
+    const uniq = (items: Array<unknown>) => Array.from(new Set(items.filter(Boolean).map(String))).sort();
+    return {
+      countries: uniq(sessions.map((item: any) => item.country)),
+      browsers: uniq(sessions.map((item: any) => item.browser)),
+      operatingSystems: uniq(sessions.map((item: any) => item.os)),
+      devices: uniq(sessions.map((item: any) => item.device)),
+      pages: uniq(events.map((item: any) => item.path || this.pathFromUrl(item.url)).concat(sessions.map((item: any) => this.pathFromUrl(item.entryUrl)))),
+      referrers: uniq(sessions.map((item: any) => item.referrer)),
+      tags: uniq(tags.map((item: any) => item.name)),
+      labels: uniq(recordings.flatMap((item: any) => Array.isArray(item.labels) ? item.labels : [])),
+      customEvents: uniq(events.filter((item: any) => item.type === 'custom_event').map((item: any) => item.payload?.eventName)),
+      behaviorTypes: uniq(signals.map((item: any) => item.type)),
+    };
+  }
+
+  async listSessions(tenantId: string, query: Record<string, unknown>) {
+    const filters = await this.resolveFilters(tenantId, query);
+    const where = this.buildSessionWhere(tenantId, filters);
     const sessions = await db.websiteSession.findMany({
       where,
       orderBy: { startedAt: 'desc' },
       take: Math.min(Number(query.limit || 100), 500),
-      include: { site: { select: { id: true, name: true, domain: true } }, visitor: true },
+      include: { site: { select: { id: true, name: true, domain: true } }, visitor: { include: { identity: true } }, tags: true },
     });
     return sessions;
   }
@@ -242,7 +373,8 @@ export class WebsiteAnalyticsService {
       where: { id, tenantId },
       include: {
         site: { select: { id: true, name: true, domain: true } },
-        visitor: true,
+        visitor: { include: { identity: true } },
+        tags: true,
         events: { orderBy: { createdAt: 'asc' }, take: 500 },
       },
     });
@@ -251,8 +383,8 @@ export class WebsiteAnalyticsService {
   }
 
   async listEvents(tenantId: string, query: Record<string, unknown>) {
-    const where: Record<string, unknown> = { tenantId };
-    if (query.siteId) where.siteId = String(query.siteId);
+    const filters = await this.resolveFilters(tenantId, query);
+    const where = this.buildEventWhere(tenantId, filters);
     if (query.sessionId) where.sessionId = String(query.sessionId);
     if (query.type) where.type = String(query.type);
     return db.websiteEvent.findMany({
@@ -264,15 +396,16 @@ export class WebsiteAnalyticsService {
   }
 
   async listHeatmaps(tenantId: string, query: Record<string, unknown>): Promise<any> {
+    const filters = await this.resolveFilters(tenantId, query);
     const where: Record<string, any> = { tenantId };
-    if (query.siteId) where.siteId = String(query.siteId);
-    if (query.path) where.path = String(query.path);
-    if (query.url) where.url = String(query.url);
+    if (filters.siteId) where.siteId = String(filters.siteId);
+    if (filters.path) where.path = this.stringMatch(filters.path);
+    if (filters.url) where.url = this.stringMatch(filters.url);
     if (query.deviceType && query.deviceType !== 'all') where.deviceType = String(query.deviceType).toLowerCase();
-    if (query.dateFrom || query.dateTo) {
+    if (filters.dateFrom || filters.dateTo) {
       where.createdAt = {};
-      if (query.dateFrom) where.createdAt.gte = new Date(String(query.dateFrom));
-      if (query.dateTo) where.createdAt.lte = new Date(String(query.dateTo));
+      if (filters.dateFrom) where.createdAt.gte = new Date(String(filters.dateFrom));
+      if (filters.dateTo) where.createdAt.lte = new Date(String(filters.dateTo));
     }
     if (query.type) {
       where.points = { some: { type: String(query.type).toUpperCase() } };
@@ -367,25 +500,24 @@ export class WebsiteAnalyticsService {
   }
 
   async listRecordings(tenantId: string, query: Record<string, unknown>) {
+    const filters = await this.resolveFilters(tenantId, query);
     const where: Record<string, any> = { tenantId };
-    if (query.siteId) where.siteId = String(query.siteId);
-    if (query.isFavorite !== undefined) where.isFavorite = String(query.isFavorite) === 'true';
-    if (query.label) where.labels = { array_contains: [String(query.label)] };
-    if (query.minDuration || query.maxDuration) {
+    if (filters.siteId) where.siteId = String(filters.siteId);
+    if (filters.isFavorite !== undefined) where.isFavorite = this.booleanFilter(filters.isFavorite);
+    const labels = stringArray(filters.labels || filters.label);
+    if (labels.length) where.labels = { array_contains: labels };
+    if (filters.minDuration || filters.maxDuration) {
       where.durationMs = {};
-      if (query.minDuration) where.durationMs.gte = Number(query.minDuration);
-      if (query.maxDuration) where.durationMs.lte = Number(query.maxDuration);
+      if (filters.minDuration) where.durationMs.gte = Number(filters.minDuration);
+      if (filters.maxDuration) where.durationMs.lte = Number(filters.maxDuration);
     }
-    if (query.startDate || query.endDate) {
+    if (filters.dateFrom || filters.dateTo) {
       where.createdAt = {};
-      if (query.startDate) where.createdAt.gte = new Date(String(query.startDate));
-      if (query.endDate) where.createdAt.lte = new Date(String(query.endDate));
+      if (filters.dateFrom) where.createdAt.gte = new Date(String(filters.dateFrom));
+      if (filters.dateTo) where.createdAt.lte = new Date(String(filters.dateTo));
     }
-    const sessionWhere: Record<string, unknown> = {};
-    if (query.hasJsError !== undefined) sessionWhere.hasJsError = String(query.hasJsError) === 'true';
-    if (query.browser) sessionWhere.browser = String(query.browser);
-    if (query.device) sessionWhere.device = String(query.device);
-    if (query.country) sessionWhere.country = String(query.country);
+    const sessionWhere = this.buildSessionWhere(tenantId, filters);
+    delete sessionWhere.tenantId;
     if (Object.keys(sessionWhere).length) where.session = sessionWhere;
 
     return db.websiteRecording.findMany({
@@ -681,30 +813,84 @@ export class WebsiteAnalyticsService {
       },
     });
     await db.websiteVisitor.update({ where: { id: visitor.id }, data: { lastSeenAt: new Date() } });
+    await this.processPublicSpecialEvents(site, sessionStart.sessionId, visitor.id, incoming);
     if (events.some((event: any) => event.type === 'js_error' || event.type === 'unhandled_rejection')) {
       await this.analyzeSession(sessionStart.sessionId, site.tenantId).catch(() => null);
     }
     return { accepted: events.length, siteId: site.id, sessionId: sessionStart.sessionId };
   }
 
+  async listSessionTags(id: string, tenantId: string): Promise<any> {
+    const session = await this.getSession(id, tenantId);
+    return db.websiteSessionTag.findMany({ where: { tenantId, sessionId: session.id }, orderBy: { createdAt: 'desc' } });
+  }
+
+  async createSessionTag(id: string, tenantId: string, data: Record<string, unknown>, createdById?: string | null): Promise<any> {
+    const session = await this.getSession(id, tenantId);
+    const name = cleanString(data.name || data.tagName, 80);
+    if (!name) throw new BadRequestError('Tag name is required', ErrorCodes.VALIDATION_FAILED);
+    const existing = await db.websiteSessionTag.findFirst({ where: { tenantId, sessionId: session.id, name } });
+    if (existing) return existing;
+    return db.websiteSessionTag.create({
+      data: {
+        tenantId,
+        siteId: session.siteId,
+        sessionId: session.id,
+        visitorId: session.visitorId || null,
+        name,
+        color: cleanString(data.color, 20),
+        createdById: createdById || cleanString(data.createdById, 120),
+      },
+    });
+  }
+
+  async deleteSessionTag(sessionId: string, tagId: string, tenantId: string): Promise<any> {
+    await this.getSession(sessionId, tenantId);
+    const tag = await db.websiteSessionTag.findFirst({ where: { id: tagId, sessionId, tenantId } });
+    if (!tag) throw new NotFoundError('Session tag not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return db.websiteSessionTag.delete({ where: { id: tagId } });
+  }
+
+  async getVisitorIdentity(visitorId: string, tenantId: string): Promise<any> {
+    const visitor = await db.websiteVisitor.findFirst({
+      where: { id: visitorId, tenantId },
+      include: { identity: true },
+    });
+    if (!visitor) throw new NotFoundError('Website visitor not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return visitor.identity || null;
+  }
+
+  async updateVisitorIdentity(visitorId: string, tenantId: string, data: Record<string, unknown>): Promise<any> {
+    const visitor = await db.websiteVisitor.findFirst({ where: { id: visitorId, tenantId } });
+    if (!visitor) throw new NotFoundError('Website visitor not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return this.upsertIdentity({
+      tenantId,
+      siteId: visitor.siteId,
+      visitorId: visitor.id,
+      externalUserId: cleanString(data.externalUserId, 200),
+      traits: safePublicPayload(data.traits || {}),
+      email: (data as any).email,
+    });
+  }
+
   async listBehaviorSignals(tenantId: string, query: Record<string, unknown>): Promise<any> {
+    const filters = await this.resolveFilters(tenantId, query);
     const where: Record<string, any> = { tenantId };
-    if (query.siteId) where.siteId = String(query.siteId);
-    if (query.type) where.type = String(query.type).toUpperCase();
-    if (query.severity) where.severity = String(query.severity).toUpperCase();
-    if (query.path) where.path = String(query.path);
-    if (query.url) where.url = String(query.url);
-    if (query.startDate || query.endDate) {
+    if (filters.siteId) where.siteId = String(filters.siteId);
+    const behaviorTypes = stringArray(filters.behaviorTypes || filters.type).map((item) => item.toUpperCase());
+    if (behaviorTypes.length) where.type = { in: behaviorTypes };
+    if (filters.severity) where.severity = String(filters.severity).toUpperCase();
+    if (filters.path) where.path = this.stringMatch(filters.path);
+    if (filters.url) where.url = this.stringMatch(filters.url);
+    if (filters.dateFrom || filters.dateTo) {
       where.firstSeenAt = {};
-      if (query.startDate) where.firstSeenAt.gte = new Date(String(query.startDate));
-      if (query.endDate) where.firstSeenAt.lte = new Date(String(query.endDate));
+      if (filters.dateFrom) where.firstSeenAt.gte = new Date(String(filters.dateFrom));
+      if (filters.dateTo) where.firstSeenAt.lte = new Date(String(filters.dateTo));
     }
-    const sessionWhere: Record<string, any> = {};
-    if (query.browser) sessionWhere.browser = String(query.browser);
-    if (query.device) sessionWhere.device = String(query.device);
-    if (query.country) sessionWhere.country = String(query.country);
+    const sessionWhere = this.buildSessionWhere(tenantId, filters);
+    delete sessionWhere.tenantId;
     if (Object.keys(sessionWhere).length) where.session = sessionWhere;
-    if (query.hasRecording !== undefined) where.recordingId = String(query.hasRecording) === 'true' ? { not: null } : null;
+    if (filters.hasRecording !== undefined) where.recordingId = this.booleanFilter(filters.hasRecording) ? { not: null } : null;
     return db.websiteBehaviorSignal.findMany({
       where,
       orderBy: { firstSeenAt: 'desc' },
@@ -723,17 +909,19 @@ export class WebsiteAnalyticsService {
   }
 
   async listBehaviorIssues(tenantId: string, query: Record<string, unknown>): Promise<any> {
+    const filters = await this.resolveFilters(tenantId, query);
     const where: Record<string, any> = { tenantId };
-    if (query.siteId) where.siteId = String(query.siteId);
-    if (query.type) where.type = String(query.type).toUpperCase();
-    if (query.severity) where.severity = String(query.severity).toUpperCase();
-    if (query.status) where.status = String(query.status).toUpperCase();
-    if (query.path) where.path = String(query.path);
-    if (query.url) where.url = String(query.url);
-    if (query.startDate || query.endDate) {
+    if (filters.siteId) where.siteId = String(filters.siteId);
+    const behaviorTypes = stringArray(filters.behaviorTypes || filters.type).map((item) => item.toUpperCase());
+    if (behaviorTypes.length) where.type = { in: behaviorTypes };
+    if (filters.severity) where.severity = String(filters.severity).toUpperCase();
+    if (filters.status) where.status = String(filters.status).toUpperCase();
+    if (filters.path) where.path = this.stringMatch(filters.path);
+    if (filters.url) where.url = this.stringMatch(filters.url);
+    if (filters.dateFrom || filters.dateTo) {
       where.lastSeenAt = {};
-      if (query.startDate) where.lastSeenAt.gte = new Date(String(query.startDate));
-      if (query.endDate) where.lastSeenAt.lte = new Date(String(query.endDate));
+      if (filters.dateFrom) where.lastSeenAt.gte = new Date(String(filters.dateFrom));
+      if (filters.dateTo) where.lastSeenAt.lte = new Date(String(filters.dateTo));
     }
     return db.websiteIssueGroup.findMany({
       where,
@@ -790,6 +978,155 @@ export class WebsiteAnalyticsService {
     const path = await import('path');
     const vendorPath = path.join(process.cwd(), 'node_modules', 'rrweb', 'dist', 'record', 'rrweb-record.min.js');
     return fs.readFile(vendorPath, 'utf8');
+  }
+
+  private async resolveFilters(tenantId: string, query: Record<string, unknown>) {
+    const segmentId = cleanString(query.segmentId, 120);
+    const queryFilters = { ...query };
+    delete queryFilters.segmentId;
+    if (!segmentId) return queryFilters;
+    const segment = await db.websiteAnalyticsSegment.findFirst({ where: { id: segmentId, tenantId } });
+    if (!segment) throw new NotFoundError('Website analytics segment not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return { ...(segment.filters || {}), ...queryFilters };
+  }
+
+  private buildSessionWhere(tenantId: string, filters: Record<string, unknown>) {
+    const where: Record<string, any> = { tenantId };
+    if (filters.siteId) where.siteId = String(filters.siteId);
+    if (filters.country) where.country = this.stringMatch(filters.country);
+    if (filters.browser) where.browser = this.stringMatch(filters.browser);
+    if (filters.os) where.os = this.stringMatch(filters.os);
+    if (filters.device) where.device = this.stringMatch(filters.device);
+    if (filters.referrer) where.referrer = this.stringMatch(filters.referrer);
+    if (filters.path) where.OR = [{ entryUrl: this.stringMatch(filters.path) }, { exitUrl: this.stringMatch(filters.path) }];
+    if (filters.url) where.OR = [{ entryUrl: this.stringMatch(filters.url) }, { exitUrl: this.stringMatch(filters.url) }];
+    if (filters.hasJsError !== undefined || filters.errors !== undefined) where.hasJsError = this.booleanFilter(filters.hasJsError ?? filters.errors);
+    if (filters.dateFrom || filters.dateTo) {
+      where.startedAt = {};
+      if (filters.dateFrom) where.startedAt.gte = new Date(String(filters.dateFrom));
+      if (filters.dateTo) where.startedAt.lte = new Date(String(filters.dateTo));
+    }
+    if (filters.minDuration || filters.maxDuration) {
+      where.durationMs = {};
+      if (filters.minDuration) where.durationMs.gte = Number(filters.minDuration);
+      if (filters.maxDuration) where.durationMs.lte = Number(filters.maxDuration);
+    }
+    if (filters.minPageCount || filters.maxPageCount) {
+      where.pageCount = {};
+      if (filters.minPageCount) where.pageCount.gte = Number(filters.minPageCount);
+      if (filters.maxPageCount) where.pageCount.lte = Number(filters.maxPageCount);
+    }
+    if (filters.minEventCount || filters.maxEventCount) {
+      where.eventCount = {};
+      if (filters.minEventCount) where.eventCount.gte = Number(filters.minEventCount);
+      if (filters.maxEventCount) where.eventCount.lte = Number(filters.maxEventCount);
+    }
+    const tags = stringArray(filters.tags || filters.tag);
+    if (tags.length) where.tags = { some: { name: { in: tags } } };
+    if (filters.visitorId) where.visitorId = String(filters.visitorId);
+    if (filters.externalUserId || filters.userId) where.visitor = { identity: { externalUserId: String(filters.externalUserId || filters.userId) } };
+    if (filters.customEventName) where.events = { some: { type: 'custom_event', payload: { path: ['eventName'], equals: String(filters.customEventName) } } };
+    const behaviorTypes = this.behaviorTypesFromFilters(filters);
+    if (behaviorTypes.length) where.behaviorSignals = { some: { type: { in: behaviorTypes } } };
+    if (filters.hasRecording !== undefined) where.recordings = this.booleanFilter(filters.hasRecording) ? { some: {} } : { none: {} };
+    return where;
+  }
+
+  private buildEventWhere(tenantId: string, filters: Record<string, unknown>) {
+    const where: Record<string, any> = { tenantId };
+    if (filters.siteId) where.siteId = String(filters.siteId);
+    if (filters.path) where.path = this.stringMatch(filters.path);
+    if (filters.url) where.url = this.stringMatch(filters.url);
+    if (filters.dateFrom || filters.dateTo) {
+      where.createdAt = {};
+      if (filters.dateFrom) where.createdAt.gte = new Date(String(filters.dateFrom));
+      if (filters.dateTo) where.createdAt.lte = new Date(String(filters.dateTo));
+    }
+    if (filters.customEventName) {
+      where.type = 'custom_event';
+      where.payload = { path: ['eventName'], equals: String(filters.customEventName) };
+    }
+    const sessionWhere = this.buildSessionWhere(tenantId, filters);
+    delete sessionWhere.tenantId;
+    delete sessionWhere.siteId;
+    if (Object.keys(sessionWhere).length) where.session = sessionWhere;
+    return where;
+  }
+
+  private behaviorTypesFromFilters(filters: Record<string, unknown>) {
+    const types = stringArray(filters.behaviorTypes).map((item) => item.toUpperCase());
+    if (this.booleanFilter(filters.hasRageClick)) types.push('RAGE_CLICK');
+    if (this.booleanFilter(filters.hasDeadClick)) types.push('DEAD_CLICK');
+    if (this.booleanFilter(filters.hasQuickBack)) types.push('QUICK_BACK');
+    if (this.booleanFilter(filters.hasExcessiveScroll)) types.push('EXCESSIVE_SCROLL');
+    return Array.from(new Set(types));
+  }
+
+  private stringMatch(value: unknown) {
+    const raw = cleanString(value, 1000) || '';
+    if (raw.startsWith('=')) return raw.slice(1);
+    return { contains: raw, mode: 'insensitive' };
+  }
+
+  private booleanFilter(value: unknown) {
+    return value === true || value === 'true' || value === '1' || value === 1;
+  }
+
+  private async clearOtherDefaultSegments(tenantId: string, id: string, siteId?: string | null) {
+    await db.websiteAnalyticsSegment.updateMany?.({
+      where: { tenantId, id: { not: id }, siteId: siteId || null },
+      data: { isDefault: false },
+    });
+  }
+
+  private async processPublicSpecialEvents(site: any, sessionId: string, visitorId: string, incoming: any[]) {
+    for (const event of incoming.slice(0, MAX_EVENTS_PER_BATCH)) {
+      if (event?.type === 'identify') {
+        await this.upsertIdentity({
+          tenantId: site.tenantId,
+          siteId: site.id,
+          visitorId,
+          externalUserId: cleanString(event.externalUserId || event.userId || event.payload?.externalUserId, 200),
+          traits: safePublicPayload(event.traits || event.payload?.traits || event.payload || {}),
+          email: event.email || event.payload?.email,
+        });
+      }
+      if (event?.type === 'session_tag') {
+        const name = cleanString(event.name || event.tagName || event.payload?.name, 80);
+        if (name) {
+          const existing = await db.websiteSessionTag.findFirst({ where: { tenantId: site.tenantId, siteId: site.id, sessionId, name } });
+          if (!existing) {
+            await db.websiteSessionTag.create({ data: { tenantId: site.tenantId, siteId: site.id, sessionId, visitorId, name, color: cleanString(event.color || event.payload?.color, 20) } });
+          }
+        }
+      }
+    }
+  }
+
+  private async upsertIdentity(input: { tenantId: string; siteId: string; visitorId: string; externalUserId?: string | null; traits?: Record<string, unknown>; email?: unknown }) {
+    const now = new Date();
+    const emailHash = hashEmail(input.email || input.traits?.email);
+    const traits = { ...(input.traits || {}) };
+    delete (traits as any).email;
+    return db.websiteVisitorIdentity.upsert({
+      where: { tenantId_siteId_visitorId: { tenantId: input.tenantId, siteId: input.siteId, visitorId: input.visitorId } },
+      create: {
+        tenantId: input.tenantId,
+        siteId: input.siteId,
+        visitorId: input.visitorId,
+        externalUserId: input.externalUserId,
+        emailHash,
+        traits,
+        firstIdentifiedAt: now,
+        lastIdentifiedAt: now,
+      },
+      update: {
+        externalUserId: input.externalUserId || undefined,
+        emailHash: emailHash || undefined,
+        traits,
+        lastIdentifiedAt: now,
+      },
+    });
   }
 
   private async withMetrics(site: any) {
@@ -976,6 +1313,11 @@ export class WebsiteAnalyticsService {
   private normalizeEvent(event: Record<string, unknown>, site: any, sessionId: string, visitorId: string) {
     const type = cleanString(event.type, 80) || 'event';
     const url = cleanString(event.url, 2000) || 'unknown';
+    const payload = safePayload(event.payload);
+    if (type === 'identify') {
+      delete (payload as any).email;
+      if ((payload as any).traits) delete (payload as any).traits.email;
+    }
     return {
       tenantId: site.tenantId,
       siteId: site.id,
@@ -990,7 +1332,7 @@ export class WebsiteAnalyticsService {
       scrollY: toInt(event.scrollY),
       viewportWidth: toInt(event.viewportWidth),
       viewportHeight: toInt(event.viewportHeight),
-      payload: safePayload(event.payload),
+      payload,
       createdAt: event.createdAt ? new Date(String(event.createdAt)) : (event.payload as any)?.clientTime ? new Date(String((event.payload as any).clientTime)) : new Date(),
     };
   }
@@ -1205,6 +1547,6 @@ export class WebsiteAnalyticsService {
   }
 }
 
-const TRACKER_SCRIPT = `(function(){try{if(window.__YSAnalytics)return;window.__YSAnalytics=true;var s=document.currentScript;var key=s&&s.getAttribute("data-tracking-key");if(!key||localStorage.getItem("ys_analytics_opt_out")==="1")return;var base=(s&&s.src?s.src:"").replace(/\\/tracker\\.js.*$/,"");var anon=localStorage.getItem("ys_analytics_visitor");if(!anon){anon="v_"+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("ys_analytics_visitor",anon)}var sk=sessionStorage.getItem("ys_analytics_session");if(!sk){sk="s_"+Math.random().toString(36).slice(2)+Date.now().toString(36);sessionStorage.setItem("ys_analytics_session",sk)}var q=[],rq=[],timer=null,rtimer=null,rseq=1,recording=false,recordingId=null,privacy={recordingsEnabled:true,maskAllInputs:true,respectDoNotTrack:true,maskSelectors:[],blockSelectors:[]};function post(url,payload,beacon){var body=JSON.stringify(payload);if(beacon&&navigator.sendBeacon){try{if(navigator.sendBeacon(url,new Blob([body],{type:"application/json"})))return Promise.resolve({})}catch(_){}}return fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:body,keepalive:!!beacon}).then(function(r){return r.json().catch(function(){return{}})}).catch(function(){return{}})}function meta(el){if(!el||!el.tagName)return{};var tag=String(el.tagName).toLowerCase();var safe=!/input|textarea|select/i.test(tag)&&!el.isContentEditable;var text=safe?(el.innerText||el.textContent||"").replace(/\\s+/g," ").trim().slice(0,80):"";return{tagName:tag,id:el.id||"",className:String(el.className||"").slice(0,160),role:el.getAttribute("role")||"",ariaLabel:el.getAttribute("aria-label")||"",text:text}}function device(){return /Mobi|Android|iPhone|iPod/i.test(navigator.userAgent)?"Mobile":/iPad|Tablet/i.test(navigator.userAgent)?"Tablet":"Desktop"}function docH(){return Math.max(document.documentElement.scrollHeight,document.body.scrollHeight,document.documentElement.offsetHeight,document.body.offsetHeight,innerHeight)}function common(e){return Object.assign({trackingKey:key,anonymousId:anon,sessionKey:sk,url:location.href,path:location.pathname,title:document.title,referrer:document.referrer,viewportWidth:innerWidth,viewportHeight:innerHeight,userAgent:navigator.userAgent,device:device()},e||{})}function send(events,beacon){if(!events.length)return;post(base+"/collect",common({events:events}),beacon)}function flush(){var batch=q.splice(0,50);send(batch,false);if(q.length)schedule()}function schedule(){if(timer)return;timer=setTimeout(function(){timer=null;flush()},1500)}function push(e){var now=new Date().toISOString();e=e||{};e.payload=Object.assign({clientTime:now},e.payload||{});q.push(Object.assign({createdAt:now},e));schedule()}function page(nav){push({type:"page_view",url:location.href,path:location.pathname,title:document.title,payload:{navigationType:nav||"load"}})}function flushRecording(beacon){if(!recording||!rq.length)return;var batch=rq.splice(0,300);post(base+"/recordings/chunk",common({recordingId:recordingId,sequence:rseq++,events:batch}),beacon)}function scheduleRecording(){if(rtimer)return;rtimer=setTimeout(function(){rtimer=null;flushRecording(false)},3000)}function loadScript(src,cb){var el=document.createElement("script");el.async=true;el.src=src;el.onload=cb;el.onerror=function(){};(document.head||document.documentElement).appendChild(el)}function startRecording(){if(recording||privacy.recordingsEnabled===false)return;if(privacy.respectDoNotTrack!==false&&(navigator.doNotTrack==="1"||window.doNotTrack==="1"))return;post(base+"/recordings/start",common({metadata:{source:"tracker"}}),false).then(function(res){recording=true;recordingId=res.data&&res.data.id||res.id||null;function begin(){if(!window.rrweb||!window.rrweb.record)return;window.rrweb.record({emit:function(ev){rq.push(ev);if(rq.length>=120)flushRecording(false);else scheduleRecording()},maskAllInputs:privacy.maskAllInputs!==false,maskInputOptions:{password:true,email:true,tel:true,text:privacy.maskAllInputs!==false},maskTextSelector:'[data-ys-mask],'+(privacy.maskSelectors||[]).join(','),blockSelector:'[data-ys-ignore],'+(privacy.blockSelectors||[]).join(',')})}if(window.rrweb&&window.rrweb.record)begin();else loadScript(base+"/vendor/rrweb-record.js",begin)})}post(base+"/session/start",common({url:location.href}),false).then(function(res){var site=res.data&&res.data.site||res.site;if(site&&site.privacySettings)privacy=Object.assign(privacy,site.privacySettings);startRecording()});page("load");["pushState","replaceState"].forEach(function(n){var o=history[n];history[n]=function(){var r=o.apply(this,arguments);setTimeout(function(){page("history")},0);return r}});addEventListener("popstate",function(){page("popstate")});addEventListener("click",function(e){push({type:"click",x:e.clientX,y:e.clientY,payload:{element:meta(e.target)}})},true);var lastScroll=0,lastScrollY=scrollY;addEventListener("scroll",function(){var now=Date.now();if(now-lastScroll<1200)return;var direction=scrollY>lastScrollY?"down":scrollY<lastScrollY?"up":"none";lastScrollY=scrollY;lastScroll=now;push({type:"scroll",scrollY:scrollY,payload:{depth:Math.round((scrollY+innerHeight)/Math.max(docH(),1)*100),documentHeight:docH(),direction:direction}})},{passive:true});var lastMove=0;addEventListener("mousemove",function(e){var now=Date.now();if(now-lastMove<2000)return;lastMove=now;push({type:"mouse_move",x:e.clientX,y:e.clientY,payload:{clientX:e.clientX,clientY:e.clientY}})},{passive:true});addEventListener("error",function(e){push({type:"js_error",payload:{message:String(e.message||"").slice(0,300),source:e.filename||"",line:e.lineno||0,column:e.colno||0,stack:String(e.error&&e.error.stack||"").slice(0,1000)}})});addEventListener("unhandledrejection",function(e){push({type:"unhandled_rejection",payload:{message:String(e.reason&&e.reason.message||e.reason||"").slice(0,300),stack:String(e.reason&&e.reason.stack||"").slice(0,1000)}})});function endAll(){send(q.splice(0,50),true);flushRecording(true);post(base+"/recordings/end",common({recordingId:recordingId}),true);post(base+"/session/end",common({url:location.href}),true)}addEventListener("pagehide",endAll);addEventListener("beforeunload",endAll)}catch(_){}})();`;
+const TRACKER_SCRIPT = `(function(){try{if(window.__YSAnalytics)return;var pre=window.ysAnalytics&&window.ysAnalytics.q||[];window.__YSAnalytics=true;var s=document.currentScript;var key=s&&s.getAttribute("data-tracking-key");if(!key||localStorage.getItem("ys_analytics_opt_out")==="1")return;var base=(s&&s.src?s.src:"").replace(/\\/tracker\\.js.*$/,"");var anon=localStorage.getItem("ys_analytics_visitor");if(!anon){anon="v_"+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("ys_analytics_visitor",anon)}var sk=sessionStorage.getItem("ys_analytics_session");if(!sk){sk="s_"+Math.random().toString(36).slice(2)+Date.now().toString(36);sessionStorage.setItem("ys_analytics_session",sk)}var q=[],rq=[],timer=null,rtimer=null,rseq=1,recording=false,recordingId=null,privacy={recordingsEnabled:true,maskAllInputs:true,respectDoNotTrack:true,maskSelectors:[],blockSelectors:[]};function post(url,payload,beacon){var body=JSON.stringify(payload);if(beacon&&navigator.sendBeacon){try{if(navigator.sendBeacon(url,new Blob([body],{type:"application/json"})))return Promise.resolve({})}catch(_){}}return fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:body,keepalive:!!beacon}).then(function(r){return r.json().catch(function(){return{}})}).catch(function(){return{}})}function safe(o){var out={},n=0;if(!o||typeof o!=="object")return out;Object.keys(o).slice(0,40).forEach(function(k){if(k==="__proto__"||k==="constructor"||k==="prototype")return;var v=o[k];if(typeof v==="string")out[k]=v.slice(0,500);else if(typeof v==="number"||typeof v==="boolean"||v===null)out[k]=v;else if(v&&typeof v==="object"&&n++<10)out[k]=safe(v)});return out}function meta(el){if(!el||!el.tagName)return{};var tag=String(el.tagName).toLowerCase();var safeText=!/input|textarea|select/i.test(tag)&&!el.isContentEditable;var text=safeText?(el.innerText||el.textContent||"").replace(/\\s+/g," ").trim().slice(0,80):"";return{tagName:tag,id:el.id||"",className:String(el.className||"").slice(0,160),role:el.getAttribute("role")||"",ariaLabel:el.getAttribute("aria-label")||"",text:text}}function device(){return /Mobi|Android|iPhone|iPod/i.test(navigator.userAgent)?"Mobile":/iPad|Tablet/i.test(navigator.userAgent)?"Tablet":"Desktop"}function docH(){return Math.max(document.documentElement.scrollHeight,document.body.scrollHeight,document.documentElement.offsetHeight,document.body.offsetHeight,innerHeight)}function common(e){return Object.assign({trackingKey:key,anonymousId:anon,sessionKey:sk,url:location.href,path:location.pathname,title:document.title,referrer:document.referrer,viewportWidth:innerWidth,viewportHeight:innerHeight,userAgent:navigator.userAgent,device:device()},e||{})}function send(events,beacon){if(!events.length)return;post(base+"/collect",common({events:events}),beacon)}function flush(){var batch=q.splice(0,50);send(batch,false);if(q.length)schedule()}function schedule(){if(timer)return;timer=setTimeout(function(){timer=null;flush()},1500)}function push(e){var now=new Date().toISOString();e=e||{};e.payload=Object.assign({clientTime:now},e.payload||{});q.push(Object.assign({createdAt:now},e));schedule()}function api(method,a,b){if(method==="event")push({type:"custom_event",payload:{eventName:String(a||"").slice(0,120),data:safe(b)}});if(method==="identify")push({type:"identify",externalUserId:String(a||"").slice(0,200),payload:{traits:safe(b)}});if(method==="tag")push({type:"session_tag",name:String(a||"").slice(0,80),payload:safe(b)})}window.ysAnalytics=api;for(var pi=0;pi<pre.length;pi++)api.apply(null,pre[pi]);function page(nav){push({type:"page_view",url:location.href,path:location.pathname,title:document.title,payload:{navigationType:nav||"load"}})}function flushRecording(beacon){if(!recording||!rq.length)return;var batch=rq.splice(0,300);post(base+"/recordings/chunk",common({recordingId:recordingId,sequence:rseq++,events:batch}),beacon)}function scheduleRecording(){if(rtimer)return;rtimer=setTimeout(function(){rtimer=null;flushRecording(false)},3000)}function loadScript(src,cb){var el=document.createElement("script");el.async=true;el.src=src;el.onload=cb;el.onerror=function(){};(document.head||document.documentElement).appendChild(el)}function startRecording(){if(recording||privacy.recordingsEnabled===false)return;if(privacy.respectDoNotTrack!==false&&(navigator.doNotTrack==="1"||window.doNotTrack==="1"))return;post(base+"/recordings/start",common({metadata:{source:"tracker"}}),false).then(function(res){recording=true;recordingId=res.data&&res.data.id||res.id||null;function begin(){if(!window.rrweb||!window.rrweb.record)return;window.rrweb.record({emit:function(ev){rq.push(ev);if(rq.length>=120)flushRecording(false);else scheduleRecording()},maskAllInputs:privacy.maskAllInputs!==false,maskInputOptions:{password:true,email:true,tel:true,text:privacy.maskAllInputs!==false},maskTextSelector:'[data-ys-mask],'+(privacy.maskSelectors||[]).join(','),blockSelector:'[data-ys-ignore],'+(privacy.blockSelectors||[]).join(',')})}if(window.rrweb&&window.rrweb.record)begin();else loadScript(base+"/vendor/rrweb-record.js",begin)})}post(base+"/session/start",common({url:location.href}),false).then(function(res){var site=res.data&&res.data.site||res.site;if(site&&site.privacySettings)privacy=Object.assign(privacy,site.privacySettings);startRecording()});page("load");["pushState","replaceState"].forEach(function(n){var o=history[n];history[n]=function(){var r=o.apply(this,arguments);setTimeout(function(){page("history")},0);return r}});addEventListener("popstate",function(){page("popstate")});addEventListener("click",function(e){push({type:"click",x:e.clientX,y:e.clientY,payload:{element:meta(e.target)}})},true);var lastScroll=0,lastScrollY=scrollY;addEventListener("scroll",function(){var now=Date.now();if(now-lastScroll<1200)return;var direction=scrollY>lastScrollY?"down":scrollY<lastScrollY?"up":"none";lastScrollY=scrollY;lastScroll=now;push({type:"scroll",scrollY:scrollY,payload:{depth:Math.round((scrollY+innerHeight)/Math.max(docH(),1)*100),documentHeight:docH(),direction:direction}})},{passive:true});var lastMove=0;addEventListener("mousemove",function(e){var now=Date.now();if(now-lastMove<2000)return;lastMove=now;push({type:"mouse_move",x:e.clientX,y:e.clientY,payload:{clientX:e.clientX,clientY:e.clientY}})},{passive:true});addEventListener("error",function(e){push({type:"js_error",payload:{message:String(e.message||"").slice(0,300),source:e.filename||"",line:e.lineno||0,column:e.colno||0,stack:String(e.error&&e.error.stack||"").slice(0,1000)}})});addEventListener("unhandledrejection",function(e){push({type:"unhandled_rejection",payload:{message:String(e.reason&&e.reason.message||e.reason||"").slice(0,300),stack:String(e.reason&&e.reason.stack||"").slice(0,1000)}})});function endAll(){send(q.splice(0,50),true);flushRecording(true);post(base+"/recordings/end",common({recordingId:recordingId}),true);post(base+"/session/end",common({url:location.href}),true)}addEventListener("pagehide",endAll);addEventListener("beforeunload",endAll)}catch(_){}})();`;
 
 export const websiteAnalyticsService = new WebsiteAnalyticsService();

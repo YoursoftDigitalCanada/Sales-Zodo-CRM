@@ -10,6 +10,7 @@ jest.mock('../../src/config/database', () => ({
     },
     websiteVisitor: {
       count: jest.fn(),
+      findFirst: jest.fn(),
       upsert: jest.fn(),
       update: jest.fn(),
     },
@@ -61,6 +62,23 @@ jest.mock('../../src/config/database', () => ({
       upsert: jest.fn(),
       update: jest.fn(),
     },
+    websiteAnalyticsSegment: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      delete: jest.fn(),
+    },
+    websiteSessionTag: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+    },
+    websiteVisitorIdentity: {
+      upsert: jest.fn(),
+    },
   },
 }));
 
@@ -89,6 +107,18 @@ describe('WebsiteAnalyticsService', () => {
     db.websiteIssueGroup.findFirst.mockResolvedValue(null);
     db.websiteIssueGroup.upsert.mockImplementation(async ({ create, update }: any) => ({ id: 'issue-1', ...create, ...update }));
     db.websiteIssueGroup.update.mockImplementation(async ({ where, data }: any) => ({ id: where.id, ...data }));
+    db.websiteAnalyticsSegment.findMany.mockResolvedValue([]);
+    db.websiteAnalyticsSegment.findFirst.mockResolvedValue(null);
+    db.websiteAnalyticsSegment.create.mockImplementation(async ({ data }: any) => ({ id: 'segment-1', ...data }));
+    db.websiteAnalyticsSegment.update.mockImplementation(async ({ where, data }: any) => ({ id: where.id, ...data }));
+    db.websiteAnalyticsSegment.updateMany.mockResolvedValue({ count: 0 });
+    db.websiteAnalyticsSegment.delete.mockResolvedValue({});
+    db.websiteSessionTag.findMany.mockResolvedValue([]);
+    db.websiteSessionTag.findFirst.mockResolvedValue(null);
+    db.websiteSessionTag.create.mockImplementation(async ({ data }: any) => ({ id: 'tag-1', ...data }));
+    db.websiteSessionTag.delete.mockResolvedValue({});
+    db.websiteVisitor.findFirst.mockResolvedValue(null);
+    db.websiteVisitorIdentity.upsert.mockImplementation(async ({ create, update }: any) => ({ id: 'identity-1', ...create, ...update }));
   });
 
   it('creates a site under the trusted tenant and ignores spoofed tenantId', async () => {
@@ -526,5 +556,139 @@ describe('WebsiteAnalyticsService', () => {
     db.websiteSession.findFirst.mockResolvedValue(null);
     await expect(websiteAnalyticsService.analyzeSession('session-1', 'tenant-2')).rejects.toMatchObject({ statusCode: 404 });
     expect(db.websiteSession.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'session-1', tenantId: 'tenant-2' } }));
+  });
+
+  it('saved segment CRUD is tenant-scoped', async () => {
+    db.websiteAnalyticsSite.findFirst.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1' });
+    const segment = await websiteAnalyticsService.createSegment('tenant-1', {
+      siteId: 'site-1',
+      name: 'High intent visitors',
+      filters: { country: 'Canada', hasRageClick: true },
+      tenantId: 'tenant-2',
+    });
+
+    expect(db.websiteAnalyticsSegment.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1', name: 'High intent visitors' }),
+    }));
+    expect(segment.tenantId).toBe('tenant-1');
+
+    db.websiteAnalyticsSegment.findFirst.mockResolvedValueOnce({ id: 'segment-1', tenantId: 'tenant-1' });
+    await websiteAnalyticsService.getSegment('segment-1', 'tenant-1');
+    expect(db.websiteAnalyticsSegment.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'segment-1', tenantId: 'tenant-1' } }));
+  });
+
+  it('one tenant cannot read update or delete another tenant segment', async () => {
+    db.websiteAnalyticsSegment.findFirst.mockResolvedValue(null);
+    await expect(websiteAnalyticsService.getSegment('segment-1', 'tenant-2')).rejects.toMatchObject({ statusCode: 404 });
+    await expect(websiteAnalyticsService.updateSegment('segment-1', 'tenant-2', { name: 'Nope' })).rejects.toMatchObject({ statusCode: 404 });
+    await expect(websiteAnalyticsService.deleteSegment('segment-1', 'tenant-2')).rejects.toMatchObject({ statusCode: 404 });
+    expect(db.websiteAnalyticsSegment.update).not.toHaveBeenCalled();
+    expect(db.websiteAnalyticsSegment.delete).not.toHaveBeenCalled();
+  });
+
+  it('filter builder applies country browser device date and url filters', async () => {
+    db.websiteSession.findMany.mockResolvedValue([]);
+    await websiteAnalyticsService.listSessions('tenant-1', {
+      siteId: 'site-1',
+      country: 'Canada',
+      browser: 'Chrome',
+      device: 'Desktop',
+      dateFrom: '2026-05-01T00:00:00.000Z',
+      dateTo: '2026-05-13T00:00:00.000Z',
+      path: '/pricing',
+    });
+
+    expect(db.websiteSession.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        tenantId: 'tenant-1',
+        siteId: 'site-1',
+        country: { contains: 'Canada', mode: 'insensitive' },
+        browser: { contains: 'Chrome', mode: 'insensitive' },
+        device: { contains: 'Desktop', mode: 'insensitive' },
+        startedAt: { gte: new Date('2026-05-01T00:00:00.000Z'), lte: new Date('2026-05-13T00:00:00.000Z') },
+        OR: expect.any(Array),
+      }),
+    }));
+  });
+
+  it('behavior filters return matching sessions', async () => {
+    db.websiteSession.findMany.mockResolvedValue([]);
+    await websiteAnalyticsService.listSessions('tenant-1', { hasRageClick: 'true', hasDeadClick: 'true' });
+    expect(db.websiteSession.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        behaviorSignals: { some: { type: { in: ['RAGE_CLICK', 'DEAD_CLICK'] } } },
+      }),
+    }));
+  });
+
+  it('tag CRUD is tenant-scoped', async () => {
+    db.websiteSession.findFirst.mockResolvedValue({ id: 'session-1', tenantId: 'tenant-1', siteId: 'site-1', visitorId: 'visitor-1' });
+    await websiteAnalyticsService.createSessionTag('session-1', 'tenant-1', { name: 'pricing-interest' });
+    expect(db.websiteSessionTag.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1', sessionId: 'session-1', name: 'pricing-interest' }),
+    }));
+
+    db.websiteSessionTag.findFirst.mockResolvedValueOnce(null);
+    await expect(websiteAnalyticsService.deleteSessionTag('session-1', 'tag-other', 'tenant-1')).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it('identity update is tenant-scoped', async () => {
+    db.websiteVisitor.findFirst.mockResolvedValue({ id: 'visitor-1', tenantId: 'tenant-1', siteId: 'site-1' });
+    await websiteAnalyticsService.updateVisitorIdentity('visitor-1', 'tenant-1', { externalUserId: 'user-123', traits: { plan: 'pro' } });
+    expect(db.websiteVisitor.findFirst).toHaveBeenCalledWith({ where: { id: 'visitor-1', tenantId: 'tenant-1' } });
+    expect(db.websiteVisitorIdentity.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1', visitorId: 'visitor-1', externalUserId: 'user-123' }),
+    }));
+  });
+
+  it('public identify rejects invalid trackingKey', async () => {
+    db.websiteAnalyticsSite.findUnique.mockResolvedValue(null);
+    await expect(websiteAnalyticsService.collect({
+      trackingKey: 'bad',
+      anonymousId: 'visitor-1',
+      sessionKey: 'session-1',
+      events: [{ type: 'identify', externalUserId: 'user-123' }],
+    })).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it('public identify stores identity under correct tenant and site', async () => {
+    db.websiteAnalyticsSite.findUnique.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1', trackingKey: 'ys_key', isActive: true });
+    db.websiteVisitor.upsert.mockResolvedValue({ id: 'visitor-1' });
+    db.websiteSession.create.mockResolvedValue({ id: 'session-1', hasJsError: false });
+    db.websiteSession.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'session-1', siteId: 'site-1', visitorId: 'visitor-1', hasJsError: false });
+    db.websiteEvent.createMany.mockResolvedValue({ count: 1 });
+    db.websiteSession.update.mockResolvedValue({});
+    db.websiteVisitor.update.mockResolvedValue({});
+
+    await websiteAnalyticsService.collect({
+      trackingKey: 'ys_key',
+      anonymousId: 'visitor-1',
+      sessionKey: 'session-1',
+      events: [{ type: 'identify', externalUserId: 'user-123', payload: { traits: { plan: 'pro' } } }],
+    });
+
+    expect(db.websiteVisitorIdentity.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1', visitorId: 'visitor-1', externalUserId: 'user-123' }),
+    }));
+  });
+
+  it('custom events are stored and filterable', async () => {
+    db.websiteEvent.findMany.mockResolvedValue([]);
+    await websiteAnalyticsService.listEvents('tenant-1', { customEventName: 'lead_created' });
+    expect(db.websiteEvent.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ type: 'custom_event', payload: { path: ['eventName'], equals: 'lead_created' } }),
+    }));
+  });
+
+  it('payload sanitization rejects dangerous keys and oversized payloads', async () => {
+    await expect(websiteAnalyticsService.createSegment('tenant-1', {
+      name: 'Unsafe',
+      filters: JSON.parse('{"__proto__":"bad"}'),
+    })).rejects.toMatchObject({ statusCode: 400 });
+
+    await expect(websiteAnalyticsService.createSegment('tenant-1', {
+      name: 'Too large',
+      filters: { blob: 'x'.repeat(25_000) },
+    })).rejects.toMatchObject({ statusCode: 400 });
   });
 });

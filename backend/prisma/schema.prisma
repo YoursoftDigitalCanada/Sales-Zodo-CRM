@@ -761,6 +761,9 @@ model Tenant {
   websiteHeatmapPoints  WebsiteHeatmapPoint[]
   websiteBehaviorSignals WebsiteBehaviorSignal[]
   websiteIssueGroups    WebsiteIssueGroup[]
+  websiteAnalyticsSegments WebsiteAnalyticsSegment[]
+  websiteSessionTags WebsiteSessionTag[]
+  websiteVisitorIdentities WebsiteVisitorIdentity[]
 
   @@index([status])
   @@index([slug])
@@ -5640,6 +5643,9 @@ model WebsiteAnalyticsSite {
   heatmapPoints    WebsiteHeatmapPoint[]
   behaviorSignals  WebsiteBehaviorSignal[]
   issueGroups      WebsiteIssueGroup[]
+  segments         WebsiteAnalyticsSegment[]
+  sessionTags      WebsiteSessionTag[]
+  visitorIdentities WebsiteVisitorIdentity[]
 
   @@index([tenantId])
   @@index([domain])
@@ -5662,6 +5668,8 @@ model WebsiteVisitor {
   events      WebsiteEvent[]
   recordings  WebsiteRecording[]
   behaviorSignals WebsiteBehaviorSignal[]
+  sessionTags WebsiteSessionTag[]
+  identity WebsiteVisitorIdentity?
 
   @@unique([siteId, anonymousId])
   @@index([tenantId])
@@ -5701,6 +5709,7 @@ model WebsiteSession {
   recordings     WebsiteRecording[]
   recordingChunks WebsiteRecordingChunk[]
   behaviorSignals WebsiteBehaviorSignal[]
+  tags WebsiteSessionTag[]
 
   @@index([tenantId])
   @@index([siteId])
@@ -5925,4 +5934,73 @@ model WebsiteIssueGroup {
   @@index([lastSeenAt])
   @@index([tenantId, siteId, type])
   @@index([tenantId, siteId, status])
+}
+
+model WebsiteAnalyticsSegment {
+  id          String               @id @default(uuid())
+  tenantId    String
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId      String?
+  site        WebsiteAnalyticsSite? @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  filters     Json                 @default("{}")
+  isDefault   Boolean              @default(false)
+  isShared    Boolean              @default(false)
+  createdById String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([tenantId, siteId])
+}
+
+model WebsiteSessionTag {
+  id          String               @id @default(uuid())
+  tenantId    String
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId      String
+  site        WebsiteAnalyticsSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  sessionId   String
+  session     WebsiteSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  visitorId   String?
+  visitor     WebsiteVisitor?      @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+  name        String
+  color       String?
+  createdById String?
+  createdAt   DateTime             @default(now())
+
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([sessionId])
+  @@index([visitorId])
+  @@index([tenantId, siteId])
+  @@index([tenantId, siteId, name])
+}
+
+model WebsiteVisitorIdentity {
+  id                String               @id @default(uuid())
+  tenantId          String
+  tenant            Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId            String
+  site              WebsiteAnalyticsSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  visitorId         String
+  visitor           WebsiteVisitor       @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  externalUserId    String?
+  emailHash         String?
+  traits            Json                 @default("{}")
+  firstIdentifiedAt DateTime             @default(now())
+  lastIdentifiedAt  DateTime             @default(now())
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@unique([tenantId, siteId, visitorId])
+  @@unique([visitorId])
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([visitorId])
+  @@index([externalUserId])
+  @@index([tenantId, siteId])
+  @@index([tenantId, siteId, externalUserId])
 }

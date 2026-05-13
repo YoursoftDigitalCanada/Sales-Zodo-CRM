@@ -29,6 +29,30 @@ export class WebsiteAnalyticsController {
     websiteAnalyticsService.getSnippet(req.params.id, req.context.tenantId, apiHost).then((data) => sendSuccess(res, data)).catch(next);
   }
 
+  listSegments(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listSegments(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  createSegment(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.createSegment(req.context.tenantId, sanitizeBody(req.body), (req.context as any).employeeId || (req.context as any).userId).then((data) => sendCreated(res, data, 'Segment created')).catch(next);
+  }
+
+  getSegment(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.getSegment(req.params.id, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  updateSegment(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.updateSegment(req.params.id, req.context.tenantId, sanitizeBody(req.body)).then((data) => sendSuccess(res, data, 'Segment updated')).catch(next);
+  }
+
+  deleteSegment(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.deleteSegment(req.params.id, req.context.tenantId).then(() => sendNoContent(res)).catch(next);
+  }
+
+  getFilterOptions(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.getFilterOptions(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
   listSessions(req: Request, res: Response, next: NextFunction) {
     websiteAnalyticsService.listSessions(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
   }
@@ -83,6 +107,26 @@ export class WebsiteAnalyticsController {
 
   analyzeSession(req: Request, res: Response, next: NextFunction) {
     websiteAnalyticsService.analyzeSession(req.params.sessionId, req.context.tenantId).then((data) => sendSuccess(res, data, 'Session analyzed')).catch(next);
+  }
+
+  listSessionTags(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listSessionTags(req.params.id, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  createSessionTag(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.createSessionTag(req.params.id, req.context.tenantId, sanitizeBody(req.body), (req.context as any).employeeId || (req.context as any).userId).then((data) => sendCreated(res, data, 'Session tagged')).catch(next);
+  }
+
+  deleteSessionTag(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.deleteSessionTag(req.params.id, req.params.tagId, req.context.tenantId).then(() => sendNoContent(res)).catch(next);
+  }
+
+  getVisitorIdentity(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.getVisitorIdentity(req.params.id, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  updateVisitorIdentity(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.updateVisitorIdentity(req.params.id, req.context.tenantId, sanitizeBody(req.body)).then((data) => sendSuccess(res, data, 'Visitor identity updated')).catch(next);
   }
 
   listRecordings(req: Request, res: Response, next: NextFunction) {

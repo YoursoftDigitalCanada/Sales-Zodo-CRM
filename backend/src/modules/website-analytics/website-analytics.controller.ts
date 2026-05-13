@@ -41,6 +41,26 @@ export class WebsiteAnalyticsController {
     websiteAnalyticsService.listEvents(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
   }
 
+  listHeatmaps(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listHeatmaps(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  createHeatmapSnapshot(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.createHeatmapSnapshot(req.context.tenantId, sanitizeBody(req.body)).then((data) => sendCreated(res, data, 'Heatmap snapshot created')).catch(next);
+  }
+
+  getHeatmapSnapshot(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.getHeatmapSnapshot(req.params.id, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  getHeatmapPoints(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.getHeatmapPoints(req.params.id, req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  deleteHeatmapSnapshot(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.deleteHeatmapSnapshot(req.params.id, req.context.tenantId).then(() => sendSuccess(res, null, 'Heatmap snapshot deleted')).catch(next);
+  }
+
   listRecordings(req: Request, res: Response, next: NextFunction) {
     websiteAnalyticsService.listRecordings(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
   }

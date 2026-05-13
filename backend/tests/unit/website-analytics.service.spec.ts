@@ -38,6 +38,17 @@ jest.mock('../../src/config/database', () => ({
       upsert: jest.fn(),
       aggregate: jest.fn(),
     },
+    websiteHeatmapSnapshot: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    websiteHeatmapPoint: {
+      findMany: jest.fn(),
+      createMany: jest.fn(),
+    },
   },
 }));
 
@@ -57,6 +68,7 @@ describe('WebsiteAnalyticsService', () => {
     db.websiteEvent.count.mockResolvedValue(0);
     db.websiteSession.aggregate.mockResolvedValue({ _avg: { durationMs: 0 } });
     db.websiteRecordingChunk.aggregate.mockResolvedValue({ _sum: { eventCount: 0, sizeBytes: 0 } });
+    db.websiteHeatmapPoint.createMany.mockResolvedValue({ count: 0 });
   });
 
   it('creates a site under the trusted tenant and ignores spoofed tenantId', async () => {
@@ -250,6 +262,115 @@ describe('WebsiteAnalyticsService', () => {
       sessionKey: 'session-123',
       sequence: 1,
       events: [{ type: 2, data: 'x'.repeat(recordingStorageService.maxChunkBytes) }],
+    })).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('heatmap snapshot creation is tenant-scoped and only uses current tenant events', async () => {
+    db.websiteAnalyticsSite.findFirst.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1', domain: 'example.com' });
+    db.websiteHeatmapSnapshot.create.mockResolvedValue({ id: 'snapshot-1' });
+    db.websiteEvent.findMany.mockResolvedValue([]);
+    db.websiteHeatmapSnapshot.update.mockResolvedValue({ id: 'snapshot-1', tenantId: 'tenant-1', siteId: 'site-1', status: 'READY' });
+
+    await websiteAnalyticsService.createHeatmapSnapshot('tenant-1', {
+      siteId: 'site-1',
+      path: '/pricing',
+      dateFrom: '2026-05-01T00:00:00.000Z',
+      dateTo: '2026-05-13T00:00:00.000Z',
+    });
+
+    expect(db.websiteAnalyticsSite.findFirst).toHaveBeenCalledWith({ where: { id: 'site-1', tenantId: 'tenant-1' } });
+    expect(db.websiteEvent.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1', path: '/pricing' }),
+    }));
+  });
+
+  it('one tenant cannot read another tenant heatmap snapshot', async () => {
+    db.websiteHeatmapSnapshot.findFirst.mockResolvedValue(null);
+    await expect(websiteAnalyticsService.getHeatmapSnapshot('snapshot-1', 'tenant-2')).rejects.toMatchObject({ statusCode: 404 });
+    expect(db.websiteHeatmapSnapshot.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'snapshot-1', tenantId: 'tenant-2' } }));
+  });
+
+  it('heatmap points endpoint is tenant-scoped', async () => {
+    db.websiteHeatmapSnapshot.findFirst.mockResolvedValue({ id: 'snapshot-1', tenantId: 'tenant-1' });
+    db.websiteHeatmapPoint.findMany.mockResolvedValue([]);
+    await websiteAnalyticsService.getHeatmapPoints('snapshot-1', 'tenant-1', { type: 'click' });
+    expect(db.websiteHeatmapPoint.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { snapshotId: 'snapshot-1', tenantId: 'tenant-1', type: 'CLICK' },
+    }));
+  });
+
+  it('click aggregation normalizes coordinates', async () => {
+    db.websiteAnalyticsSite.findFirst.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1', domain: 'example.com' });
+    db.websiteHeatmapSnapshot.create.mockResolvedValue({ id: 'snapshot-1' });
+    db.websiteEvent.findMany.mockResolvedValue([
+      { id: 'event-1', tenantId: 'tenant-1', siteId: 'site-1', type: 'click', path: '/pricing', x: 50, y: 100, viewportWidth: 100, viewportHeight: 200, payload: { element: { id: 'buy' } }, createdAt: new Date() },
+    ]);
+    db.websiteHeatmapSnapshot.update.mockResolvedValue({ id: 'snapshot-1', clickCount: 1 });
+
+    await websiteAnalyticsService.createHeatmapSnapshot('tenant-1', {
+      siteId: 'site-1',
+      path: '/pricing',
+      dateFrom: '2026-05-01T00:00:00.000Z',
+      dateTo: '2026-05-13T00:00:00.000Z',
+    });
+
+    expect(db.websiteHeatmapPoint.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ type: 'CLICK', normalizedX: 0.5, normalizedY: 0.5, selector: '#buy' })],
+    });
+  });
+
+  it('scroll aggregation calculates max and average scroll depth', async () => {
+    db.websiteAnalyticsSite.findFirst.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1', domain: 'example.com' });
+    db.websiteHeatmapSnapshot.create.mockResolvedValue({ id: 'snapshot-1' });
+    db.websiteEvent.findMany.mockResolvedValue([
+      { id: 'event-1', type: 'scroll', scrollY: 100, viewportHeight: 100, payload: { documentHeight: 400 }, createdAt: new Date() },
+      { id: 'event-2', type: 'scroll', scrollY: 300, viewportHeight: 100, payload: { documentHeight: 400 }, createdAt: new Date() },
+    ]);
+    db.websiteHeatmapSnapshot.update.mockResolvedValue({ id: 'snapshot-1' });
+
+    await websiteAnalyticsService.createHeatmapSnapshot('tenant-1', {
+      siteId: 'site-1',
+      path: '/pricing',
+      dateFrom: '2026-05-01T00:00:00.000Z',
+      dateTo: '2026-05-13T00:00:00.000Z',
+    });
+
+    expect(db.websiteHeatmapSnapshot.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ maxScrollDepth: 100, avgScrollDepth: 75 }),
+    }));
+  });
+
+  it('device filter is applied during heatmap aggregation', async () => {
+    db.websiteAnalyticsSite.findFirst.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1', domain: 'example.com' });
+    db.websiteHeatmapSnapshot.create.mockResolvedValue({ id: 'snapshot-1' });
+    db.websiteEvent.findMany.mockResolvedValue([]);
+    db.websiteHeatmapSnapshot.update.mockResolvedValue({ id: 'snapshot-1' });
+
+    await websiteAnalyticsService.createHeatmapSnapshot('tenant-1', {
+      siteId: 'site-1',
+      path: '/pricing',
+      deviceType: 'mobile',
+      dateFrom: '2026-05-01T00:00:00.000Z',
+      dateTo: '2026-05-13T00:00:00.000Z',
+    });
+
+    expect(db.websiteEvent.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ session: { device: { equals: 'mobile', mode: 'insensitive' } } }),
+    }));
+  });
+
+  it('invalid heatmap siteId and date inputs are rejected', async () => {
+    await expect(websiteAnalyticsService.createHeatmapSnapshot('tenant-1', {
+      path: '/pricing',
+      dateFrom: '2026-05-01T00:00:00.000Z',
+      dateTo: '2026-05-13T00:00:00.000Z',
+    })).rejects.toMatchObject({ statusCode: 400 });
+
+    await expect(websiteAnalyticsService.createHeatmapSnapshot('tenant-1', {
+      siteId: 'site-1',
+      path: '/pricing',
+      dateFrom: 'bad',
+      dateTo: '2026-05-13T00:00:00.000Z',
     })).rejects.toMatchObject({ statusCode: 400 });
   });
 });

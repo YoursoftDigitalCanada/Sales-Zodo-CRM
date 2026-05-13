@@ -97,6 +97,41 @@ function duration(startedAt: Date, endedAt: Date) {
   return Math.max(0, endedAt.getTime() - startedAt.getTime());
 }
 
+function parseDate(value: unknown, field: string) {
+  const date = value ? new Date(String(value)) : null;
+  if (!date || Number.isNaN(date.getTime())) {
+    throw new BadRequestError(`${field} is required`, ErrorCodes.VALIDATION_FAILED);
+  }
+  return date;
+}
+
+function normalizeRatio(value: number | null, total: number | null) {
+  if (!value || !total || total <= 0) return null;
+  return Math.max(0, Math.min(1, value / total));
+}
+
+function eventSelector(event: any) {
+  const element = event?.payload?.element || {};
+  const id = cleanString(element.id, 80);
+  const className = cleanString(element.className, 120);
+  const tag = cleanString(element.tagName, 40);
+  if (id) return `#${id}`;
+  if (className) return `.${className.split(/\s+/).filter(Boolean).slice(0, 2).join('.')}`;
+  return tag;
+}
+
+function scrollDepth(event: any) {
+  const payloadDepth = toInt(event?.payload?.depth);
+  if (payloadDepth !== null) return Math.max(0, Math.min(100, payloadDepth));
+  const scrollY = toInt(event?.scrollY);
+  const docHeight = toInt(event?.payload?.documentHeight);
+  const viewport = toInt(event?.viewportHeight);
+  if (scrollY !== null && docHeight && viewport) {
+    return Math.max(0, Math.min(100, Math.round(((scrollY + viewport) / docHeight) * 100)));
+  }
+  return null;
+}
+
 export class WebsiteAnalyticsService {
   async listSites(tenantId: string) {
     const sites = await db.websiteAnalyticsSite.findMany({
@@ -200,6 +235,109 @@ export class WebsiteAnalyticsService {
       take: Math.min(Number(query.limit || 200), 1000),
       include: { site: { select: { id: true, name: true, domain: true } } },
     });
+  }
+
+  async listHeatmaps(tenantId: string, query: Record<string, unknown>): Promise<any> {
+    const where: Record<string, any> = { tenantId };
+    if (query.siteId) where.siteId = String(query.siteId);
+    if (query.path) where.path = String(query.path);
+    if (query.url) where.url = String(query.url);
+    if (query.deviceType && query.deviceType !== 'all') where.deviceType = String(query.deviceType).toLowerCase();
+    if (query.dateFrom || query.dateTo) {
+      where.createdAt = {};
+      if (query.dateFrom) where.createdAt.gte = new Date(String(query.dateFrom));
+      if (query.dateTo) where.createdAt.lte = new Date(String(query.dateTo));
+    }
+    if (query.type) {
+      where.points = { some: { type: String(query.type).toUpperCase() } };
+    }
+    return db.websiteHeatmapSnapshot.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(Number(query.limit || 100), 500),
+      include: {
+        site: { select: { id: true, name: true, domain: true } },
+        _count: { select: { points: true } },
+      },
+    });
+  }
+
+  async createHeatmapSnapshot(tenantId: string, data: Record<string, unknown>): Promise<any> {
+    const siteId = cleanString(data.siteId, 120);
+    if (!siteId) throw new BadRequestError('siteId is required', ErrorCodes.VALIDATION_FAILED);
+    const site = await db.websiteAnalyticsSite.findFirst({ where: { id: siteId, tenantId } });
+    if (!site) throw new NotFoundError('Website analytics site not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    const dateFrom = parseDate(data.dateFrom, 'dateFrom');
+    const dateTo = parseDate(data.dateTo, 'dateTo');
+    if (dateTo < dateFrom) throw new BadRequestError('dateTo must be after dateFrom', ErrorCodes.VALIDATION_FAILED);
+    const path = cleanString(data.path, 1000) || this.pathFromUrl(cleanString(data.url, 2000)) || '/';
+    const url = cleanString(data.url, 2000) || `${site.domain}${path}`;
+    const deviceType = data.deviceType && String(data.deviceType) !== 'all' ? String(data.deviceType).toLowerCase() : null;
+
+    const snapshot = await db.websiteHeatmapSnapshot.create({
+      data: {
+        tenantId,
+        siteId: site.id,
+        url,
+        path,
+        deviceType,
+        dateFrom,
+        dateTo,
+        status: 'PROCESSING',
+        metadata: safePayload(data.metadata),
+      },
+    });
+
+    try {
+      const aggregate = await this.aggregateHeatmapEvents(tenantId, site.id, snapshot.id, path, dateFrom, dateTo, deviceType);
+      const ready = await db.websiteHeatmapSnapshot.update({
+        where: { id: snapshot.id },
+        data: {
+          status: 'READY',
+          clickCount: aggregate.clickCount,
+          scrollSampleCount: aggregate.scrollSampleCount,
+          engagementSampleCount: aggregate.engagementSampleCount,
+          maxScrollDepth: aggregate.maxScrollDepth,
+          avgScrollDepth: aggregate.avgScrollDepth,
+          viewportWidth: aggregate.viewportWidth,
+          viewportHeight: aggregate.viewportHeight,
+          metadata: {
+            topClickedAreas: aggregate.topClickedAreas,
+            scrollBands: aggregate.scrollBands,
+          },
+        },
+        include: { site: { select: { id: true, name: true, domain: true } }, _count: { select: { points: true } } },
+      });
+      return ready;
+    } catch (error) {
+      await db.websiteHeatmapSnapshot.update({ where: { id: snapshot.id }, data: { status: 'FAILED' } }).catch(() => null);
+      throw error;
+    }
+  }
+
+  async getHeatmapSnapshot(id: string, tenantId: string): Promise<any> {
+    const snapshot = await db.websiteHeatmapSnapshot.findFirst({
+      where: { id, tenantId },
+      include: { site: { select: { id: true, name: true, domain: true } }, _count: { select: { points: true } } },
+    });
+    if (!snapshot) throw new NotFoundError('Heatmap snapshot not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return snapshot;
+  }
+
+  async getHeatmapPoints(id: string, tenantId: string, query: Record<string, unknown> = {}): Promise<any> {
+    await this.getHeatmapSnapshot(id, tenantId);
+    const where: Record<string, any> = { snapshotId: id, tenantId };
+    if (query.type) where.type = String(query.type).toUpperCase();
+    return db.websiteHeatmapPoint.findMany({
+      where,
+      orderBy: { createdAt: 'asc' },
+      take: Math.min(Number(query.limit || 5000), 10000),
+    });
+  }
+
+  async deleteHeatmapSnapshot(id: string, tenantId: string): Promise<any> {
+    await this.getHeatmapSnapshot(id, tenantId);
+    return db.websiteHeatmapSnapshot.delete({ where: { id } });
   }
 
   async listRecordings(tenantId: string, query: Record<string, unknown>) {
@@ -555,6 +693,127 @@ export class WebsiteAnalyticsService {
     return site;
   }
 
+  private pathFromUrl(url: string | null) {
+    if (!url) return null;
+    try {
+      return new URL(url.startsWith('http') ? url : `https://${url}`).pathname || '/';
+    } catch {
+      return null;
+    }
+  }
+
+  private async aggregateHeatmapEvents(
+    tenantId: string,
+    siteId: string,
+    snapshotId: string,
+    path: string,
+    dateFrom: Date,
+    dateTo: Date,
+    deviceType: string | null
+  ): Promise<any> {
+    const events = await db.websiteEvent.findMany({
+      where: {
+        tenantId,
+        siteId,
+        path,
+        createdAt: { gte: dateFrom, lte: dateTo },
+        type: { in: ['click', 'scroll', 'mouse_move'] },
+        ...(deviceType ? { session: { device: { equals: deviceType, mode: 'insensitive' } } } : {}),
+      },
+      include: { session: { select: { device: true } } },
+      orderBy: { createdAt: 'asc' },
+      take: 10000,
+    });
+
+    const points: any[] = [];
+    const scrollDepths: number[] = [];
+    const selectorCounts = new Map<string, number>();
+    let viewportWidth: number | null = null;
+    let viewportHeight: number | null = null;
+
+    for (const event of events) {
+      viewportWidth ||= event.viewportWidth || null;
+      viewportHeight ||= event.viewportHeight || null;
+      const blockedSelectors = event?.payload?.element?.blocked === true;
+      if (blockedSelectors) continue;
+      if (event.type === 'click' || event.type === 'mouse_move') {
+        const x = toInt(event.x);
+        const y = toInt(event.y);
+        const width = toInt(event.viewportWidth);
+        const height = toInt(event.viewportHeight);
+        if (x === null || y === null) continue;
+        const type = event.type === 'click' ? 'CLICK' : 'ENGAGEMENT';
+        const selector = eventSelector(event);
+        if (type === 'CLICK' && selector) selectorCounts.set(selector, (selectorCounts.get(selector) || 0) + 1);
+        points.push({
+          tenantId,
+          snapshotId,
+          siteId,
+          type,
+          x,
+          y,
+          normalizedX: normalizeRatio(x, width),
+          normalizedY: normalizeRatio(y, height),
+          value: type === 'CLICK' ? 1 : 0.5,
+          viewportWidth: width,
+          viewportHeight: height,
+          selector,
+          createdAt: event.createdAt,
+        });
+      }
+      if (event.type === 'scroll') {
+        const depth = scrollDepth(event);
+        if (depth === null) continue;
+        scrollDepths.push(depth);
+        points.push({
+          tenantId,
+          snapshotId,
+          siteId,
+          type: 'SCROLL',
+          x: null,
+          y: null,
+          normalizedX: null,
+          normalizedY: depth / 100,
+          value: depth,
+          viewportWidth: toInt(event.viewportWidth),
+          viewportHeight: toInt(event.viewportHeight),
+          selector: null,
+          createdAt: event.createdAt,
+        });
+      }
+    }
+
+    if (points.length) {
+      await db.websiteHeatmapPoint.createMany({ data: points });
+    }
+
+    const clickCount = points.filter((point) => point.type === 'CLICK').length;
+    const engagementSampleCount = points.filter((point) => point.type === 'ENGAGEMENT').length;
+    const maxScrollDepth = scrollDepths.length ? Math.max(...scrollDepths) : null;
+    const avgScrollDepth = scrollDepths.length ? Math.round((scrollDepths.reduce((sum, value) => sum + value, 0) / scrollDepths.length) * 100) / 100 : null;
+    const scrollBands = [25, 50, 75, 100].map((band) => ({
+      depth: band,
+      count: scrollDepths.filter((value) => value >= band).length,
+      percentage: scrollDepths.length ? Math.round((scrollDepths.filter((value) => value >= band).length / scrollDepths.length) * 100) : 0,
+    }));
+    const topClickedAreas = Array.from(selectorCounts.entries())
+      .sort((left, right) => right[1] - left[1])
+      .slice(0, 10)
+      .map(([selector, count]) => ({ selector, count }));
+
+    return {
+      clickCount,
+      scrollSampleCount: scrollDepths.length,
+      engagementSampleCount,
+      maxScrollDepth,
+      avgScrollDepth,
+      viewportWidth,
+      viewportHeight,
+      scrollBands,
+      topClickedAreas,
+    };
+  }
+
   private async getPublicSession(site: any, sessionKeyValue: unknown) {
     const sessionKey = this.requirePublicId(sessionKeyValue, 'sessionKey');
     const session = await db.websiteSession.findFirst({ where: { sessionKey, tenantId: site.tenantId, siteId: site.id } });
@@ -609,6 +868,6 @@ export class WebsiteAnalyticsService {
   }
 }
 
-const TRACKER_SCRIPT = `(function(){try{if(window.__YSAnalytics)return;window.__YSAnalytics=true;var s=document.currentScript;var key=s&&s.getAttribute("data-tracking-key");if(!key||localStorage.getItem("ys_analytics_opt_out")==="1")return;var base=(s&&s.src?s.src:"").replace(/\\/tracker\\.js.*$/,"");var anon=localStorage.getItem("ys_analytics_visitor");if(!anon){anon="v_"+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("ys_analytics_visitor",anon)}var sk=sessionStorage.getItem("ys_analytics_session");if(!sk){sk="s_"+Math.random().toString(36).slice(2)+Date.now().toString(36);sessionStorage.setItem("ys_analytics_session",sk)}var q=[],rq=[],timer=null,rtimer=null,rseq=1,recording=false,recordingId=null,privacy={recordingsEnabled:true,maskAllInputs:true,respectDoNotTrack:true,maskSelectors:[],blockSelectors:[]};function post(url,payload,beacon){var body=JSON.stringify(payload);if(beacon&&navigator.sendBeacon){try{if(navigator.sendBeacon(url,new Blob([body],{type:"application/json"})))return Promise.resolve({})}catch(_){}}return fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:body,keepalive:!!beacon}).then(function(r){return r.json().catch(function(){return{}})}).catch(function(){return{}})}function meta(el){if(!el||!el.tagName)return{};var tag=String(el.tagName).toLowerCase();var safe=!/input|textarea|select/i.test(tag)&&!el.isContentEditable;var text=safe?(el.innerText||el.textContent||"").replace(/\\s+/g," ").trim().slice(0,80):"";return{tagName:tag,id:el.id||"",className:String(el.className||"").slice(0,160),text:text}}function common(e){return Object.assign({trackingKey:key,anonymousId:anon,sessionKey:sk,url:location.href,path:location.pathname,title:document.title,referrer:document.referrer,viewportWidth:innerWidth,viewportHeight:innerHeight,userAgent:navigator.userAgent},e||{})}function send(events,beacon){if(!events.length)return;post(base+"/collect",common({events:events}),beacon)}function flush(){var batch=q.splice(0,50);send(batch,false);if(q.length)schedule()}function schedule(){if(timer)return;timer=setTimeout(function(){timer=null;flush()},1500)}function push(e){q.push(Object.assign({createdAt:new Date().toISOString()},e));schedule()}function page(){push({type:"page_view",url:location.href,path:location.pathname,title:document.title})}function flushRecording(beacon){if(!recording||!rq.length)return;var batch=rq.splice(0,300);post(base+"/recordings/chunk",common({recordingId:recordingId,sequence:rseq++,events:batch}),beacon)}function scheduleRecording(){if(rtimer)return;rtimer=setTimeout(function(){rtimer=null;flushRecording(false)},3000)}function loadScript(src,cb){var el=document.createElement("script");el.async=true;el.src=src;el.onload=cb;el.onerror=function(){};(document.head||document.documentElement).appendChild(el)}function startRecording(){if(recording||privacy.recordingsEnabled===false)return;if(privacy.respectDoNotTrack!==false&&(navigator.doNotTrack==="1"||window.doNotTrack==="1"))return;post(base+"/recordings/start",common({metadata:{source:"tracker"}}),false).then(function(res){recording=true;recordingId=res.data&&res.data.id||res.id||null;function begin(){if(!window.rrweb||!window.rrweb.record)return;window.rrweb.record({emit:function(ev){rq.push(ev);if(rq.length>=120)flushRecording(false);else scheduleRecording()},maskAllInputs:privacy.maskAllInputs!==false,maskInputOptions:{password:true,email:true,tel:true,text:privacy.maskAllInputs!==false},maskTextSelector:'[data-ys-mask],'+(privacy.maskSelectors||[]).join(','),blockSelector:'[data-ys-ignore],'+(privacy.blockSelectors||[]).join(',')})}if(window.rrweb&&window.rrweb.record)begin();else loadScript(base+"/vendor/rrweb-record.js",begin)})}post(base+"/session/start",common({url:location.href}),false).then(function(res){var site=res.data&&res.data.site||res.site;if(site&&site.privacySettings)privacy=Object.assign(privacy,site.privacySettings);startRecording()});page();["pushState","replaceState"].forEach(function(n){var o=history[n];history[n]=function(){var r=o.apply(this,arguments);setTimeout(page,0);return r}});addEventListener("popstate",page);addEventListener("click",function(e){push({type:"click",x:e.clientX,y:e.clientY,payload:{element:meta(e.target)}})},true);var lastScroll=0;addEventListener("scroll",function(){var now=Date.now();if(now-lastScroll<1200)return;lastScroll=now;push({type:"scroll",scrollY:scrollY,payload:{depth:Math.round((scrollY+innerHeight)/Math.max(document.body.scrollHeight,1)*100)}})},{passive:true});var lastMove=0;addEventListener("mousemove",function(e){var now=Date.now();if(now-lastMove<2000)return;lastMove=now;push({type:"mouse_move",x:e.clientX,y:e.clientY})},{passive:true});addEventListener("error",function(e){push({type:"js_error",payload:{message:String(e.message||"").slice(0,300),source:e.filename||"",line:e.lineno||0,column:e.colno||0}})});addEventListener("unhandledrejection",function(e){push({type:"unhandled_rejection",payload:{message:String(e.reason&&e.reason.message||e.reason||"").slice(0,300)}})});function endAll(){send(q.splice(0,50),true);flushRecording(true);post(base+"/recordings/end",common({recordingId:recordingId}),true);post(base+"/session/end",common({url:location.href}),true)}addEventListener("pagehide",endAll);addEventListener("beforeunload",endAll)}catch(_){}})();`;
+const TRACKER_SCRIPT = `(function(){try{if(window.__YSAnalytics)return;window.__YSAnalytics=true;var s=document.currentScript;var key=s&&s.getAttribute("data-tracking-key");if(!key||localStorage.getItem("ys_analytics_opt_out")==="1")return;var base=(s&&s.src?s.src:"").replace(/\\/tracker\\.js.*$/,"");var anon=localStorage.getItem("ys_analytics_visitor");if(!anon){anon="v_"+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("ys_analytics_visitor",anon)}var sk=sessionStorage.getItem("ys_analytics_session");if(!sk){sk="s_"+Math.random().toString(36).slice(2)+Date.now().toString(36);sessionStorage.setItem("ys_analytics_session",sk)}var q=[],rq=[],timer=null,rtimer=null,rseq=1,recording=false,recordingId=null,privacy={recordingsEnabled:true,maskAllInputs:true,respectDoNotTrack:true,maskSelectors:[],blockSelectors:[]};function post(url,payload,beacon){var body=JSON.stringify(payload);if(beacon&&navigator.sendBeacon){try{if(navigator.sendBeacon(url,new Blob([body],{type:"application/json"})))return Promise.resolve({})}catch(_){}}return fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:body,keepalive:!!beacon}).then(function(r){return r.json().catch(function(){return{}})}).catch(function(){return{}})}function meta(el){if(!el||!el.tagName)return{};var tag=String(el.tagName).toLowerCase();var safe=!/input|textarea|select/i.test(tag)&&!el.isContentEditable;var text=safe?(el.innerText||el.textContent||"").replace(/\\s+/g," ").trim().slice(0,80):"";return{tagName:tag,id:el.id||"",className:String(el.className||"").slice(0,160),text:text}}function device(){return /Mobi|Android|iPhone|iPod/i.test(navigator.userAgent)?"Mobile":/iPad|Tablet/i.test(navigator.userAgent)?"Tablet":"Desktop"}function docH(){return Math.max(document.documentElement.scrollHeight,document.body.scrollHeight,document.documentElement.offsetHeight,document.body.offsetHeight,innerHeight)}function common(e){return Object.assign({trackingKey:key,anonymousId:anon,sessionKey:sk,url:location.href,path:location.pathname,title:document.title,referrer:document.referrer,viewportWidth:innerWidth,viewportHeight:innerHeight,userAgent:navigator.userAgent,device:device()},e||{})}function send(events,beacon){if(!events.length)return;post(base+"/collect",common({events:events}),beacon)}function flush(){var batch=q.splice(0,50);send(batch,false);if(q.length)schedule()}function schedule(){if(timer)return;timer=setTimeout(function(){timer=null;flush()},1500)}function push(e){q.push(Object.assign({createdAt:new Date().toISOString()},e));schedule()}function page(){push({type:"page_view",url:location.href,path:location.pathname,title:document.title})}function flushRecording(beacon){if(!recording||!rq.length)return;var batch=rq.splice(0,300);post(base+"/recordings/chunk",common({recordingId:recordingId,sequence:rseq++,events:batch}),beacon)}function scheduleRecording(){if(rtimer)return;rtimer=setTimeout(function(){rtimer=null;flushRecording(false)},3000)}function loadScript(src,cb){var el=document.createElement("script");el.async=true;el.src=src;el.onload=cb;el.onerror=function(){};(document.head||document.documentElement).appendChild(el)}function startRecording(){if(recording||privacy.recordingsEnabled===false)return;if(privacy.respectDoNotTrack!==false&&(navigator.doNotTrack==="1"||window.doNotTrack==="1"))return;post(base+"/recordings/start",common({metadata:{source:"tracker"}}),false).then(function(res){recording=true;recordingId=res.data&&res.data.id||res.id||null;function begin(){if(!window.rrweb||!window.rrweb.record)return;window.rrweb.record({emit:function(ev){rq.push(ev);if(rq.length>=120)flushRecording(false);else scheduleRecording()},maskAllInputs:privacy.maskAllInputs!==false,maskInputOptions:{password:true,email:true,tel:true,text:privacy.maskAllInputs!==false},maskTextSelector:'[data-ys-mask],'+(privacy.maskSelectors||[]).join(','),blockSelector:'[data-ys-ignore],'+(privacy.blockSelectors||[]).join(',')})}if(window.rrweb&&window.rrweb.record)begin();else loadScript(base+"/vendor/rrweb-record.js",begin)})}post(base+"/session/start",common({url:location.href}),false).then(function(res){var site=res.data&&res.data.site||res.site;if(site&&site.privacySettings)privacy=Object.assign(privacy,site.privacySettings);startRecording()});page();["pushState","replaceState"].forEach(function(n){var o=history[n];history[n]=function(){var r=o.apply(this,arguments);setTimeout(page,0);return r}});addEventListener("popstate",page);addEventListener("click",function(e){push({type:"click",x:e.clientX,y:e.clientY,payload:{element:meta(e.target)}})},true);var lastScroll=0;addEventListener("scroll",function(){var now=Date.now();if(now-lastScroll<1200)return;lastScroll=now;push({type:"scroll",scrollY:scrollY,payload:{depth:Math.round((scrollY+innerHeight)/Math.max(docH(),1)*100),documentHeight:docH()}})},{passive:true});var lastMove=0;addEventListener("mousemove",function(e){var now=Date.now();if(now-lastMove<2000)return;lastMove=now;push({type:"mouse_move",x:e.clientX,y:e.clientY})},{passive:true});addEventListener("error",function(e){push({type:"js_error",payload:{message:String(e.message||"").slice(0,300),source:e.filename||"",line:e.lineno||0,column:e.colno||0}})});addEventListener("unhandledrejection",function(e){push({type:"unhandled_rejection",payload:{message:String(e.reason&&e.reason.message||e.reason||"").slice(0,300)}})});function endAll(){send(q.splice(0,50),true);flushRecording(true);post(base+"/recordings/end",common({recordingId:recordingId}),true);post(base+"/session/end",common({url:location.href}),true)}addEventListener("pagehide",endAll);addEventListener("beforeunload",endAll)}catch(_){}})();`;
 
 export const websiteAnalyticsService = new WebsiteAnalyticsService();

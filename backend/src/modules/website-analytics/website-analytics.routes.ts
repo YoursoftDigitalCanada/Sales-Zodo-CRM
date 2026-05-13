@@ -36,6 +36,11 @@ router.get('/sites/:id/snippet', requirePermission(PERMISSIONS.ANALYTICS_VIEW), 
 router.get('/sessions', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listSessions.bind(websiteAnalyticsController));
 router.get('/sessions/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getSession.bind(websiteAnalyticsController));
 router.get('/events', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listEvents.bind(websiteAnalyticsController));
+router.get('/heatmaps', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listHeatmaps.bind(websiteAnalyticsController));
+router.post('/heatmaps/snapshots', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(bodySchema), websiteAnalyticsController.createHeatmapSnapshot.bind(websiteAnalyticsController));
+router.get('/heatmaps/snapshots/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getHeatmapSnapshot.bind(websiteAnalyticsController));
+router.get('/heatmaps/snapshots/:id/points', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getHeatmapPoints.bind(websiteAnalyticsController));
+router.delete('/heatmaps/snapshots/:id', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), websiteAnalyticsController.deleteHeatmapSnapshot.bind(websiteAnalyticsController));
 router.get('/recordings', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listRecordings.bind(websiteAnalyticsController));
 router.get('/recordings/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getRecording.bind(websiteAnalyticsController));
 router.get('/recordings/:id/chunks', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getRecordingChunks.bind(websiteAnalyticsController));

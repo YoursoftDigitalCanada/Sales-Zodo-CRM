@@ -11,7 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  createWebsiteHeatmapSnapshot,
   createWebsiteAnalyticsSite,
+  getWebsiteHeatmapPoints,
+  getWebsiteHeatmaps,
   getWebsiteAnalyticsSites,
   getWebsiteAnalyticsSnippet,
   getWebsiteRecording,
@@ -23,6 +26,8 @@ import {
   setWebsiteRecordingLabels,
   shareWebsiteRecording,
   updateWebsiteAnalyticsSite,
+  type WebsiteHeatmapPoint,
+  type WebsiteHeatmapSnapshot,
   type WebsiteAnalyticsSite,
   type WebsiteRecording,
   type WebsiteSession,
@@ -72,6 +77,15 @@ export default function WebsiteAnalyticsPage() {
   const [selectedRecordingId, setSelectedRecordingId] = useState<string | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
   const [activeTab, setActiveTab] = useState("websites");
+  const [heatmapForm, setHeatmapForm] = useState({
+    path: "/",
+    dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    dateTo: new Date().toISOString().slice(0, 10),
+    deviceType: "all",
+    type: "click",
+  });
+  const [selectedHeatmapId, setSelectedHeatmapId] = useState<string>("");
+  const [compareHeatmapId, setCompareHeatmapId] = useState<string>("");
   const playerRef = useRef<HTMLDivElement | null>(null);
 
   const sitesQuery = useQuery({ queryKey: ["website-analytics", "sites"], queryFn: getWebsiteAnalyticsSites });
@@ -94,6 +108,22 @@ export default function WebsiteAnalyticsPage() {
     queryKey: ["website-analytics", "recordings", activeSiteId],
     queryFn: () => getWebsiteRecordings({ siteId: activeSiteId, limit: 100 }),
     enabled: Boolean(activeSiteId),
+  });
+  const heatmapsQuery = useQuery({
+    queryKey: ["website-analytics", "heatmaps", activeSiteId],
+    queryFn: () => getWebsiteHeatmaps({ siteId: activeSiteId, limit: 100 }),
+    enabled: Boolean(activeSiteId),
+  });
+  const effectiveHeatmapId = selectedHeatmapId || heatmapsQuery.data?.[0]?.id || "";
+  const heatmapPointsQuery = useQuery({
+    queryKey: ["website-analytics", "heatmap-points", effectiveHeatmapId, heatmapForm.type],
+    queryFn: () => getWebsiteHeatmapPoints(effectiveHeatmapId, { type: heatmapForm.type, limit: 8000 }),
+    enabled: Boolean(effectiveHeatmapId),
+  });
+  const comparePointsQuery = useQuery({
+    queryKey: ["website-analytics", "heatmap-points", compareHeatmapId, heatmapForm.type],
+    queryFn: () => getWebsiteHeatmapPoints(compareHeatmapId, { type: heatmapForm.type, limit: 8000 }),
+    enabled: Boolean(compareHeatmapId),
   });
   const recordingDetailQuery = useQuery({
     queryKey: ["website-analytics", "recording", selectedRecordingId],
@@ -151,6 +181,14 @@ export default function WebsiteAnalyticsPage() {
       await queryClient.invalidateQueries({ queryKey: ["website-analytics", "recording", selectedRecordingId] });
     },
   });
+  const heatmapMutation = useMutation({
+    mutationFn: createWebsiteHeatmapSnapshot,
+    onSuccess: async (snapshot) => {
+      setSelectedHeatmapId(snapshot.id);
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "heatmaps"] });
+      toast({ title: "Heatmap generated", description: "Snapshot is ready to inspect." });
+    },
+  });
 
   const totals = useMemo(() => {
     return sites.reduce(
@@ -169,6 +207,11 @@ export default function WebsiteAnalyticsPage() {
   const sessions = sessionsQuery.data || [];
   const sessionDetail = sessionDetailQuery.data;
   const recordings = recordingsQuery.data || [];
+  const heatmaps = heatmapsQuery.data || [];
+  const selectedHeatmap = heatmaps.find((item) => item.id === effectiveHeatmapId) || heatmaps[0];
+  const compareHeatmap = heatmaps.find((item) => item.id === compareHeatmapId);
+  const heatmapPoints = heatmapPointsQuery.data || [];
+  const comparePoints = comparePointsQuery.data || [];
   const recordingDetail = recordingDetailQuery.data;
   const replayEvents = useMemo(() => (recordingChunksQuery.data?.chunks || []).flatMap((chunk) => chunk.events || []), [recordingChunksQuery.data]);
 
@@ -203,6 +246,53 @@ export default function WebsiteAnalyticsPage() {
     updateSiteMutation.mutate({ id: selectedSite.id, privacySettings: { ...privacy, ...patch } });
   };
 
+  const generateHeatmap = () => {
+    if (!activeSiteId) return;
+    heatmapMutation.mutate({
+      siteId: activeSiteId,
+      path: heatmapForm.path || "/",
+      deviceType: heatmapForm.deviceType,
+      dateFrom: new Date(`${heatmapForm.dateFrom}T00:00:00`).toISOString(),
+      dateTo: new Date(`${heatmapForm.dateTo}T23:59:59`).toISOString(),
+    });
+  };
+
+  const renderHeatmapCanvas = (points: WebsiteHeatmapPoint[], snapshot?: WebsiteHeatmapSnapshot, label = "Heatmap") => {
+    const displayPoints = points.filter((point) => point.type.toLowerCase() === heatmapForm.type || (heatmapForm.type === "click" && point.type === "CLICK")).slice(0, 1200);
+    return (
+      <div className="rounded-lg border border-[#E2E8F0] bg-white">
+        <div className="border-b border-[#E2E8F0] p-4">
+          <h3 className="text-sm font-semibold text-[#0F172A]">{label}</h3>
+          <p className="mt-1 truncate text-xs text-[#64748B]">{snapshot?.path || heatmapForm.path || "/"}</p>
+        </div>
+        <div className="relative mx-auto my-5 h-[520px] w-full max-w-[840px] overflow-hidden rounded-md border border-[#CBD5E1] bg-gradient-to-b from-white to-[#F8FAFC]">
+          <div className="absolute inset-x-0 top-0 border-b border-dashed border-[#CBD5E1] bg-white/80 px-3 py-2 text-xs text-[#64748B]">{snapshot?.url || "Page preview placeholder"}</div>
+          {heatmapForm.type === "scroll" ? (
+            <div className="absolute inset-x-0 top-10 bottom-0">
+              {((snapshot?.metadata?.scrollBands as any[]) || []).map((band, index) => (
+                <div key={band.depth} className="absolute inset-x-0 border-t border-white/80" style={{ top: `${Math.min(100, band.depth)}%`, height: "25%", background: `rgba(8, 145, 178, ${0.08 + (band.percentage / 100) * 0.42})` }}>
+                  <span className="ml-3 text-xs font-medium text-[#0F172A]">{band.depth}% depth · {band.percentage}%</span>
+                </div>
+              ))}
+            </div>
+          ) : displayPoints.map((point, index) => (
+            <span
+              key={`${point.id}-${index}`}
+              className="absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[1px]"
+              style={{
+                left: `${Math.max(0, Math.min(1, point.normalizedX ?? 0)) * 100}%`,
+                top: `${Math.max(0, Math.min(1, point.normalizedY ?? 0)) * 100}%`,
+                background: heatmapForm.type === "click" ? "rgba(239,68,68,0.5)" : "rgba(8,145,178,0.35)",
+                boxShadow: heatmapForm.type === "click" ? "0 0 18px rgba(239,68,68,0.75)" : "0 0 18px rgba(8,145,178,0.55)",
+              }}
+              title={point.selector || point.type}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <header className="border-b border-[#E2E8F0] bg-white px-4 py-5 sm:px-6">
@@ -231,11 +321,12 @@ export default function WebsiteAnalyticsPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
           <div className="rounded-lg border border-[#E2E8F0] bg-white p-2">
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-4">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-5">
               <TabsTrigger value="websites" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Globe2 size={16} />Websites</TabsTrigger>
               <TabsTrigger value="privacy" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Eye size={16} />Privacy & Tracking</TabsTrigger>
               <TabsTrigger value="sessions" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Sessions</TabsTrigger>
               <TabsTrigger value="recordings" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><MousePointerClick size={16} />Recordings</TabsTrigger>
+              <TabsTrigger value="heatmaps" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Heatmaps</TabsTrigger>
             </TabsList>
           </div>
 
@@ -381,6 +472,92 @@ export default function WebsiteAnalyticsPage() {
                 </table>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="heatmaps" className="mt-0 space-y-5">
+            <section className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+              <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr_1fr_auto]">
+                <div className="space-y-2">
+                  <Label>URL / Path</Label>
+                  <Input value={heatmapForm.path} onChange={(event) => setHeatmapForm((current) => ({ ...current, path: event.target.value }))} placeholder="/pricing" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Date From</Label>
+                  <Input type="date" value={heatmapForm.dateFrom} onChange={(event) => setHeatmapForm((current) => ({ ...current, dateFrom: event.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Date To</Label>
+                  <Input type="date" value={heatmapForm.dateTo} onChange={(event) => setHeatmapForm((current) => ({ ...current, dateTo: event.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Device</Label>
+                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={heatmapForm.deviceType} onChange={(event) => setHeatmapForm((current) => ({ ...current, deviceType: event.target.value }))}>
+                    <option value="all">All</option>
+                    <option value="desktop">Desktop</option>
+                    <option value="tablet">Tablet</option>
+                    <option value="mobile">Mobile</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <Button disabled={!activeSiteId || heatmapMutation.isPending} onClick={generateHeatmap} className="w-full bg-[#0891B2] hover:bg-[#0E7490]">Generate</Button>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {["click", "scroll", "engagement"].map((type) => (
+                  <Button key={type} variant={heatmapForm.type === type ? "default" : "outline"} onClick={() => setHeatmapForm((current) => ({ ...current, type }))}>{type}</Button>
+                ))}
+              </div>
+            </section>
+
+            <section className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
+              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                <h2 className="text-sm font-semibold text-[#0F172A]">Snapshots</h2>
+                <div className="mt-3 space-y-2">
+                  {heatmaps.length === 0 ? <p className="rounded-md bg-[#F8FAFC] p-4 text-sm text-[#64748B]">No heatmap snapshots yet.</p> : null}
+                  {heatmaps.map((snapshot) => (
+                    <button key={snapshot.id} onClick={() => setSelectedHeatmapId(snapshot.id)} className={`w-full rounded-md border p-3 text-left text-sm ${selectedHeatmap?.id === snapshot.id ? "border-[#0891B2] bg-[#ECFEFF]" : "border-[#E2E8F0]"}`}>
+                      <div className="font-medium text-[#0F172A]">{snapshot.path}</div>
+                      <div className="mt-1 text-xs text-[#64748B]">{snapshot.deviceType || "all"} · {snapshot.clickCount} clicks</div>
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-4 space-y-2">
+                  <Label>Compare With</Label>
+                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={compareHeatmapId} onChange={(event) => setCompareHeatmapId(event.target.value)}>
+                    <option value="">No comparison</option>
+                    {heatmaps.filter((snapshot) => snapshot.id !== selectedHeatmap?.id).map((snapshot) => <option key={snapshot.id} value={snapshot.id}>{snapshot.path} · {new Date(snapshot.createdAt).toLocaleDateString()}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-5">
+                <div className={compareHeatmap ? "grid gap-5 xl:grid-cols-2" : ""}>
+                  {renderHeatmapCanvas(heatmapPoints, selectedHeatmap, "Selected Heatmap")}
+                  {compareHeatmap ? renderHeatmapCanvas(comparePoints, compareHeatmap, "Comparison Heatmap") : null}
+                </div>
+                <div className="grid gap-5 lg:grid-cols-2">
+                  <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                    <h3 className="text-sm font-semibold text-[#0F172A]">Scroll Depth Summary</h3>
+                    <div className="mt-3 space-y-2 text-sm text-[#334155]">
+                      <p>Max depth: {selectedHeatmap?.maxScrollDepth ?? 0}%</p>
+                      <p>Average depth: {selectedHeatmap?.avgScrollDepth ?? 0}%</p>
+                      <p>Samples: {selectedHeatmap?.scrollSampleCount ?? 0}</p>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                    <h3 className="text-sm font-semibold text-[#0F172A]">Top Clicked Areas</h3>
+                    <div className="mt-3 space-y-2">
+                      {((selectedHeatmap?.metadata?.topClickedAreas as any[]) || []).length === 0 ? <p className="text-sm text-[#64748B]">No click areas yet.</p> : null}
+                      {((selectedHeatmap?.metadata?.topClickedAreas as any[]) || []).map((item) => (
+                        <div key={item.selector} className="flex items-center justify-between rounded-md bg-[#F8FAFC] px-3 py-2 text-sm">
+                          <span className="truncate text-[#334155]">{item.selector}</span>
+                          <Badge variant="outline">{item.count}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
           </TabsContent>
         </Tabs>
       </main>

@@ -49,6 +49,47 @@ export interface RecordingChunksResponse {
   chunks: Array<{ sequence: number; events: any[] }>;
 }
 
+export interface WebsiteHeatmapSnapshot {
+  id: string;
+  siteId: string;
+  url: string;
+  path: string;
+  deviceType?: string | null;
+  viewportWidth?: number | null;
+  viewportHeight?: number | null;
+  dateFrom: string;
+  dateTo: string;
+  clickCount: number;
+  scrollSampleCount: number;
+  engagementSampleCount: number;
+  maxScrollDepth?: number | null;
+  avgScrollDepth?: number | null;
+  status: string;
+  metadata?: {
+    topClickedAreas?: Array<{ selector: string; count: number }>;
+    scrollBands?: Array<{ depth: number; count: number; percentage: number }>;
+    [key: string]: unknown;
+  };
+  site?: Pick<WebsiteAnalyticsSite, "id" | "name" | "domain">;
+  createdAt: string;
+}
+
+export interface WebsiteHeatmapPoint {
+  id: string;
+  snapshotId: string;
+  siteId: string;
+  type: "CLICK" | "ENGAGEMENT" | "SCROLL" | string;
+  x?: number | null;
+  y?: number | null;
+  normalizedX?: number | null;
+  normalizedY?: number | null;
+  value: number;
+  viewportWidth?: number | null;
+  viewportHeight?: number | null;
+  selector?: string | null;
+  createdAt: string;
+}
+
 export interface WebsiteSession {
   id: string;
   siteId: string;
@@ -146,4 +187,31 @@ export async function getSharedWebsiteRecording(token: string): Promise<WebsiteR
 
 export async function getSharedWebsiteRecordingChunks(token: string): Promise<RecordingChunksResponse> {
   return data(await api.get(`/public/website-analytics/shared-recordings/${token}/chunks`));
+}
+
+export async function getWebsiteHeatmaps(params?: Record<string, unknown>): Promise<WebsiteHeatmapSnapshot[]> {
+  return data(await api.get("/website-analytics/heatmaps", { params })) || [];
+}
+
+export async function createWebsiteHeatmapSnapshot(payload: {
+  siteId: string;
+  url?: string;
+  path?: string;
+  deviceType?: string;
+  dateFrom: string;
+  dateTo: string;
+}): Promise<WebsiteHeatmapSnapshot> {
+  return data(await api.post("/website-analytics/heatmaps/snapshots", payload));
+}
+
+export async function getWebsiteHeatmapSnapshot(id: string): Promise<WebsiteHeatmapSnapshot> {
+  return data(await api.get(`/website-analytics/heatmaps/snapshots/${id}`));
+}
+
+export async function getWebsiteHeatmapPoints(id: string, params?: { type?: string; limit?: number }): Promise<WebsiteHeatmapPoint[]> {
+  return data(await api.get(`/website-analytics/heatmaps/snapshots/${id}/points`, { params })) || [];
+}
+
+export async function deleteWebsiteHeatmapSnapshot(id: string): Promise<void> {
+  await api.delete(`/website-analytics/heatmaps/snapshots/${id}`);
 }

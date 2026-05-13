@@ -1743,7 +1743,11 @@ export class WebsiteAnalyticsService {
       .replace('post(base+"/recordings/start",common({metadata:{source:"tracker"}}),false).then(function(res){recording=true;recordingId=res.data&&res.data.id||res.id||null;function begin(){',
         'post(base+"/recordings/start",common({metadata:{source:"tracker"}}),false).then(function(res){recordingId=res.data&&res.data.id||res.id||null;if(!recordingId){recording=false;setTimeout(startRecording,5000);return}recording=true;liveHeartbeat("visible",false);function begin(){')
       .replace('function begin(){if(!window.rrweb||!window.rrweb.record)return;',
-        'function begin(){if(!window.rrweb||!window.rrweb.record){recording=false;setTimeout(startRecording,5000);return}')
+        'function begin(){var rec=window.rrweb&&window.rrweb.record||window.rrwebRecord&&window.rrwebRecord.record||window.rrwebRecord;if(typeof rec!=="function"){recording=false;setTimeout(startRecording,5000);return}')
+      .replace('window.rrweb.record({emit:function(ev){rq.push(ev);if(rq.length>=120)flushRecording(false);else scheduleRecording()},',
+        'rec({emit:function(ev){rq.push(ev);if(rq.length>=120)flushRecording(false);else scheduleRecording()},')
+      .replace('window.rrweb.record({emit:function(ev){rq.push(ev);if(rq.length>=40)flushRecording(false);else scheduleRecording()},',
+        'rec({emit:function(ev){rq.push(ev);if(rq.length>=40)flushRecording(false);else scheduleRecording()},')
       .replace('function send(events,beacon){if(!events.length)return;post(base+"/collect",common({events:events}),beacon)}',
         'function liveHeartbeat(status,beacon){post(base+"/live/heartbeat",common({currentUrl:location.href,currentPath:location.pathname,currentTitle:document.title,visibilityState:document.visibilityState||status||"visible"}),!!beacon)}function send(events,beacon){if(!events.length)return;post(base+"/collect",common({events:events}),beacon)}')
       .replace('function endAll(){send(q.splice(0,50),true);flushRecording(true);post(base+"/recordings/end",common({recordingId:recordingId}),true);post(base+"/session/end",common({url:location.href}),true)}',

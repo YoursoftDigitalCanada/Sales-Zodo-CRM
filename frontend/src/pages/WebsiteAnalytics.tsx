@@ -707,7 +707,7 @@ export default function WebsiteAnalyticsPage() {
   }, [behaviorIssues]);
 
   useEffect(() => {
-    if (!playerRef.current || replayEvents.length === 0) return;
+    if (!playerRef.current || replayEvents.length < 2) return;
     playerRef.current.innerHTML = "";
     const player = new rrwebPlayer({
       target: playerRef.current,
@@ -1847,7 +1847,7 @@ export default function WebsiteAnalyticsPage() {
             <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
               <div className="space-y-4">
                 <div className="overflow-hidden rounded-lg border border-[#E2E8F0] bg-white">
-                  {replayEvents.length ? <div ref={playerRef} className="min-h-[520px]" /> : <div className="p-10 text-center text-sm text-[#64748B]">Recording chunks are loading, or this recording has no replay events.</div>}
+                  {replayEvents.length >= 2 ? <div ref={playerRef} className="min-h-[520px]" /> : <div className="p-10 text-center text-sm text-[#64748B]">This recording does not have enough replay data yet. Keep the visitor page open and interact for a few seconds, then refresh recordings.</div>}
                 </div>
                 <div className="rounded-lg border border-[#E2E8F0] bg-white p-4">
                   <h3 className="text-sm font-semibold text-[#0F172A]">Event Markers</h3>

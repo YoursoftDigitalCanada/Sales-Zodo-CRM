@@ -1748,6 +1748,8 @@ export class WebsiteAnalyticsService {
         'rec({emit:function(ev){rq.push(ev);if(rq.length>=120)flushRecording(false);else scheduleRecording()},')
       .replace('window.rrweb.record({emit:function(ev){rq.push(ev);if(rq.length>=40)flushRecording(false);else scheduleRecording()},',
         'rec({emit:function(ev){rq.push(ev);if(rq.length>=40)flushRecording(false);else scheduleRecording()},')
+      .replace("maskTextSelector:'[data-ys-mask],'+(privacy.maskSelectors||[]).join(','),blockSelector:'[data-ys-ignore],'+(privacy.blockSelectors||[]).join(',')",
+        "maskTextSelector:['[data-ys-mask]'].concat(privacy.maskSelectors||[]).filter(Boolean).join(','),blockSelector:['[data-ys-ignore]'].concat(privacy.blockSelectors||[]).filter(Boolean).join(',')")
       .replace('function send(events,beacon){if(!events.length)return;post(base+"/collect",common({events:events}),beacon)}',
         'function liveHeartbeat(status,beacon){post(base+"/live/heartbeat",common({currentUrl:location.href,currentPath:location.pathname,currentTitle:document.title,visibilityState:document.visibilityState||status||"visible"}),!!beacon)}function send(events,beacon){if(!events.length)return;post(base+"/collect",common({events:events}),beacon)}')
       .replace('function endAll(){send(q.splice(0,50),true);flushRecording(true);post(base+"/recordings/end",common({recordingId:recordingId}),true);post(base+"/session/end",common({url:location.href}),true)}',

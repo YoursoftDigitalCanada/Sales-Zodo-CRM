@@ -370,13 +370,13 @@ export default function WebsiteAnalyticsPage() {
     queryKey: ["website-analytics", "live-overview", liveQueryParams],
     queryFn: () => getWebsiteLiveOverview(liveQueryParams),
     enabled: Boolean(activeSiteId),
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
   const liveSessionsQuery = useQuery({
     queryKey: ["website-analytics", "live-sessions", liveQueryParams],
     queryFn: () => getWebsiteLiveSessions(liveQueryParams),
     enabled: Boolean(activeSiteId),
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
   const integrationsQuery = useQuery({
     queryKey: ["website-analytics", "integrations", activeSiteId],

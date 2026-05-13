@@ -1,6 +1,7 @@
 import cors, { CorsOptions, CorsOptionsDelegate } from 'cors';
 import { Request } from 'express';
 import { config } from '../../config';
+import { prisma } from '../../config/database';
 import { logger } from '../utils/logger';
 
 // ============================================================================
@@ -184,13 +185,84 @@ export const openCorsOptions: CorsOptions = {
   maxAge: 86400,
 };
 
+const WEBSITE_ANALYTICS_CORS_CACHE_MS = 60 * 1000;
+let websiteAnalyticsCorsCache: { expiresAt: number; domains: string[] } = { expiresAt: 0, domains: [] };
+
+function normalizeCorsDomain(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    return new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`).hostname.replace(/^www\./i, '').toLowerCase();
+  } catch {
+    const domain = trimmed.replace(/^https?:\/\//i, '').replace(/^www\./i, '').split('/')[0].toLowerCase();
+    return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain) ? domain : null;
+  }
+}
+
+function originMatchesAnalyticsDomain(origin: string, domains: string[]) {
+  const host = normalizeCorsDomain(origin);
+  if (!host) return false;
+  return domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
+}
+
+async function getWebsiteAnalyticsCorsDomains() {
+  if (Date.now() < websiteAnalyticsCorsCache.expiresAt) return websiteAnalyticsCorsCache.domains;
+
+  const sites = await (prisma as any).websiteAnalyticsSite.findMany({
+    where: { isActive: true },
+    select: { domain: true, privacySettings: true },
+  });
+
+  const domains = new Set<string>();
+  for (const site of sites) {
+    const domain = normalizeCorsDomain(site.domain);
+    if (domain) domains.add(domain);
+
+    const allowedDomains = Array.isArray(site.privacySettings?.allowedDomains)
+      ? site.privacySettings.allowedDomains
+      : [];
+    for (const item of allowedDomains) {
+      const allowed = normalizeCorsDomain(item);
+      if (allowed) domains.add(allowed);
+    }
+  }
+
+  websiteAnalyticsCorsCache = {
+    expiresAt: Date.now() + WEBSITE_ANALYTICS_CORS_CACHE_MS,
+    domains: Array.from(domains),
+  };
+  return websiteAnalyticsCorsCache.domains;
+}
+
+function websiteAnalyticsOriginValidator(
+  origin: string | undefined,
+  callback: (err: Error | null, allow?: boolean) => void,
+): void {
+  if (!origin) return callback(null, true);
+
+  getWebsiteAnalyticsCorsDomains()
+    .then((domains) => {
+      if (originMatchesAnalyticsDomain(origin, domains)) {
+        return callback(null, true);
+      }
+      logger.warn('Website analytics CORS blocked origin', { origin });
+      return callback(new Error(`Origin ${origin} not allowed for website analytics`));
+    })
+    .catch((error) => {
+      logger.error('Website analytics CORS domain lookup failed', { error });
+      return callback(new Error('Website analytics CORS lookup failed'));
+    });
+}
+
 /**
- * Website analytics tracking endpoints run on customer websites, so their
- * browser origins cannot be known ahead of time. The tracking key/site
- * validation inside the analytics service is the authorization boundary here.
+ * Website analytics tracking endpoints run on customer websites. The allowed
+ * browser origins come from active Website Analytics sites and their
+ * privacySettings.allowedDomains values, so adding a site automatically allows
+ * that domain to send tracking requests.
  */
 export const websiteAnalyticsCorsOptions: CorsOptions = {
-  origin: true,
+  origin: websiteAnalyticsOriginValidator,
   methods: ['GET', 'POST', 'HEAD', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Accept'],
   exposedHeaders: ['Content-Length'],

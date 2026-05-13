@@ -101,6 +101,32 @@ function defaultPrivacySettings(input?: Record<string, unknown>) {
   };
 }
 
+function cleanOptionalDomain(value: unknown): string | null {
+  const raw = cleanString(value, 253);
+  if (!raw) return null;
+  const domain = raw.replace(/^https?:\/\//i, '').replace(/^www\./i, '').split('/')[0].toLowerCase();
+  return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain) ? domain : null;
+}
+
+function cleanAllowedDomains(value: unknown): string[] {
+  const domains = new Set<string>();
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  for (const item of values) {
+    const domain = cleanOptionalDomain(item);
+    if (domain) domains.add(domain);
+  }
+  return Array.from(domains).slice(0, 25);
+}
+
+function sitePrivacySettings(domain: string, input?: Record<string, unknown>) {
+  const privacy = defaultPrivacySettings(input);
+  const allowedDomains = cleanAllowedDomains(privacy.allowedDomains);
+  return {
+    ...privacy,
+    allowedDomains: allowedDomains.length ? allowedDomains : [domain],
+  };
+}
+
 function hostnameFromUrl(value: unknown) {
   const raw = cleanString(value, 2000);
   if (!raw) return null;
@@ -301,7 +327,7 @@ export class WebsiteAnalyticsService {
         name,
         domain,
         trackingKey: trackingKey(),
-        privacySettings: defaultPrivacySettings(safePayload(data.privacySettings)),
+        privacySettings: sitePrivacySettings(domain, safePayload(data.privacySettings)),
       },
     });
     return this.withMetrics(site);
@@ -314,18 +340,25 @@ export class WebsiteAnalyticsService {
   }
 
   async updateSite(id: string, tenantId: string, data: Record<string, unknown>) {
-    await this.getSite(id, tenantId);
+    const existing = await db.websiteAnalyticsSite.findFirst({ where: { id, tenantId } });
+    if (!existing) throw new NotFoundError('Website analytics site not found', ErrorCodes.RESOURCE_NOT_FOUND);
     const update: Record<string, unknown> = {};
     if (data.name !== undefined) {
       const name = cleanString(data.name, 120);
       if (!name) throw new BadRequestError('Website name is required', ErrorCodes.VALIDATION_FAILED);
       update.name = name;
     }
-    if (data.domain !== undefined) update.domain = cleanDomain(data.domain);
+    const nextDomain = data.domain !== undefined ? cleanDomain(data.domain) : existing.domain;
+    if (data.domain !== undefined) update.domain = nextDomain;
     if (data.isActive !== undefined) update.isActive = Boolean(data.isActive);
     if (data.privacySettings !== undefined) {
-      const current = await db.websiteAnalyticsSite.findFirst({ where: { id, tenantId }, select: { privacySettings: true } });
-      update.privacySettings = defaultPrivacySettings({ ...(current?.privacySettings || {}), ...safePayload(data.privacySettings) });
+      update.privacySettings = sitePrivacySettings(nextDomain, { ...(existing.privacySettings || {}), ...safePayload(data.privacySettings) });
+    } else if (data.domain !== undefined) {
+      const currentAllowedDomains = cleanAllowedDomains((existing.privacySettings || {}).allowedDomains);
+      update.privacySettings = {
+        ...(existing.privacySettings || {}),
+        allowedDomains: Array.from(new Set([...currentAllowedDomains, nextDomain])),
+      };
     }
     const site = await db.websiteAnalyticsSite.update({ where: { id }, data: update });
     return this.withMetrics(site);

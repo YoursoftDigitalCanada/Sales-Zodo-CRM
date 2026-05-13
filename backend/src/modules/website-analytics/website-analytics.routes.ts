@@ -8,6 +8,7 @@ import { PERMISSIONS } from '../../common/constants/permissions';
 import { websiteAnalyticsController } from './website-analytics.controller';
 
 const idSchema = z.object({ params: z.object({ id: z.string().uuid() }) }).passthrough();
+const runIdSchema = z.object({ params: z.object({ runId: z.string().uuid() }) }).passthrough();
 const sessionIdSchema = z.object({ params: z.object({ sessionId: z.string().uuid() }) }).passthrough();
 const tagIdSchema = z.object({ params: z.object({ id: z.string().uuid(), tagId: z.string().uuid() }) }).passthrough();
 const bodySchema = z.object({ body: z.object({}).passthrough() }).passthrough();
@@ -41,6 +42,20 @@ router.get('/segments/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), valid
 router.put('/segments/:id', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), validate(bodySchema), websiteAnalyticsController.updateSegment.bind(websiteAnalyticsController));
 router.delete('/segments/:id', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), websiteAnalyticsController.deleteSegment.bind(websiteAnalyticsController));
 router.get('/filter-options', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.getFilterOptions.bind(websiteAnalyticsController));
+router.get('/funnels', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listFunnels.bind(websiteAnalyticsController));
+router.post('/funnels', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(bodySchema), websiteAnalyticsController.createFunnel.bind(websiteAnalyticsController));
+router.get('/funnels/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getFunnel.bind(websiteAnalyticsController));
+router.put('/funnels/:id', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), validate(bodySchema), websiteAnalyticsController.updateFunnel.bind(websiteAnalyticsController));
+router.delete('/funnels/:id', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), websiteAnalyticsController.deleteFunnel.bind(websiteAnalyticsController));
+router.post('/funnels/:id/run', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), validate(bodySchema), websiteAnalyticsController.runFunnel.bind(websiteAnalyticsController));
+router.get('/funnels/:id/runs', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.listFunnelRuns.bind(websiteAnalyticsController));
+router.get('/funnel-runs/:runId', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(runIdSchema), websiteAnalyticsController.getFunnelRun.bind(websiteAnalyticsController));
+router.get('/funnel-runs/:runId/sessions', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(runIdSchema), websiteAnalyticsController.listFunnelRunSessions.bind(websiteAnalyticsController));
+router.post('/journeys/analyze', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(bodySchema), websiteAnalyticsController.analyzeJourneys.bind(websiteAnalyticsController));
+router.get('/journeys/paths', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listJourneyPaths.bind(websiteAnalyticsController));
+router.get('/journeys/aggregates', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listJourneyAggregates.bind(websiteAnalyticsController));
+router.get('/journeys/paths/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getJourneyPath.bind(websiteAnalyticsController));
+router.get('/journeys/sessions/:sessionId', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(sessionIdSchema), websiteAnalyticsController.getSessionJourney.bind(websiteAnalyticsController));
 router.get('/sessions', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listSessions.bind(websiteAnalyticsController));
 router.get('/sessions/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getSession.bind(websiteAnalyticsController));
 router.get('/sessions/:id/tags', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.listSessionTags.bind(websiteAnalyticsController));

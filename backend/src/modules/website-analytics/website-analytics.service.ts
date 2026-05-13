@@ -199,6 +199,18 @@ function hashEmail(value: unknown) {
   return crypto.createHash('sha256').update(email).digest('hex');
 }
 
+function average(values: number[]) {
+  const nums = values.filter((value) => Number.isFinite(value));
+  return nums.length ? Math.round(nums.reduce((sum, value) => sum + value, 0) / nums.length) : 0;
+}
+
+function median(values: number[]) {
+  const nums = values.filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
+  if (!nums.length) return 0;
+  const mid = Math.floor(nums.length / 2);
+  return nums.length % 2 ? nums[mid] : Math.round((nums[mid - 1] + nums[mid]) / 2);
+}
+
 export class WebsiteAnalyticsService {
   async listSites(tenantId: string) {
     const sites = await db.websiteAnalyticsSite.findMany({
@@ -354,6 +366,186 @@ export class WebsiteAnalyticsService {
       customEvents: uniq(events.filter((item: any) => item.type === 'custom_event').map((item: any) => item.payload?.eventName)),
       behaviorTypes: uniq(signals.map((item: any) => item.type)),
     };
+  }
+
+  async listFunnels(tenantId: string, query: Record<string, unknown> = {}) {
+    const where: Record<string, unknown> = { tenantId };
+    if (query.siteId) where.siteId = String(query.siteId);
+    return db.websiteFunnel.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(Number(query.limit || 100), 500),
+      include: { site: { select: { id: true, name: true, domain: true } }, runs: { orderBy: { createdAt: 'desc' }, take: 1 } },
+    });
+  }
+
+  async createFunnel(tenantId: string, data: Record<string, unknown>, createdById?: string | null) {
+    const siteId = cleanString(data.siteId, 120);
+    if (!siteId) throw new BadRequestError('siteId is required', ErrorCodes.VALIDATION_FAILED);
+    await this.getSite(siteId, tenantId);
+    const name = cleanString(data.name, 120);
+    if (!name) throw new BadRequestError('Funnel name is required', ErrorCodes.VALIDATION_FAILED);
+    const steps = this.validateFunnelSteps(data.steps);
+    const funnel = await db.websiteFunnel.create({
+      data: {
+        tenantId,
+        siteId,
+        name,
+        description: cleanString(data.description, 500),
+        steps,
+        segmentId: cleanString(data.segmentId, 120),
+        isActive: data.isActive === undefined ? true : Boolean(data.isActive),
+        createdById: createdById || cleanString(data.createdById, 120),
+      },
+    });
+    return funnel;
+  }
+
+  async getFunnel(id: string, tenantId: string) {
+    const funnel = await db.websiteFunnel.findFirst({
+      where: { id, tenantId },
+      include: { site: { select: { id: true, name: true, domain: true } }, runs: { orderBy: { createdAt: 'desc' }, take: 5 } },
+    });
+    if (!funnel) throw new NotFoundError('Website funnel not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return funnel;
+  }
+
+  async updateFunnel(id: string, tenantId: string, data: Record<string, unknown>) {
+    await this.getFunnel(id, tenantId);
+    const update: Record<string, unknown> = {};
+    if (data.name !== undefined) {
+      const name = cleanString(data.name, 120);
+      if (!name) throw new BadRequestError('Funnel name is required', ErrorCodes.VALIDATION_FAILED);
+      update.name = name;
+    }
+    if (data.description !== undefined) update.description = cleanString(data.description, 500);
+    if (data.steps !== undefined) update.steps = this.validateFunnelSteps(data.steps);
+    if (data.segmentId !== undefined) update.segmentId = cleanString(data.segmentId, 120);
+    if (data.isActive !== undefined) update.isActive = Boolean(data.isActive);
+    return db.websiteFunnel.update({ where: { id }, data: update });
+  }
+
+  async deleteFunnel(id: string, tenantId: string) {
+    await this.getFunnel(id, tenantId);
+    return db.websiteFunnel.delete({ where: { id } });
+  }
+
+  async runFunnel(id: string, tenantId: string, data: Record<string, unknown> = {}) {
+    const funnel = await this.getFunnel(id, tenantId);
+    const dateFrom = data.dateFrom ? new Date(String(data.dateFrom)) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const dateTo = data.dateTo ? new Date(String(data.dateTo)) : new Date();
+    if (Number.isNaN(dateFrom.getTime()) || Number.isNaN(dateTo.getTime()) || dateTo < dateFrom) {
+      throw new BadRequestError('Valid date range is required', ErrorCodes.VALIDATION_FAILED);
+    }
+    const segmentFilters = await this.resolveFunnelFilters(tenantId, funnel, data);
+    const run = await db.websiteFunnelRun.create({
+      data: { tenantId, funnelId: funnel.id, siteId: funnel.siteId, dateFrom, dateTo, segmentFilters, status: 'PROCESSING' },
+    });
+    try {
+      const sessions = await this.loadFunnelSessions(tenantId, funnel.siteId, dateFrom, dateTo, segmentFilters);
+      const results = this.analyzeFunnelSessions(funnel.steps || [], sessions);
+      return db.websiteFunnelRun.update({
+        where: { id: run.id },
+        data: {
+          status: 'READY',
+          totalEntrants: results.totalEntrants,
+          totalConversions: results.totalConversions,
+          conversionRate: results.conversionRate,
+          results,
+        },
+      });
+    } catch (error) {
+      await db.websiteFunnelRun.update({ where: { id: run.id }, data: { status: 'FAILED', results: { error: error instanceof Error ? error.message : 'Funnel analysis failed' } } }).catch(() => null);
+      throw error;
+    }
+  }
+
+  async listFunnelRuns(id: string, tenantId: string) {
+    await this.getFunnel(id, tenantId);
+    return db.websiteFunnelRun.findMany({ where: { tenantId, funnelId: id }, orderBy: { createdAt: 'desc' }, take: 100 });
+  }
+
+  async getFunnelRun(id: string, tenantId: string) {
+    const run = await db.websiteFunnelRun.findFirst({ where: { id, tenantId }, include: { funnel: true, site: { select: { id: true, name: true, domain: true } } } });
+    if (!run) throw new NotFoundError('Website funnel run not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return run;
+  }
+
+  async listFunnelRunSessions(id: string, tenantId: string, query: Record<string, unknown> = {}) {
+    const run = await this.getFunnelRun(id, tenantId);
+    const results = run.results || {};
+    let ids = String(query.converted) === 'true'
+      ? (results.convertedSessions || [])
+      : String(query.droppedOff) === 'true'
+        ? Object.values(results.dropOffSessionsByStep || {}).flat()
+        : [...(results.convertedSessions || []), ...Object.values(results.dropOffSessionsByStep || {}).flat()];
+    if (query.stepIndex !== undefined) ids = (results.dropOffSessionsByStep || {})[String(query.stepIndex)] || [];
+    ids = Array.from(new Set(ids)).slice(0, 200);
+    if (!ids.length) return [];
+    return db.websiteSession.findMany({
+      where: { tenantId, siteId: run.siteId, id: { in: ids } },
+      include: { recordings: { select: { id: true, status: true }, take: 1 }, visitor: { include: { identity: true } }, tags: true },
+      orderBy: { startedAt: 'desc' },
+    });
+  }
+
+  async analyzeJourneys(tenantId: string, data: Record<string, unknown> = {}) {
+    const siteId = cleanString(data.siteId, 120);
+    if (!siteId) throw new BadRequestError('siteId is required', ErrorCodes.VALIDATION_FAILED);
+    await this.getSite(siteId, tenantId);
+    const dateFrom = data.dateFrom ? new Date(String(data.dateFrom)) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const dateTo = data.dateTo ? new Date(String(data.dateTo)) : new Date();
+    const filters = await this.resolveFilters(tenantId, { ...data, siteId, dateFrom: dateFrom.toISOString(), dateTo: dateTo.toISOString() });
+    const where = this.buildSessionWhere(tenantId, filters);
+    const sessions = await db.websiteSession.findMany({
+      where,
+      include: { events: { orderBy: { createdAt: 'asc' }, take: 1000 }, behaviorSignals: true },
+      orderBy: { startedAt: 'asc' },
+      take: Math.min(Number(data.limit || 500), 2000),
+    });
+    const paths = [];
+    for (const session of sessions) {
+      const path = this.extractJourneyPath(session);
+      if (!path.steps.length) continue;
+      const saved = await this.upsertJourneyPath(tenantId, siteId, session, path);
+      paths.push(saved);
+    }
+    await this.aggregateJourneyPaths(tenantId, siteId, paths, dateFrom, dateTo);
+    return { siteId, analyzedSessions: sessions.length, pathCount: paths.length };
+  }
+
+  async listJourneyPaths(tenantId: string, query: Record<string, unknown> = {}) {
+    const where: Record<string, any> = { tenantId };
+    if (query.siteId) where.siteId = String(query.siteId);
+    if (query.converted !== undefined) where.converted = this.booleanFilter(query.converted);
+    if (query.minStepCount) where.stepCount = { gte: Number(query.minStepCount) };
+    if (query.dateFrom || query.dateTo) {
+      where.createdAt = {};
+      if (query.dateFrom) where.createdAt.gte = new Date(String(query.dateFrom));
+      if (query.dateTo) where.createdAt.lte = new Date(String(query.dateTo));
+    }
+    return db.websiteJourneyPath.findMany({ where, orderBy: { createdAt: 'desc' }, take: Math.min(Number(query.limit || 100), 500) });
+  }
+
+  async getJourneyPath(id: string, tenantId: string) {
+    const path = await db.websiteJourneyPath.findFirst({ where: { id, tenantId }, include: { session: { include: { behaviorSignals: true, recordings: { take: 1 } } }, visitor: { include: { identity: true } } } });
+    if (!path) throw new NotFoundError('Website journey path not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return path;
+  }
+
+  async listJourneyAggregates(tenantId: string, query: Record<string, unknown> = {}) {
+    const where: Record<string, any> = { tenantId };
+    if (query.siteId) where.siteId = String(query.siteId);
+    return db.websitePathAggregate.findMany({ where, orderBy: { occurrenceCount: 'desc' }, take: Math.min(Number(query.limit || 100), 500) });
+  }
+
+  async getSessionJourney(sessionId: string, tenantId: string) {
+    const session = await this.getSession(sessionId, tenantId);
+    const existing = await db.websiteJourneyPath.findFirst({ where: { tenantId, sessionId }, orderBy: { createdAt: 'desc' } });
+    if (existing) return existing;
+    const hydrated = await db.websiteSession.findFirst({ where: { id: session.id, tenantId }, include: { events: { orderBy: { createdAt: 'asc' } }, behaviorSignals: true } });
+    if (!hydrated) throw new NotFoundError('Website session not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return this.upsertJourneyPath(tenantId, session.siteId, hydrated, this.extractJourneyPath(hydrated));
   }
 
   async listSessions(tenantId: string, query: Record<string, unknown>) {
@@ -1127,6 +1319,209 @@ export class WebsiteAnalyticsService {
         lastIdentifiedAt: now,
       },
     });
+  }
+
+  private validateFunnelSteps(input: unknown) {
+    if (!Array.isArray(input) || input.length < 1) {
+      throw new BadRequestError('At least one funnel step is required', ErrorCodes.VALIDATION_FAILED);
+    }
+    if (jsonSize(input) > MAX_PAYLOAD_BYTES) {
+      throw new BadRequestError('Funnel steps payload is too large', ErrorCodes.VALIDATION_FAILED);
+    }
+    const allowedTypes = new Set(['page', 'custom_event', 'click', 'behavior_signal', 'tag', 'js_error']);
+    const allowedOperators = new Set(['contains', 'equals', 'exact', 'selector']);
+    return input.slice(0, 12).map((step: any, index) => {
+      const name = cleanString(step?.name, 120) || `Step ${index + 1}`;
+      const type = cleanString(step?.type, 40);
+      const operator = cleanString(step?.operator, 40) || 'contains';
+      const value = cleanString(step?.value, 500);
+      if (!type || !allowedTypes.has(type)) throw new BadRequestError('Invalid funnel step type', ErrorCodes.VALIDATION_FAILED);
+      if (!allowedOperators.has(operator)) throw new BadRequestError('Invalid funnel step operator', ErrorCodes.VALIDATION_FAILED);
+      if (type !== 'js_error' && !value) throw new BadRequestError('Funnel step value is required', ErrorCodes.VALIDATION_FAILED);
+      return {
+        name,
+        type,
+        operator,
+        value,
+        withinMinutes: step?.withinMinutes ? Math.max(1, Math.min(1440, Number(step.withinMinutes))) : null,
+        required: step?.required !== false,
+      };
+    });
+  }
+
+  private async resolveFunnelFilters(tenantId: string, funnel: any, data: Record<string, unknown>) {
+    const base = funnel.segmentId ? await this.resolveFilters(tenantId, { segmentId: funnel.segmentId }) : {};
+    const override = data.segmentId ? await this.resolveFilters(tenantId, { segmentId: data.segmentId }) : {};
+    return { ...base, ...override, ...safePublicPayload(data.filters || {}) };
+  }
+
+  private async loadFunnelSessions(tenantId: string, siteId: string, dateFrom: Date, dateTo: Date, filters: Record<string, unknown>) {
+    const where = this.buildSessionWhere(tenantId, {
+      ...filters,
+      siteId,
+      dateFrom: dateFrom.toISOString(),
+      dateTo: dateTo.toISOString(),
+    });
+    return db.websiteSession.findMany({
+      where,
+      include: {
+        events: { orderBy: { createdAt: 'asc' }, take: 1000 },
+        behaviorSignals: { orderBy: { firstSeenAt: 'asc' }, take: 200 },
+        tags: true,
+        recordings: { select: { id: true, status: true }, take: 1 },
+        visitor: { include: { identity: true } },
+      },
+      orderBy: { startedAt: 'asc' },
+      take: 2000,
+    });
+  }
+
+  private analyzeFunnelSessions(steps: any[], sessions: any[]) {
+    const stepStats = steps.map((step, index) => ({ index, name: step.name, entrants: 0, dropOffs: 0, conversions: 0, avgTimeFromPreviousMs: 0, medianTimeFromPreviousMs: 0 }));
+    const times: number[][] = steps.map(() => []);
+    const convertedSessions: string[] = [];
+    const dropOffSessionsByStep: Record<string, string[]> = {};
+    const topDropOffPages = new Map<string, number>();
+
+    for (const session of sessions) {
+      let cursor = 0;
+      let lastTime: number | null = null;
+      let reached = -1;
+      for (let index = 0; index < steps.length; index += 1) {
+        const match = this.findStepMatch(session, steps[index], cursor, lastTime);
+        if (!match) break;
+        stepStats[index].entrants += 1;
+        if (lastTime !== null) times[index].push(match.time - lastTime);
+        lastTime = match.time;
+        cursor = match.eventIndex + 1;
+        reached = index;
+      }
+      if (reached === steps.length - 1) {
+        convertedSessions.push(session.id);
+      } else if (reached >= 0 || steps.length) {
+        const dropIndex = Math.max(0, reached + 1);
+        stepStats[dropIndex].dropOffs += 1;
+        dropOffSessionsByStep[String(dropIndex)] = [...(dropOffSessionsByStep[String(dropIndex)] || []), session.id];
+        const page = session.exitUrl || session.entryUrl || 'unknown';
+        topDropOffPages.set(page, (topDropOffPages.get(page) || 0) + 1);
+      }
+    }
+    stepStats.forEach((step, index) => {
+      step.conversions = index === steps.length - 1 ? convertedSessions.length : (stepStats[index + 1]?.entrants || 0);
+      step.avgTimeFromPreviousMs = average(times[index]);
+      step.medianTimeFromPreviousMs = median(times[index]);
+    });
+    const totalEntrants = stepStats[0]?.entrants || 0;
+    const totalConversions = convertedSessions.length;
+    return {
+      totalEntrants,
+      totalConversions,
+      conversionRate: totalEntrants ? Math.round((totalConversions / totalEntrants) * 10000) / 100 : 0,
+      steps: stepStats,
+      convertedSessions,
+      dropOffSessionsByStep,
+      topDropOffPages: Array.from(topDropOffPages.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([page, count]) => ({ page, count })),
+    };
+  }
+
+  private findStepMatch(session: any, step: any, startIndex: number, lastTime: number | null) {
+    const timeline = this.sessionTimeline(session);
+    const withinMs = step.withinMinutes ? Number(step.withinMinutes) * 60 * 1000 : null;
+    for (let index = startIndex; index < timeline.length; index += 1) {
+      const item = timeline[index];
+      if (lastTime !== null && withinMs && item.time - lastTime > withinMs) return null;
+      if (this.matchesFunnelStep(item, step)) return { eventIndex: index, time: item.time, item };
+    }
+    return null;
+  }
+
+  private sessionTimeline(session: any) {
+    const events = (session.events || []).map((event: any) => ({ kind: 'event', event, time: eventTime(event) }));
+    const signals = (session.behaviorSignals || []).map((signal: any) => ({ kind: 'behavior_signal', signal, time: new Date(signal.firstSeenAt).getTime() }));
+    const tags = (session.tags || []).map((tag: any) => ({ kind: 'tag', tag, time: new Date(tag.createdAt || session.startedAt).getTime() }));
+    return [...events, ...signals, ...tags].sort((a, b) => a.time - b.time);
+  }
+
+  private matchesFunnelStep(item: any, step: any) {
+    if (step.type === 'behavior_signal') return item.kind === 'behavior_signal' && this.valueMatches(item.signal.type, step.value, step.operator);
+    if (step.type === 'tag') return item.kind === 'tag' && this.valueMatches(item.tag.name, step.value, step.operator);
+    const event = item.event;
+    if (!event) return false;
+    if (step.type === 'page') return event.type === 'page_view' && (this.valueMatches(event.path, step.value, step.operator) || this.valueMatches(event.url, step.value, step.operator));
+    if (step.type === 'custom_event') return event.type === 'custom_event' && this.valueMatches(event.payload?.eventName, step.value, step.operator);
+    if (step.type === 'click') return event.type === 'click' && this.valueMatches(eventSelector(event), step.value, step.operator);
+    if (step.type === 'js_error') return event.type === 'js_error' || event.type === 'unhandled_rejection';
+    return false;
+  }
+
+  private valueMatches(actual: unknown, expected: unknown, operator = 'contains') {
+    const a = String(actual || '').toLowerCase();
+    const e = String(expected || '').toLowerCase();
+    if (!e && operator !== 'exists') return false;
+    if (operator === 'equals' || operator === 'exact' || operator === 'selector') return a === e;
+    return a.includes(e);
+  }
+
+  private extractJourneyPath(session: any) {
+    const steps = (session.events || [])
+      .filter((event: any) => event.type === 'page_view' || event.type === 'custom_event')
+      .map((event: any) => ({
+        type: event.type === 'page_view' ? 'page' : 'custom_event',
+        label: event.type === 'page_view' ? (event.path || this.pathFromUrl(event.url) || event.url) : event.payload?.eventName || 'custom_event',
+        url: event.url,
+        path: event.path,
+        at: event.createdAt,
+      }))
+      .filter((step: any, index: number, list: any[]) => index === 0 || step.label !== list[index - 1].label)
+      .slice(0, 50);
+    const conversion = steps.find((step: any) => ['lead_created', 'signup', 'checkout_complete', 'purchase'].includes(String(step.label).toLowerCase()));
+    const durationMs = session.durationMs || (session.endedAt ? duration(new Date(session.startedAt), new Date(session.endedAt)) : null);
+    return {
+      steps,
+      pathHash: fingerprint(steps.map((step: any) => step.label)),
+      durationMs,
+      converted: Boolean(conversion),
+      conversionEvent: conversion?.label || null,
+    };
+  }
+
+  private async upsertJourneyPath(tenantId: string, siteId: string, session: any, path: any) {
+    const existing = await db.websiteJourneyPath.findFirst({ where: { tenantId, siteId, sessionId: session.id } });
+    const data = {
+      tenantId,
+      siteId,
+      sessionId: session.id,
+      visitorId: session.visitorId || null,
+      pathHash: path.pathHash,
+      steps: path.steps,
+      stepCount: path.steps.length,
+      durationMs: path.durationMs,
+      converted: path.converted,
+      conversionEvent: path.conversionEvent,
+    };
+    return existing ? db.websiteJourneyPath.update({ where: { id: existing.id }, data }) : db.websiteJourneyPath.create({ data });
+  }
+
+  private async aggregateJourneyPaths(tenantId: string, siteId: string, paths: any[], dateFrom: Date, dateTo: Date) {
+    const byHash = new Map<string, any[]>();
+    paths.forEach((path) => byHash.set(path.pathHash, [...(byHash.get(path.pathHash) || []), path]));
+    for (const [pathHash, group] of byHash.entries()) {
+      const first = group[0];
+      const data = {
+        tenantId,
+        siteId,
+        pathHash,
+        steps: first.steps,
+        occurrenceCount: group.length,
+        conversionCount: group.filter((path) => path.converted).length,
+        avgDurationMs: average(group.map((path) => path.durationMs || 0)),
+        dateFrom,
+        dateTo,
+      };
+      const existing = await db.websitePathAggregate.findFirst({ where: { tenantId, siteId, pathHash } });
+      if (existing) await db.websitePathAggregate.update({ where: { id: existing.id }, data });
+      else await db.websitePathAggregate.create({ data });
+    }
   }
 
   private async withMetrics(site: any) {

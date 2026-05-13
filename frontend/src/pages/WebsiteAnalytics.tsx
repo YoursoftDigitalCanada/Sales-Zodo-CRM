@@ -12,6 +12,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   analyzeWebsiteBehaviorSession,
+  analyzeWebsiteJourneys,
+  createWebsiteFunnel,
   createWebsiteAnalyticsSegment,
   createWebsiteSessionTag,
   createWebsiteHeatmapSnapshot,
@@ -21,6 +23,11 @@ import {
   getWebsiteBehaviorIssue,
   getWebsiteBehaviorIssues,
   getWebsiteBehaviorSignals,
+  getWebsiteFunnelRunSessions,
+  getWebsiteFunnels,
+  getWebsiteJourneyAggregates,
+  getWebsiteJourneyPath,
+  getWebsiteJourneyPaths,
   getWebsiteAnalyticsSegments,
   getWebsiteFilterOptions,
   getWebsiteHeatmapPoints,
@@ -35,11 +42,17 @@ import {
   setWebsiteRecordingFavorite,
   setWebsiteRecordingLabels,
   shareWebsiteRecording,
+  runWebsiteFunnel,
   updateWebsiteBehaviorIssueStatus,
   updateWebsiteAnalyticsSegment,
   updateWebsiteAnalyticsSite,
   type WebsiteAnalyticsSegment,
   type WebsiteBehaviorSignal,
+  type WebsiteFunnel,
+  type WebsiteFunnelRun,
+  type WebsiteFunnelStep,
+  type WebsiteJourneyPath,
+  type WebsitePathAggregate,
   type WebsiteHeatmapPoint,
   type WebsiteHeatmapSnapshot,
   type WebsiteIssueGroup,
@@ -131,6 +144,17 @@ export default function WebsiteAnalyticsPage() {
   const [tagDraft, setTagDraft] = useState("");
   const [behaviorFilters, setBehaviorFilters] = useState({ type: "all", severity: "all", status: "OPEN", path: "" });
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
+  const [funnelForm, setFunnelForm] = useState({
+    name: "",
+    description: "",
+    steps: [
+      { name: "Pricing page", type: "page", operator: "contains", value: "/pricing" },
+      { name: "Lead created", type: "custom_event", operator: "equals", value: "lead_created" },
+    ] as WebsiteFunnelStep[],
+  });
+  const [selectedFunnelId, setSelectedFunnelId] = useState<string>("");
+  const [selectedRunId, setSelectedRunId] = useState<string>("");
+  const [selectedJourneyId, setSelectedJourneyId] = useState<string | null>(null);
   const playerRef = useRef<HTMLDivElement | null>(null);
 
   const sitesQuery = useQuery({ queryKey: ["website-analytics", "sites"], queryFn: getWebsiteAnalyticsSites });
@@ -188,6 +212,35 @@ export default function WebsiteAnalyticsPage() {
     queryKey: ["website-analytics", "filter-options", activeSiteId, filters.dateFrom, filters.dateTo],
     queryFn: () => getWebsiteFilterOptions({ siteId: activeSiteId, dateFrom: filters.dateFrom, dateTo: filters.dateTo }),
     enabled: Boolean(activeSiteId),
+  });
+  const funnelsQuery = useQuery({
+    queryKey: ["website-analytics", "funnels", activeSiteId],
+    queryFn: () => getWebsiteFunnels({ siteId: activeSiteId }),
+    enabled: Boolean(activeSiteId),
+  });
+  const selectedFunnel = (funnelsQuery.data || []).find((funnel) => funnel.id === selectedFunnelId) || (funnelsQuery.data || [])[0];
+  const selectedRun = selectedRunId
+    ? ((selectedFunnel?.runs || []).find((run) => run.id === selectedRunId) as WebsiteFunnelRun | undefined)
+    : (selectedFunnel?.runs?.[0] as WebsiteFunnelRun | undefined);
+  const runSessionsQuery = useQuery({
+    queryKey: ["website-analytics", "funnel-run-sessions", selectedRun?.id],
+    queryFn: () => getWebsiteFunnelRunSessions(selectedRun!.id, { droppedOff: true }),
+    enabled: Boolean(selectedRun?.id),
+  });
+  const journeyAggregatesQuery = useQuery({
+    queryKey: ["website-analytics", "journey-aggregates", analyticsFilters],
+    queryFn: () => getWebsiteJourneyAggregates(analyticsFilters),
+    enabled: Boolean(activeSiteId),
+  });
+  const journeyPathsQuery = useQuery({
+    queryKey: ["website-analytics", "journey-paths", analyticsFilters],
+    queryFn: () => getWebsiteJourneyPaths(analyticsFilters),
+    enabled: Boolean(activeSiteId),
+  });
+  const journeyDetailQuery = useQuery({
+    queryKey: ["website-analytics", "journey-path", selectedJourneyId],
+    queryFn: () => getWebsiteJourneyPath(selectedJourneyId!),
+    enabled: Boolean(selectedJourneyId),
   });
   const effectiveHeatmapId = selectedHeatmapId || heatmapsQuery.data?.[0]?.id || "";
   const heatmapPointsQuery = useQuery({
@@ -323,6 +376,32 @@ export default function WebsiteAnalyticsPage() {
       await queryClient.invalidateQueries({ queryKey: ["website-analytics", "session", selectedSessionId] });
     },
   });
+  const createFunnelMutation = useMutation({
+    mutationFn: () => createWebsiteFunnel({ siteId: activeSiteId, name: funnelForm.name, description: funnelForm.description, steps: funnelForm.steps, segmentId: filters.segmentId || undefined }),
+    onSuccess: async (funnel) => {
+      setSelectedFunnelId(funnel.id);
+      setFunnelForm((current) => ({ ...current, name: "", description: "" }));
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "funnels"] });
+      toast({ title: "Funnel saved" });
+    },
+  });
+  const runFunnelMutation = useMutation({
+    mutationFn: (id: string) => runWebsiteFunnel(id, { dateFrom: `${filters.dateFrom}T00:00:00`, dateTo: `${filters.dateTo}T23:59:59`, segmentId: filters.segmentId || undefined, filters: analyticsFilters }),
+    onSuccess: async (run) => {
+      setSelectedRunId(run.id);
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "funnels"] });
+      toast({ title: "Funnel analyzed", description: `${run.totalConversions} conversions from ${run.totalEntrants} entrants.` });
+    },
+  });
+  const journeyAnalyzeMutation = useMutation({
+    mutationFn: () => analyzeWebsiteJourneys({ ...analyticsFilters, siteId: activeSiteId, dateFrom: `${filters.dateFrom}T00:00:00`, dateTo: `${filters.dateTo}T23:59:59` }),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "journey"] });
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "journey-paths"] });
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "journey-aggregates"] });
+      toast({ title: "Journeys analyzed", description: `${result.pathCount} paths extracted.` });
+    },
+  });
   const deleteTagMutation = useMutation({
     mutationFn: ({ sessionId, tagId }: { sessionId: string; tagId: string }) => deleteWebsiteSessionTag(sessionId, tagId),
     onSuccess: async () => {
@@ -371,6 +450,11 @@ export default function WebsiteAnalyticsPage() {
   const behaviorIssues = behaviorIssuesQuery.data || [];
   const behaviorSignals = behaviorSignalsQuery.data || [];
   const selectedIssue = issueDetailQuery.data;
+  const funnels = funnelsQuery.data || [];
+  const journeyAggregates = journeyAggregatesQuery.data || [];
+  const journeyPaths = journeyPathsQuery.data || [];
+  const selectedJourney = journeyDetailQuery.data;
+  const runSessions = runSessionsQuery.data || [];
   const selectedHeatmap = heatmaps.find((item) => item.id === effectiveHeatmapId) || heatmaps[0];
   const compareHeatmap = heatmaps.find((item) => item.id === compareHeatmapId);
   const heatmapPoints = heatmapPointsQuery.data || [];
@@ -571,13 +655,14 @@ export default function WebsiteAnalyticsPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
           <div className="rounded-lg border border-[#E2E8F0] bg-white p-2">
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-6">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-7">
               <TabsTrigger value="websites" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Globe2 size={16} />Websites</TabsTrigger>
               <TabsTrigger value="privacy" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Eye size={16} />Privacy & Tracking</TabsTrigger>
               <TabsTrigger value="sessions" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Sessions</TabsTrigger>
               <TabsTrigger value="recordings" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><MousePointerClick size={16} />Recordings</TabsTrigger>
               <TabsTrigger value="heatmaps" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Heatmaps</TabsTrigger>
               <TabsTrigger value="behavior" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><AlertTriangle size={16} />Behavior</TabsTrigger>
+              <TabsTrigger value="funnels" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Funnels</TabsTrigger>
             </TabsList>
           </div>
 
@@ -949,6 +1034,150 @@ export default function WebsiteAnalyticsPage() {
               </div>
             </section>
           </TabsContent>
+
+          <TabsContent value="funnels" className="mt-0 space-y-5">
+            <section className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                <h2 className="text-sm font-semibold text-[#0F172A]">Create Funnel</h2>
+                <div className="mt-4 space-y-3">
+                  <div className="space-y-2"><Label>Name</Label><Input value={funnelForm.name} onChange={(event) => setFunnelForm((current) => ({ ...current, name: event.target.value }))} placeholder="Pricing to lead" /></div>
+                  <div className="space-y-2"><Label>Description</Label><Input value={funnelForm.description} onChange={(event) => setFunnelForm((current) => ({ ...current, description: event.target.value }))} placeholder="Track pricing page visitors into leads" /></div>
+                  <div className="space-y-3">
+                    {funnelForm.steps.map((step, index) => (
+                      <div key={index} className="rounded-md border border-[#E2E8F0] p-3">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-xs font-semibold text-[#64748B]">Step {index + 1}</span>
+                          <Button size="sm" variant="outline" onClick={() => setFunnelForm((current) => ({ ...current, steps: current.steps.filter((_, stepIndex) => stepIndex !== index) }))}>Remove</Button>
+                        </div>
+                        <div className="grid gap-2">
+                          <Input value={step.name} onChange={(event) => setFunnelForm((current) => ({ ...current, steps: current.steps.map((item, stepIndex) => stepIndex === index ? { ...item, name: event.target.value } : item) }))} placeholder="Step name" />
+                          <select className="h-10 rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={step.type} onChange={(event) => setFunnelForm((current) => ({ ...current, steps: current.steps.map((item, stepIndex) => stepIndex === index ? { ...item, type: event.target.value } : item) }))}>
+                            <option value="page">Page</option>
+                            <option value="custom_event">Custom Event</option>
+                            <option value="click">Click Selector</option>
+                            <option value="behavior_signal">Behavior Signal</option>
+                            <option value="tag">Session Tag</option>
+                            <option value="js_error">JS Error</option>
+                          </select>
+                          <select className="h-10 rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={step.operator} onChange={(event) => setFunnelForm((current) => ({ ...current, steps: current.steps.map((item, stepIndex) => stepIndex === index ? { ...item, operator: event.target.value } : item) }))}>
+                            <option value="contains">Contains</option>
+                            <option value="equals">Equals</option>
+                            <option value="selector">Selector</option>
+                          </select>
+                          <Input value={step.value || ""} onChange={(event) => setFunnelForm((current) => ({ ...current, steps: current.steps.map((item, stepIndex) => stepIndex === index ? { ...item, value: event.target.value } : item) }))} placeholder="/pricing, lead_created, #signup" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setFunnelForm((current) => ({ ...current, steps: [...current.steps, { name: `Step ${current.steps.length + 1}`, type: "page", operator: "contains", value: "" }] }))}>Add Step</Button>
+                    <Button disabled={!activeSiteId || !funnelForm.name.trim() || createFunnelMutation.isPending} onClick={() => createFunnelMutation.mutate()} className="bg-[#0891B2] hover:bg-[#0E7490]">Save Funnel</Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="space-y-2">
+                      <Label>Saved Funnels</Label>
+                      <select className="h-10 min-w-[260px] rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={selectedFunnel?.id || ""} onChange={(event) => { setSelectedFunnelId(event.target.value); setSelectedRunId(""); }}>
+                        {funnels.length === 0 ? <option value="">No funnels yet</option> : null}
+                        {funnels.map((funnel: WebsiteFunnel) => <option key={funnel.id} value={funnel.id}>{funnel.name}</option>)}
+                      </select>
+                    </div>
+                    <Button disabled={!selectedFunnel?.id || runFunnelMutation.isPending} onClick={() => selectedFunnel?.id && runFunnelMutation.mutate(selectedFunnel.id)} className="bg-[#0891B2] hover:bg-[#0E7490]">Run Funnel</Button>
+                  </div>
+                  {selectedRun ? (
+                    <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                      <MetricCard label="Entrants" value={formatNumber(selectedRun.totalEntrants)} icon={Activity} />
+                      <MetricCard label="Conversions" value={formatNumber(selectedRun.totalConversions)} icon={MousePointerClick} />
+                      <MetricCard label="Conversion Rate" value={`${selectedRun.conversionRate || 0}%`} icon={Search} />
+                    </div>
+                  ) : <p className="mt-5 rounded-md bg-[#F8FAFC] p-4 text-sm text-[#64748B]">Run a funnel to see conversion and drop-off metrics.</p>}
+                </div>
+
+                {selectedRun?.results?.steps ? (
+                  <div className="grid gap-3 lg:grid-cols-3">
+                    {selectedRun.results.steps.map((step) => (
+                      <div key={step.index} className="rounded-lg border border-[#E2E8F0] bg-white p-4">
+                        <p className="text-sm font-semibold text-[#0F172A]">{step.name}</p>
+                        <div className="mt-3 space-y-1 text-sm text-[#334155]">
+                          <p>Entrants: {step.entrants}</p>
+                          <p>Drop-offs: {step.dropOffs}</p>
+                          <p>Avg time: {formatDuration(step.avgTimeFromPreviousMs)}</p>
+                          <p>Median time: {formatDuration(step.medianTimeFromPreviousMs)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="rounded-lg border border-[#E2E8F0] bg-white">
+                  <div className="border-b border-[#E2E8F0] p-5">
+                    <h2 className="text-sm font-semibold text-[#0F172A]">Drop-off Sessions</h2>
+                  </div>
+                  <div className="divide-y divide-[#E2E8F0]">
+                    {runSessions.map((session) => (
+                      <div key={session.id} className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
+                        <div>
+                          <p className="font-medium text-[#0F172A]">{session.entryUrl}</p>
+                          <p className="text-xs text-[#64748B]">{session.browser || "-"} / {session.device || "-"} / {formatDuration(session.durationMs)}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          {session.recordings?.[0]?.id ? <Button size="sm" variant="outline" onClick={() => setSelectedRecordingId(session.recordings?.[0]?.id || null)}>Recording</Button> : null}
+                          <Button size="sm" variant="outline" onClick={() => setSelectedSessionId(session.id)}>Session</Button>
+                        </div>
+                      </div>
+                    ))}
+                    {runSessions.length === 0 ? <p className="p-6 text-sm text-[#64748B]">No drop-off sessions for the selected run yet.</p> : null}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="grid gap-5 xl:grid-cols-2">
+              <div className="rounded-lg border border-[#E2E8F0] bg-white">
+                <div className="flex items-center justify-between border-b border-[#E2E8F0] p-5">
+                  <div>
+                    <h2 className="text-sm font-semibold text-[#0F172A]">Top Journey Paths</h2>
+                    <p className="text-xs text-[#64748B]">Common page and custom-event paths.</p>
+                  </div>
+                  <Button variant="outline" disabled={!activeSiteId || journeyAnalyzeMutation.isPending} onClick={() => journeyAnalyzeMutation.mutate()}>Analyze</Button>
+                </div>
+                <div className="divide-y divide-[#E2E8F0]">
+                  {journeyAggregates.map((path: WebsitePathAggregate) => (
+                    <div key={path.id} className="p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-[#0F172A]">{path.steps.map((step) => step.label).join(" → ")}</p>
+                        <Badge variant="outline">{path.occurrenceCount}</Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-[#64748B]">Conversions: {path.conversionCount} · Avg duration: {formatDuration(path.avgDurationMs)}</p>
+                    </div>
+                  ))}
+                  {journeyAggregates.length === 0 ? <p className="p-6 text-sm text-[#64748B]">Analyze journeys to populate common paths.</p> : null}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-[#E2E8F0] bg-white">
+                <div className="border-b border-[#E2E8F0] p-5">
+                  <h2 className="text-sm font-semibold text-[#0F172A]">Session Journeys</h2>
+                </div>
+                <div className="divide-y divide-[#E2E8F0]">
+                  {journeyPaths.map((path: WebsiteJourneyPath) => (
+                    <div key={path.id} className="flex items-center justify-between gap-3 p-4">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-[#0F172A]">{path.steps.map((step) => step.label).join(" → ")}</p>
+                        <p className="text-xs text-[#64748B]">{path.stepCount} steps · {path.converted ? `Converted: ${path.conversionEvent}` : "Dropped off"}</p>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => setSelectedJourneyId(path.id)}>Open</Button>
+                    </div>
+                  ))}
+                  {journeyPaths.length === 0 ? <p className="p-6 text-sm text-[#64748B]">No journey paths yet.</p> : null}
+                </div>
+              </div>
+            </section>
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -1106,6 +1335,45 @@ export default function WebsiteAnalyticsPage() {
               </div>
             </div>
           ) : <p className="mt-6 text-sm text-[#64748B]">Loading behavior issue...</p>}
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={Boolean(selectedJourneyId)} onOpenChange={(open) => !open && setSelectedJourneyId(null)}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-3xl">
+          <SheetHeader>
+            <SheetTitle>Journey Detail</SheetTitle>
+          </SheetHeader>
+          {selectedJourney ? (
+            <div className="mt-6 space-y-5">
+              <div className="rounded-lg border border-[#E2E8F0] bg-white p-4">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant={selectedJourney.converted ? "default" : "secondary"}>{selectedJourney.converted ? "Converted" : "Dropped off"}</Badge>
+                  <Badge variant="outline">{selectedJourney.stepCount} steps</Badge>
+                  <Badge variant="outline">{formatDuration(selectedJourney.durationMs)}</Badge>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {(selectedJourney.steps || []).map((step, index) => (
+                    <div key={`${step.label}-${index}`} className="rounded-md bg-[#F8FAFC] px-3 py-2 text-sm">
+                      <p className="font-medium text-[#0F172A]">{index + 1}. {step.label}</p>
+                      <p className="text-xs text-[#64748B]">{step.type} · {formatDate(step.at)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {selectedJourney.session?.behaviorSignals?.length ? (
+                <div className="rounded-lg border border-[#E2E8F0] bg-white p-4">
+                  <h3 className="text-sm font-semibold text-[#0F172A]">Behavior Signals</h3>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedJourney.session.behaviorSignals.map((signal) => <Badge key={signal.id} variant={severityBadgeVariant(signal.severity) as any}>{formatBehaviorType(signal.type)}</Badge>)}
+                  </div>
+                </div>
+              ) : null}
+              <div className="flex gap-2">
+                {selectedJourney.session?.recordings?.[0]?.id ? <Button variant="outline" onClick={() => setSelectedRecordingId(selectedJourney.session?.recordings?.[0]?.id || null)}>Open Recording</Button> : null}
+                {selectedJourney.sessionId ? <Button variant="outline" onClick={() => setSelectedSessionId(selectedJourney.sessionId || null)}>Open Session</Button> : null}
+              </div>
+            </div>
+          ) : <p className="mt-6 text-sm text-[#64748B]">Loading journey...</p>}
         </SheetContent>
       </Sheet>
     </div>

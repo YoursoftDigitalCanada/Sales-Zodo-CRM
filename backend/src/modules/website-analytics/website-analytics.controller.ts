@@ -53,6 +53,62 @@ export class WebsiteAnalyticsController {
     websiteAnalyticsService.getFilterOptions(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
   }
 
+  listFunnels(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listFunnels(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  createFunnel(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.createFunnel(req.context.tenantId, sanitizeBody(req.body), (req.context as any).employeeId || (req.context as any).userId).then((data) => sendCreated(res, data, 'Funnel created')).catch(next);
+  }
+
+  getFunnel(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.getFunnel(req.params.id, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  updateFunnel(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.updateFunnel(req.params.id, req.context.tenantId, sanitizeBody(req.body)).then((data) => sendSuccess(res, data, 'Funnel updated')).catch(next);
+  }
+
+  deleteFunnel(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.deleteFunnel(req.params.id, req.context.tenantId).then(() => sendNoContent(res)).catch(next);
+  }
+
+  runFunnel(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.runFunnel(req.params.id, req.context.tenantId, sanitizeBody(req.body)).then((data) => sendCreated(res, data, 'Funnel analyzed')).catch(next);
+  }
+
+  listFunnelRuns(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listFunnelRuns(req.params.id, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  getFunnelRun(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.getFunnelRun(req.params.runId, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  listFunnelRunSessions(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listFunnelRunSessions(req.params.runId, req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  analyzeJourneys(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.analyzeJourneys(req.context.tenantId, sanitizeBody(req.body)).then((data) => sendCreated(res, data, 'Journeys analyzed')).catch(next);
+  }
+
+  listJourneyPaths(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listJourneyPaths(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  getJourneyPath(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.getJourneyPath(req.params.id, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  listJourneyAggregates(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listJourneyAggregates(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  getSessionJourney(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.getSessionJourney(req.params.sessionId, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
   listSessions(req: Request, res: Response, next: NextFunction) {
     websiteAnalyticsService.listSessions(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
   }

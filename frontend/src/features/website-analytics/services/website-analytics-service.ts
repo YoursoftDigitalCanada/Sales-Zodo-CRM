@@ -27,7 +27,6 @@ export interface WebsiteRecording {
   siteId: string;
   visitorId?: string | null;
   sessionId: string;
-  visitorId?: string | null;
   status: string;
   eventCount: number;
   durationMs?: number | null;
@@ -111,6 +110,7 @@ export interface WebsiteSession {
   events?: WebsiteEvent[];
   behaviorSignals?: WebsiteBehaviorSignal[];
   tags?: WebsiteSessionTag[];
+  recordings?: Array<{ id: string; status?: string }>;
   visitor?: { id: string; anonymousId: string; identity?: WebsiteVisitorIdentity | null };
 }
 
@@ -213,6 +213,73 @@ export interface WebsiteFilterOptions {
   labels: string[];
   customEvents: string[];
   behaviorTypes: string[];
+}
+
+export interface WebsiteFunnelStep {
+  name: string;
+  type: "page" | "custom_event" | "click" | "behavior_signal" | "tag" | "js_error" | string;
+  operator: "contains" | "equals" | "exact" | "selector" | string;
+  value?: string;
+  withinMinutes?: number | null;
+  required?: boolean;
+}
+
+export interface WebsiteFunnel {
+  id: string;
+  siteId: string;
+  name: string;
+  description?: string | null;
+  steps: WebsiteFunnelStep[];
+  segmentId?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  runs?: WebsiteFunnelRun[];
+}
+
+export interface WebsiteFunnelRun {
+  id: string;
+  funnelId: string;
+  siteId: string;
+  dateFrom: string;
+  dateTo: string;
+  totalEntrants: number;
+  totalConversions: number;
+  conversionRate: number;
+  status: string;
+  results?: {
+    steps?: Array<{ index: number; name: string; entrants: number; dropOffs: number; conversions: number; avgTimeFromPreviousMs: number; medianTimeFromPreviousMs: number }>;
+    convertedSessions?: string[];
+    dropOffSessionsByStep?: Record<string, string[]>;
+    topDropOffPages?: Array<{ page: string; count: number }>;
+    [key: string]: unknown;
+  };
+  createdAt: string;
+}
+
+export interface WebsiteJourneyPath {
+  id: string;
+  siteId: string;
+  sessionId?: string | null;
+  visitorId?: string | null;
+  pathHash: string;
+  steps: Array<{ type: string; label: string; url?: string; path?: string; at?: string }>;
+  stepCount: number;
+  durationMs?: number | null;
+  converted: boolean;
+  conversionEvent?: string | null;
+  createdAt: string;
+  session?: WebsiteSession;
+}
+
+export interface WebsitePathAggregate {
+  id: string;
+  siteId: string;
+  pathHash: string;
+  steps: WebsiteJourneyPath["steps"];
+  occurrenceCount: number;
+  conversionCount: number;
+  avgDurationMs?: number | null;
 }
 
 export async function getWebsiteAnalyticsSites(): Promise<WebsiteAnalyticsSite[]> {
@@ -368,4 +435,56 @@ export async function getWebsiteVisitorIdentity(visitorId: string): Promise<Webs
 
 export async function updateWebsiteVisitorIdentity(visitorId: string, payload: { externalUserId?: string; traits?: Record<string, unknown> }): Promise<WebsiteVisitorIdentity> {
   return data(await api.put(`/website-analytics/visitors/${visitorId}/identity`, payload));
+}
+
+export async function getWebsiteFunnels(params?: Record<string, unknown>): Promise<WebsiteFunnel[]> {
+  return data(await api.get("/website-analytics/funnels", { params })) || [];
+}
+
+export async function createWebsiteFunnel(payload: Partial<WebsiteFunnel>): Promise<WebsiteFunnel> {
+  return data(await api.post("/website-analytics/funnels", payload));
+}
+
+export async function updateWebsiteFunnel(id: string, payload: Partial<WebsiteFunnel>): Promise<WebsiteFunnel> {
+  return data(await api.put(`/website-analytics/funnels/${id}`, payload));
+}
+
+export async function deleteWebsiteFunnel(id: string): Promise<void> {
+  await api.delete(`/website-analytics/funnels/${id}`);
+}
+
+export async function runWebsiteFunnel(id: string, payload: Record<string, unknown>): Promise<WebsiteFunnelRun> {
+  return data(await api.post(`/website-analytics/funnels/${id}/run`, payload));
+}
+
+export async function getWebsiteFunnelRuns(id: string): Promise<WebsiteFunnelRun[]> {
+  return data(await api.get(`/website-analytics/funnels/${id}/runs`)) || [];
+}
+
+export async function getWebsiteFunnelRun(id: string): Promise<WebsiteFunnelRun> {
+  return data(await api.get(`/website-analytics/funnel-runs/${id}`));
+}
+
+export async function getWebsiteFunnelRunSessions(id: string, params?: Record<string, unknown>): Promise<WebsiteSession[]> {
+  return data(await api.get(`/website-analytics/funnel-runs/${id}/sessions`, { params })) || [];
+}
+
+export async function analyzeWebsiteJourneys(payload: Record<string, unknown>): Promise<{ siteId: string; analyzedSessions: number; pathCount: number }> {
+  return data(await api.post("/website-analytics/journeys/analyze", payload));
+}
+
+export async function getWebsiteJourneyPaths(params?: Record<string, unknown>): Promise<WebsiteJourneyPath[]> {
+  return data(await api.get("/website-analytics/journeys/paths", { params })) || [];
+}
+
+export async function getWebsiteJourneyPath(id: string): Promise<WebsiteJourneyPath> {
+  return data(await api.get(`/website-analytics/journeys/paths/${id}`));
+}
+
+export async function getWebsiteJourneyAggregates(params?: Record<string, unknown>): Promise<WebsitePathAggregate[]> {
+  return data(await api.get("/website-analytics/journeys/aggregates", { params })) || [];
+}
+
+export async function getWebsiteSessionJourney(sessionId: string): Promise<WebsiteJourneyPath> {
+  return data(await api.get(`/website-analytics/journeys/sessions/${sessionId}`));
 }

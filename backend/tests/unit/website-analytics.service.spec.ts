@@ -79,6 +79,31 @@ jest.mock('../../src/config/database', () => ({
     websiteVisitorIdentity: {
       upsert: jest.fn(),
     },
+    websiteFunnel: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    websiteFunnelRun: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    websiteJourneyPath: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    websitePathAggregate: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
   },
 }));
 
@@ -119,6 +144,23 @@ describe('WebsiteAnalyticsService', () => {
     db.websiteSessionTag.delete.mockResolvedValue({});
     db.websiteVisitor.findFirst.mockResolvedValue(null);
     db.websiteVisitorIdentity.upsert.mockImplementation(async ({ create, update }: any) => ({ id: 'identity-1', ...create, ...update }));
+    db.websiteFunnel.findMany.mockResolvedValue([]);
+    db.websiteFunnel.findFirst.mockResolvedValue(null);
+    db.websiteFunnel.create.mockImplementation(async ({ data }: any) => ({ id: 'funnel-1', ...data }));
+    db.websiteFunnel.update.mockImplementation(async ({ where, data }: any) => ({ id: where.id, ...data }));
+    db.websiteFunnel.delete.mockResolvedValue({});
+    db.websiteFunnelRun.findMany.mockResolvedValue([]);
+    db.websiteFunnelRun.findFirst.mockResolvedValue(null);
+    db.websiteFunnelRun.create.mockImplementation(async ({ data }: any) => ({ id: 'run-1', ...data }));
+    db.websiteFunnelRun.update.mockImplementation(async ({ where, data }: any) => ({ id: where.id, ...data }));
+    db.websiteJourneyPath.findMany.mockResolvedValue([]);
+    db.websiteJourneyPath.findFirst.mockResolvedValue(null);
+    db.websiteJourneyPath.create.mockImplementation(async ({ data }: any) => ({ id: 'journey-1', ...data }));
+    db.websiteJourneyPath.update.mockImplementation(async ({ where, data }: any) => ({ id: where.id, ...data }));
+    db.websitePathAggregate.findMany.mockResolvedValue([]);
+    db.websitePathAggregate.findFirst.mockResolvedValue(null);
+    db.websitePathAggregate.create.mockImplementation(async ({ data }: any) => ({ id: 'aggregate-1', ...data }));
+    db.websitePathAggregate.update.mockImplementation(async ({ where, data }: any) => ({ id: where.id, ...data }));
   });
 
   it('creates a site under the trusted tenant and ignores spoofed tenantId', async () => {
@@ -689,6 +731,155 @@ describe('WebsiteAnalyticsService', () => {
     await expect(websiteAnalyticsService.createSegment('tenant-1', {
       name: 'Too large',
       filters: { blob: 'x'.repeat(25_000) },
+    })).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('funnel CRUD is tenant-scoped', async () => {
+    db.websiteAnalyticsSite.findFirst.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1' });
+    const funnel = await websiteAnalyticsService.createFunnel('tenant-1', {
+      siteId: 'site-1',
+      name: 'Pricing conversion',
+      steps: [{ name: 'Pricing', type: 'page', operator: 'contains', value: '/pricing' }],
+    });
+    expect(db.websiteFunnel.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1', name: 'Pricing conversion' }),
+    }));
+    expect(funnel.tenantId).toBe('tenant-1');
+
+    db.websiteFunnel.findFirst.mockResolvedValueOnce({ id: 'funnel-1', tenantId: 'tenant-1', siteId: 'site-1' });
+    await websiteAnalyticsService.getFunnel('funnel-1', 'tenant-1');
+    expect(db.websiteFunnel.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'funnel-1', tenantId: 'tenant-1' } }));
+  });
+
+  it('one tenant cannot access another tenant funnels or runs', async () => {
+    db.websiteFunnel.findFirst.mockResolvedValue(null);
+    await expect(websiteAnalyticsService.getFunnel('funnel-1', 'tenant-2')).rejects.toMatchObject({ statusCode: 404 });
+    db.websiteFunnelRun.findFirst.mockResolvedValue(null);
+    await expect(websiteAnalyticsService.getFunnelRun('run-1', 'tenant-2')).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it('funnel run calculates ordered conversion and drop-off correctly', async () => {
+    const base = new Date('2026-05-13T10:00:00.000Z').getTime();
+    db.websiteFunnel.findFirst.mockResolvedValue({
+      id: 'funnel-1',
+      tenantId: 'tenant-1',
+      siteId: 'site-1',
+      steps: [
+        { name: 'Pricing', type: 'page', operator: 'contains', value: '/pricing' },
+        { name: 'Lead Created', type: 'custom_event', operator: 'equals', value: 'lead_created' },
+      ],
+    });
+    db.websiteSession.findMany.mockResolvedValue([
+      {
+        id: 'session-converted',
+        startedAt: new Date(base),
+        entryUrl: '/pricing',
+        exitUrl: '/thanks',
+        events: [
+          { id: 'pv-1', type: 'page_view', path: '/pricing', url: 'https://example.com/pricing', createdAt: new Date(base) },
+          { id: 'ce-1', type: 'custom_event', path: '/pricing', url: 'https://example.com/pricing', payload: { eventName: 'lead_created' }, createdAt: new Date(base + 5000) },
+        ],
+        behaviorSignals: [],
+        tags: [],
+      },
+      {
+        id: 'session-drop',
+        startedAt: new Date(base),
+        entryUrl: '/pricing',
+        exitUrl: '/pricing',
+        events: [{ id: 'pv-2', type: 'page_view', path: '/pricing', url: 'https://example.com/pricing', createdAt: new Date(base) }],
+        behaviorSignals: [],
+        tags: [],
+      },
+    ]);
+
+    await websiteAnalyticsService.runFunnel('funnel-1', 'tenant-1', { dateFrom: '2026-05-01T00:00:00.000Z', dateTo: '2026-05-13T23:59:59.000Z' });
+    const readyUpdate = db.websiteFunnelRun.update.mock.calls.find((call: any[]) => call[0].data.status === 'READY')?.[0];
+    expect(readyUpdate.data.totalEntrants).toBe(2);
+    expect(readyUpdate.data.totalConversions).toBe(1);
+    expect(readyUpdate.data.results.dropOffSessionsByStep['1']).toContain('session-drop');
+  });
+
+  it('page path and custom event funnel steps work', async () => {
+    db.websiteFunnel.findFirst.mockResolvedValue({
+      id: 'funnel-1',
+      tenantId: 'tenant-1',
+      siteId: 'site-1',
+      steps: [
+        { name: 'Feature', type: 'page', operator: 'contains', value: '/features' },
+        { name: 'Signup', type: 'custom_event', operator: 'equals', value: 'signup' },
+      ],
+    });
+    db.websiteSession.findMany.mockResolvedValue([{
+      id: 'session-1',
+      startedAt: new Date(),
+      entryUrl: '/features',
+      events: [
+        { type: 'page_view', path: '/features', url: 'https://example.com/features', createdAt: new Date() },
+        { type: 'custom_event', payload: { eventName: 'signup' }, url: 'https://example.com/features', createdAt: new Date(Date.now() + 1000) },
+      ],
+      behaviorSignals: [],
+      tags: [],
+    }]);
+
+    await websiteAnalyticsService.runFunnel('funnel-1', 'tenant-1', {});
+    const readyUpdate = db.websiteFunnelRun.update.mock.calls.find((call: any[]) => call[0].data.status === 'READY')?.[0];
+    expect(readyUpdate.data.totalConversions).toBe(1);
+  });
+
+  it('segment filters are applied to funnel runs', async () => {
+    db.websiteFunnel.findFirst.mockResolvedValue({ id: 'funnel-1', tenantId: 'tenant-1', siteId: 'site-1', steps: [{ name: 'Pricing', type: 'page', operator: 'contains', value: '/pricing' }] });
+    db.websiteAnalyticsSegment.findFirst.mockResolvedValue({ id: 'segment-1', tenantId: 'tenant-1', filters: { country: 'Canada' } });
+    db.websiteSession.findMany.mockResolvedValue([]);
+    await websiteAnalyticsService.runFunnel('funnel-1', 'tenant-1', { segmentId: 'segment-1' });
+    expect(db.websiteSession.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ country: { contains: 'Canada', mode: 'insensitive' } }),
+    }));
+  });
+
+  it('journey path extraction works and aggregates paths tenant-safely', async () => {
+    db.websiteAnalyticsSite.findFirst.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1' });
+    db.websiteSession.findMany.mockResolvedValue([{
+      id: 'session-1',
+      tenantId: 'tenant-1',
+      siteId: 'site-1',
+      visitorId: 'visitor-1',
+      startedAt: new Date(),
+      durationMs: 2000,
+      events: [
+        { type: 'page_view', path: '/', url: 'https://example.com/', createdAt: new Date() },
+        { type: 'page_view', path: '/pricing', url: 'https://example.com/pricing', createdAt: new Date() },
+        { type: 'custom_event', payload: { eventName: 'lead_created' }, url: 'https://example.com/pricing', createdAt: new Date() },
+      ],
+      behaviorSignals: [],
+    }]);
+
+    await websiteAnalyticsService.analyzeJourneys('tenant-1', { siteId: 'site-1' });
+    expect(db.websiteJourneyPath.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1', sessionId: 'session-1', converted: true, conversionEvent: 'lead_created' }),
+    }));
+    expect(db.websitePathAggregate.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1', occurrenceCount: 1, conversionCount: 1 }),
+    }));
+  });
+
+  it('path aggregates and run sessions endpoints are tenant-scoped', async () => {
+    db.websitePathAggregate.findMany.mockResolvedValue([]);
+    await websiteAnalyticsService.listJourneyAggregates('tenant-1', { siteId: 'site-1' });
+    expect(db.websitePathAggregate.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: 'tenant-1', siteId: 'site-1' } }));
+
+    db.websiteFunnelRun.findFirst.mockResolvedValue({ id: 'run-1', tenantId: 'tenant-1', siteId: 'site-1', results: { convertedSessions: ['session-1'], dropOffSessionsByStep: {} } });
+    db.websiteSession.findMany.mockResolvedValue([]);
+    await websiteAnalyticsService.listFunnelRunSessions('run-1', 'tenant-1', { converted: 'true' });
+    expect(db.websiteSession.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1', id: { in: ['session-1'] } }) }));
+  });
+
+  it('invalid funnel step definitions are rejected', async () => {
+    db.websiteAnalyticsSite.findFirst.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1' });
+    await expect(websiteAnalyticsService.createFunnel('tenant-1', {
+      siteId: 'site-1',
+      name: 'Bad funnel',
+      steps: [{ name: 'Bad', type: 'unknown', operator: 'contains', value: 'x' }],
     })).rejects.toMatchObject({ statusCode: 400 });
   });
 });

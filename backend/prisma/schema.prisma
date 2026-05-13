@@ -764,6 +764,10 @@ model Tenant {
   websiteAnalyticsSegments WebsiteAnalyticsSegment[]
   websiteSessionTags WebsiteSessionTag[]
   websiteVisitorIdentities WebsiteVisitorIdentity[]
+  websiteFunnels WebsiteFunnel[]
+  websiteFunnelRuns WebsiteFunnelRun[]
+  websiteJourneyPaths WebsiteJourneyPath[]
+  websitePathAggregates WebsitePathAggregate[]
 
   @@index([status])
   @@index([slug])
@@ -5646,6 +5650,10 @@ model WebsiteAnalyticsSite {
   segments         WebsiteAnalyticsSegment[]
   sessionTags      WebsiteSessionTag[]
   visitorIdentities WebsiteVisitorIdentity[]
+  funnels          WebsiteFunnel[]
+  funnelRuns       WebsiteFunnelRun[]
+  journeyPaths     WebsiteJourneyPath[]
+  pathAggregates   WebsitePathAggregate[]
 
   @@index([tenantId])
   @@index([domain])
@@ -5670,6 +5678,7 @@ model WebsiteVisitor {
   behaviorSignals WebsiteBehaviorSignal[]
   sessionTags WebsiteSessionTag[]
   identity WebsiteVisitorIdentity?
+  journeyPaths WebsiteJourneyPath[]
 
   @@unique([siteId, anonymousId])
   @@index([tenantId])
@@ -5710,6 +5719,7 @@ model WebsiteSession {
   recordingChunks WebsiteRecordingChunk[]
   behaviorSignals WebsiteBehaviorSignal[]
   tags WebsiteSessionTag[]
+  journeyPaths WebsiteJourneyPath[]
 
   @@index([tenantId])
   @@index([siteId])
@@ -6003,4 +6013,101 @@ model WebsiteVisitorIdentity {
   @@index([externalUserId])
   @@index([tenantId, siteId])
   @@index([tenantId, siteId, externalUserId])
+}
+
+model WebsiteFunnel {
+  id          String               @id @default(uuid())
+  tenantId    String
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId      String
+  site        WebsiteAnalyticsSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  steps       Json                 @default("[]")
+  segmentId   String?
+  isActive    Boolean              @default(true)
+  createdById String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  runs        WebsiteFunnelRun[]
+
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([tenantId, siteId])
+}
+
+model WebsiteFunnelRun {
+  id               String               @id @default(uuid())
+  tenantId         String
+  tenant           Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  funnelId         String
+  funnel           WebsiteFunnel        @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+  siteId           String
+  site             WebsiteAnalyticsSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  dateFrom         DateTime
+  dateTo           DateTime
+  segmentFilters   Json                 @default("{}")
+  totalEntrants    Int                  @default(0)
+  totalConversions Int                  @default(0)
+  conversionRate   Float                @default(0)
+  results          Json                 @default("{}")
+  status           String               @default("PROCESSING")
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([funnelId])
+  @@index([tenantId, siteId])
+  @@index([funnelId, createdAt])
+}
+
+model WebsiteJourneyPath {
+  id              String               @id @default(uuid())
+  tenantId        String
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId          String
+  site            WebsiteAnalyticsSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  sessionId       String?
+  session         WebsiteSession?      @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  visitorId       String?
+  visitor         WebsiteVisitor?      @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+  pathHash        String
+  steps           Json                 @default("[]")
+  stepCount       Int                  @default(0)
+  durationMs      Int?
+  converted       Boolean              @default(false)
+  conversionEvent String?
+  createdAt       DateTime             @default(now())
+
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([sessionId])
+  @@index([visitorId])
+  @@index([tenantId, siteId])
+  @@index([tenantId, siteId, createdAt])
+  @@index([tenantId, siteId, pathHash])
+}
+
+model WebsitePathAggregate {
+  id              String               @id @default(uuid())
+  tenantId        String
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId          String
+  site            WebsiteAnalyticsSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  pathHash        String
+  steps           Json                 @default("[]")
+  occurrenceCount Int                  @default(0)
+  conversionCount Int                  @default(0)
+  avgDurationMs   Int?
+  dateFrom        DateTime?
+  dateTo          DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([tenantId, siteId])
+  @@index([tenantId, siteId, pathHash])
 }

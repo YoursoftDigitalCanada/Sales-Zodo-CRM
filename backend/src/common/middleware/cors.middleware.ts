@@ -184,6 +184,21 @@ export const openCorsOptions: CorsOptions = {
   maxAge: 86400,
 };
 
+/**
+ * Website analytics tracking endpoints run on customer websites, so their
+ * browser origins cannot be known ahead of time. The tracking key/site
+ * validation inside the analytics service is the authorization boundary here.
+ */
+export const websiteAnalyticsCorsOptions: CorsOptions = {
+  origin: true,
+  methods: ['GET', 'POST', 'HEAD', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Accept'],
+  exposedHeaders: ['Content-Length'],
+  credentials: false,
+  maxAge: 86400,
+  optionsSuccessStatus: 204,
+};
+
 // ============================================================================
 // CORS MIDDLEWARE EXPORTS
 // ============================================================================
@@ -191,7 +206,13 @@ export const openCorsOptions: CorsOptions = {
 /**
  * Default CORS middleware
  */
-export const corsMiddleware = cors(corsOptions);
+export const corsMiddleware = cors((req: Request, callback) => {
+  const path = (req.originalUrl || req.path || '').toLowerCase();
+  if (path.includes('/public/website-analytics')) {
+    return callback(null, websiteAnalyticsCorsOptions);
+  }
+  return callback(null, corsOptions);
+});
 
 /**
  * Strict CORS middleware for sensitive endpoints

@@ -378,6 +378,7 @@ export class WebsiteAnalyticsController {
   tracker(req: Request, res: Response) {
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=300');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.send(websiteAnalyticsService.trackerScript());
   }
 
@@ -385,6 +386,7 @@ export class WebsiteAnalyticsController {
     websiteAnalyticsService.vendorScript().then((script) => {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
       res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
       res.send(script);
     }).catch(next);
   }

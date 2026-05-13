@@ -96,6 +96,7 @@ import {
   type WebsiteRecording,
   type WebsiteSession,
 } from "@/features/website-analytics";
+import { prepareReplayEvents } from "@/features/website-analytics/utils/replay-events";
 import { toast } from "@/hooks/use-toast";
 
 function formatNumber(value: number | undefined) {
@@ -683,7 +684,10 @@ export default function WebsiteAnalyticsPage() {
   const heatmapPoints = heatmapPointsQuery.data || [];
   const comparePoints = comparePointsQuery.data || [];
   const recordingDetail = recordingDetailQuery.data;
-  const replayEvents = useMemo(() => (recordingChunksQuery.data?.chunks || []).flatMap((chunk) => chunk.events || []), [recordingChunksQuery.data]);
+  const replayEvents = useMemo(
+    () => prepareReplayEvents((recordingChunksQuery.data?.chunks || []).flatMap((chunk) => chunk.events || [])),
+    [recordingChunksQuery.data],
+  );
   const behaviorSummary = useMemo(() => {
     const types = ["RAGE_CLICK", "DEAD_CLICK", "QUICK_BACK", "EXCESSIVE_SCROLL", "JS_ERROR", "BROKEN_INTERACTION"];
     return types.map((type) => ({

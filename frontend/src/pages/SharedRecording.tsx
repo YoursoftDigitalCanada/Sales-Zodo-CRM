@@ -6,6 +6,7 @@ import "rrweb-player/dist/style.css";
 import { Globe2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getSharedWebsiteRecording, getSharedWebsiteRecordingChunks } from "@/features/website-analytics";
+import { prepareReplayEvents } from "@/features/website-analytics/utils/replay-events";
 
 function formatDuration(ms?: number | null) {
   if (!ms) return "0s";
@@ -19,10 +20,13 @@ export default function SharedRecordingPage() {
   const playerRef = useRef<HTMLDivElement | null>(null);
   const recordingQuery = useQuery({ queryKey: ["shared-recording", token], queryFn: () => getSharedWebsiteRecording(token!), enabled: Boolean(token) });
   const chunksQuery = useQuery({ queryKey: ["shared-recording", token, "chunks"], queryFn: () => getSharedWebsiteRecordingChunks(token!), enabled: Boolean(token) });
-  const events = useMemo(() => (chunksQuery.data?.chunks || []).flatMap((chunk) => chunk.events || []), [chunksQuery.data]);
+  const events = useMemo(
+    () => prepareReplayEvents((chunksQuery.data?.chunks || []).flatMap((chunk) => chunk.events || [])),
+    [chunksQuery.data],
+  );
 
   useEffect(() => {
-    if (!playerRef.current || events.length === 0) return;
+    if (!playerRef.current || events.length < 2) return;
     playerRef.current.innerHTML = "";
     const player = new rrwebPlayer({
       target: playerRef.current,
@@ -49,7 +53,7 @@ export default function SharedRecordingPage() {
       </header>
       <main className="mx-auto grid max-w-6xl gap-5 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section className="overflow-hidden rounded-lg border border-[#E2E8F0] bg-white">
-          {events.length ? <div ref={playerRef} className="min-h-[560px]" /> : <div className="p-12 text-center text-[#64748B]">Loading replay...</div>}
+          {events.length >= 2 ? <div ref={playerRef} className="min-h-[560px]" /> : <div className="p-12 text-center text-[#64748B]">This recording does not have enough replay data yet.</div>}
         </section>
         <aside className="rounded-lg border border-[#E2E8F0] bg-white p-5 text-sm text-[#334155]">
           {recording ? (

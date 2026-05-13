@@ -1,4 +1,6 @@
 import api from "@/lib/axios";
+import { getAccessToken } from "@/features/auth/lib/auth-storage";
+import { API_BASE_URL, normalizeApiEndpoint } from "@/services/api";
 
 const data = (response: any) => response.data?.data || response.data;
 
@@ -318,6 +320,40 @@ export interface WebsiteAiMessage {
   createdAt: string;
 }
 
+export interface WebsiteLiveOverview {
+  activeSessionCount: number;
+  activeVisitors: number;
+  topCurrentPages: Array<{ path: string; count: number }>;
+  liveErrorsCount: number;
+  liveBehaviorAlertsCount: number;
+  activeRecordingsCount: number;
+  generatedAt: string;
+}
+
+export interface WebsiteLiveSessionState {
+  id: string;
+  siteId: string;
+  sessionId: string;
+  visitorId?: string | null;
+  currentUrl?: string | null;
+  currentPath?: string | null;
+  currentTitle?: string | null;
+  referrer?: string | null;
+  browser?: string | null;
+  os?: string | null;
+  device?: string | null;
+  country?: string | null;
+  isRecording: boolean;
+  lastEventType?: string | null;
+  lastEventAt: string;
+  startedAt: string;
+  pageCount: number;
+  eventCount: number;
+  hasJsError: boolean;
+  hasBehaviorSignal: boolean;
+  session?: WebsiteSession;
+}
+
 export async function getWebsiteAnalyticsSites(): Promise<WebsiteAnalyticsSite[]> {
   return data(await api.get("/website-analytics/sites")) || [];
 }
@@ -559,4 +595,23 @@ export async function getWebsiteAiMessages(conversationId: string): Promise<Webs
 
 export async function createWebsiteAiMessage(conversationId: string, payload: { content: string }): Promise<{ userMessage: WebsiteAiMessage; assistant: WebsiteAiMessage }> {
   return data(await api.post(`/website-analytics/ai/conversations/${conversationId}/messages`, payload));
+}
+
+export async function getWebsiteLiveOverview(params?: Record<string, unknown>): Promise<WebsiteLiveOverview> {
+  return data(await api.get("/website-analytics/live/overview", { params }));
+}
+
+export async function getWebsiteLiveSessions(params?: Record<string, unknown>): Promise<WebsiteLiveSessionState[]> {
+  return data(await api.get("/website-analytics/live/sessions", { params })) || [];
+}
+
+export function createWebsiteLiveEventSource(params?: Record<string, unknown>): EventSource {
+  const query = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") query.set(key, String(value));
+  });
+  const token = getAccessToken();
+  if (token) query.set("access_token", token);
+  const endpoint = normalizeApiEndpoint(`/website-analytics/live/stream?${query.toString()}`);
+  return new EventSource(`${API_BASE_URL}${endpoint}`);
 }

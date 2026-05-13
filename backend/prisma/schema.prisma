@@ -771,6 +771,7 @@ model Tenant {
   websiteAiInsights WebsiteAiInsight[]
   websiteAiConversations WebsiteAiConversation[]
   websiteAiMessages WebsiteAiMessage[]
+  websiteLiveSessionStates WebsiteLiveSessionState[]
 
   @@index([status])
   @@index([slug])
@@ -5659,6 +5660,7 @@ model WebsiteAnalyticsSite {
   pathAggregates   WebsitePathAggregate[]
   aiInsights       WebsiteAiInsight[]
   aiConversations  WebsiteAiConversation[]
+  liveSessionStates WebsiteLiveSessionState[]
 
   @@index([tenantId])
   @@index([domain])
@@ -5684,6 +5686,7 @@ model WebsiteVisitor {
   sessionTags WebsiteSessionTag[]
   identity WebsiteVisitorIdentity?
   journeyPaths WebsiteJourneyPath[]
+  liveSessionStates WebsiteLiveSessionState[]
 
   @@unique([siteId, anonymousId])
   @@index([tenantId])
@@ -5725,6 +5728,7 @@ model WebsiteSession {
   behaviorSignals WebsiteBehaviorSignal[]
   tags WebsiteSessionTag[]
   journeyPaths WebsiteJourneyPath[]
+  liveSessionState WebsiteLiveSessionState?
 
   @@index([tenantId])
   @@index([siteId])
@@ -6180,4 +6184,41 @@ model WebsiteAiMessage {
   @@index([tenantId])
   @@index([conversationId])
   @@index([tenantId, conversationId])
+}
+
+model WebsiteLiveSessionState {
+  id                String               @id @default(uuid())
+  tenantId          String
+  tenant            Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId            String
+  site              WebsiteAnalyticsSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  sessionId         String               @unique
+  session           WebsiteSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  visitorId         String?
+  visitor           WebsiteVisitor?      @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+  currentUrl        String?
+  currentPath       String?
+  currentTitle      String?
+  referrer          String?
+  browser           String?
+  os                String?
+  device            String?
+  country           String?
+  isRecording       Boolean              @default(false)
+  lastEventType     String?
+  lastEventAt       DateTime
+  startedAt         DateTime
+  pageCount         Int                  @default(0)
+  eventCount        Int                  @default(0)
+  hasJsError        Boolean              @default(false)
+  hasBehaviorSignal Boolean              @default(false)
+  metadata          Json                 @default("{}")
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([visitorId])
+  @@index([lastEventAt])
+  @@index([tenantId, siteId, lastEventAt])
 }

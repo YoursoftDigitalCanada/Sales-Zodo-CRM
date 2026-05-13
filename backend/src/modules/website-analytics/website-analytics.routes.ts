@@ -22,6 +22,8 @@ websiteAnalyticsPublicRoutes.get('/shared-recordings/:shareToken/chunks', websit
 websiteAnalyticsPublicRoutes.post('/session/start', rateLimiter({ windowMs: 60 * 1000, max: 600 }), validate(bodySchema), websiteAnalyticsController.startSession.bind(websiteAnalyticsController));
 websiteAnalyticsPublicRoutes.post('/session/end', rateLimiter({ windowMs: 60 * 1000, max: 600 }), validate(bodySchema), websiteAnalyticsController.endSession.bind(websiteAnalyticsController));
 websiteAnalyticsPublicRoutes.post('/collect', rateLimiter({ windowMs: 60 * 1000, max: 1200 }), validate(bodySchema), websiteAnalyticsController.collect.bind(websiteAnalyticsController));
+websiteAnalyticsPublicRoutes.post('/live/heartbeat', rateLimiter({ windowMs: 60 * 1000, max: 1200 }), validate(bodySchema), websiteAnalyticsController.liveHeartbeat.bind(websiteAnalyticsController));
+websiteAnalyticsPublicRoutes.post('/live/event', rateLimiter({ windowMs: 60 * 1000, max: 1200 }), validate(bodySchema), websiteAnalyticsController.liveEvent.bind(websiteAnalyticsController));
 websiteAnalyticsPublicRoutes.post('/recordings/start', rateLimiter({ windowMs: 60 * 1000, max: 300 }), validate(bodySchema), websiteAnalyticsController.startRecording.bind(websiteAnalyticsController));
 websiteAnalyticsPublicRoutes.post('/recordings/chunk', rateLimiter({ windowMs: 60 * 1000, max: 900 }), validate(bodySchema), websiteAnalyticsController.uploadRecordingChunk.bind(websiteAnalyticsController));
 websiteAnalyticsPublicRoutes.post('/recordings/end', rateLimiter({ windowMs: 60 * 1000, max: 300 }), validate(bodySchema), websiteAnalyticsController.endRecording.bind(websiteAnalyticsController));
@@ -66,6 +68,9 @@ router.get('/ai/conversations', requirePermission(PERMISSIONS.ANALYTICS_VIEW), w
 router.post('/ai/conversations', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(bodySchema), websiteAnalyticsController.createAiConversation.bind(websiteAnalyticsController));
 router.get('/ai/conversations/:id/messages', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.listAiMessages.bind(websiteAnalyticsController));
 router.post('/ai/conversations/:id/messages', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), validate(bodySchema), websiteAnalyticsController.createAiMessage.bind(websiteAnalyticsController));
+router.get('/live/overview', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.getLiveOverview.bind(websiteAnalyticsController));
+router.get('/live/sessions', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listLiveSessions.bind(websiteAnalyticsController));
+router.get('/live/stream', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.liveStream.bind(websiteAnalyticsController));
 router.get('/sessions', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listSessions.bind(websiteAnalyticsController));
 router.get('/sessions/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getSession.bind(websiteAnalyticsController));
 router.get('/sessions/:id/tags', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.listSessionTags.bind(websiteAnalyticsController));

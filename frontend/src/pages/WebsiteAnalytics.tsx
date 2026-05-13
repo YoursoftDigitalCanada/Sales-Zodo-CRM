@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import rrwebPlayer from "rrweb-player";
 import "rrweb-player/dist/style.css";
-import { Activity, AlertTriangle, Bot, Clock, Copy, Eye, Globe2, MessageSquare, MousePointerClick, Plus, RefreshCw, Search, Share2, Sparkles, Star, Tags } from "lucide-react";
+import { Activity, AlertTriangle, Bot, Clock, Copy, Eye, Globe2, MessageSquare, MousePointerClick, Plus, RefreshCw, Search, Share2, Sparkles, Star, Tags, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import {
   analyzeWebsiteJourneys,
   createWebsiteAiConversation,
   createWebsiteAiMessage,
+  createWebsiteLiveEventSource,
   createWebsiteFunnel,
   createWebsiteAnalyticsSegment,
   createWebsiteSessionTag,
@@ -26,6 +27,8 @@ import {
   getWebsiteAiConversations,
   getWebsiteAiInsights,
   getWebsiteAiMessages,
+  getWebsiteLiveOverview,
+  getWebsiteLiveSessions,
   getWebsiteBehaviorIssue,
   getWebsiteBehaviorIssues,
   getWebsiteBehaviorSignals,
@@ -59,6 +62,7 @@ import {
   type WebsiteAiConversation,
   type WebsiteAiInsight,
   type WebsiteAiMessage,
+  type WebsiteLiveSessionState,
   type WebsiteBehaviorSignal,
   type WebsiteFunnel,
   type WebsiteFunnelRun,
@@ -170,6 +174,9 @@ export default function WebsiteAnalyticsPage() {
   const [aiFilters, setAiFilters] = useState({ type: "all", severity: "all", status: "GENERATED" });
   const [selectedAiConversationId, setSelectedAiConversationId] = useState<string>("");
   const [aiPrompt, setAiPrompt] = useState("");
+  const [liveFilters, setLiveFilters] = useState({ path: "", country: "", device: "", hasJsError: "all", hasBehaviorSignal: "all" });
+  const [liveStatus, setLiveStatus] = useState<"connecting" | "connected" | "disconnected">("disconnected");
+  const [liveEvents, setLiveEvents] = useState<Array<{ id: string; type: string; payload: any; at: string }>>([]);
   const playerRef = useRef<HTMLDivElement | null>(null);
 
   const sitesQuery = useQuery({ queryKey: ["website-analytics", "sites"], queryFn: getWebsiteAnalyticsSites });
@@ -326,6 +333,26 @@ export default function WebsiteAnalyticsPage() {
     queryKey: ["website-analytics", "ai-messages", selectedAiConversation?.id],
     queryFn: () => getWebsiteAiMessages(selectedAiConversation!.id),
     enabled: Boolean(selectedAiConversation?.id),
+  });
+  const liveQueryParams = {
+    siteId: activeSiteId,
+    ...(liveFilters.path ? { path: liveFilters.path } : {}),
+    ...(liveFilters.country ? { country: liveFilters.country } : {}),
+    ...(liveFilters.device ? { device: liveFilters.device } : {}),
+    ...(liveFilters.hasJsError !== "all" ? { hasJsError: liveFilters.hasJsError } : {}),
+    ...(liveFilters.hasBehaviorSignal !== "all" ? { hasBehaviorSignal: liveFilters.hasBehaviorSignal } : {}),
+  };
+  const liveOverviewQuery = useQuery({
+    queryKey: ["website-analytics", "live-overview", liveQueryParams],
+    queryFn: () => getWebsiteLiveOverview(liveQueryParams),
+    enabled: Boolean(activeSiteId),
+    refetchInterval: 30000,
+  });
+  const liveSessionsQuery = useQuery({
+    queryKey: ["website-analytics", "live-sessions", liveQueryParams],
+    queryFn: () => getWebsiteLiveSessions(liveQueryParams),
+    enabled: Boolean(activeSiteId),
+    refetchInterval: 30000,
   });
 
   const createMutation = useMutation({
@@ -548,6 +575,8 @@ export default function WebsiteAnalyticsPage() {
   const aiInsights = aiInsightsQuery.data || [];
   const aiConversations = aiConversationsQuery.data || [];
   const aiMessages = aiMessagesQuery.data || [];
+  const liveOverview = liveOverviewQuery.data;
+  const liveSessions = liveSessionsQuery.data || [];
   const funnels = funnelsQuery.data || [];
   const journeyAggregates = journeyAggregatesQuery.data || [];
   const journeyPaths = journeyPathsQuery.data || [];
@@ -599,6 +628,28 @@ export default function WebsiteAnalyticsPage() {
       void player;
     };
   }, [replayEvents]);
+
+  useEffect(() => {
+    if (!activeSiteId) return;
+    setLiveStatus("connecting");
+    const source = createWebsiteLiveEventSource(liveQueryParams);
+    const refresh = () => {
+      void liveOverviewQuery.refetch();
+      void liveSessionsQuery.refetch();
+    };
+    source.addEventListener("connected", () => setLiveStatus("connected"));
+    source.onerror = () => setLiveStatus("disconnected");
+    ["overview.updated", "session.started", "session.updated", "session.ended", "event.received", "error.received", "behavior.detected", "recording.started", "recording.ended"].forEach((type) => {
+      source.addEventListener(type, (event) => {
+        const payload = JSON.parse((event as MessageEvent).data || "{}");
+        if (["event.received", "error.received", "behavior.detected"].includes(type)) {
+          setLiveEvents((current) => [{ id: `${type}-${Date.now()}-${Math.random()}`, type, payload, at: new Date().toISOString() }, ...current].slice(0, 80));
+        }
+        refresh();
+      });
+    });
+    return () => source.close();
+  }, [activeSiteId, liveFilters.path, liveFilters.country, liveFilters.device, liveFilters.hasJsError, liveFilters.hasBehaviorSignal]);
 
   const copySnippet = async () => {
     if (!snippet) return;
@@ -753,11 +804,12 @@ export default function WebsiteAnalyticsPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
           <div className="rounded-lg border border-[#E2E8F0] bg-white p-2">
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-8">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-9">
               <TabsTrigger value="websites" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Globe2 size={16} />Websites</TabsTrigger>
               <TabsTrigger value="privacy" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Eye size={16} />Privacy & Tracking</TabsTrigger>
               <TabsTrigger value="sessions" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Sessions</TabsTrigger>
               <TabsTrigger value="recordings" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><MousePointerClick size={16} />Recordings</TabsTrigger>
+              <TabsTrigger value="live" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Wifi size={16} />Live</TabsTrigger>
               <TabsTrigger value="heatmaps" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Heatmaps</TabsTrigger>
               <TabsTrigger value="behavior" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><AlertTriangle size={16} />Behavior</TabsTrigger>
               <TabsTrigger value="funnels" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Funnels</TabsTrigger>
@@ -907,6 +959,115 @@ export default function WebsiteAnalyticsPage() {
                 </table>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="live" className="mt-0 space-y-5">
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              <MetricCard label="Active Sessions" value={formatNumber(liveOverview?.activeSessionCount)} icon={Wifi} />
+              <MetricCard label="Active Visitors" value={formatNumber(liveOverview?.activeVisitors)} icon={Globe2} />
+              <MetricCard label="Live Errors" value={formatNumber(liveOverview?.liveErrorsCount)} icon={AlertTriangle} />
+              <MetricCard label="Behavior Alerts" value={formatNumber(liveOverview?.liveBehaviorAlertsCount)} icon={MousePointerClick} />
+              <MetricCard label="Recording Now" value={formatNumber(liveOverview?.activeRecordingsCount)} icon={Eye} />
+            </section>
+
+            <section className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+              <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="flex items-center gap-2 text-sm font-semibold text-[#0F172A]"><Wifi size={16} />Live Analytics</h2>
+                  <p className="text-xs text-[#64748B]">Connection: <span className={liveStatus === "connected" ? "text-[#159A62]" : "text-[#B45309]"}>{liveStatus}</span></p>
+                </div>
+                <Button variant="outline" onClick={() => { void liveOverviewQuery.refetch(); void liveSessionsQuery.refetch(); }} className="gap-2"><RefreshCw size={16} />Refresh</Button>
+              </div>
+              <div className="grid gap-3 md:grid-cols-5">
+                <div className="space-y-1"><Label>Page / Path</Label><Input value={liveFilters.path} onChange={(event) => setLiveFilters((current) => ({ ...current, path: event.target.value }))} placeholder="/pricing" /></div>
+                <div className="space-y-1"><Label>Country</Label><Input value={liveFilters.country} onChange={(event) => setLiveFilters((current) => ({ ...current, country: event.target.value }))} placeholder="Canada" /></div>
+                <div className="space-y-1"><Label>Device</Label><Input value={liveFilters.device} onChange={(event) => setLiveFilters((current) => ({ ...current, device: event.target.value }))} placeholder="Desktop" /></div>
+                <div className="space-y-1">
+                  <Label>Errors</Label>
+                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={liveFilters.hasJsError} onChange={(event) => setLiveFilters((current) => ({ ...current, hasJsError: event.target.value }))}>
+                    <option value="all">All</option><option value="true">With errors</option><option value="false">No errors</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Behavior</Label>
+                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={liveFilters.hasBehaviorSignal} onChange={(event) => setLiveFilters((current) => ({ ...current, hasBehaviorSignal: event.target.value }))}>
+                    <option value="all">All</option><option value="true">With alerts</option><option value="false">No alerts</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+              <div className="rounded-lg border border-[#E2E8F0] bg-white">
+                <div className="border-b border-[#E2E8F0] p-5">
+                  <h2 className="text-sm font-semibold text-[#0F172A]">Live Sessions</h2>
+                  <p className="text-xs text-[#64748B]">Active means the visitor sent an event or heartbeat in the last 2 minutes.</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1040px] text-sm">
+                    <thead className="bg-[#F8FAFC] text-left text-xs uppercase text-[#64748B]">
+                      <tr>
+                        {["Current Page", "Visitor / User", "Country", "Browser", "Device", "Started", "Last Event", "Pages", "Events", "Recording", "Alerts", "Open"].map((item) => <th key={item} className="px-4 py-3 font-medium">{item}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E2E8F0]">
+                      {liveSessions.map((session: WebsiteLiveSessionState) => (
+                        <tr key={session.id} className="hover:bg-[#F8FAFC]">
+                          <td className="max-w-[260px] truncate px-4 py-3 text-[#0F172A]">{session.currentPath || session.currentUrl || "-"}</td>
+                          <td className="px-4 py-3">{session.session?.visitor?.identity?.externalUserId || session.session?.visitor?.anonymousId || session.visitorId || "-"}</td>
+                          <td className="px-4 py-3">{session.country || "-"}</td>
+                          <td className="px-4 py-3">{session.browser || "-"}</td>
+                          <td className="px-4 py-3">{session.device || "-"}</td>
+                          <td className="px-4 py-3">{formatDate(session.startedAt)}</td>
+                          <td className="px-4 py-3">{formatDate(session.lastEventAt)}</td>
+                          <td className="px-4 py-3">{session.pageCount}</td>
+                          <td className="px-4 py-3">{session.eventCount}</td>
+                          <td className="px-4 py-3">{session.isRecording ? <Badge variant="default">Live</Badge> : <Badge variant="secondary">No</Badge>}</td>
+                          <td className="px-4 py-3">{session.hasJsError || session.hasBehaviorSignal ? <Badge variant="destructive">Yes</Badge> : <Badge variant="secondary">No</Badge>}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" onClick={() => setSelectedSessionId(session.sessionId)}>Session</Button>
+                              {session.session?.recordings?.[0]?.id ? <Button size="sm" variant="outline" onClick={() => setSelectedRecordingId(session.session?.recordings?.[0]?.id || null)}>Replay</Button> : null}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {liveSessions.length === 0 ? <tr><td colSpan={12} className="px-4 py-10 text-center text-[#64748B]">No active visitors right now.</td></tr> : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <aside className="space-y-5">
+                <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                  <h3 className="text-sm font-semibold text-[#0F172A]">Top Live Pages</h3>
+                  <div className="mt-3 space-y-2">
+                    {(liveOverview?.topCurrentPages || []).length === 0 ? <p className="text-sm text-[#64748B]">No live pages yet.</p> : null}
+                    {(liveOverview?.topCurrentPages || []).map((page) => (
+                      <div key={page.path} className="flex items-center justify-between gap-3 rounded-md bg-[#F8FAFC] px-3 py-2 text-sm">
+                        <span className="truncate">{page.path}</span>
+                        <Badge variant="outline">{page.count}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                  <h3 className="text-sm font-semibold text-[#0F172A]">Live Event Feed</h3>
+                  <div className="mt-3 max-h-[520px] space-y-2 overflow-y-auto">
+                    {liveEvents.length === 0 ? <p className="text-sm text-[#64748B]">Waiting for live events.</p> : null}
+                    {liveEvents.map((event) => (
+                      <div key={event.id} className="rounded-md border border-[#E2E8F0] bg-[#F8FAFC] p-3 text-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <Badge variant={event.type.includes("error") || event.type.includes("behavior") ? "destructive" : "outline"}>{event.type}</Badge>
+                          <span className="text-xs text-[#64748B]">{formatDate(event.at)}</span>
+                        </div>
+                        <p className="mt-2 truncate text-[#334155]">{event.payload?.path || event.payload?.currentPath || event.payload?.url || "-"}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </aside>
+            </section>
           </TabsContent>
 
           <TabsContent value="heatmaps" className="mt-0 space-y-5">

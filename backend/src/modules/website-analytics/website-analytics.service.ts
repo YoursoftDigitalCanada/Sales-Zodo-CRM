@@ -4,6 +4,7 @@ import { BadRequestError, ForbiddenError, NotFoundError } from '../../common/err
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { recordingStorageService } from './recording-storage.service';
 import { llmAdapterService } from '../copilot/llm-adapter.service';
+import { websiteAnalyticsLiveBroadcaster } from './live-broadcaster.service';
 
 const db = prisma as any;
 const MAX_EVENTS_PER_BATCH = 50;
@@ -11,6 +12,7 @@ const MAX_BODY_BYTES = 120_000;
 const MAX_PAYLOAD_BYTES = 20_000;
 const MAX_AI_CONTEXT_BYTES = 18_000;
 const MAX_RRWEB_EVENTS_PER_CHUNK = 500;
+const LIVE_ACTIVE_MS = 2 * 60 * 1000;
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 function cleanString(value: unknown, max = 500): string | null {
@@ -708,6 +710,49 @@ export class WebsiteAnalyticsService {
     return { userMessage, assistant };
   }
 
+  async getLiveOverview(tenantId: string, query: Record<string, unknown> = {}) {
+    const sessions = await this.getActiveLiveStates(tenantId, query);
+    const visitors = new Set(sessions.map((session: any) => session.visitorId).filter(Boolean));
+    const pageCounts = new Map<string, number>();
+    sessions.forEach((session: any) => {
+      const key = session.currentPath || this.pathFromUrl(session.currentUrl) || '/';
+      pageCounts.set(key, (pageCounts.get(key) || 0) + 1);
+    });
+    return {
+      activeSessionCount: sessions.length,
+      activeVisitors: visitors.size,
+      topCurrentPages: Array.from(pageCounts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([path, count]) => ({ path, count })),
+      liveErrorsCount: sessions.filter((session: any) => session.hasJsError).length,
+      liveBehaviorAlertsCount: sessions.filter((session: any) => session.hasBehaviorSignal).length,
+      activeRecordingsCount: sessions.filter((session: any) => session.isRecording).length,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  async listLiveSessions(tenantId: string, query: Record<string, unknown> = {}) {
+    return this.getActiveLiveStates(tenantId, query);
+  }
+
+  async liveHeartbeat(data: Record<string, unknown>, headers: Record<string, any> = {}, remoteAddress?: string) {
+    if (jsonSize(data) > MAX_BODY_BYTES) throw new BadRequestError('Live payload is too large', ErrorCodes.VALIDATION_FAILED);
+    const site = await this.getActiveSite(data.trackingKey);
+    const session = await this.getPublicSession(site, data.sessionKey);
+    const state = await this.upsertLiveState(site, session, {
+      ...data,
+      lastEventType: 'heartbeat',
+      userAgent: data.userAgent || headers['user-agent'],
+      ipHash: hashIp(getClientIp(headers, remoteAddress) || undefined),
+    });
+    this.publishLive('session.updated', site.tenantId, site.id, state);
+    this.publishLive('overview.updated', site.tenantId, site.id, await this.getLiveOverview(site.tenantId, { siteId: site.id }));
+    return { active: true, sessionId: session.id, lastEventAt: state.lastEventAt };
+  }
+
+  async liveEvent(data: Record<string, unknown>, headers: Record<string, any> = {}, remoteAddress?: string) {
+    const result = await this.collect(data, headers, remoteAddress);
+    return { accepted: result.accepted, sessionId: result.sessionId };
+  }
+
   async listSessions(tenantId: string, query: Record<string, unknown>) {
     const filters = await this.resolveFilters(tenantId, query);
     const where = this.buildSessionWhere(tenantId, filters);
@@ -980,7 +1025,7 @@ export class WebsiteAnalyticsService {
       where: { tenantId: site.tenantId, siteId: site.id, sessionId: session.id },
     });
     if (existing) return existing;
-    return db.websiteRecording.create({
+    const recording = await db.websiteRecording.create({
       data: {
         tenantId: site.tenantId,
         siteId: site.id,
@@ -991,6 +1036,9 @@ export class WebsiteAnalyticsService {
         metadata: safePayload(data.metadata),
       },
     });
+    await db.websiteLiveSessionState.update({ where: { sessionId: session.id }, data: { isRecording: true, lastEventType: 'recording_start', lastEventAt: new Date() } }).catch(() => null);
+    this.publishLive('recording.started', site.tenantId, site.id, { recordingId: recording.id, sessionId: session.id, startedAt: recording.startedAt });
+    return recording;
   }
 
   async uploadRecordingChunk(data: Record<string, unknown>) {
@@ -1063,6 +1111,8 @@ export class WebsiteAnalyticsService {
         durationMs: duration(recording.startedAt, endedAt),
       },
     });
+    await db.websiteLiveSessionState.update({ where: { sessionId: session.id }, data: { isRecording: false, lastEventType: 'recording_end', lastEventAt: endedAt } }).catch(() => null);
+    this.publishLive('recording.ended', site.tenantId, site.id, { recordingId: updated.id, sessionId: session.id, endedAt: updated.endedAt, status: updated.status });
     await this.analyzeSession(session.id, site.tenantId).catch(() => null);
     return updated;
   }
@@ -1109,6 +1159,8 @@ export class WebsiteAnalyticsService {
       },
       })
       : await db.websiteSession.create({ data: sessionData });
+    await this.upsertLiveState(site, session, { ...data, lastEventType: 'session_start' }).catch(() => null);
+    this.publishLive('session.started', site.tenantId, site.id, { sessionId: session.id, currentUrl: entryUrl, currentPath: this.pathFromUrl(entryUrl), visitorId: visitor.id });
     return {
       siteId: site.id,
       tenantId: site.tenantId,
@@ -1136,6 +1188,8 @@ export class WebsiteAnalyticsService {
         exitUrl: cleanString(data.url || data.exitUrl, 2000) || session.exitUrl,
       },
     });
+    await db.websiteLiveSessionState.update({ where: { sessionId: session.id }, data: { lastEventType: 'session_end', lastEventAt: endedAt, currentUrl: cleanString(data.url || data.exitUrl, 2000) || session.exitUrl } }).catch(() => null);
+    this.publishLive('session.ended', site.tenantId, site.id, { sessionId: session.id, endedAt: endedAt.toISOString(), currentUrl: cleanString(data.url || data.exitUrl, 2000) || session.exitUrl });
     await this.analyzeSession(session.id, site.tenantId).catch(() => null);
     return updated;
   }
@@ -1166,6 +1220,39 @@ export class WebsiteAnalyticsService {
     });
     await db.websiteVisitor.update({ where: { id: visitor.id }, data: { lastSeenAt: new Date() } });
     await this.processPublicSpecialEvents(site, sessionStart.sessionId, visitor.id, incoming);
+    const updatedSession = {
+      ...(session || {}),
+      id: sessionStart.sessionId,
+      tenantId: site.tenantId,
+      siteId: site.id,
+      visitorId: visitor.id,
+      pageCount: (session?.pageCount || 0) + pageViews,
+      eventCount: (session?.eventCount || 0) + events.length,
+      hasJsError: hasJsError || session?.hasJsError,
+      exitUrl: lastUrl || session?.exitUrl,
+      startedAt: session?.startedAt || new Date(),
+    };
+    const state = await this.upsertLiveState(site, updatedSession, {
+      ...events[events.length - 1],
+      lastEventType: events[events.length - 1]?.type || 'event',
+      pageCount: updatedSession.pageCount,
+      eventCount: updatedSession.eventCount,
+      hasJsError: updatedSession.hasJsError,
+    }).catch(() => null);
+    if (state) this.publishLive('session.updated', site.tenantId, site.id, state);
+    for (const event of events.slice(-10)) {
+      this.publishLive(event.type === 'js_error' || event.type === 'unhandled_rejection' ? 'error.received' : 'event.received', site.tenantId, site.id, {
+        sessionId: sessionStart.sessionId,
+        visitorId: visitor.id,
+        type: event.type,
+        url: event.url,
+        path: event.path,
+        title: event.title,
+        createdAt: event.createdAt,
+        payload: event.type === 'js_error' || event.type === 'unhandled_rejection' || event.type === 'custom_event' ? event.payload : undefined,
+      });
+    }
+    this.publishLive('overview.updated', site.tenantId, site.id, await this.getLiveOverview(site.tenantId, { siteId: site.id }));
     if (events.some((event: any) => event.type === 'js_error' || event.type === 'unhandled_rejection')) {
       await this.analyzeSession(sessionStart.sessionId, site.tenantId).catch(() => null);
     }
@@ -1318,11 +1405,22 @@ export class WebsiteAnalyticsService {
     for (const signal of signals) {
       saved.push(await this.upsertBehaviorSignal(session, signal));
     }
+    if (saved.length) {
+      await db.websiteLiveSessionState.update({ where: { sessionId: session.id }, data: { hasBehaviorSignal: true, lastEventType: 'behavior_signal', lastEventAt: new Date() } }).catch(() => null);
+      for (const signal of saved.slice(-10)) this.publishLive('behavior.detected', tenantId, session.siteId, signal);
+      this.publishLive('overview.updated', tenantId, session.siteId, await this.getLiveOverview(tenantId, { siteId: session.siteId }));
+    }
     return { sessionId, signalCount: saved.length, signals: saved };
   }
 
   trackerScript() {
-    return TRACKER_SCRIPT;
+    return TRACKER_SCRIPT
+      .replace('function send(events,beacon){if(!events.length)return;post(base+"/collect",common({events:events}),beacon)}',
+        'function liveHeartbeat(status,beacon){post(base+"/live/heartbeat",common({currentUrl:location.href,currentPath:location.pathname,currentTitle:document.title,visibilityState:document.visibilityState||status||"visible"}),!!beacon)}function send(events,beacon){if(!events.length)return;post(base+"/collect",common({events:events}),beacon)}')
+      .replace('post(base+"/session/start",common({url:location.href}),false).then(function(res){var site=res.data&&res.data.site||res.site;if(site&&site.privacySettings)privacy=Object.assign(privacy,site.privacySettings);startRecording()});',
+        'post(base+"/session/start",common({url:location.href}),false).then(function(res){var site=res.data&&res.data.site||res.site;if(site&&site.privacySettings)privacy=Object.assign(privacy,site.privacySettings);liveHeartbeat("visible",false);setInterval(function(){if(document.visibilityState!=="hidden")liveHeartbeat("visible",false)},20000);startRecording()});')
+      .replace('function endAll(){send(q.splice(0,50),true);flushRecording(true);post(base+"/recordings/end",common({recordingId:recordingId}),true);post(base+"/session/end",common({url:location.href}),true)}',
+        'function endAll(){liveHeartbeat("hidden",true);send(q.splice(0,50),true);flushRecording(true);post(base+"/recordings/end",common({recordingId:recordingId}),true);post(base+"/session/end",common({url:location.href}),true)}');
   }
 
   async vendorScript() {
@@ -1873,6 +1971,94 @@ export class WebsiteAnalyticsService {
     if (funnel) recs.push('Review the largest funnel drop-off step and compare sessions that converted versus dropped off.');
     if (context.heatmaps?.[0]) recs.push('Compare heatmap click concentration with the primary call-to-action placement.');
     return recs;
+  }
+
+  private activeSince() {
+    return new Date(Date.now() - LIVE_ACTIVE_MS);
+  }
+
+  private async getActiveLiveStates(tenantId: string, query: Record<string, unknown> = {}) {
+    const where: Record<string, any> = { tenantId, lastEventAt: { gte: this.activeSince() } };
+    if (query.siteId) where.siteId = String(query.siteId);
+    if (query.path) where.currentPath = this.stringMatch(query.path);
+    if (query.page) where.currentPath = this.stringMatch(query.page);
+    if (query.browser) where.browser = this.stringMatch(query.browser);
+    if (query.device) where.device = this.stringMatch(query.device);
+    if (query.country) where.country = this.stringMatch(query.country);
+    if (query.hasJsError !== undefined) where.hasJsError = this.booleanFilter(query.hasJsError);
+    if (query.hasBehaviorSignal !== undefined) where.hasBehaviorSignal = this.booleanFilter(query.hasBehaviorSignal);
+    return db.websiteLiveSessionState.findMany({
+      where,
+      orderBy: { lastEventAt: 'desc' },
+      take: Math.min(Number(query.limit || 100), 500),
+      include: {
+        site: { select: { id: true, name: true, domain: true } },
+        session: { include: { recordings: { orderBy: { createdAt: 'desc' }, take: 1 }, visitor: { include: { identity: true } } } },
+      },
+    });
+  }
+
+  private async upsertLiveState(site: any, session: any, data: Record<string, unknown>) {
+    const userAgent = cleanString(data.userAgent || session.userAgent, 1000);
+    const parsed = parseUserAgent(userAgent);
+    const currentUrl = cleanString(data.url || data.currentUrl || session.exitUrl || session.entryUrl, 2000);
+    const currentPath = cleanString(data.path || data.currentPath, 1000) || this.pathFromUrl(currentUrl);
+    const lastEventType = cleanString(data.lastEventType || data.type, 80);
+    const hasJsError = Boolean(data.hasJsError || session.hasJsError || lastEventType === 'js_error' || lastEventType === 'unhandled_rejection');
+    const stateData = {
+      tenantId: site.tenantId,
+      siteId: site.id,
+      sessionId: session.id,
+      visitorId: session.visitorId || null,
+      currentUrl,
+      currentPath,
+      currentTitle: cleanString(data.title || data.currentTitle, 300),
+      referrer: cleanString(data.referrer || session.referrer, 2000),
+      browser: cleanString(data.browser || session.browser, 80) || parsed.browser,
+      os: cleanString(data.os || session.os, 80) || parsed.os,
+      device: cleanString(data.device || session.device, 80) || parsed.device,
+      country: cleanString(data.country || session.country, 80),
+      isRecording: Boolean(data.isRecording),
+      lastEventType,
+      lastEventAt: new Date(),
+      startedAt: session.startedAt || new Date(),
+      pageCount: Number(data.pageCount || session.pageCount || 0),
+      eventCount: Number(data.eventCount || session.eventCount || 0),
+      hasJsError,
+      hasBehaviorSignal: Boolean(data.hasBehaviorSignal),
+      metadata: safePayload(data.metadata),
+    };
+    return db.websiteLiveSessionState.upsert({
+      where: { sessionId: session.id },
+      create: stateData,
+      update: {
+        currentUrl: stateData.currentUrl,
+        currentPath: stateData.currentPath,
+        currentTitle: stateData.currentTitle,
+        referrer: stateData.referrer,
+        browser: stateData.browser,
+        os: stateData.os,
+        device: stateData.device,
+        country: stateData.country,
+        isRecording: stateData.isRecording,
+        lastEventType: stateData.lastEventType,
+        lastEventAt: stateData.lastEventAt,
+        pageCount: stateData.pageCount,
+        eventCount: stateData.eventCount,
+        hasJsError: stateData.hasJsError,
+        hasBehaviorSignal: data.hasBehaviorSignal === undefined ? undefined : stateData.hasBehaviorSignal,
+        metadata: stateData.metadata,
+      },
+    });
+  }
+
+  private publishLive(type: string, tenantId: string, siteId: string, payload: Record<string, unknown>) {
+    websiteAnalyticsLiveBroadcaster.publish({
+      type,
+      tenantId,
+      siteId,
+      payload: redactPII(payload) as Record<string, unknown>,
+    });
   }
 
   private async withMetrics(site: any) {

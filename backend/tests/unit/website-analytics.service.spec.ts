@@ -120,6 +120,11 @@ jest.mock('../../src/config/database', () => ({
       findMany: jest.fn(),
       create: jest.fn(),
     },
+    websiteLiveSessionState: {
+      findMany: jest.fn(),
+      upsert: jest.fn(),
+      update: jest.fn(),
+    },
   },
 }));
 
@@ -144,6 +149,7 @@ jest.mock('../../src/modules/copilot/llm-adapter.service', () => ({
 
 import { prisma } from '../../src/config/database';
 import { llmAdapterService } from '../../src/modules/copilot/llm-adapter.service';
+import { websiteAnalyticsLiveBroadcaster } from '../../src/modules/website-analytics/live-broadcaster.service';
 import { websiteAnalyticsService } from '../../src/modules/website-analytics/website-analytics.service';
 import { recordingStorageService } from '../../src/modules/website-analytics/recording-storage.service';
 
@@ -206,6 +212,9 @@ describe('WebsiteAnalyticsService', () => {
     db.websiteAiConversation.update.mockImplementation(async ({ where, data }: any) => ({ id: where.id, ...data }));
     db.websiteAiMessage.findMany.mockResolvedValue([]);
     db.websiteAiMessage.create.mockImplementation(async ({ data }: any) => ({ id: `message-${data.role}`, createdAt: new Date(), ...data }));
+    db.websiteLiveSessionState.findMany.mockResolvedValue([]);
+    db.websiteLiveSessionState.upsert.mockImplementation(async ({ create, update }: any) => ({ id: 'live-1', ...create, ...update }));
+    db.websiteLiveSessionState.update.mockImplementation(async ({ where, data }: any) => ({ id: 'live-1', ...where, ...data }));
     (llmAdapterService.generate as jest.Mock).mockResolvedValue({
       text: JSON.stringify({
         title: 'AI Insight',
@@ -1012,5 +1021,117 @@ describe('WebsiteAnalyticsService', () => {
     await websiteAnalyticsService.generateAiInsight('tenant-1', { type: 'TREND_SUMMARY' });
     const contextSummary = (llmAdapterService.generate as jest.Mock).mock.calls[0][0].contextSummary;
     expect(Buffer.byteLength(contextSummary, 'utf8')).toBeLessThanOrEqual(18000);
+  });
+
+  it('heartbeat creates or updates live session state', async () => {
+    db.websiteAnalyticsSite.findUnique.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1', trackingKey: 'ys_key', isActive: true });
+    db.websiteSession.findFirst.mockResolvedValue({ id: 'session-1', tenantId: 'tenant-1', siteId: 'site-1', visitorId: 'visitor-1', sessionKey: 'session-123', startedAt: new Date(), pageCount: 2, eventCount: 5 });
+    db.websiteLiveSessionState.upsert.mockResolvedValue({ id: 'live-1', tenantId: 'tenant-1', siteId: 'site-1', sessionId: 'session-1', currentPath: '/pricing', lastEventAt: new Date(), pageCount: 2, eventCount: 5, isRecording: false, hasJsError: false, hasBehaviorSignal: false });
+
+    const result = await websiteAnalyticsService.liveHeartbeat({
+      trackingKey: 'ys_key',
+      sessionKey: 'session-123',
+      url: 'https://example.com/pricing',
+      path: '/pricing',
+      title: 'Pricing',
+    });
+
+    expect(result).toMatchObject({ active: true, sessionId: 'session-1' });
+    expect(db.websiteLiveSessionState.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { sessionId: 'session-1' },
+      create: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1', currentPath: '/pricing' }),
+    }));
+  });
+
+  it('invalid trackingKey heartbeat is rejected', async () => {
+    db.websiteAnalyticsSite.findUnique.mockResolvedValue(null);
+    await expect(websiteAnalyticsService.liveHeartbeat({ trackingKey: 'bad', sessionKey: 'session-123' })).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it('heartbeat cannot update another site session', async () => {
+    db.websiteAnalyticsSite.findUnique.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1', trackingKey: 'ys_key', isActive: true });
+    db.websiteSession.findFirst.mockResolvedValue(null);
+    await expect(websiteAnalyticsService.liveHeartbeat({ trackingKey: 'ys_key', sessionKey: 'session-123' })).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it('live overview and sessions are tenant-scoped and exclude expired sessions', async () => {
+    const fresh = new Date();
+    db.websiteLiveSessionState.findMany.mockResolvedValue([
+      { id: 'live-1', tenantId: 'tenant-1', siteId: 'site-1', visitorId: 'visitor-1', currentPath: '/pricing', lastEventAt: fresh, isRecording: true, hasJsError: true, hasBehaviorSignal: true },
+    ]);
+
+    const overview = await websiteAnalyticsService.getLiveOverview('tenant-1', { siteId: 'site-1' });
+    expect(overview).toMatchObject({ activeSessionCount: 1, activeVisitors: 1, liveErrorsCount: 1, liveBehaviorAlertsCount: 1, activeRecordingsCount: 1 });
+    expect(db.websiteLiveSessionState.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1', lastEventAt: expect.objectContaining({ gte: expect.any(Date) }) }),
+    }));
+
+    await websiteAnalyticsService.listLiveSessions('tenant-1', { siteId: 'site-1', device: 'Desktop', hasJsError: 'true' });
+    expect(db.websiteLiveSessionState.findMany).toHaveBeenLastCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1', device: { contains: 'Desktop', mode: 'insensitive' }, hasJsError: true }),
+    }));
+  });
+
+  it('live JS error updates hasJsError', async () => {
+    db.websiteAnalyticsSite.findUnique.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1', trackingKey: 'ys_key', isActive: true });
+    db.websiteVisitor.upsert.mockResolvedValue({ id: 'visitor-1', tenantId: 'tenant-1', siteId: 'site-1' });
+    db.websiteSession.findUnique.mockResolvedValue({ id: 'session-1', tenantId: 'tenant-1', siteId: 'site-1', visitorId: 'visitor-1', sessionKey: 'session-123', startedAt: new Date(), pageCount: 0, eventCount: 0, hasJsError: false });
+    db.websiteSession.update.mockResolvedValue({ id: 'session-1', tenantId: 'tenant-1', siteId: 'site-1', visitorId: 'visitor-1', sessionKey: 'session-123', startedAt: new Date(), pageCount: 0, eventCount: 0, hasJsError: true });
+    db.websiteEvent.createMany.mockResolvedValue({ count: 1 });
+
+    await websiteAnalyticsService.collect({
+      trackingKey: 'ys_key',
+      anonymousId: 'visitor-123',
+      sessionKey: 'session-123',
+      events: [{ type: 'js_error', url: 'https://example.com/pricing', path: '/pricing', payload: { message: 'Boom' } }],
+    });
+
+    expect(db.websiteLiveSessionState.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      update: expect.objectContaining({ hasJsError: true, lastEventType: 'js_error' }),
+    }));
+  });
+
+  it('behavior signal updates live behavior alert state', async () => {
+    db.websiteSession.findFirst.mockResolvedValue({
+      id: 'session-1',
+      tenantId: 'tenant-1',
+      siteId: 'site-1',
+      visitorId: 'visitor-1',
+      entryUrl: 'https://example.com',
+      startedAt: new Date(),
+      events: [
+        { id: 'e1', type: 'click', path: '/', url: 'https://example.com', x: 10, y: 10, payload: { element: { tagName: 'button', id: 'cta' } }, createdAt: new Date() },
+      ],
+      recordings: [],
+    });
+
+    await websiteAnalyticsService.analyzeSession('session-1', 'tenant-1');
+    expect(db.websiteLiveSessionState.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { sessionId: 'session-1' },
+      data: expect.objectContaining({ hasBehaviorSignal: true, lastEventType: 'behavior_signal' }),
+    }));
+  });
+
+  it('SSE broadcaster only emits current tenant events', async () => {
+    const writes: string[] = [];
+    const response = {
+      write: jest.fn((chunk: string) => writes.push(chunk)),
+      on: jest.fn(),
+    } as any;
+    const id = websiteAnalyticsLiveBroadcaster.subscribe({
+      tenantId: 'tenant-1',
+      siteId: 'site-1',
+      eventTypes: new Set(),
+      response,
+    });
+    writes.length = 0;
+
+    websiteAnalyticsLiveBroadcaster.publish({ type: 'session.started', tenantId: 'tenant-2', siteId: 'site-1', payload: { sessionId: 'other' } });
+    expect(writes.join('')).not.toContain('other');
+
+    websiteAnalyticsLiveBroadcaster.publish({ type: 'session.started', tenantId: 'tenant-1', siteId: 'site-1', payload: { sessionId: 'session-1' } });
+    expect(writes.join('')).toContain('session.started');
+    expect(writes.join('')).toContain('session-1');
+    websiteAnalyticsLiveBroadcaster.unsubscribe(id);
   });
 });

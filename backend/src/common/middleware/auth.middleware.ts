@@ -18,7 +18,8 @@ export async function authenticate(
 ): Promise<void> {
   try {
     // Get token from header
-    const authHeader = req.headers.authorization;
+    const queryToken = typeof req.query.access_token === 'string' ? req.query.access_token : null;
+    const authHeader = req.headers.authorization || (queryToken ? `Bearer ${queryToken}` : undefined);
 
     if (!authHeader) {
       throw new UnauthorizedError(

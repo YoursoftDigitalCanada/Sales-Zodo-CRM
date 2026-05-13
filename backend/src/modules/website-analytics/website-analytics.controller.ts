@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { sendCreated, sendNoContent, sendSuccess } from '../../common/utils/responseFormatter';
 import { sanitizeBody } from '../../common/utils/sanitize-body';
 import { websiteAnalyticsService } from './website-analytics.service';
+import { websiteAnalyticsLiveBroadcaster } from './live-broadcaster.service';
 
 export class WebsiteAnalyticsController {
   listSites(req: Request, res: Response, next: NextFunction) {
@@ -149,6 +150,31 @@ export class WebsiteAnalyticsController {
     websiteAnalyticsService.createAiMessage(req.params.id, req.context.tenantId, sanitizeBody(req.body)).then((data) => sendCreated(res, data, 'AI message created')).catch(next);
   }
 
+  getLiveOverview(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.getLiveOverview(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  listLiveSessions(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listLiveSessions(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  liveStream(req: Request, res: Response) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+    const eventTypes = typeof req.query.eventTypes === 'string'
+      ? new Set(req.query.eventTypes.split(',').map((item) => item.trim()).filter(Boolean))
+      : new Set<string>();
+    websiteAnalyticsLiveBroadcaster.subscribe({
+      tenantId: req.context.tenantId,
+      siteId: typeof req.query.siteId === 'string' ? req.query.siteId : null,
+      eventTypes,
+      path: typeof req.query.path === 'string' ? req.query.path : null,
+      response: res,
+    });
+  }
+
   listSessions(req: Request, res: Response, next: NextFunction) {
     websiteAnalyticsService.listSessions(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
   }
@@ -277,6 +303,14 @@ export class WebsiteAnalyticsController {
 
   startSession(req: Request, res: Response, next: NextFunction) {
     websiteAnalyticsService.startSession(sanitizeBody(req.body), req.headers, req.socket.remoteAddress).then((data) => sendCreated(res, data, 'Session started')).catch(next);
+  }
+
+  liveHeartbeat(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.liveHeartbeat(sanitizeBody(req.body), req.headers, req.socket.remoteAddress).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  liveEvent(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.liveEvent(sanitizeBody(req.body), req.headers, req.socket.remoteAddress).then((data) => sendSuccess(res, data)).catch(next);
   }
 
   endSession(req: Request, res: Response, next: NextFunction) {

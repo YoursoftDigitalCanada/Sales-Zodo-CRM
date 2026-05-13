@@ -379,7 +379,7 @@ export class WebsiteAnalyticsController {
 
   tracker(req: Request, res: Response) {
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.setHeader('Cache-Control', 'public, max-age=30');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.send(websiteAnalyticsService.trackerScript());
   }

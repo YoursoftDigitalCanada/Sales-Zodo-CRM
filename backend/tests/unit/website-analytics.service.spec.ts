@@ -33,6 +33,7 @@ jest.mock('../../src/config/database', () => ({
       findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      count: jest.fn(),
     },
     websiteRecordingChunk: {
       findMany: jest.fn(),
@@ -45,6 +46,7 @@ jest.mock('../../src/config/database', () => ({
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      count: jest.fn(),
     },
     websiteHeatmapPoint: {
       findMany: jest.fn(),
@@ -57,6 +59,7 @@ jest.mock('../../src/config/database', () => ({
       update: jest.fn(),
     },
     websiteIssueGroup: {
+      count: jest.fn(),
       findMany: jest.fn(),
       findFirst: jest.fn(),
       upsert: jest.fn(),
@@ -124,6 +127,19 @@ jest.mock('../../src/config/database', () => ({
       findMany: jest.fn(),
       upsert: jest.fn(),
       update: jest.fn(),
+    },
+    websiteAnalyticsIntegration: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    websiteAnalyticsWebhookDelivery: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      count: jest.fn(),
     },
   },
 }));
@@ -215,6 +231,31 @@ describe('WebsiteAnalyticsService', () => {
     db.websiteLiveSessionState.findMany.mockResolvedValue([]);
     db.websiteLiveSessionState.upsert.mockImplementation(async ({ create, update }: any) => ({ id: 'live-1', ...create, ...update }));
     db.websiteLiveSessionState.update.mockImplementation(async ({ where, data }: any) => ({ id: 'live-1', ...where, ...data }));
+    db.websiteAnalyticsIntegration.findMany.mockResolvedValue([]);
+    db.websiteAnalyticsIntegration.findFirst.mockResolvedValue(null);
+    db.websiteAnalyticsIntegration.create.mockImplementation(async ({ data }: any) => ({ id: 'integration-1', createdAt: new Date(), updatedAt: new Date(), ...data }));
+    db.websiteAnalyticsIntegration.update.mockImplementation(async ({ where, data }: any) => ({ id: where.id, ...data }));
+    db.websiteAnalyticsIntegration.delete.mockResolvedValue({});
+    db.websiteAnalyticsWebhookDelivery.findMany.mockResolvedValue([]);
+    db.websiteAnalyticsWebhookDelivery.create.mockImplementation(async ({ data }: any) => ({ id: 'delivery-1', createdAt: new Date(), updatedAt: new Date(), ...data }));
+    db.websiteAnalyticsWebhookDelivery.update.mockImplementation(async ({ where, data }: any) => ({ id: where.id, ...data }));
+    db.websiteAnalyticsWebhookDelivery.count.mockResolvedValue(0);
+    db.websiteEvent.deleteMany = jest.fn().mockResolvedValue({ count: 0 });
+    db.websiteEvent.updateMany = jest.fn().mockResolvedValue({ count: 0 });
+    db.websiteSession.deleteMany = jest.fn().mockResolvedValue({ count: 0 });
+    db.websiteSession.delete = jest.fn().mockResolvedValue({});
+    db.websiteBehaviorSignal.deleteMany = jest.fn().mockResolvedValue({ count: 0 });
+    db.websiteSessionTag.deleteMany = jest.fn().mockResolvedValue({ count: 0 });
+    db.websiteVisitorIdentity.findFirst = jest.fn().mockResolvedValue(null);
+    db.websiteVisitorIdentity.deleteMany = jest.fn().mockResolvedValue({ count: 0 });
+    db.websiteVisitor.delete = jest.fn().mockResolvedValue({});
+    db.websiteRecording.deleteMany = jest.fn().mockResolvedValue({ count: 0 });
+    db.websiteHeatmapSnapshot.deleteMany = jest.fn().mockResolvedValue({ count: 0 });
+    db.websiteHeatmapPoint.deleteMany = jest.fn().mockResolvedValue({ count: 0 });
+    db.websiteRecording.aggregate = jest.fn().mockResolvedValue({ _sum: { sizeBytes: 0 } });
+    db.websiteRecording.count.mockResolvedValue(0);
+    db.websiteHeatmapSnapshot.count.mockResolvedValue(0);
+    db.websiteIssueGroup.count.mockResolvedValue(0);
     (llmAdapterService.generate as jest.Mock).mockResolvedValue({
       text: JSON.stringify({
         title: 'AI Insight',
@@ -1133,5 +1174,187 @@ describe('WebsiteAnalyticsService', () => {
     expect(writes.join('')).toContain('session.started');
     expect(writes.join('')).toContain('session-1');
     websiteAnalyticsLiveBroadcaster.unsubscribe(id);
+  });
+
+  it('integration CRUD is tenant-scoped and ignores spoofed tenantId', async () => {
+    db.websiteAnalyticsSite.findFirst.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1' });
+
+    const integration = await websiteAnalyticsService.createIntegration('tenant-1', {
+      tenantId: 'tenant-2',
+      siteId: 'site-1',
+      provider: 'GOOGLE_ANALYTICS',
+      name: 'GA4',
+      config: { measurementId: 'G-123' },
+    }, 'user-1');
+
+    expect(db.websiteAnalyticsIntegration.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1', provider: 'GOOGLE_ANALYTICS', createdById: 'user-1' }),
+    }));
+    expect(integration.tenantId).toBe('tenant-1');
+
+    db.websiteAnalyticsIntegration.findFirst.mockResolvedValueOnce({ id: 'integration-1', tenantId: 'tenant-1', provider: 'GOOGLE_ANALYTICS' });
+    await websiteAnalyticsService.updateIntegration('integration-1', 'tenant-1', { name: 'GA4 Production' });
+    expect(db.websiteAnalyticsIntegration.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'integration-1', tenantId: 'tenant-1' } }));
+    expect(db.websiteAnalyticsIntegration.update).toHaveBeenCalledWith({ where: { id: 'integration-1' }, data: { name: 'GA4 Production' } });
+  });
+
+  it('custom webhook setup blocks private and local URLs', async () => {
+    await expect(websiteAnalyticsService.createIntegration('tenant-1', {
+      provider: 'CUSTOM_WEBHOOK',
+      name: 'Unsafe webhook',
+      config: { webhookUrl: 'http://localhost:3000/hook' },
+    })).rejects.toMatchObject({ statusCode: 400 });
+
+    await expect(websiteAnalyticsService.createIntegration('tenant-1', {
+      provider: 'CUSTOM_WEBHOOK',
+      name: 'Private webhook',
+      config: { webhookUrl: 'http://192.168.1.10/hook' },
+    })).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('webhook delivery reads are tenant-scoped', async () => {
+    db.websiteAnalyticsIntegration.findFirst.mockResolvedValue({ id: 'integration-1', tenantId: 'tenant-1', provider: 'CUSTOM_WEBHOOK' });
+    db.websiteAnalyticsWebhookDelivery.findMany.mockResolvedValue([]);
+
+    await websiteAnalyticsService.listIntegrationDeliveries('integration-1', 'tenant-1');
+
+    expect(db.websiteAnalyticsWebhookDelivery.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { tenantId: 'tenant-1', integrationId: 'integration-1' },
+    }));
+  });
+
+  it('privacy settings update stays tenant-scoped', async () => {
+    db.websiteAnalyticsSite.findFirst.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1', privacySettings: {} });
+    db.websiteAnalyticsSite.update.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1', privacySettings: { trackingEnabled: false } });
+
+    await websiteAnalyticsService.updateSite('site-1', 'tenant-1', { privacySettings: { trackingEnabled: false, consentMode: true } });
+
+    expect(db.websiteAnalyticsSite.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'site-1', tenantId: 'tenant-1' } }));
+    expect(db.websiteAnalyticsSite.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'site-1' },
+      data: expect.objectContaining({ privacySettings: expect.objectContaining({ trackingEnabled: false, consentMode: true }) }),
+    }));
+  });
+
+  it('consent mode prevents public tracking before consent is granted', async () => {
+    db.websiteAnalyticsSite.findUnique.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1', trackingKey: 'ys_key', isActive: true, privacySettings: { consentMode: true } });
+
+    await expect(websiteAnalyticsService.startSession({
+      trackingKey: 'ys_key',
+      anonymousId: 'visitor-1',
+      sessionKey: 'session-1',
+      url: 'https://example.com',
+    })).rejects.toMatchObject({ statusCode: 403 });
+
+    expect(db.websiteVisitor.upsert).not.toHaveBeenCalled();
+  });
+
+  it('tracking disabled blocks public event collection', async () => {
+    db.websiteAnalyticsSite.findUnique.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1', trackingKey: 'ys_key', isActive: true, privacySettings: { trackingEnabled: false } });
+
+    await expect(websiteAnalyticsService.collect({
+      trackingKey: 'ys_key',
+      anonymousId: 'visitor-1',
+      sessionKey: 'session-1',
+      events: [{ type: 'page_view', url: 'https://example.com' }],
+    })).rejects.toMatchObject({ statusCode: 403 });
+
+    expect(db.websiteEvent.createMany).not.toHaveBeenCalled();
+  });
+
+  it('allowed domains reject public tracking from another domain', async () => {
+    db.websiteAnalyticsSite.findUnique.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1', trackingKey: 'ys_key', isActive: true, privacySettings: { allowedDomains: ['good.example.com'] } });
+
+    await expect(websiteAnalyticsService.collect({
+      trackingKey: 'ys_key',
+      anonymousId: 'visitor-1',
+      sessionKey: 'session-1',
+      url: 'https://bad.example.com/pricing',
+      events: [{ type: 'page_view', url: 'https://bad.example.com/pricing' }],
+    })).rejects.toMatchObject({ statusCode: 403 });
+
+    expect(db.websiteEvent.createMany).not.toHaveBeenCalled();
+  });
+
+  it('visitor export only includes current tenant data', async () => {
+    db.websiteVisitor.findFirst.mockResolvedValue({ id: 'visitor-1', tenantId: 'tenant-1', siteId: 'site-1' });
+    db.websiteSession.findMany.mockResolvedValue([{ id: 'session-1', tenantId: 'tenant-1' }]);
+    db.websiteEvent.findMany.mockResolvedValue([{ id: 'event-1', tenantId: 'tenant-1' }]);
+    db.websiteRecording.findMany.mockResolvedValue([]);
+    db.websiteSessionTag.findMany.mockResolvedValue([]);
+    db.websiteVisitorIdentity.findFirst.mockResolvedValue(null);
+
+    await websiteAnalyticsService.exportVisitor('tenant-1', { visitorId: 'visitor-1' });
+
+    expect(db.websiteVisitor.findFirst).toHaveBeenCalledWith({ where: { id: 'visitor-1', tenantId: 'tenant-1' } });
+    expect(db.websiteSession.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: 'tenant-1', visitorId: 'visitor-1' } }));
+    expect(db.websiteEvent.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: 'tenant-1', visitorId: 'visitor-1' } }));
+  });
+
+  it('visitor delete only removes current tenant data', async () => {
+    db.websiteVisitor.findFirst.mockResolvedValue({ id: 'visitor-1', tenantId: 'tenant-1', siteId: 'site-1' });
+    db.websiteRecording.findMany.mockResolvedValue([]);
+
+    await websiteAnalyticsService.deleteVisitor('tenant-1', { visitorId: 'visitor-1' });
+
+    expect(db.websiteEvent.deleteMany).toHaveBeenCalledWith({ where: { tenantId: 'tenant-1', visitorId: 'visitor-1' } });
+    expect(db.websiteSession.deleteMany).toHaveBeenCalledWith({ where: { tenantId: 'tenant-1', visitorId: 'visitor-1' } });
+    expect(db.websiteVisitorIdentity.deleteMany).toHaveBeenCalledWith({ where: { tenantId: 'tenant-1', visitorId: 'visitor-1' } });
+  });
+
+  it('session delete removes tenant-scoped session data and chunk files safely', async () => {
+    db.websiteSession.findFirst.mockResolvedValue({ id: 'session-1', tenantId: 'tenant-1', siteId: 'site-1' });
+    db.websiteRecording.findMany.mockResolvedValue([{ id: 'recording-1', chunks: [{ storagePath: 'tenant-1/site-1/session-1/chunk-000001.json.gz' }] }]);
+
+    await websiteAnalyticsService.deleteSessionPrivacy('session-1', 'tenant-1');
+
+    expect(db.websiteEvent.deleteMany).toHaveBeenCalledWith({ where: { tenantId: 'tenant-1', sessionId: 'session-1' } });
+    expect(db.websiteBehaviorSignal.deleteMany).toHaveBeenCalledWith({ where: { tenantId: 'tenant-1', sessionId: 'session-1' } });
+    expect(db.websiteSession.delete).toHaveBeenCalledWith({ where: { id: 'session-1' } });
+  });
+
+  it('retention cleanup deletes old tenant data only', async () => {
+    db.websiteAnalyticsSite.findFirst.mockResolvedValue({ id: 'site-1', tenantId: 'tenant-1', privacySettings: { dataRetentionDays: 30, recordingRetentionDays: 14 } });
+    db.websiteSession.count.mockResolvedValue(1);
+    db.websiteEvent.count.mockResolvedValue(2);
+    db.websiteRecording.count.mockResolvedValue(1);
+    db.websiteHeatmapSnapshot.count.mockResolvedValue(1);
+    db.websiteRecording.findMany.mockResolvedValue([]);
+
+    await websiteAnalyticsService.runRetentionCleanup('tenant-1', { siteId: 'site-1' });
+
+    expect(db.websiteEvent.deleteMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1' }) }));
+    expect(db.websiteSession.deleteMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1' }) }));
+    expect(db.websiteRecording.deleteMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1' }) }));
+  });
+
+  it('report endpoints are tenant-scoped and filter-aware', async () => {
+    db.websiteSession.count.mockResolvedValue(3);
+    db.websiteVisitor.count.mockResolvedValue(2);
+    db.websiteEvent.count.mockResolvedValue(5);
+    db.websiteSession.aggregate.mockResolvedValue({ _avg: { durationMs: 1200 } });
+    db.websiteFunnelRun.findMany.mockResolvedValue([{ totalConversions: 1 }]);
+
+    await websiteAnalyticsService.reportOverview('tenant-1', { siteId: 'site-1', device: 'desktop' });
+
+    expect(db.websiteSession.count).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1', device: { contains: 'desktop', mode: 'insensitive' } }),
+    }));
+    expect(db.websiteEvent.count).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ tenantId: 'tenant-1', siteId: 'site-1' }),
+    }));
+  });
+
+  it('storage usage does not expose another tenant', async () => {
+    await websiteAnalyticsService.storageUsage('tenant-1', { siteId: 'site-1' });
+
+    expect(db.websiteRecording.aggregate).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: 'tenant-1', siteId: 'site-1' } }));
+    expect(db.websiteEvent.count).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: 'tenant-1', siteId: 'site-1' } }));
+  });
+
+  it('admin reprocess rejects cross-tenant sessions', async () => {
+    db.websiteSession.findFirst.mockResolvedValue(null);
+    await expect(websiteAnalyticsService.reprocessSession('session-other', 'tenant-1')).rejects.toMatchObject({ statusCode: 404 });
+    expect(db.websiteSession.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'session-other', tenantId: 'tenant-1' } }));
   });
 });

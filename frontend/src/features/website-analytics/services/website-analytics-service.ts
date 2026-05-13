@@ -354,6 +354,29 @@ export interface WebsiteLiveSessionState {
   session?: WebsiteSession;
 }
 
+export interface WebsiteAnalyticsIntegration {
+  id: string;
+  siteId?: string | null;
+  provider: string;
+  name: string;
+  status: string;
+  config?: Record<string, unknown>;
+  lastSyncAt?: string | null;
+  lastError?: string | null;
+  createdAt: string;
+}
+
+export interface WebsiteAnalyticsWebhookDelivery {
+  id: string;
+  integrationId: string;
+  eventType: string;
+  status: string;
+  attempts: number;
+  responseStatus?: number | null;
+  responseBody?: string | null;
+  createdAt: string;
+}
+
 export async function getWebsiteAnalyticsSites(): Promise<WebsiteAnalyticsSite[]> {
   return data(await api.get("/website-analytics/sites")) || [];
 }
@@ -614,4 +637,76 @@ export function createWebsiteLiveEventSource(params?: Record<string, unknown>): 
   if (token) query.set("access_token", token);
   const endpoint = normalizeApiEndpoint(`/website-analytics/live/stream?${query.toString()}`);
   return new EventSource(`${API_BASE_URL}${endpoint}`);
+}
+
+export async function getWebsiteAnalyticsIntegrations(params?: Record<string, unknown>): Promise<WebsiteAnalyticsIntegration[]> {
+  return data(await api.get("/website-analytics/integrations", { params })) || [];
+}
+
+export async function createWebsiteAnalyticsIntegration(payload: Record<string, unknown>): Promise<WebsiteAnalyticsIntegration> {
+  return data(await api.post("/website-analytics/integrations", payload));
+}
+
+export async function updateWebsiteAnalyticsIntegration(id: string, payload: Record<string, unknown>): Promise<WebsiteAnalyticsIntegration> {
+  return data(await api.put(`/website-analytics/integrations/${id}`, payload));
+}
+
+export async function deleteWebsiteAnalyticsIntegration(id: string): Promise<void> {
+  await api.delete(`/website-analytics/integrations/${id}`);
+}
+
+export async function testWebsiteAnalyticsIntegration(id: string): Promise<WebsiteAnalyticsWebhookDelivery> {
+  return data(await api.post(`/website-analytics/integrations/${id}/test`));
+}
+
+export async function getWebsiteAnalyticsIntegrationDeliveries(id: string): Promise<WebsiteAnalyticsWebhookDelivery[]> {
+  return data(await api.get(`/website-analytics/integrations/${id}/deliveries`)) || [];
+}
+
+export async function exportWebsiteAnalyticsVisitor(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
+  return data(await api.post("/website-analytics/privacy/export-visitor", payload));
+}
+
+export async function deleteWebsiteAnalyticsVisitor(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
+  return data(await api.post("/website-analytics/privacy/delete-visitor", payload));
+}
+
+export async function getWebsiteAnalyticsRetentionPreview(params?: Record<string, unknown>): Promise<any[]> {
+  return data(await api.get("/website-analytics/privacy/retention-preview", { params })) || [];
+}
+
+export async function runWebsiteAnalyticsRetentionCleanup(payload?: Record<string, unknown>): Promise<Record<string, unknown>> {
+  return data(await api.post("/website-analytics/privacy/run-retention-cleanup", payload || {}));
+}
+
+export async function getWebsiteAnalyticsReportOverview(params?: Record<string, unknown>): Promise<Record<string, any>> {
+  return data(await api.get("/website-analytics/reports/overview", { params }));
+}
+
+export async function getWebsiteAnalyticsReportPages(params?: Record<string, unknown>): Promise<any[]> {
+  return data(await api.get("/website-analytics/reports/pages", { params })) || [];
+}
+
+export async function getWebsiteAnalyticsReportAcquisition(params?: Record<string, unknown>): Promise<any[]> {
+  return data(await api.get("/website-analytics/reports/acquisition", { params })) || [];
+}
+
+export async function getWebsiteAnalyticsReportBehavior(params?: Record<string, unknown>): Promise<any[]> {
+  return data(await api.get("/website-analytics/reports/behavior", { params })) || [];
+}
+
+export async function getWebsiteAnalyticsReportTechnical(params?: Record<string, unknown>): Promise<any[]> {
+  return data(await api.get("/website-analytics/reports/technical", { params })) || [];
+}
+
+export async function getWebsiteAnalyticsReportConversions(params?: Record<string, unknown>): Promise<any[]> {
+  return data(await api.get("/website-analytics/reports/conversions", { params })) || [];
+}
+
+export async function getWebsiteAnalyticsStorageUsage(params?: Record<string, unknown>): Promise<Record<string, any>> {
+  return data(await api.get("/website-analytics/admin/storage-usage", { params }));
+}
+
+export async function getWebsiteAnalyticsIngestionHealth(params?: Record<string, unknown>): Promise<Record<string, any>> {
+  return data(await api.get("/website-analytics/admin/ingestion-health", { params }));
 }

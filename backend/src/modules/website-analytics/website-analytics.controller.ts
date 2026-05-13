@@ -150,6 +150,102 @@ export class WebsiteAnalyticsController {
     websiteAnalyticsService.createAiMessage(req.params.id, req.context.tenantId, sanitizeBody(req.body)).then((data) => sendCreated(res, data, 'AI message created')).catch(next);
   }
 
+  listIntegrations(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listIntegrations(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  createIntegration(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.createIntegration(req.context.tenantId, sanitizeBody(req.body), (req.context as any).employeeId || (req.context as any).userId).then((data) => sendCreated(res, data, 'Integration created')).catch(next);
+  }
+
+  getIntegration(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.getIntegration(req.params.id, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  updateIntegration(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.updateIntegration(req.params.id, req.context.tenantId, sanitizeBody(req.body)).then((data) => sendSuccess(res, data, 'Integration updated')).catch(next);
+  }
+
+  deleteIntegration(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.deleteIntegration(req.params.id, req.context.tenantId).then(() => sendNoContent(res)).catch(next);
+  }
+
+  testIntegration(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.testIntegration(req.params.id, req.context.tenantId).then((data) => sendSuccess(res, data, 'Integration tested')).catch(next);
+  }
+
+  listIntegrationDeliveries(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listIntegrationDeliveries(req.params.id, req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  exportVisitor(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.exportVisitor(req.context.tenantId, sanitizeBody(req.body)).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  deleteVisitor(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.deleteVisitor(req.context.tenantId, sanitizeBody(req.body)).then((data) => sendSuccess(res, data, 'Visitor data deleted')).catch(next);
+  }
+
+  deleteSessionPrivacy(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.deleteSessionPrivacy(req.params.sessionId, req.context.tenantId).then((data) => sendSuccess(res, data, 'Session data deleted')).catch(next);
+  }
+
+  anonymizeSession(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.anonymizeSession(req.params.sessionId, req.context.tenantId).then((data) => sendSuccess(res, data, 'Session anonymized')).catch(next);
+  }
+
+  retentionPreview(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.retentionPreview(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  runRetentionCleanup(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.runRetentionCleanup(req.context.tenantId, sanitizeBody(req.body)).then((data) => sendSuccess(res, data, 'Retention cleanup complete')).catch(next);
+  }
+
+  reportOverview(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.reportOverview(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  reportPages(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.reportPages(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  reportAcquisition(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.reportBreakdown(req.context.tenantId, req.query as any, 'referrer').then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  reportBehavior(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.reportBehavior(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  reportTechnical(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.reportTechnical(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  reportConversions(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.reportConversions(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  storageUsage(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.storageUsage(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  ingestionHealth(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.ingestionHealth(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  reprocessSession(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.reprocessSession(req.params.sessionId, req.context.tenantId).then((data) => sendSuccess(res, data, 'Session reprocessed')).catch(next);
+  }
+
+  rebuildHeatmap(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.rebuildHeatmap(req.params.snapshotId, req.context.tenantId).then((data) => sendSuccess(res, data, 'Heatmap rebuilt')).catch(next);
+  }
+
+  recalculateFunnel(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.recalculateFunnel(req.params.runId, req.context.tenantId).then((data) => sendSuccess(res, data, 'Funnel recalculated')).catch(next);
+  }
+
   getLiveOverview(req: Request, res: Response, next: NextFunction) {
     websiteAnalyticsService.getLiveOverview(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
   }

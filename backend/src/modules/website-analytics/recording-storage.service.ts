@@ -76,6 +76,13 @@ export class RecordingStorageService {
     }
   }
 
+  async deleteChunk(storagePath: string) {
+    const fullPath = this.resolvePath(storagePath);
+    await fs.unlink(fullPath).catch((error: any) => {
+      if (error?.code !== 'ENOENT') throw error;
+    });
+  }
+
   private resolvePath(storagePath: string) {
     const root = rootPath();
     const fullPath = path.resolve(root, storagePath);

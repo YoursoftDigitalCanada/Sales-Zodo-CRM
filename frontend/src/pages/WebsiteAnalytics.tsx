@@ -21,12 +21,25 @@ import {
   createWebsiteSessionTag,
   createWebsiteHeatmapSnapshot,
   createWebsiteAnalyticsSite,
+  createWebsiteAnalyticsIntegration,
   deleteWebsiteAnalyticsSegment,
+  deleteWebsiteAnalyticsIntegration,
   deleteWebsiteSessionTag,
   generateWebsiteAiInsight,
   getWebsiteAiConversations,
   getWebsiteAiInsights,
   getWebsiteAiMessages,
+  getWebsiteAnalyticsIngestionHealth,
+  getWebsiteAnalyticsIntegrationDeliveries,
+  getWebsiteAnalyticsIntegrations,
+  getWebsiteAnalyticsReportAcquisition,
+  getWebsiteAnalyticsReportBehavior,
+  getWebsiteAnalyticsReportConversions,
+  getWebsiteAnalyticsReportOverview,
+  getWebsiteAnalyticsReportPages,
+  getWebsiteAnalyticsReportTechnical,
+  getWebsiteAnalyticsRetentionPreview,
+  getWebsiteAnalyticsStorageUsage,
   getWebsiteLiveOverview,
   getWebsiteLiveSessions,
   getWebsiteBehaviorIssue,
@@ -52,13 +65,20 @@ import {
   setWebsiteRecordingLabels,
   shareWebsiteRecording,
   runWebsiteFunnel,
+  deleteWebsiteAnalyticsVisitor,
+  exportWebsiteAnalyticsVisitor,
+  runWebsiteAnalyticsRetentionCleanup,
   summarizeWebsiteAiRecording,
   summarizeWebsiteAiSession,
   updateWebsiteAiInsightStatus,
   updateWebsiteBehaviorIssueStatus,
   updateWebsiteAnalyticsSegment,
+  updateWebsiteAnalyticsIntegration,
   updateWebsiteAnalyticsSite,
+  testWebsiteAnalyticsIntegration,
   type WebsiteAnalyticsSegment,
+  type WebsiteAnalyticsIntegration,
+  type WebsiteAnalyticsWebhookDelivery,
   type WebsiteAiConversation,
   type WebsiteAiInsight,
   type WebsiteAiMessage,
@@ -177,6 +197,10 @@ export default function WebsiteAnalyticsPage() {
   const [liveFilters, setLiveFilters] = useState({ path: "", country: "", device: "", hasJsError: "all", hasBehaviorSignal: "all" });
   const [liveStatus, setLiveStatus] = useState<"connecting" | "connected" | "disconnected">("disconnected");
   const [liveEvents, setLiveEvents] = useState<Array<{ id: string; type: string; payload: any; at: string }>>([]);
+  const [integrationForm, setIntegrationForm] = useState({ provider: "CUSTOM_WEBHOOK", name: "", webhookUrl: "", signingSecret: "", events: "session.started,behavior.detected,js_error.detected" });
+  const [selectedIntegrationId, setSelectedIntegrationId] = useState<string>("");
+  const [privacyTool, setPrivacyTool] = useState({ visitorId: "", externalUserId: "" });
+  const [privacyExport, setPrivacyExport] = useState<Record<string, unknown> | null>(null);
   const playerRef = useRef<HTMLDivElement | null>(null);
 
   const sitesQuery = useQuery({ queryKey: ["website-analytics", "sites"], queryFn: getWebsiteAnalyticsSites });
@@ -354,6 +378,28 @@ export default function WebsiteAnalyticsPage() {
     enabled: Boolean(activeSiteId),
     refetchInterval: 30000,
   });
+  const integrationsQuery = useQuery({
+    queryKey: ["website-analytics", "integrations", activeSiteId],
+    queryFn: () => getWebsiteAnalyticsIntegrations({ siteId: activeSiteId }),
+    enabled: Boolean(activeSiteId),
+  });
+  const selectedIntegration = selectedIntegrationId
+    ? (integrationsQuery.data || []).find((item) => item.id === selectedIntegrationId)
+    : (integrationsQuery.data || [])[0];
+  const integrationDeliveriesQuery = useQuery({
+    queryKey: ["website-analytics", "integration-deliveries", selectedIntegration?.id],
+    queryFn: () => getWebsiteAnalyticsIntegrationDeliveries(selectedIntegration!.id),
+    enabled: Boolean(selectedIntegration?.id),
+  });
+  const reportOverviewQuery = useQuery({ queryKey: ["website-analytics", "report-overview", analyticsFilters], queryFn: () => getWebsiteAnalyticsReportOverview(analyticsFilters), enabled: Boolean(activeSiteId) });
+  const reportPagesQuery = useQuery({ queryKey: ["website-analytics", "report-pages", analyticsFilters], queryFn: () => getWebsiteAnalyticsReportPages(analyticsFilters), enabled: Boolean(activeSiteId) });
+  const reportAcquisitionQuery = useQuery({ queryKey: ["website-analytics", "report-acquisition", analyticsFilters], queryFn: () => getWebsiteAnalyticsReportAcquisition(analyticsFilters), enabled: Boolean(activeSiteId) });
+  const reportBehaviorQuery = useQuery({ queryKey: ["website-analytics", "report-behavior", analyticsFilters], queryFn: () => getWebsiteAnalyticsReportBehavior(analyticsFilters), enabled: Boolean(activeSiteId) });
+  const reportTechnicalQuery = useQuery({ queryKey: ["website-analytics", "report-technical", analyticsFilters], queryFn: () => getWebsiteAnalyticsReportTechnical(analyticsFilters), enabled: Boolean(activeSiteId) });
+  const reportConversionsQuery = useQuery({ queryKey: ["website-analytics", "report-conversions", analyticsFilters], queryFn: () => getWebsiteAnalyticsReportConversions(analyticsFilters), enabled: Boolean(activeSiteId) });
+  const retentionPreviewQuery = useQuery({ queryKey: ["website-analytics", "retention-preview", activeSiteId], queryFn: () => getWebsiteAnalyticsRetentionPreview({ siteId: activeSiteId }), enabled: Boolean(activeSiteId) });
+  const storageUsageQuery = useQuery({ queryKey: ["website-analytics", "storage", activeSiteId], queryFn: () => getWebsiteAnalyticsStorageUsage({ siteId: activeSiteId }), enabled: Boolean(activeSiteId) });
+  const ingestionHealthQuery = useQuery({ queryKey: ["website-analytics", "ingestion", activeSiteId], queryFn: () => getWebsiteAnalyticsIngestionHealth({ siteId: activeSiteId }), enabled: Boolean(activeSiteId) });
 
   const createMutation = useMutation({
     mutationFn: createWebsiteAnalyticsSite,
@@ -548,6 +594,53 @@ export default function WebsiteAnalyticsPage() {
       toast({ title: "Recording AI summary generated" });
     },
   });
+  const createIntegrationMutation = useMutation({
+    mutationFn: () => createWebsiteAnalyticsIntegration({
+      siteId: activeSiteId,
+      provider: integrationForm.provider,
+      name: integrationForm.name || integrationForm.provider.replace(/_/g, " "),
+      config: { webhookUrl: integrationForm.webhookUrl, events: integrationForm.events.split(",").map((item) => item.trim()).filter(Boolean) },
+      secretConfig: integrationForm.signingSecret ? { signingSecret: integrationForm.signingSecret } : {},
+    }),
+    onSuccess: async (integration) => {
+      setSelectedIntegrationId(integration.id);
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "integrations"] });
+      toast({ title: "Integration saved" });
+    },
+  });
+  const deleteIntegrationMutation = useMutation({
+    mutationFn: deleteWebsiteAnalyticsIntegration,
+    onSuccess: async () => {
+      setSelectedIntegrationId("");
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "integrations"] });
+    },
+  });
+  const testIntegrationMutation = useMutation({
+    mutationFn: testWebsiteAnalyticsIntegration,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "integration-deliveries"] });
+      toast({ title: "Integration test queued" });
+    },
+  });
+  const visitorExportMutation = useMutation({
+    mutationFn: exportWebsiteAnalyticsVisitor,
+    onSuccess: (data) => setPrivacyExport(data),
+  });
+  const visitorDeleteMutation = useMutation({
+    mutationFn: deleteWebsiteAnalyticsVisitor,
+    onSuccess: async () => {
+      setPrivacyExport(null);
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics"] });
+      toast({ title: "Visitor data deleted" });
+    },
+  });
+  const retentionCleanupMutation = useMutation({
+    mutationFn: () => runWebsiteAnalyticsRetentionCleanup({ siteId: activeSiteId }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics"] });
+      toast({ title: "Retention cleanup completed" });
+    },
+  });
 
   const totals = useMemo(() => {
     return sites.reduce(
@@ -577,6 +670,9 @@ export default function WebsiteAnalyticsPage() {
   const aiMessages = aiMessagesQuery.data || [];
   const liveOverview = liveOverviewQuery.data;
   const liveSessions = liveSessionsQuery.data || [];
+  const integrations = integrationsQuery.data || [];
+  const integrationDeliveries = integrationDeliveriesQuery.data || [];
+  const reportOverview = reportOverviewQuery.data || {};
   const funnels = funnelsQuery.data || [];
   const journeyAggregates = journeyAggregatesQuery.data || [];
   const journeyPaths = journeyPathsQuery.data || [];
@@ -804,7 +900,7 @@ export default function WebsiteAnalyticsPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
           <div className="rounded-lg border border-[#E2E8F0] bg-white p-2">
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-9">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-12">
               <TabsTrigger value="websites" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Globe2 size={16} />Websites</TabsTrigger>
               <TabsTrigger value="privacy" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Eye size={16} />Privacy & Tracking</TabsTrigger>
               <TabsTrigger value="sessions" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Sessions</TabsTrigger>
@@ -814,6 +910,9 @@ export default function WebsiteAnalyticsPage() {
               <TabsTrigger value="behavior" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><AlertTriangle size={16} />Behavior</TabsTrigger>
               <TabsTrigger value="funnels" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Funnels</TabsTrigger>
               <TabsTrigger value="ai" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Sparkles size={16} />AI Insights</TabsTrigger>
+              <TabsTrigger value="integrations" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Share2 size={16} />Integrations</TabsTrigger>
+              <TabsTrigger value="reports" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Search size={16} />Reports</TabsTrigger>
+              <TabsTrigger value="admin" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Admin</TabsTrigger>
             </TabsList>
           </div>
 
@@ -865,9 +964,18 @@ export default function WebsiteAnalyticsPage() {
                 <h2 className="text-sm font-semibold text-[#0F172A]">Privacy & Recording Settings</h2>
                 <div className="mt-4 grid gap-3">
                   {[
+                    ["trackingEnabled", "Enable tracking"],
+                    ["consentMode", "Consent mode"],
+                    ["requireConsentForRecording", "Require recording consent"],
+                    ["requireConsentForCookies", "Require cookie consent"],
                     ["recordingsEnabled", "Record sessions"],
+                    ["heatmapsEnabled", "Collect heatmaps"],
+                    ["aiProcessingEnabled", "Allow AI processing"],
                     ["maskAllInputs", "Mask all inputs"],
+                    ["maskTextByDefault", "Mask text by default"],
                     ["respectDoNotTrack", "Respect Do Not Track"],
+                    ["ipAnonymizationEnabled", "Anonymize IP"],
+                    ["piiRedactionEnabled", "Redact PII"],
                   ].map(([key, label]) => (
                     <label key={key} className="flex items-center justify-between rounded-md border border-[#E2E8F0] px-3 py-2 text-sm">
                       <span>{label}</span>
@@ -876,7 +984,11 @@ export default function WebsiteAnalyticsPage() {
                   ))}
                   <div className="space-y-2">
                     <Label>Retention Days</Label>
-                    <Input type="number" value={privacy.retentionDays || 30} onChange={(event) => updatePrivacy({ retentionDays: Number(event.target.value || 30) })} />
+                    <Input type="number" value={privacy.dataRetentionDays || privacy.retentionDays || 30} onChange={(event) => updatePrivacy({ dataRetentionDays: Number(event.target.value || 30), retentionDays: Number(event.target.value || 30) })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Recording Retention Days</Label>
+                    <Input type="number" value={privacy.recordingRetentionDays || 30} onChange={(event) => updatePrivacy({ recordingRetentionDays: Number(event.target.value || 30) })} />
                   </div>
                   <div className="space-y-2">
                     <Label>Mask Selectors</Label>
@@ -886,8 +998,26 @@ export default function WebsiteAnalyticsPage() {
                     <Label>Block Selectors</Label>
                     <Input value={(privacy.blockSelectors || []).join(", ")} onChange={(event) => updatePrivacy({ blockSelectors: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} placeholder=".billing-card, iframe" />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Allowed Domains</Label>
+                    <Input value={(privacy.allowedDomains || []).join(", ")} onChange={(event) => updatePrivacy({ allowedDomains: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} placeholder="example.com, app.example.com" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Blocked Countries</Label>
+                    <Input value={(privacy.blockedCountries || []).join(", ")} onChange={(event) => updatePrivacy({ blockedCountries: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} placeholder="EU, Germany" />
+                  </div>
                 </div>
               </div>
+            </section>
+            <section className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+              <h2 className="text-sm font-semibold text-[#0F172A]">Visitor Privacy Tools</h2>
+              <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto_auto]">
+                <Input value={privacyTool.visitorId} onChange={(event) => setPrivacyTool((current) => ({ ...current, visitorId: event.target.value }))} placeholder="Visitor ID" />
+                <Input value={privacyTool.externalUserId} onChange={(event) => setPrivacyTool((current) => ({ ...current, externalUserId: event.target.value }))} placeholder="External user ID" />
+                <Button variant="outline" onClick={() => visitorExportMutation.mutate(privacyTool)}>Export</Button>
+                <Button variant="outline" onClick={() => visitorDeleteMutation.mutate(privacyTool)}>Delete</Button>
+              </div>
+              {privacyExport ? <pre className="mt-4 max-h-80 overflow-auto rounded-md bg-[#F8FAFC] p-3 text-xs text-[#475569]">{JSON.stringify(privacyExport, null, 2)}</pre> : null}
             </section>
           </TabsContent>
 
@@ -1549,6 +1679,107 @@ export default function WebsiteAnalyticsPage() {
                   <Button disabled={!activeSiteId || !aiPrompt.trim() || sendAiMessageMutation.isPending} onClick={() => sendAiMessageMutation.mutate()} className="w-full bg-[#0891B2] hover:bg-[#0E7490]">Ask AI</Button>
                 </div>
               </aside>
+            </section>
+          </TabsContent>
+
+          <TabsContent value="integrations" className="mt-0 space-y-5">
+            <section className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
+              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                <h2 className="text-sm font-semibold text-[#0F172A]">Create Integration</h2>
+                <div className="mt-4 space-y-3">
+                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={integrationForm.provider} onChange={(event) => setIntegrationForm((current) => ({ ...current, provider: event.target.value }))}>
+                    {["CUSTOM_WEBHOOK", "GOOGLE_ANALYTICS", "GOOGLE_TAG_MANAGER", "SHOPIFY", "ADS"].map((provider) => <option key={provider} value={provider}>{formatBehaviorType(provider)}</option>)}
+                  </select>
+                  <Input value={integrationForm.name} onChange={(event) => setIntegrationForm((current) => ({ ...current, name: event.target.value }))} placeholder="Integration name" />
+                  {integrationForm.provider === "CUSTOM_WEBHOOK" ? (
+                    <>
+                      <Input value={integrationForm.webhookUrl} onChange={(event) => setIntegrationForm((current) => ({ ...current, webhookUrl: event.target.value }))} placeholder="https://example.com/webhook" />
+                      <Input value={integrationForm.signingSecret} onChange={(event) => setIntegrationForm((current) => ({ ...current, signingSecret: event.target.value }))} placeholder="Signing secret" />
+                      <Textarea value={integrationForm.events} onChange={(event) => setIntegrationForm((current) => ({ ...current, events: event.target.value }))} />
+                    </>
+                  ) : <p className="rounded-md bg-[#F8FAFC] p-3 text-sm text-[#64748B]">OAuth is not enabled yet. Save this provider to keep setup instructions and mapping fields for rollout.</p>}
+                  <Button disabled={!activeSiteId || createIntegrationMutation.isPending} onClick={() => createIntegrationMutation.mutate()} className="w-full bg-[#0891B2] hover:bg-[#0E7490]">Save Integration</Button>
+                </div>
+              </div>
+              <div className="rounded-lg border border-[#E2E8F0] bg-white">
+                <div className="border-b border-[#E2E8F0] p-5"><h2 className="text-sm font-semibold text-[#0F172A]">Integrations</h2></div>
+                <div className="divide-y divide-[#E2E8F0]">
+                  {integrations.map((integration: WebsiteAnalyticsIntegration) => (
+                    <div key={integration.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+                      <button className="text-left" onClick={() => setSelectedIntegrationId(integration.id)}>
+                        <p className="font-medium text-[#0F172A]">{integration.name}</p>
+                        <p className="text-xs text-[#64748B]">{formatBehaviorType(integration.provider)} · {integration.status} · {integration.lastError || "No errors"}</p>
+                      </button>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => testIntegrationMutation.mutate(integration.id)}>Test</Button>
+                        <Button size="sm" variant="outline" onClick={() => deleteIntegrationMutation.mutate(integration.id)}>Delete</Button>
+                      </div>
+                    </div>
+                  ))}
+                  {integrations.length === 0 ? <p className="p-6 text-sm text-[#64748B]">No integrations yet.</p> : null}
+                </div>
+              </div>
+            </section>
+            <section className="rounded-lg border border-[#E2E8F0] bg-white">
+              <div className="border-b border-[#E2E8F0] p-5"><h2 className="text-sm font-semibold text-[#0F172A]">Delivery Log</h2></div>
+              <div className="divide-y divide-[#E2E8F0]">
+                {integrationDeliveries.map((delivery: WebsiteAnalyticsWebhookDelivery) => (
+                  <div key={delivery.id} className="grid gap-2 p-4 text-sm md:grid-cols-5">
+                    <span>{delivery.eventType}</span><span>{delivery.status}</span><span>{delivery.attempts} attempts</span><span>{delivery.responseStatus || "-"}</span><span className="truncate">{delivery.responseBody || "-"}</span>
+                  </div>
+                ))}
+                {integrationDeliveries.length === 0 ? <p className="p-6 text-sm text-[#64748B]">Select an integration to inspect deliveries.</p> : null}
+              </div>
+            </section>
+          </TabsContent>
+
+          <TabsContent value="reports" className="mt-0 space-y-5">
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+              <MetricCard label="Sessions" value={formatNumber(reportOverview.sessions)} icon={Activity} />
+              <MetricCard label="Visitors" value={formatNumber(reportOverview.uniqueVisitors)} icon={Globe2} />
+              <MetricCard label="Page Views" value={formatNumber(reportOverview.pageViews)} icon={Search} />
+              <MetricCard label="Avg Duration" value={formatDuration(reportOverview.averageDurationMs)} icon={Clock} />
+              <MetricCard label="Behavior Issues" value={formatNumber(reportOverview.behaviorIssues)} icon={AlertTriangle} />
+              <MetricCard label="Conversions" value={formatNumber(reportOverview.funnelConversions)} icon={MousePointerClick} />
+            </section>
+            <section className="grid gap-5 xl:grid-cols-2">
+              {[
+                ["Top Pages", reportPagesQuery.data || [], "path", "pageViews"],
+                ["Acquisition", reportAcquisitionQuery.data || [], "name", "sessions"],
+                ["Behavior Issues", reportBehaviorQuery.data || [], "type", "occurrenceCount"],
+                ["Technical Errors", reportTechnicalQuery.data || [], "path", "type"],
+                ["Funnel Conversions", reportConversionsQuery.data || [], "funnel.name", "conversionRate"],
+              ].map(([title, rows, labelKey, valueKey]: any) => (
+                <div key={title} className="rounded-lg border border-[#E2E8F0] bg-white">
+                  <div className="border-b border-[#E2E8F0] p-5"><h2 className="text-sm font-semibold text-[#0F172A]">{title}</h2></div>
+                  <div className="divide-y divide-[#E2E8F0]">
+                    {rows.slice(0, 8).map((row: any, index: number) => {
+                      const label = labelKey.includes(".") ? row.funnel?.name : row[labelKey];
+                      return <div key={`${title}-${index}`} className="flex justify-between gap-3 p-4 text-sm"><span className="truncate">{label || "-"}</span><Badge variant="outline">{String(row[valueKey] ?? "-")}</Badge></div>;
+                    })}
+                    {rows.length === 0 ? <p className="p-6 text-sm text-[#64748B]">No data yet.</p> : null}
+                  </div>
+                </div>
+              ))}
+            </section>
+          </TabsContent>
+
+          <TabsContent value="admin" className="mt-0 space-y-5">
+            <section className="grid gap-4 md:grid-cols-3">
+              <MetricCard label="Recording Storage" value={`${Math.round((storageUsageQuery.data?.recordingBytes || 0) / 1024)} KB`} icon={Eye} />
+              <MetricCard label="Events Stored" value={formatNumber(storageUsageQuery.data?.eventCount)} icon={Activity} />
+              <MetricCard label="Sessions Stored" value={formatNumber(storageUsageQuery.data?.sessionCount)} icon={Globe2} />
+            </section>
+            <section className="grid gap-5 lg:grid-cols-2">
+              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                <h2 className="text-sm font-semibold text-[#0F172A]">Ingestion Health</h2>
+                <pre className="mt-3 rounded-md bg-[#F8FAFC] p-3 text-xs text-[#475569]">{JSON.stringify(ingestionHealthQuery.data || {}, null, 2)}</pre>
+              </div>
+              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                <h2 className="text-sm font-semibold text-[#0F172A]">Retention Preview</h2>
+                <pre className="mt-3 max-h-64 overflow-auto rounded-md bg-[#F8FAFC] p-3 text-xs text-[#475569]">{JSON.stringify(retentionPreviewQuery.data || [], null, 2)}</pre>
+                <Button className="mt-4 bg-[#0891B2] hover:bg-[#0E7490]" disabled={retentionCleanupMutation.isPending} onClick={() => retentionCleanupMutation.mutate()}>Run Cleanup</Button>
+              </div>
             </section>
           </TabsContent>
         </Tabs>

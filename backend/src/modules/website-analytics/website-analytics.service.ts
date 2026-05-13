@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { prisma } from '../../config/database';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
+import { encryptSecret, decryptSecret } from '../../common/utils/secret-crypto';
 import { recordingStorageService } from './recording-storage.service';
 import { llmAdapterService } from '../copilot/llm-adapter.service';
 import { websiteAnalyticsLiveBroadcaster } from './live-broadcaster.service';
@@ -76,15 +77,53 @@ function shareToken() {
 
 function defaultPrivacySettings(input?: Record<string, unknown>) {
   return {
+    trackingEnabled: true,
+    consentMode: false,
+    requireConsentForRecording: true,
+    requireConsentForCookies: false,
     maskInputs: true,
     recordingsEnabled: true,
+    heatmapsEnabled: true,
+    aiProcessingEnabled: true,
     maskAllInputs: true,
+    maskTextByDefault: false,
     respectDoNotTrack: true,
     maskSelectors: [],
     blockSelectors: [],
+    allowedDomains: [],
+    blockedCountries: [],
+    dataRetentionDays: 30,
+    recordingRetentionDays: 30,
+    ipAnonymizationEnabled: true,
+    piiRedactionEnabled: true,
     retentionDays: 30,
     ...(input || {}),
   };
+}
+
+function hostnameFromUrl(value: unknown) {
+  const raw = cleanString(value, 2000);
+  if (!raw) return null;
+  try {
+    return new URL(raw.startsWith('http') ? raw : `https://${raw}`).hostname.replace(/^www\./i, '').toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function validateWebhookUrl(value: unknown) {
+  const raw = cleanString(value, 2000);
+  if (!raw) throw new BadRequestError('Webhook URL is required', ErrorCodes.VALIDATION_FAILED);
+  let parsed: URL;
+  try { parsed = new URL(raw); } catch { throw new BadRequestError('Webhook URL is invalid', ErrorCodes.VALIDATION_FAILED); }
+  if (!['http:', 'https:'].includes(parsed.protocol)) throw new BadRequestError('Webhook URL must use http or https', ErrorCodes.VALIDATION_FAILED);
+  const host = parsed.hostname.toLowerCase();
+  const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '::1' || host.endsWith('.local');
+  const isPrivate = /^10\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) || /^169\.254\./.test(host);
+  if ((isLocal || isPrivate) && process.env.WEBSITE_ANALYTICS_ALLOW_PRIVATE_WEBHOOKS !== 'true') {
+    throw new BadRequestError('Private or local webhook URLs are not allowed', ErrorCodes.VALIDATION_FAILED);
+  }
+  return parsed.toString();
 }
 
 function hashIp(ip: string | undefined) {
@@ -710,6 +749,261 @@ export class WebsiteAnalyticsService {
     return { userMessage, assistant };
   }
 
+  async listIntegrations(tenantId: string, query: Record<string, unknown> = {}) {
+    const where: Record<string, unknown> = { tenantId };
+    if (query.siteId) where.siteId = String(query.siteId);
+    if (query.provider) where.provider = String(query.provider).toUpperCase();
+    return db.websiteAnalyticsIntegration.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(Number(query.limit || 100), 500),
+      include: { site: { select: { id: true, name: true, domain: true } } },
+    });
+  }
+
+  async createIntegration(tenantId: string, data: Record<string, unknown>, createdById?: string | null) {
+    const provider = cleanString(data.provider, 60)?.toUpperCase();
+    if (!provider) throw new BadRequestError('Integration provider is required', ErrorCodes.VALIDATION_FAILED);
+    const name = cleanString(data.name, 120) || provider.replace(/_/g, ' ');
+    const siteId = cleanString(data.siteId, 120);
+    if (siteId) await this.getSite(siteId, tenantId);
+    const config = this.normalizeIntegrationConfig(provider, data.config || {});
+    const secretConfig = this.normalizeSecretConfig(data.secretConfig || {});
+    return db.websiteAnalyticsIntegration.create({
+      data: { tenantId, siteId, provider, name, status: 'DISCONNECTED', config, secretConfig, createdById: createdById || cleanString(data.createdById, 120) },
+    });
+  }
+
+  async getIntegration(id: string, tenantId: string) {
+    const integration = await db.websiteAnalyticsIntegration.findFirst({ where: { id, tenantId }, include: { site: { select: { id: true, name: true, domain: true } } } });
+    if (!integration) throw new NotFoundError('Website analytics integration not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return integration;
+  }
+
+  async updateIntegration(id: string, tenantId: string, data: Record<string, unknown>) {
+    const existing = await this.getIntegration(id, tenantId);
+    const update: Record<string, unknown> = {};
+    if (data.name !== undefined) update.name = cleanString(data.name, 120) || existing.name;
+    if (data.status !== undefined) update.status = cleanString(data.status, 30)?.toUpperCase() || existing.status;
+    if (data.siteId !== undefined) {
+      const siteId = cleanString(data.siteId, 120);
+      if (siteId) await this.getSite(siteId, tenantId);
+      update.siteId = siteId;
+    }
+    if (data.config !== undefined) update.config = this.normalizeIntegrationConfig(existing.provider, data.config || {});
+    if (data.secretConfig !== undefined) update.secretConfig = this.normalizeSecretConfig(data.secretConfig || {});
+    return db.websiteAnalyticsIntegration.update({ where: { id }, data: update });
+  }
+
+  async deleteIntegration(id: string, tenantId: string) {
+    await this.getIntegration(id, tenantId);
+    return db.websiteAnalyticsIntegration.delete({ where: { id } });
+  }
+
+  async listIntegrationDeliveries(id: string, tenantId: string, query: Record<string, unknown> = {}) {
+    await this.getIntegration(id, tenantId);
+    return db.websiteAnalyticsWebhookDelivery.findMany({
+      where: { tenantId, integrationId: id },
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(Number(query.limit || 100), 500),
+    });
+  }
+
+  async testIntegration(id: string, tenantId: string) {
+    const integration = await this.getIntegration(id, tenantId);
+    const delivery = await this.createWebhookDelivery(integration, 'integration.test', { test: true, at: new Date().toISOString() });
+    return this.dispatchWebhookDelivery(integration, delivery);
+  }
+
+  async exportVisitor(tenantId: string, data: Record<string, unknown>) {
+    const visitor = await this.findVisitorForPrivacy(tenantId, data);
+    const [sessions, events, recordings, tags, identity] = await Promise.all([
+      db.websiteSession.findMany({ where: { tenantId, visitorId: visitor.id }, take: 1000 }),
+      db.websiteEvent.findMany({ where: { tenantId, visitorId: visitor.id }, take: 5000 }),
+      db.websiteRecording.findMany({ where: { tenantId, visitorId: visitor.id }, select: { id: true, siteId: true, sessionId: true, status: true, eventCount: true, durationMs: true, startedAt: true, endedAt: true, sizeBytes: true, labels: true }, take: 1000 }),
+      db.websiteSessionTag.findMany({ where: { tenantId, visitorId: visitor.id }, take: 1000 }),
+      db.websiteVisitorIdentity.findFirst({ where: { tenantId, visitorId: visitor.id } }),
+    ]);
+    return { visitor, identity, sessions, events, recordings, tags, exportedAt: new Date().toISOString() };
+  }
+
+  async deleteVisitor(tenantId: string, data: Record<string, unknown>) {
+    const visitor = await this.findVisitorForPrivacy(tenantId, data);
+    const recordings = await db.websiteRecording.findMany({ where: { tenantId, visitorId: visitor.id }, include: { chunks: true } });
+    for (const recording of recordings) {
+      for (const chunk of recording.chunks || []) await recordingStorageService.deleteChunk(chunk.storagePath).catch(() => null);
+    }
+    const [events, sessions, tags, identity, visitorDelete] = await Promise.all([
+      db.websiteEvent.deleteMany({ where: { tenantId, visitorId: visitor.id } }),
+      db.websiteSession.deleteMany({ where: { tenantId, visitorId: visitor.id } }),
+      db.websiteSessionTag.deleteMany({ where: { tenantId, visitorId: visitor.id } }),
+      db.websiteVisitorIdentity.deleteMany({ where: { tenantId, visitorId: visitor.id } }),
+      db.websiteVisitor.delete({ where: { id: visitor.id } }).catch(() => null),
+    ]);
+    return { visitorId: visitor.id, deleted: { events: events.count, sessions: sessions.count, tags: tags.count, identities: identity.count, visitor: Boolean(visitorDelete) } };
+  }
+
+  async deleteSessionPrivacy(sessionId: string, tenantId: string) {
+    const session = await this.getSession(sessionId, tenantId);
+    const recordings = await db.websiteRecording.findMany({ where: { tenantId, sessionId }, include: { chunks: true } });
+    for (const recording of recordings) {
+      for (const chunk of recording.chunks || []) await recordingStorageService.deleteChunk(chunk.storagePath).catch(() => null);
+    }
+    const [events, signals, tags] = await Promise.all([
+      db.websiteEvent.deleteMany({ where: { tenantId, sessionId } }),
+      db.websiteBehaviorSignal.deleteMany({ where: { tenantId, sessionId } }),
+      db.websiteSessionTag.deleteMany({ where: { tenantId, sessionId } }),
+    ]);
+    await db.websiteSession.delete({ where: { id: session.id } });
+    return { sessionId, deleted: { events: events.count, behaviorSignals: signals.count, tags: tags.count } };
+  }
+
+  async anonymizeSession(sessionId: string, tenantId: string) {
+    const session = await this.getSession(sessionId, tenantId);
+    await db.websiteEvent.updateMany({ where: { tenantId, sessionId }, data: { visitorId: null, payload: {} } });
+    return db.websiteSession.update({
+      where: { id: session.id },
+      data: { visitorId: session.visitorId, ipHash: null, userAgent: null, country: null, metadata: { anonymized: true }, referrer: null },
+    });
+  }
+
+  async retentionPreview(tenantId: string, query: Record<string, unknown> = {}) {
+    const siteId = cleanString(query.siteId, 120);
+    const sites = siteId ? [await this.getSite(siteId, tenantId)] : await db.websiteAnalyticsSite.findMany({ where: { tenantId } });
+    const previews = [];
+    for (const site of sites) {
+      const privacy = defaultPrivacySettings(site.privacySettings || {});
+      const cutoff = new Date(Date.now() - Number(privacy.dataRetentionDays || privacy.retentionDays || 30) * 24 * 60 * 60 * 1000);
+      const recordingCutoff = new Date(Date.now() - Number(privacy.recordingRetentionDays || privacy.retentionDays || 30) * 24 * 60 * 60 * 1000);
+      previews.push({
+        siteId: site.id,
+        sessions: await db.websiteSession.count({ where: { tenantId, siteId: site.id, startedAt: { lt: cutoff } } }),
+        events: await db.websiteEvent.count({ where: { tenantId, siteId: site.id, createdAt: { lt: cutoff } } }),
+        recordings: await db.websiteRecording.count({ where: { tenantId, siteId: site.id, createdAt: { lt: recordingCutoff } } }),
+        heatmaps: await db.websiteHeatmapSnapshot.count({ where: { tenantId, siteId: site.id, createdAt: { lt: cutoff } } }),
+      });
+    }
+    return previews;
+  }
+
+  async runRetentionCleanup(tenantId: string, data: Record<string, unknown> = {}) {
+    const preview = await this.retentionPreview(tenantId, data);
+    const results = [];
+    for (const item of preview) {
+      const site = await this.getSite(item.siteId, tenantId);
+      const privacy = defaultPrivacySettings(site.privacySettings || {});
+      const cutoff = new Date(Date.now() - Number(privacy.dataRetentionDays || privacy.retentionDays || 30) * 24 * 60 * 60 * 1000);
+      const recordingCutoff = new Date(Date.now() - Number(privacy.recordingRetentionDays || privacy.retentionDays || 30) * 24 * 60 * 60 * 1000);
+      const recordings = await db.websiteRecording.findMany({ where: { tenantId, siteId: site.id, createdAt: { lt: recordingCutoff } }, include: { chunks: true } });
+      for (const recording of recordings) for (const chunk of recording.chunks || []) await recordingStorageService.deleteChunk(chunk.storagePath).catch(() => null);
+      const [events, sessions, heatmaps, recordingDelete] = await Promise.all([
+        db.websiteEvent.deleteMany({ where: { tenantId, siteId: site.id, createdAt: { lt: cutoff } } }),
+        db.websiteSession.deleteMany({ where: { tenantId, siteId: site.id, startedAt: { lt: cutoff } } }),
+        db.websiteHeatmapSnapshot.deleteMany({ where: { tenantId, siteId: site.id, createdAt: { lt: cutoff } } }),
+        db.websiteRecording.deleteMany({ where: { tenantId, siteId: site.id, createdAt: { lt: recordingCutoff } } }),
+      ]);
+      results.push({ siteId: site.id, deleted: { events: events.count, sessions: sessions.count, heatmaps: heatmaps.count, recordings: recordingDelete.count } });
+    }
+    return { cleanedAt: new Date().toISOString(), results };
+  }
+
+  async reportOverview(tenantId: string, query: Record<string, unknown> = {}) {
+    const filters = await this.resolveFilters(tenantId, query);
+    const sessionWhere = this.buildSessionWhere(tenantId, filters);
+    const eventWhere = this.buildEventWhere(tenantId, filters);
+    const [sessions, visitors, pageViews, avg, recordings, issues, funnels, customEvents] = await Promise.all([
+      db.websiteSession.count({ where: sessionWhere }),
+      db.websiteVisitor.count({ where: { tenantId, ...(filters.siteId ? { siteId: String(filters.siteId) } : {}) } }),
+      db.websiteEvent.count({ where: { ...eventWhere, type: 'page_view' } }),
+      db.websiteSession.aggregate({ where: { ...sessionWhere, durationMs: { not: null } }, _avg: { durationMs: true } }),
+      db.websiteRecording.count({ where: { tenantId, ...(filters.siteId ? { siteId: String(filters.siteId) } : {}) } }),
+      db.websiteIssueGroup.count({ where: { tenantId, ...(filters.siteId ? { siteId: String(filters.siteId) } : {}) } }),
+      db.websiteFunnelRun.findMany({ where: { tenantId, ...(filters.siteId ? { siteId: String(filters.siteId) } : {}) }, take: 20, orderBy: { createdAt: 'desc' } }),
+      db.websiteEvent.count({ where: { ...eventWhere, type: 'custom_event' } }),
+    ]);
+    return { sessions, uniqueVisitors: visitors, pageViews, averageDurationMs: Math.round(avg._avg.durationMs || 0), recordings, behaviorIssues: issues, funnelConversions: funnels.reduce((sum: number, run: any) => sum + (run.totalConversions || 0), 0), customEvents };
+  }
+
+  async reportPages(tenantId: string, query: Record<string, unknown> = {}) {
+    const events = await db.websiteEvent.findMany({ where: { ...this.buildEventWhere(tenantId, await this.resolveFilters(tenantId, query)), type: 'page_view' }, select: { path: true, url: true }, take: 5000 });
+    const map = new Map<string, number>();
+    events.forEach((event: any) => map.set(event.path || this.pathFromUrl(event.url) || 'unknown', (map.get(event.path || this.pathFromUrl(event.url) || 'unknown') || 0) + 1));
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 100).map(([path, pageViews]) => ({ path, pageViews }));
+  }
+
+  async reportBreakdown(tenantId: string, query: Record<string, unknown>, field: 'referrer' | 'country' | 'device' | 'browser') {
+    const sessions = await db.websiteSession.findMany({ where: this.buildSessionWhere(tenantId, await this.resolveFilters(tenantId, query)), select: { [field]: true } as any, take: 5000 });
+    const map = new Map<string, number>();
+    sessions.forEach((session: any) => map.set(session[field] || 'Unknown', (map.get(session[field] || 'Unknown') || 0) + 1));
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 100).map(([name, sessions]) => ({ name, sessions }));
+  }
+
+  async reportBehavior(tenantId: string, query: Record<string, unknown> = {}) {
+    const filters = await this.resolveFilters(tenantId, query);
+    return db.websiteIssueGroup.findMany({ where: { tenantId, ...(filters.siteId ? { siteId: String(filters.siteId) } : {}) }, orderBy: { occurrenceCount: 'desc' }, take: 100 });
+  }
+
+  async reportTechnical(tenantId: string, query: Record<string, unknown> = {}) {
+    const filters = await this.resolveFilters(tenantId, query);
+    return db.websiteEvent.findMany({ where: { ...this.buildEventWhere(tenantId, filters), type: { in: ['js_error', 'unhandled_rejection'] } }, orderBy: { createdAt: 'desc' }, take: 200 });
+  }
+
+  async reportConversions(tenantId: string, query: Record<string, unknown> = {}) {
+    const filters = await this.resolveFilters(tenantId, query);
+    return db.websiteFunnelRun.findMany({ where: { tenantId, ...(filters.siteId ? { siteId: String(filters.siteId) } : {}) }, orderBy: { createdAt: 'desc' }, take: 100, include: { funnel: true } });
+  }
+
+  async storageUsage(tenantId: string, query: Record<string, unknown> = {}) {
+    const where = { tenantId, ...(query.siteId ? { siteId: String(query.siteId) } : {}) };
+    const [recordingBytes, recordingCount, eventCount, sessionCount] = await Promise.all([
+      db.websiteRecording.aggregate({ where, _sum: { sizeBytes: true } }),
+      db.websiteRecording.count({ where }),
+      db.websiteEvent.count({ where }),
+      db.websiteSession.count({ where }),
+    ]);
+    return { recordingBytes: recordingBytes._sum.sizeBytes || 0, recordingCount, eventCount, sessionCount };
+  }
+
+  async ingestionHealth(tenantId: string, query: Record<string, unknown> = {}) {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const where = { tenantId, ...(query.siteId ? { siteId: String(query.siteId) } : {}) };
+    const [events24h, sessions24h, failedDeliveries] = await Promise.all([
+      db.websiteEvent.count({ where: { ...where, createdAt: { gte: since } } }),
+      db.websiteSession.count({ where: { ...where, startedAt: { gte: since } } }),
+      db.websiteAnalyticsWebhookDelivery.count({ where: { tenantId, status: 'FAILED' } }),
+    ]);
+    return { status: 'OK', events24h, sessions24h, failedDeliveries, checkedAt: new Date().toISOString() };
+  }
+
+  async reprocessSession(sessionId: string, tenantId: string) {
+    return this.analyzeSession(sessionId, tenantId);
+  }
+
+  async rebuildHeatmap(snapshotId: string, tenantId: string) {
+    const snapshot = await this.getHeatmapSnapshot(snapshotId, tenantId);
+    await db.websiteHeatmapPoint.deleteMany?.({ where: { tenantId, snapshotId } });
+    const aggregate = await this.aggregateHeatmapEvents(tenantId, snapshot.siteId, snapshot.id, snapshot.path, snapshot.dateFrom, snapshot.dateTo, snapshot.deviceType);
+    return db.websiteHeatmapSnapshot.update({
+      where: { id: snapshot.id },
+      data: {
+        status: 'READY',
+        clickCount: aggregate.clickCount,
+        scrollSampleCount: aggregate.scrollSampleCount,
+        engagementSampleCount: aggregate.engagementSampleCount,
+        maxScrollDepth: aggregate.maxScrollDepth,
+        avgScrollDepth: aggregate.avgScrollDepth,
+        viewportWidth: aggregate.viewportWidth,
+        viewportHeight: aggregate.viewportHeight,
+        metadata: { topClickedAreas: aggregate.topClickedAreas, scrollBands: aggregate.scrollBands },
+      },
+    });
+  }
+
+  async recalculateFunnel(runId: string, tenantId: string) {
+    const run = await this.getFunnelRun(runId, tenantId);
+    return this.runFunnel(run.funnelId, tenantId, { dateFrom: run.dateFrom, dateTo: run.dateTo, filters: run.segmentFilters });
+  }
+
   async getLiveOverview(tenantId: string, query: Record<string, unknown> = {}) {
     const sessions = await this.getActiveLiveStates(tenantId, query);
     const visitors = new Set(sessions.map((session: any) => session.visitorId).filter(Boolean));
@@ -736,6 +1030,7 @@ export class WebsiteAnalyticsService {
   async liveHeartbeat(data: Record<string, unknown>, headers: Record<string, any> = {}, remoteAddress?: string) {
     if (jsonSize(data) > MAX_BODY_BYTES) throw new BadRequestError('Live payload is too large', ErrorCodes.VALIDATION_FAILED);
     const site = await this.getActiveSite(data.trackingKey);
+    this.enforcePublicPrivacy(site, data);
     const session = await this.getPublicSession(site, data.sessionKey);
     const state = await this.upsertLiveState(site, session, {
       ...data,
@@ -1016,9 +1311,13 @@ export class WebsiteAnalyticsService {
 
   async startRecording(data: Record<string, unknown>) {
     const site = await this.getActiveSite(data.trackingKey);
+    const publicPrivacy = this.enforcePublicPrivacy(site, data);
     const privacy = defaultPrivacySettings(site.privacySettings || {});
     if (privacy.recordingsEnabled === false) {
       throw new ForbiddenError('Recordings are disabled for this site', ErrorCodes.AUTH_TOKEN_INVALID);
+    }
+    if (publicPrivacy.requireConsentForRecording && publicPrivacy.consentMode && data.consent !== 'granted') {
+      throw new ForbiddenError('Recording consent is required for this site', ErrorCodes.AUTH_TOKEN_INVALID);
     }
     const session = await this.getPublicSession(site, data.sessionKey);
     const existing = await db.websiteRecording.findFirst({
@@ -1043,6 +1342,7 @@ export class WebsiteAnalyticsService {
 
   async uploadRecordingChunk(data: Record<string, unknown>) {
     const site = await this.getActiveSite(data.trackingKey);
+    this.enforcePublicPrivacy(site, data);
     const session = await this.getPublicSession(site, data.sessionKey);
     const recording = await db.websiteRecording.findFirst({
       where: { tenantId: site.tenantId, siteId: site.id, sessionId: session.id },
@@ -1097,6 +1397,7 @@ export class WebsiteAnalyticsService {
 
   async endRecording(data: Record<string, unknown>) {
     const site = await this.getActiveSite(data.trackingKey);
+    this.enforcePublicPrivacy(site, data);
     const session = await this.getPublicSession(site, data.sessionKey);
     const recording = await db.websiteRecording.findFirst({
       where: { tenantId: site.tenantId, siteId: site.id, sessionId: session.id },
@@ -1119,6 +1420,7 @@ export class WebsiteAnalyticsService {
 
   async startSession(data: Record<string, unknown>, headers: Record<string, any> = {}, remoteAddress?: string) {
     const site = await this.getActiveSite(data.trackingKey);
+    this.enforcePublicPrivacy(site, data);
     const anonymousId = this.requirePublicId(data.anonymousId, 'anonymousId');
     const sessionKey = this.requirePublicId(data.sessionKey || crypto.randomUUID(), 'sessionKey');
     const visitor = await this.upsertVisitor(site, anonymousId, data.metadata);
@@ -1176,6 +1478,7 @@ export class WebsiteAnalyticsService {
 
   async endSession(data: Record<string, unknown>) {
     const site = await this.getActiveSite(data.trackingKey);
+    this.enforcePublicPrivacy(site, data);
     const sessionKey = this.requirePublicId(data.sessionKey, 'sessionKey');
     const session = await db.websiteSession.findFirst({ where: { sessionKey, siteId: site.id } });
     if (!session) throw new NotFoundError('Website session not found', ErrorCodes.RESOURCE_NOT_FOUND);
@@ -1197,12 +1500,16 @@ export class WebsiteAnalyticsService {
   async collect(data: Record<string, unknown>, headers: Record<string, any> = {}, remoteAddress?: string) {
     if (jsonSize(data) > MAX_BODY_BYTES) throw new BadRequestError('Analytics payload is too large', ErrorCodes.VALIDATION_FAILED);
     const site = await this.getActiveSite(data.trackingKey);
+    const privacy = this.enforcePublicPrivacy(site, data);
     const anonymousId = this.requirePublicId(data.anonymousId, 'anonymousId');
     const sessionKey = this.requirePublicId(data.sessionKey, 'sessionKey');
     const visitor = await this.upsertVisitor(site, anonymousId, data.metadata);
     const sessionStart = await this.startSession({ ...data, anonymousId, sessionKey }, headers, remoteAddress);
     const session = await db.websiteSession.findUnique({ where: { id: sessionStart.sessionId } });
-    const incoming = Array.isArray(data.events) ? data.events : [data];
+    const incomingRaw = Array.isArray(data.events) ? data.events : [data];
+    const incoming = privacy.heatmapsEnabled === false
+      ? incomingRaw.filter((event: any) => !['click', 'scroll', 'mouse_move'].includes(event?.type))
+      : incomingRaw;
     const events = incoming.slice(0, MAX_EVENTS_PER_BATCH).map((event: any) => this.normalizeEvent(event, site, sessionStart.sessionId, visitor.id));
     if (!events.length) return { accepted: 0 };
     await db.websiteEvent.createMany({ data: events });
@@ -1415,10 +1722,18 @@ export class WebsiteAnalyticsService {
 
   trackerScript() {
     return TRACKER_SCRIPT
+      .replace('if(!key||localStorage.getItem("ys_analytics_opt_out")==="1")return;',
+        'if(!key||localStorage.getItem("ys_analytics_opt_out")==="1")return;var consent=localStorage.getItem("ys_analytics_consent")||"granted";')
+      .replace('function common(e){return Object.assign({trackingKey:key,anonymousId:anon,sessionKey:sk,url:location.href,path:location.pathname,title:document.title,referrer:document.referrer,viewportWidth:innerWidth,viewportHeight:innerHeight,userAgent:navigator.userAgent,device:device()},e||{})}',
+        'function common(e){return Object.assign({trackingKey:key,anonymousId:anon,sessionKey:sk,consent:consent,url:location.href,path:location.pathname,title:document.title,referrer:document.referrer,viewportWidth:innerWidth,viewportHeight:innerHeight,userAgent:navigator.userAgent,device:device()},e||{})}')
+      .replace('function push(e){var now=new Date().toISOString();e=e||{};e.payload=Object.assign({clientTime:now},e.payload||{});q.push(Object.assign({createdAt:now},e));schedule()}',
+        'function push(e){if(consent==="denied")return;var now=new Date().toISOString();e=e||{};e.payload=Object.assign({clientTime:now},e.payload||{});q.push(Object.assign({createdAt:now},e));schedule()}')
+      .replace('function api(method,a,b){if(method==="event")push({type:"custom_event",payload:{eventName:String(a||"").slice(0,120),data:safe(b)}});if(method==="identify")push({type:"identify",externalUserId:String(a||"").slice(0,200),payload:{traits:safe(b)}});if(method==="tag")push({type:"session_tag",name:String(a||"").slice(0,80),payload:safe(b)})}',
+        'function api(method,a,b){if(method==="consent"){consent=a==="granted"?"granted":"denied";localStorage.setItem("ys_analytics_consent",consent);if(consent==="granted")boot();return}if(method==="optOut"){localStorage.setItem("ys_analytics_opt_out","1");consent="denied";return}if(method==="optIn"){localStorage.removeItem("ys_analytics_opt_out");consent="granted";localStorage.setItem("ys_analytics_consent","granted");boot();return}if(method==="event")push({type:"custom_event",payload:{eventName:String(a||"").slice(0,120),data:safe(b)}});if(method==="identify")push({type:"identify",externalUserId:String(a||"").slice(0,200),payload:{traits:safe(b)}});if(method==="tag")push({type:"session_tag",name:String(a||"").slice(0,80),payload:safe(b)})}')
+      .replace('post(base+"/session/start",common({url:location.href}),false).then(function(res){var site=res.data&&res.data.site||res.site;if(site&&site.privacySettings)privacy=Object.assign(privacy,site.privacySettings);startRecording()});page("load");',
+        'var booted=false;function boot(){if(booted||consent==="denied")return;booted=true;post(base+"/session/start",common({url:location.href}),false).then(function(res){var site=res.data&&res.data.site||res.site;if(site&&site.privacySettings){privacy=Object.assign(privacy,site.privacySettings);if(privacy.trackingEnabled===false)return;if(privacy.consentMode===true&&consent!=="granted"){booted=false;return}}liveHeartbeat("visible",false);setInterval(function(){if(document.visibilityState!=="hidden")liveHeartbeat("visible",false)},20000);startRecording()});page("load")}boot();')
       .replace('function send(events,beacon){if(!events.length)return;post(base+"/collect",common({events:events}),beacon)}',
         'function liveHeartbeat(status,beacon){post(base+"/live/heartbeat",common({currentUrl:location.href,currentPath:location.pathname,currentTitle:document.title,visibilityState:document.visibilityState||status||"visible"}),!!beacon)}function send(events,beacon){if(!events.length)return;post(base+"/collect",common({events:events}),beacon)}')
-      .replace('post(base+"/session/start",common({url:location.href}),false).then(function(res){var site=res.data&&res.data.site||res.site;if(site&&site.privacySettings)privacy=Object.assign(privacy,site.privacySettings);startRecording()});',
-        'post(base+"/session/start",common({url:location.href}),false).then(function(res){var site=res.data&&res.data.site||res.site;if(site&&site.privacySettings)privacy=Object.assign(privacy,site.privacySettings);liveHeartbeat("visible",false);setInterval(function(){if(document.visibilityState!=="hidden")liveHeartbeat("visible",false)},20000);startRecording()});')
       .replace('function endAll(){send(q.splice(0,50),true);flushRecording(true);post(base+"/recordings/end",common({recordingId:recordingId}),true);post(base+"/session/end",common({url:location.href}),true)}',
         'function endAll(){liveHeartbeat("hidden",true);send(q.splice(0,50),true);flushRecording(true);post(base+"/recordings/end",common({recordingId:recordingId}),true);post(base+"/session/end",common({url:location.href}),true)}');
   }
@@ -1998,6 +2313,66 @@ export class WebsiteAnalyticsService {
     });
   }
 
+  private normalizeIntegrationConfig(provider: string, value: unknown) {
+    const config = safePublicPayload(value);
+    if (provider === 'CUSTOM_WEBHOOK') {
+      config.webhookUrl = validateWebhookUrl((config as any).webhookUrl);
+      config.events = stringArray((config as any).events).length ? stringArray((config as any).events) : ['session.started', 'behavior.detected', 'js_error.detected'];
+    }
+    return config;
+  }
+
+  private normalizeSecretConfig(value: unknown) {
+    const input = safePublicPayload(value);
+    const output: Record<string, unknown> = {};
+    for (const [key, raw] of Object.entries(input)) {
+      output[key] = typeof raw === 'string' ? encryptSecret(raw) : raw;
+    }
+    return output;
+  }
+
+  private async createWebhookDelivery(integration: any, eventType: string, payload: Record<string, unknown>) {
+    return db.websiteAnalyticsWebhookDelivery.create({
+      data: { tenantId: integration.tenantId, integrationId: integration.id, eventType, payload: safePayload(payload), status: 'PENDING' },
+    });
+  }
+
+  private async dispatchWebhookDelivery(integration: any, delivery: any) {
+    if (integration.provider !== 'CUSTOM_WEBHOOK') {
+      return db.websiteAnalyticsWebhookDelivery.update({ where: { id: delivery.id }, data: { status: 'SENT', attempts: { increment: 1 }, lastAttemptAt: new Date(), responseStatus: 200, responseBody: 'Setup instructions only for this provider.' } });
+    }
+    const webhookUrl = validateWebhookUrl(integration.config?.webhookUrl);
+    const secret = decryptSecret(integration.secretConfig?.signingSecret || '');
+    const body = JSON.stringify(delivery.payload || {});
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (secret) headers['X-YS-Signature'] = crypto.createHmac('sha256', secret).update(body).digest('hex');
+    try {
+      const response = await fetch(webhookUrl, { method: 'POST', headers, body, signal: AbortSignal.timeout(5000) } as any);
+      const text = await response.text().catch(() => '');
+      return db.websiteAnalyticsWebhookDelivery.update({
+        where: { id: delivery.id },
+        data: { status: response.ok ? 'SENT' : 'FAILED', attempts: { increment: 1 }, lastAttemptAt: new Date(), responseStatus: response.status, responseBody: text.slice(0, 1000) },
+      });
+    } catch (error: any) {
+      return db.websiteAnalyticsWebhookDelivery.update({
+        where: { id: delivery.id },
+        data: { status: 'FAILED', attempts: { increment: 1 }, lastAttemptAt: new Date(), responseBody: String(error?.message || error).slice(0, 1000) },
+      });
+    }
+  }
+
+  private async findVisitorForPrivacy(tenantId: string, data: Record<string, unknown>) {
+    const visitorId = cleanString(data.visitorId, 120);
+    const externalUserId = cleanString(data.externalUserId, 200);
+    let visitor = visitorId ? await db.websiteVisitor.findFirst({ where: { id: visitorId, tenantId } }) : null;
+    if (!visitor && externalUserId) {
+      const identity = await db.websiteVisitorIdentity.findFirst({ where: { tenantId, externalUserId }, include: { visitor: true } });
+      visitor = identity?.visitor || null;
+    }
+    if (!visitor) throw new NotFoundError('Website visitor not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return visitor;
+  }
+
   private async upsertLiveState(site: any, session: any, data: Record<string, unknown>) {
     const userAgent = cleanString(data.userAgent || session.userAgent, 1000);
     const parsed = parseUserAgent(userAgent);
@@ -2088,6 +2463,24 @@ export class WebsiteAnalyticsService {
     if (!site) throw new ForbiddenError('Unknown tracking key', ErrorCodes.AUTH_TOKEN_INVALID);
     if (!site.isActive) throw new ForbiddenError('Tracking site is inactive', ErrorCodes.AUTH_TOKEN_INVALID);
     return site;
+  }
+
+  private enforcePublicPrivacy(site: any, data: Record<string, unknown>) {
+    const privacy = defaultPrivacySettings(site.privacySettings || {});
+    if (privacy.trackingEnabled === false) throw new ForbiddenError('Tracking is disabled for this site', ErrorCodes.AUTH_TOKEN_INVALID);
+    if (privacy.consentMode === true && data.consent !== 'granted') throw new ForbiddenError('Consent is required before tracking', ErrorCodes.AUTH_TOKEN_INVALID);
+    const allowed = stringArray(privacy.allowedDomains);
+    if (allowed.length) {
+      const host = hostnameFromUrl(data.url || data.entryUrl || data.currentUrl);
+      const normalized = allowed.map((item) => item.replace(/^https?:\/\//i, '').replace(/^www\./i, '').toLowerCase());
+      if (!host || !normalized.some((domain) => host === domain || host.endsWith(`.${domain}`))) {
+        throw new ForbiddenError('Tracking origin is not allowed for this site', ErrorCodes.AUTH_TOKEN_INVALID);
+      }
+    }
+    const blockedCountries = stringArray(privacy.blockedCountries).map((item) => item.toLowerCase());
+    const country = cleanString(data.country, 80)?.toLowerCase();
+    if (country && blockedCountries.includes(country)) throw new ForbiddenError('Tracking is blocked in this country', ErrorCodes.AUTH_TOKEN_INVALID);
+    return privacy;
   }
 
   private pathFromUrl(url: string | null) {

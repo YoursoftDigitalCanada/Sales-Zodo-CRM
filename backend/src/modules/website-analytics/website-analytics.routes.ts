@@ -8,6 +8,7 @@ import { PERMISSIONS } from '../../common/constants/permissions';
 import { websiteAnalyticsController } from './website-analytics.controller';
 
 const idSchema = z.object({ params: z.object({ id: z.string().uuid() }) }).passthrough();
+const sessionIdSchema = z.object({ params: z.object({ sessionId: z.string().uuid() }) }).passthrough();
 const bodySchema = z.object({ body: z.object({}).passthrough() }).passthrough();
 
 export const websiteAnalyticsPublicRoutes = Router();
@@ -41,6 +42,12 @@ router.post('/heatmaps/snapshots', requirePermission(PERMISSIONS.ANALYTICS_EXPOR
 router.get('/heatmaps/snapshots/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getHeatmapSnapshot.bind(websiteAnalyticsController));
 router.get('/heatmaps/snapshots/:id/points', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getHeatmapPoints.bind(websiteAnalyticsController));
 router.delete('/heatmaps/snapshots/:id', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), websiteAnalyticsController.deleteHeatmapSnapshot.bind(websiteAnalyticsController));
+router.get('/behavior/signals', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listBehaviorSignals.bind(websiteAnalyticsController));
+router.get('/behavior/signals/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getBehaviorSignal.bind(websiteAnalyticsController));
+router.get('/behavior/issues', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listBehaviorIssues.bind(websiteAnalyticsController));
+router.get('/behavior/issues/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getBehaviorIssue.bind(websiteAnalyticsController));
+router.patch('/behavior/issues/:id/status', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(idSchema), validate(bodySchema), websiteAnalyticsController.updateBehaviorIssueStatus.bind(websiteAnalyticsController));
+router.post('/behavior/sessions/:sessionId/analyze', requirePermission(PERMISSIONS.ANALYTICS_EXPORT), validate(sessionIdSchema), websiteAnalyticsController.analyzeSession.bind(websiteAnalyticsController));
 router.get('/recordings', requirePermission(PERMISSIONS.ANALYTICS_VIEW), websiteAnalyticsController.listRecordings.bind(websiteAnalyticsController));
 router.get('/recordings/:id', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getRecording.bind(websiteAnalyticsController));
 router.get('/recordings/:id/chunks', requirePermission(PERMISSIONS.ANALYTICS_VIEW), validate(idSchema), websiteAnalyticsController.getRecordingChunks.bind(websiteAnalyticsController));

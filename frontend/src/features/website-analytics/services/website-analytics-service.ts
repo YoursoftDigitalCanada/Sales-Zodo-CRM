@@ -108,6 +108,7 @@ export interface WebsiteSession {
   eventCount: number;
   hasJsError: boolean;
   events?: WebsiteEvent[];
+  behaviorSignals?: WebsiteBehaviorSignal[];
 }
 
 export interface WebsiteEvent {
@@ -123,6 +124,48 @@ export interface WebsiteEvent {
   viewportHeight?: number | null;
   payload?: Record<string, unknown>;
   createdAt: string;
+}
+
+export interface WebsiteBehaviorSignal {
+  id: string;
+  siteId: string;
+  sessionId: string;
+  visitorId?: string | null;
+  recordingId?: string | null;
+  type: string;
+  severity: string;
+  url: string;
+  path?: string | null;
+  title?: string | null;
+  selector?: string | null;
+  message?: string | null;
+  eventIds?: string[];
+  firstSeenAt: string;
+  lastSeenAt: string;
+  metadata?: Record<string, unknown>;
+  site?: Pick<WebsiteAnalyticsSite, "id" | "name" | "domain">;
+  session?: Partial<WebsiteSession>;
+}
+
+export interface WebsiteIssueGroup {
+  id: string;
+  siteId: string;
+  type: string;
+  fingerprint: string;
+  url?: string | null;
+  path?: string | null;
+  selector?: string | null;
+  message?: string | null;
+  severity: string;
+  occurrenceCount: number;
+  affectedSessionCount: number;
+  affectedVisitorCount: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  status: string;
+  metadata?: Record<string, unknown>;
+  site?: Pick<WebsiteAnalyticsSite, "id" | "name" | "domain">;
+  signals?: WebsiteBehaviorSignal[];
 }
 
 export async function getWebsiteAnalyticsSites(): Promise<WebsiteAnalyticsSite[]> {
@@ -214,4 +257,28 @@ export async function getWebsiteHeatmapPoints(id: string, params?: { type?: stri
 
 export async function deleteWebsiteHeatmapSnapshot(id: string): Promise<void> {
   await api.delete(`/website-analytics/heatmaps/snapshots/${id}`);
+}
+
+export async function getWebsiteBehaviorSignals(params?: Record<string, unknown>): Promise<WebsiteBehaviorSignal[]> {
+  return data(await api.get("/website-analytics/behavior/signals", { params })) || [];
+}
+
+export async function getWebsiteBehaviorSignal(id: string): Promise<WebsiteBehaviorSignal> {
+  return data(await api.get(`/website-analytics/behavior/signals/${id}`));
+}
+
+export async function getWebsiteBehaviorIssues(params?: Record<string, unknown>): Promise<WebsiteIssueGroup[]> {
+  return data(await api.get("/website-analytics/behavior/issues", { params })) || [];
+}
+
+export async function getWebsiteBehaviorIssue(id: string): Promise<WebsiteIssueGroup> {
+  return data(await api.get(`/website-analytics/behavior/issues/${id}`));
+}
+
+export async function updateWebsiteBehaviorIssueStatus(id: string, status: "OPEN" | "IGNORED" | "RESOLVED"): Promise<WebsiteIssueGroup> {
+  return data(await api.patch(`/website-analytics/behavior/issues/${id}/status`, { status }));
+}
+
+export async function analyzeWebsiteBehaviorSession(sessionId: string): Promise<{ sessionId: string; signalCount: number; signals: WebsiteBehaviorSignal[] }> {
+  return data(await api.post(`/website-analytics/behavior/sessions/${sessionId}/analyze`));
 }

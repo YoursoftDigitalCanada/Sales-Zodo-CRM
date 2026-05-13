@@ -11,8 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  analyzeWebsiteBehaviorSession,
   createWebsiteHeatmapSnapshot,
   createWebsiteAnalyticsSite,
+  getWebsiteBehaviorIssue,
+  getWebsiteBehaviorIssues,
+  getWebsiteBehaviorSignals,
   getWebsiteHeatmapPoints,
   getWebsiteHeatmaps,
   getWebsiteAnalyticsSites,
@@ -25,9 +29,12 @@ import {
   setWebsiteRecordingFavorite,
   setWebsiteRecordingLabels,
   shareWebsiteRecording,
+  updateWebsiteBehaviorIssueStatus,
   updateWebsiteAnalyticsSite,
+  type WebsiteBehaviorSignal,
   type WebsiteHeatmapPoint,
   type WebsiteHeatmapSnapshot,
+  type WebsiteIssueGroup,
   type WebsiteAnalyticsSite,
   type WebsiteRecording,
   type WebsiteSession,
@@ -50,6 +57,14 @@ function formatDuration(ms?: number | null) {
 function formatDate(value?: string | null) {
   if (!value) return "-";
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+}
+
+function formatBehaviorType(value?: string) {
+  return String(value || "").toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function severityBadgeVariant(severity?: string) {
+  return severity === "HIGH" ? "destructive" : severity === "MEDIUM" ? "default" : "secondary";
 }
 
 function MetricCard({ label, value, icon: Icon }: { label: string; value: string; icon: typeof Activity }) {
@@ -86,6 +101,8 @@ export default function WebsiteAnalyticsPage() {
   });
   const [selectedHeatmapId, setSelectedHeatmapId] = useState<string>("");
   const [compareHeatmapId, setCompareHeatmapId] = useState<string>("");
+  const [behaviorFilters, setBehaviorFilters] = useState({ type: "all", severity: "all", status: "OPEN", path: "" });
+  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const playerRef = useRef<HTMLDivElement | null>(null);
 
   const sitesQuery = useQuery({ queryKey: ["website-analytics", "sites"], queryFn: getWebsiteAnalyticsSites });
@@ -124,6 +141,29 @@ export default function WebsiteAnalyticsPage() {
     queryKey: ["website-analytics", "heatmap-points", compareHeatmapId, heatmapForm.type],
     queryFn: () => getWebsiteHeatmapPoints(compareHeatmapId, { type: heatmapForm.type, limit: 8000 }),
     enabled: Boolean(compareHeatmapId),
+  });
+  const behaviorQueryParams = {
+    siteId: activeSiteId,
+    limit: 200,
+    ...(behaviorFilters.type !== "all" ? { type: behaviorFilters.type } : {}),
+    ...(behaviorFilters.severity !== "all" ? { severity: behaviorFilters.severity } : {}),
+    ...(behaviorFilters.status !== "all" ? { status: behaviorFilters.status } : {}),
+    ...(behaviorFilters.path.trim() ? { path: behaviorFilters.path.trim() } : {}),
+  };
+  const behaviorIssuesQuery = useQuery({
+    queryKey: ["website-analytics", "behavior-issues", behaviorQueryParams],
+    queryFn: () => getWebsiteBehaviorIssues(behaviorQueryParams),
+    enabled: Boolean(activeSiteId),
+  });
+  const behaviorSignalsQuery = useQuery({
+    queryKey: ["website-analytics", "behavior-signals", behaviorQueryParams],
+    queryFn: () => getWebsiteBehaviorSignals(behaviorQueryParams),
+    enabled: Boolean(activeSiteId),
+  });
+  const issueDetailQuery = useQuery({
+    queryKey: ["website-analytics", "behavior-issue", selectedIssueId],
+    queryFn: () => getWebsiteBehaviorIssue(selectedIssueId!),
+    enabled: Boolean(selectedIssueId),
   });
   const recordingDetailQuery = useQuery({
     queryKey: ["website-analytics", "recording", selectedRecordingId],
@@ -189,6 +229,23 @@ export default function WebsiteAnalyticsPage() {
       toast({ title: "Heatmap generated", description: "Snapshot is ready to inspect." });
     },
   });
+  const issueStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "OPEN" | "IGNORED" | "RESOLVED" }) => updateWebsiteBehaviorIssueStatus(id, status),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "behavior-issues"] });
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "behavior-issue", selectedIssueId] });
+      toast({ title: "Issue status updated" });
+    },
+  });
+  const analyzeSessionMutation = useMutation({
+    mutationFn: analyzeWebsiteBehaviorSession,
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "behavior"] });
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "behavior-issues"] });
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "behavior-signals"] });
+      toast({ title: "Session analyzed", description: `${result.signalCount} behavior signals found.` });
+    },
+  });
 
   const totals = useMemo(() => {
     return sites.reduce(
@@ -208,12 +265,36 @@ export default function WebsiteAnalyticsPage() {
   const sessionDetail = sessionDetailQuery.data;
   const recordings = recordingsQuery.data || [];
   const heatmaps = heatmapsQuery.data || [];
+  const behaviorIssues = behaviorIssuesQuery.data || [];
+  const behaviorSignals = behaviorSignalsQuery.data || [];
+  const selectedIssue = issueDetailQuery.data;
   const selectedHeatmap = heatmaps.find((item) => item.id === effectiveHeatmapId) || heatmaps[0];
   const compareHeatmap = heatmaps.find((item) => item.id === compareHeatmapId);
   const heatmapPoints = heatmapPointsQuery.data || [];
   const comparePoints = comparePointsQuery.data || [];
   const recordingDetail = recordingDetailQuery.data;
   const replayEvents = useMemo(() => (recordingChunksQuery.data?.chunks || []).flatMap((chunk) => chunk.events || []), [recordingChunksQuery.data]);
+  const behaviorSummary = useMemo(() => {
+    const types = ["RAGE_CLICK", "DEAD_CLICK", "QUICK_BACK", "EXCESSIVE_SCROLL", "JS_ERROR", "BROKEN_INTERACTION"];
+    return types.map((type) => ({
+      type,
+      count: behaviorIssues.filter((issue) => issue.type === type).reduce((sum, issue) => sum + (issue.occurrenceCount || 0), 0),
+    }));
+  }, [behaviorIssues]);
+  const severitySummary = useMemo(() => {
+    return ["HIGH", "MEDIUM", "LOW"].map((severity) => ({
+      severity,
+      count: behaviorIssues.filter((issue) => issue.severity === severity).length,
+    }));
+  }, [behaviorIssues]);
+  const topAffectedPages = useMemo(() => {
+    const map = new Map<string, number>();
+    behaviorIssues.forEach((issue) => {
+      const key = issue.path || issue.url || "Unknown page";
+      map.set(key, (map.get(key) || 0) + (issue.occurrenceCount || 0));
+    });
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  }, [behaviorIssues]);
 
   useEffect(() => {
     if (!playerRef.current || replayEvents.length === 0) return;
@@ -321,12 +402,13 @@ export default function WebsiteAnalyticsPage() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
           <div className="rounded-lg border border-[#E2E8F0] bg-white p-2">
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-5">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-6">
               <TabsTrigger value="websites" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Globe2 size={16} />Websites</TabsTrigger>
               <TabsTrigger value="privacy" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Eye size={16} />Privacy & Tracking</TabsTrigger>
               <TabsTrigger value="sessions" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Sessions</TabsTrigger>
               <TabsTrigger value="recordings" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><MousePointerClick size={16} />Recordings</TabsTrigger>
               <TabsTrigger value="heatmaps" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Heatmaps</TabsTrigger>
+              <TabsTrigger value="behavior" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><AlertTriangle size={16} />Behavior</TabsTrigger>
             </TabsList>
           </div>
 
@@ -559,6 +641,145 @@ export default function WebsiteAnalyticsPage() {
               </div>
             </section>
           </TabsContent>
+
+          <TabsContent value="behavior" className="mt-0 space-y-5">
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+              {behaviorSummary.map((item) => (
+                <div key={item.type} className="rounded-lg border border-[#E2E8F0] bg-white p-4">
+                  <p className="text-xs font-medium uppercase text-[#64748B]">{formatBehaviorType(item.type)}</p>
+                  <p className="mt-2 text-2xl font-semibold text-[#0F172A]">{formatNumber(item.count)}</p>
+                </div>
+              ))}
+            </section>
+
+            <section className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+              <div className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr_1.3fr_auto]">
+                <div className="space-y-2">
+                  <Label>Issue Type</Label>
+                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={behaviorFilters.type} onChange={(event) => setBehaviorFilters((current) => ({ ...current, type: event.target.value }))}>
+                    <option value="all">All</option>
+                    {["RAGE_CLICK", "DEAD_CLICK", "QUICK_BACK", "EXCESSIVE_SCROLL", "JS_ERROR", "BROKEN_INTERACTION"].map((type) => <option key={type} value={type}>{formatBehaviorType(type)}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Severity</Label>
+                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={behaviorFilters.severity} onChange={(event) => setBehaviorFilters((current) => ({ ...current, severity: event.target.value }))}>
+                    <option value="all">All</option>
+                    <option value="HIGH">High</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="LOW">Low</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={behaviorFilters.status} onChange={(event) => setBehaviorFilters((current) => ({ ...current, status: event.target.value }))}>
+                    <option value="all">All</option>
+                    <option value="OPEN">Open</option>
+                    <option value="IGNORED">Ignored</option>
+                    <option value="RESOLVED">Resolved</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Page Path</Label>
+                  <Input value={behaviorFilters.path} onChange={(event) => setBehaviorFilters((current) => ({ ...current, path: event.target.value }))} placeholder="/pricing" />
+                </div>
+                <div className="flex items-end">
+                  <Button variant="outline" onClick={() => { void behaviorIssuesQuery.refetch(); void behaviorSignalsQuery.refetch(); }} className="w-full gap-2"><RefreshCw size={16} />Refresh</Button>
+                </div>
+              </div>
+            </section>
+
+            <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="rounded-lg border border-[#E2E8F0] bg-white">
+                <div className="border-b border-[#E2E8F0] p-5">
+                  <h2 className="text-sm font-semibold text-[#0F172A]">Issue Groups</h2>
+                  <p className="text-xs text-[#64748B]">Grouped behavior problems across visitor sessions.</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[980px] text-sm">
+                    <thead className="bg-[#F8FAFC] text-left text-xs uppercase text-[#64748B]">
+                      <tr>
+                        {["Type", "Severity", "Page", "Selector / Message", "Occurrences", "Sessions", "Last Seen", "Status", "Open"].map((item) => <th key={item} className="px-4 py-3 font-medium">{item}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E2E8F0]">
+                      {behaviorIssues.map((issue: WebsiteIssueGroup) => (
+                        <tr key={issue.id} className="hover:bg-[#F8FAFC]">
+                          <td className="px-4 py-3 font-medium text-[#0F172A]">{formatBehaviorType(issue.type)}</td>
+                          <td className="px-4 py-3"><Badge variant={severityBadgeVariant(issue.severity) as any}>{issue.severity}</Badge></td>
+                          <td className="max-w-[220px] truncate px-4 py-3">{issue.path || issue.url || "-"}</td>
+                          <td className="max-w-[260px] truncate px-4 py-3">{issue.selector || issue.message || "-"}</td>
+                          <td className="px-4 py-3">{issue.occurrenceCount}</td>
+                          <td className="px-4 py-3">{issue.affectedSessionCount}</td>
+                          <td className="px-4 py-3">{formatDate(issue.lastSeenAt)}</td>
+                          <td className="px-4 py-3"><Badge variant={issue.status === "OPEN" ? "default" : "secondary"}>{issue.status}</Badge></td>
+                          <td className="px-4 py-3"><Button size="sm" variant="outline" onClick={() => setSelectedIssueId(issue.id)}>Details</Button></td>
+                        </tr>
+                      ))}
+                      {behaviorIssues.length === 0 ? <tr><td colSpan={9} className="px-4 py-10 text-center text-[#64748B]">No behavior issues match these filters yet.</td></tr> : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <aside className="space-y-5">
+                <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                  <h3 className="text-sm font-semibold text-[#0F172A]">Severity Breakdown</h3>
+                  <div className="mt-3 space-y-2">
+                    {severitySummary.map((item) => (
+                      <div key={item.severity} className="flex items-center justify-between rounded-md bg-[#F8FAFC] px-3 py-2 text-sm">
+                        <span>{item.severity}</span>
+                        <Badge variant={severityBadgeVariant(item.severity) as any}>{item.count}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+                  <h3 className="text-sm font-semibold text-[#0F172A]">Top Affected Pages</h3>
+                  <div className="mt-3 space-y-2">
+                    {topAffectedPages.length === 0 ? <p className="text-sm text-[#64748B]">No affected pages yet.</p> : null}
+                    {topAffectedPages.map(([path, count]) => (
+                      <div key={path} className="flex items-center justify-between gap-3 rounded-md bg-[#F8FAFC] px-3 py-2 text-sm">
+                        <span className="truncate">{path}</span>
+                        <Badge variant="outline">{count}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </aside>
+            </section>
+
+            <section className="rounded-lg border border-[#E2E8F0] bg-white">
+              <div className="border-b border-[#E2E8F0] p-5">
+                <h2 className="text-sm font-semibold text-[#0F172A]">Signals by Session</h2>
+                <p className="text-xs text-[#64748B]">Individual rage clicks, dead clicks, errors, quick backs, and broken interactions.</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[980px] text-sm">
+                  <thead className="bg-[#F8FAFC] text-left text-xs uppercase text-[#64748B]">
+                    <tr>
+                      {["Timestamp", "Type", "Severity", "Page", "Browser", "Device", "Country", "Recording"].map((item) => <th key={item} className="px-4 py-3 font-medium">{item}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E2E8F0]">
+                    {behaviorSignals.map((signal: WebsiteBehaviorSignal) => (
+                      <tr key={signal.id} className="hover:bg-[#F8FAFC]">
+                        <td className="px-4 py-3">{formatDate(signal.firstSeenAt)}</td>
+                        <td className="px-4 py-3 font-medium text-[#0F172A]">{formatBehaviorType(signal.type)}</td>
+                        <td className="px-4 py-3"><Badge variant={severityBadgeVariant(signal.severity) as any}>{signal.severity}</Badge></td>
+                        <td className="max-w-[260px] truncate px-4 py-3">{signal.path || signal.url}</td>
+                        <td className="px-4 py-3">{signal.session?.browser || "-"}</td>
+                        <td className="px-4 py-3">{signal.session?.device || "-"}</td>
+                        <td className="px-4 py-3">{signal.session?.country || "-"}</td>
+                        <td className="px-4 py-3">{signal.recordingId ? <Button size="sm" variant="outline" onClick={() => setSelectedRecordingId(signal.recordingId!)}>Open</Button> : "-"}</td>
+                      </tr>
+                    ))}
+                    {behaviorSignals.length === 0 ? <tr><td colSpan={8} className="px-4 py-10 text-center text-[#64748B]">No behavior signals collected yet.</td></tr> : null}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -577,6 +798,7 @@ export default function WebsiteAnalyticsPage() {
                 <p><span className="font-medium">Entry:</span> {sessionDetail.entryUrl}</p>
                 <p className="mt-2"><span className="font-medium">Exit:</span> {sessionDetail.exitUrl || "-"}</p>
                 <p className="mt-2"><span className="font-medium">Browser:</span> {sessionDetail.browser || "-"} / {sessionDetail.os || "-"}</p>
+                <Button variant="outline" className="mt-4" disabled={analyzeSessionMutation.isPending} onClick={() => analyzeSessionMutation.mutate(sessionDetail.id)}>Analyze Behavior</Button>
               </div>
               <div className="space-y-3">
                 {(sessionDetail.events || []).map((event) => (
@@ -612,6 +834,9 @@ export default function WebsiteAnalyticsPage() {
                     {(recordingDetail.session?.events || []).filter((event) => ["click", "page_view", "js_error", "unhandled_rejection"].includes(event.type)).slice(0, 80).map((event) => (
                       <Badge key={event.id} variant={event.type.includes("error") ? "destructive" : "outline"}>{event.type}</Badge>
                     ))}
+                    {(recordingDetail.session?.behaviorSignals || []).slice(0, 40).map((signal) => (
+                      <Badge key={signal.id} variant={severityBadgeVariant(signal.severity) as any}>{formatBehaviorType(signal.type)}</Badge>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -643,6 +868,60 @@ export default function WebsiteAnalyticsPage() {
               </aside>
             </div>
           ) : <p className="mt-6 text-sm text-[#64748B]">Loading recording...</p>}
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={Boolean(selectedIssueId)} onOpenChange={(open) => !open && setSelectedIssueId(null)}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-3xl">
+          <SheetHeader>
+            <SheetTitle>Behavior Issue Detail</SheetTitle>
+          </SheetHeader>
+          {selectedIssue ? (
+            <div className="mt-6 space-y-5">
+              <div className="rounded-lg border border-[#E2E8F0] bg-white p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline">{formatBehaviorType(selectedIssue.type)}</Badge>
+                  <Badge variant={severityBadgeVariant(selectedIssue.severity) as any}>{selectedIssue.severity}</Badge>
+                  <Badge variant={selectedIssue.status === "OPEN" ? "default" : "secondary"}>{selectedIssue.status}</Badge>
+                </div>
+                <div className="mt-4 space-y-2 text-sm text-[#334155]">
+                  <p><span className="font-medium">Page:</span> {selectedIssue.path || selectedIssue.url || "-"}</p>
+                  <p><span className="font-medium">Selector:</span> {selectedIssue.selector || "-"}</p>
+                  <p><span className="font-medium">Message:</span> {selectedIssue.message || "-"}</p>
+                  <p><span className="font-medium">Occurrences:</span> {selectedIssue.occurrenceCount}</p>
+                  <p><span className="font-medium">Affected sessions:</span> {selectedIssue.affectedSessionCount}</p>
+                  <p><span className="font-medium">Last seen:</span> {formatDate(selectedIssue.lastSeenAt)}</p>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(["OPEN", "IGNORED", "RESOLVED"] as const).map((status) => (
+                    <Button key={status} variant={selectedIssue.status === status ? "default" : "outline"} size="sm" disabled={issueStatusMutation.isPending} onClick={() => issueStatusMutation.mutate({ id: selectedIssue.id, status })}>{status}</Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-[#E2E8F0] bg-white">
+                <div className="border-b border-[#E2E8F0] p-4">
+                  <h3 className="text-sm font-semibold text-[#0F172A]">Occurrences</h3>
+                </div>
+                <div className="divide-y divide-[#E2E8F0]">
+                  {(selectedIssue.signals || []).map((signal) => (
+                    <div key={signal.id} className="p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant={severityBadgeVariant(signal.severity) as any}>{signal.severity}</Badge>
+                          <span className="text-sm font-medium text-[#0F172A]">{formatDate(signal.firstSeenAt)}</span>
+                        </div>
+                        {signal.recordingId ? <Button size="sm" variant="outline" onClick={() => setSelectedRecordingId(signal.recordingId!)}>Open Recording</Button> : null}
+                      </div>
+                      <p className="mt-2 truncate text-sm text-[#334155]">{signal.url}</p>
+                      <p className="mt-1 text-xs text-[#64748B]">{signal.session?.browser || "-"} / {signal.session?.device || "-"} / {signal.session?.country || "-"}</p>
+                    </div>
+                  ))}
+                  {(selectedIssue.signals || []).length === 0 ? <p className="p-6 text-sm text-[#64748B]">No individual signals returned for this issue.</p> : null}
+                </div>
+              </div>
+            </div>
+          ) : <p className="mt-6 text-sm text-[#64748B]">Loading behavior issue...</p>}
         </SheetContent>
       </Sheet>
     </div>

@@ -759,6 +759,8 @@ model Tenant {
   websiteRecordingChunks WebsiteRecordingChunk[]
   websiteHeatmapSnapshots WebsiteHeatmapSnapshot[]
   websiteHeatmapPoints  WebsiteHeatmapPoint[]
+  websiteBehaviorSignals WebsiteBehaviorSignal[]
+  websiteIssueGroups    WebsiteIssueGroup[]
 
   @@index([status])
   @@index([slug])
@@ -5636,6 +5638,8 @@ model WebsiteAnalyticsSite {
   recordings      WebsiteRecording[]
   heatmapSnapshots WebsiteHeatmapSnapshot[]
   heatmapPoints    WebsiteHeatmapPoint[]
+  behaviorSignals  WebsiteBehaviorSignal[]
+  issueGroups      WebsiteIssueGroup[]
 
   @@index([tenantId])
   @@index([domain])
@@ -5657,6 +5661,7 @@ model WebsiteVisitor {
   sessions    WebsiteSession[]
   events      WebsiteEvent[]
   recordings  WebsiteRecording[]
+  behaviorSignals WebsiteBehaviorSignal[]
 
   @@unique([siteId, anonymousId])
   @@index([tenantId])
@@ -5695,6 +5700,7 @@ model WebsiteSession {
   events         WebsiteEvent[]
   recordings     WebsiteRecording[]
   recordingChunks WebsiteRecordingChunk[]
+  behaviorSignals WebsiteBehaviorSignal[]
 
   @@index([tenantId])
   @@index([siteId])
@@ -5849,4 +5855,74 @@ model WebsiteHeatmapPoint {
   @@index([siteId])
   @@index([snapshotId])
   @@index([snapshotId, type])
+}
+
+model WebsiteBehaviorSignal {
+  id          String               @id @default(uuid())
+  tenantId    String
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId      String
+  site        WebsiteAnalyticsSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  sessionId   String
+  session     WebsiteSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  visitorId   String?
+  visitor     WebsiteVisitor?      @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+  recordingId String?
+  type        String
+  severity    String
+  url         String
+  path        String?
+  title       String?
+  selector    String?
+  message     String?
+  eventIds    Json                 @default("[]")
+  firstSeenAt DateTime
+  lastSeenAt  DateTime
+  metadata    Json                 @default("{}")
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([sessionId])
+  @@index([visitorId])
+  @@index([type])
+  @@index([severity])
+  @@index([firstSeenAt])
+  @@index([lastSeenAt])
+  @@index([tenantId, siteId, type])
+}
+
+model WebsiteIssueGroup {
+  id                   String               @id @default(uuid())
+  tenantId             String
+  tenant               Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId               String
+  site                 WebsiteAnalyticsSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  type                 String
+  fingerprint          String
+  url                  String?
+  path                 String?
+  selector             String?
+  message              String?
+  severity             String
+  occurrenceCount      Int                  @default(0)
+  affectedSessionCount Int                  @default(0)
+  affectedVisitorCount Int                  @default(0)
+  firstSeenAt          DateTime
+  lastSeenAt           DateTime
+  status               String               @default("OPEN")
+  metadata             Json                 @default("{}")
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  @@unique([tenantId, siteId, fingerprint])
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([type])
+  @@index([severity])
+  @@index([firstSeenAt])
+  @@index([lastSeenAt])
+  @@index([tenantId, siteId, type])
+  @@index([tenantId, siteId, status])
 }

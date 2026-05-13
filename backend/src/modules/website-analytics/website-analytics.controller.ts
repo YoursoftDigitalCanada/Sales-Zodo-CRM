@@ -61,6 +61,30 @@ export class WebsiteAnalyticsController {
     websiteAnalyticsService.deleteHeatmapSnapshot(req.params.id, req.context.tenantId).then(() => sendSuccess(res, null, 'Heatmap snapshot deleted')).catch(next);
   }
 
+  listBehaviorSignals(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listBehaviorSignals(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  getBehaviorSignal(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.getBehaviorSignal(req.params.id, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  listBehaviorIssues(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.listBehaviorIssues(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  getBehaviorIssue(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.getBehaviorIssue(req.params.id, req.context.tenantId).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  updateBehaviorIssueStatus(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.updateBehaviorIssueStatus(req.params.id, req.context.tenantId, sanitizeBody(req.body)).then((data) => sendSuccess(res, data)).catch(next);
+  }
+
+  analyzeSession(req: Request, res: Response, next: NextFunction) {
+    websiteAnalyticsService.analyzeSession(req.params.sessionId, req.context.tenantId).then((data) => sendSuccess(res, data, 'Session analyzed')).catch(next);
+  }
+
   listRecordings(req: Request, res: Response, next: NextFunction) {
     websiteAnalyticsService.listRecordings(req.context.tenantId, req.query as any).then((data) => sendSuccess(res, data)).catch(next);
   }

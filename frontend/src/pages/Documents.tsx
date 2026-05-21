@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download, Eye, File, FileArchive, FileImage, FileSpreadsheet, FileText, FileVideo,
   FolderOpen, Globe, Grid2X2, Link2, List, MoreVertical, Pencil, RefreshCw, Search,
-  Share2, Star, StarOff, Trash2, Upload, X,
+  Share2, Star, StarOff, Trash2, Upload, X, FolderPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { getFolders, type FolderResponse } from "@/features/files/services/files-service";
+import { createFolder, getFolders, type FolderResponse } from "@/features/files/services/files-service";
 import {
   deleteDocument,
   getDocumentCategories,
@@ -73,6 +73,20 @@ function openDownload(doc: BusinessDocument) {
   document.body.removeChild(anchor);
 }
 
+function detectDocumentType(file: File | null) {
+  if (!file) return "document";
+  const name = file.name.toLowerCase();
+  const mime = file.type.toLowerCase();
+  const ext = name.includes(".") ? name.split(".").pop() || "" : "";
+  if (mime === "application/pdf" || ext === "pdf") return "pdf";
+  if (mime.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(ext)) return "image";
+  if (mime.startsWith("video/") || ["mp4", "webm", "mov", "avi", "mkv"].includes(ext)) return "video";
+  if (["xls", "xlsx", "csv"].includes(ext) || mime.includes("spreadsheet") || mime.includes("excel") || mime.includes("csv")) return "spreadsheet";
+  if (["zip", "rar", "7z", "tar", "gz"].includes(ext) || mime.includes("zip") || mime.includes("compressed")) return "archive";
+  if (["doc", "docx", "txt", "rtf", "odt"].includes(ext) || mime.includes("word") || mime.startsWith("text/")) return "document";
+  return "other";
+}
+
 export default function DocumentsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -84,6 +98,7 @@ export default function DocumentsPage() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [folderOpen, setFolderOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<BusinessDocument | null>(null);
   const [editDoc, setEditDoc] = useState<BusinessDocument | null>(null);
   const [linkDoc, setLinkDoc] = useState<BusinessDocument | null>(null);
@@ -91,6 +106,7 @@ export default function DocumentsPage() {
   const [uploadFileValue, setUploadFileValue] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadForm, setUploadForm] = useState({ description: "", categoryId: "", documentType: "document", folderId: "" });
+  const [folderForm, setFolderForm] = useState({ name: "", parentId: "" });
   const [editForm, setEditForm] = useState({ name: "", description: "", categoryId: "", documentType: "document", version: 1, visibleToClient: false, requiresSignature: false });
   const [linkForm, setLinkForm] = useState({ linkedEntityType: "Client", linkedEntityId: "" });
 
@@ -137,6 +153,18 @@ export default function DocumentsPage() {
       invalidate();
     },
     onError: (error: any) => toast({ title: "Upload failed", description: error?.message || "Try again.", variant: "destructive" }),
+  });
+
+  const createFolderMutation = useMutation({
+    mutationFn: () => createFolder(folderForm.name, folderForm.parentId || null),
+    onSuccess: (folder) => {
+      toast({ title: "Folder created", description: folder.name });
+      setFolderOpen(false);
+      setFolderForm({ name: "", parentId: "" });
+      void queryClient.invalidateQueries({ queryKey: ["folders"] });
+      setFolderId(folder.id);
+    },
+    onError: (error: any) => toast({ title: "Folder creation failed", description: error?.message || "Try again.", variant: "destructive" }),
   });
 
   const updateMutation = useMutation({
@@ -186,6 +214,7 @@ export default function DocumentsPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => invalidate()}><RefreshCw size={16} className="mr-2" />Refresh</Button>
+            <Button variant="outline" onClick={() => setFolderOpen(true)}><FolderPlus size={16} className="mr-2" />New Folder</Button>
             <Button className="bg-[#0891B2] text-white hover:bg-[#0E7490]" onClick={() => setUploadOpen(true)}><Upload size={16} className="mr-2" />Upload Document</Button>
           </div>
         </header>
@@ -258,7 +287,10 @@ export default function DocumentsPage() {
             <FolderOpen size={42} className="mx-auto text-[#94A3B8]" />
             <h2 className="mt-4 text-lg font-semibold text-[#0F172A]">No documents found</h2>
             <p className="mt-1 text-sm text-[#64748B]">Upload a contract, proposal, invoice, report, or client file.</p>
-            <Button className="mt-4 bg-[#0891B2] text-white hover:bg-[#0E7490]" onClick={() => setUploadOpen(true)}><Upload size={16} className="mr-2" />Upload Document</Button>
+            <div className="mt-4 flex justify-center gap-2">
+              <Button variant="outline" onClick={() => setFolderOpen(true)}><FolderPlus size={16} className="mr-2" />Create Folder</Button>
+              <Button className="bg-[#0891B2] text-white hover:bg-[#0E7490]" onClick={() => setUploadOpen(true)}><Upload size={16} className="mr-2" />Upload Document</Button>
+            </div>
           </div>
         ) : viewMode === "list" ? (
           <div className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white">
@@ -329,16 +361,54 @@ export default function DocumentsPage() {
         <DialogContent className="sm:max-w-xl">
           <DialogHeader><DialogTitle>Upload Document</DialogTitle><DialogDescription>Upload into the existing CRM file storage and add business metadata.</DialogDescription></DialogHeader>
           <div className="space-y-4">
-            <Input type="file" onChange={(event) => setUploadFileValue(event.target.files?.[0] || null)} />
+            <Input
+              type="file"
+              onChange={(event) => {
+                const file = event.target.files?.[0] || null;
+                setUploadFileValue(file);
+                setUploadForm((prev) => ({ ...prev, documentType: detectDocumentType(file) }));
+              }}
+            />
+            {uploadFileValue ? (
+              <div className="rounded-md border border-[#CFFAFE] bg-[#ECFEFF] px-3 py-2 text-sm text-[#0E7490]">
+                Detected as <span className="font-semibold">{detectDocumentType(uploadFileValue)}</span> from {uploadFileValue.type || uploadFileValue.name.split(".").pop()?.toUpperCase() || "file"}.
+              </div>
+            ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <div><Label>Category</Label><Select value={uploadForm.categoryId || "none"} onValueChange={(value) => setUploadForm((prev) => ({ ...prev, categoryId: value === "none" ? "" : value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No category</SelectItem>{categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}</SelectContent></Select></div>
-              <div><Label>Type</Label><Select value={uploadForm.documentType} onValueChange={(value) => setUploadForm((prev) => ({ ...prev, documentType: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="document">Document</SelectItem><SelectItem value="pdf">PDF</SelectItem><SelectItem value="spreadsheet">Spreadsheet</SelectItem><SelectItem value="image">Image</SelectItem><SelectItem value="video">Video</SelectItem><SelectItem value="archive">Archive</SelectItem></SelectContent></Select></div>
+              <div><Label>Type</Label><Select value={uploadForm.documentType} onValueChange={(value) => setUploadForm((prev) => ({ ...prev, documentType: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="document">Document</SelectItem><SelectItem value="pdf">PDF</SelectItem><SelectItem value="spreadsheet">Spreadsheet</SelectItem><SelectItem value="image">Image</SelectItem><SelectItem value="video">Video</SelectItem><SelectItem value="archive">Archive</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select></div>
               <div className="sm:col-span-2"><Label>Folder</Label><Select value={uploadForm.folderId || "root"} onValueChange={(value) => setUploadForm((prev) => ({ ...prev, folderId: value === "root" ? "" : value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="root">Root</SelectItem>{folders.map((folder) => <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>)}</SelectContent></Select></div>
             </div>
             <div><Label>Description</Label><Textarea value={uploadForm.description} onChange={(event) => setUploadForm((prev) => ({ ...prev, description: event.target.value }))} placeholder="Add context for the sales or operations team..." /></div>
             {uploadProgress ? <div className="h-2 overflow-hidden rounded bg-[#E2E8F0]"><div className="h-full bg-[#0891B2]" style={{ width: `${uploadProgress}%` }} /></div> : null}
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setUploadOpen(false)}>Cancel</Button><Button disabled={!uploadFileValue || uploadMutation.isPending} onClick={() => uploadMutation.mutate()} className="bg-[#0891B2] text-white hover:bg-[#0E7490]">Upload</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={folderOpen} onOpenChange={setFolderOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Folder</DialogTitle>
+            <DialogDescription>Organize documents using the existing CRM folder system.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Folder Name</Label>
+              <Input value={folderForm.name} onChange={(event) => setFolderForm((prev) => ({ ...prev, name: event.target.value }))} placeholder="Contracts, Onboarding, Reports..." />
+            </div>
+            <div>
+              <Label>Parent Folder</Label>
+              <Select value={folderForm.parentId || "root"} onValueChange={(value) => setFolderForm((prev) => ({ ...prev, parentId: value === "root" ? "" : value }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="root">Root</SelectItem>{folders.map((folder) => <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFolderOpen(false)}>Cancel</Button>
+            <Button disabled={!folderForm.name.trim() || createFolderMutation.isPending} onClick={() => createFolderMutation.mutate()} className="bg-[#0891B2] text-white hover:bg-[#0E7490]">Create Folder</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

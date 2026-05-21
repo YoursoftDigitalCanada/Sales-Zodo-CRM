@@ -693,6 +693,8 @@ model Tenant {
   calendarEventAttendees CalendarEventAttendee[]
   files                 File[]
   folders               Folder[]
+  documentCategories    DocumentCategory[]
+  documentMetadata      DocumentMetadata[]
   invoices              Invoice[]
   invoiceItems          InvoiceItem[]
   expenses              Expense[]
@@ -3387,6 +3389,7 @@ model File {
   
   // Relations
   tags            FileTag[]
+  documentMetadata DocumentMetadata?
 
   @@index([tenantId])
   @@index([folderId])
@@ -3398,6 +3401,48 @@ model File {
   @@index([leadId])
   @@index([quoteId])
   @@unique([id, tenantId])
+}
+
+model DocumentCategory {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  color     String?
+  isSystem  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents DocumentMetadata[]
+
+  @@index([tenantId])
+  @@unique([tenantId, name])
+}
+
+model DocumentMetadata {
+  id                String            @id @default(uuid())
+  tenantId          String
+  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fileId            String            @unique
+  file              File              @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  categoryId        String?
+  category          DocumentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  documentType      String?
+  description       String?
+  version           Int               @default(1)
+  linkedEntityType  String?
+  linkedEntityId    String?
+  visibleToClient   Boolean           @default(false)
+  requiresSignature Boolean           @default(false)
+  expiresAt         DateTime?
+  metadata          Json              @default("{}")
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([tenantId])
+  @@index([fileId])
+  @@index([categoryId])
+  @@index([linkedEntityType, linkedEntityId])
 }
 
 model FileTag {

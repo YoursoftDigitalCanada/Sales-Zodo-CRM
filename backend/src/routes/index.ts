@@ -50,7 +50,9 @@ import proposalsPublicRoutes from '../modules/proposals/proposals.public-routes'
 
 // File management modules
 import filesRoutes from '../modules/files/files.routes';
+import { filesController } from '../modules/files/files.controller';
 import foldersRoutes from '../modules/folders/folders.routes';
+import documentsRoutes from '../modules/documents/documents.routes';
 
 // Communication modules
 import emailsRoutes from '../modules/emails/emails.routes';
@@ -122,6 +124,7 @@ export function registerRoutes(app: Application): void {
   apiRouter.use('/public', quotesPublicRoutes);
   apiRouter.use('/public', proposalsPublicRoutes);
   apiRouter.use('/public/website-analytics', websiteAnalyticsPublicRoutes);
+  apiRouter.get('/public/files/:shareLink/download', filesController.downloadByShareLink.bind(filesController));
   apiRouter.use('/webhooks/leads', leadSourceWebhooksRoutes);
   apiRouter.use('/webhooks', eagleViewWebhookRouter);
 
@@ -190,6 +193,7 @@ export function registerRoutes(app: Application): void {
   // File Management
   protectedRouter.use('/files', filesRoutes);
   protectedRouter.use('/folders', foldersRoutes);
+  protectedRouter.use('/documents', documentsRoutes);
 
   // Communication
   protectedRouter.use('/emails', emailsRoutes);

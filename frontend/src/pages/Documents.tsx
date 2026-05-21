@@ -1,568 +1,416 @@
-// src/pages/Documents.tsx
-import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-// import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Download, Eye, File, FileArchive, FileImage, FileSpreadsheet, FileText, FileVideo,
+  FolderOpen, Globe, Grid2X2, Link2, List, MoreVertical, Pencil, RefreshCw, Search,
+  Share2, Star, StarOff, Trash2, Upload, X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { getFolders, type FolderResponse } from "@/features/files/services/files-service";
 import {
-  FileText, Search, Plus, X, Eye, Pencil, Trash2, MoreVertical, RefreshCw,
-  Sparkles, Download, Upload, FolderOpen, File, FileSpreadsheet, FileImage,
-  FileVideo, FileArchive, FilePdf, Star, StarOff, Share2, Copy, Link2,
-  Clock, User, HardDrive, LayoutGrid, List, Filter, SortAsc,
-  CheckCircle2, AlertTriangle, Zap, TrendingUp, FolderPlus, Tag,
-  ChevronRight, ChevronLeft, Globe, Lock,
-  type LucideIcon,
-} from "lucide-react";
+  deleteDocument,
+  getDocumentCategories,
+  getDocumentDownloadUrl,
+  getDocumentShareUrl,
+  getDocumentPreviewUrl,
+  getDocuments,
+  revokeDocumentShare,
+  shareDocument,
+  updateDocument,
+  uploadDocument,
+  type BusinessDocument,
+} from "@/features/documents";
 
-// ============================================
-// TYPES
-// ============================================
-interface Document {
-  id: string; name: string; type: "pdf" | "doc" | "spreadsheet" | "image" | "video" | "archive" | "other";
-  size: number; category: string; tags: string[];
-  uploadedBy: string; uploadedAt: string; updatedAt: string;
-  starred: boolean; shared: boolean; version: number;
-  description?: string; linkedEntity?: { type: string; name: string };
-}
-
-interface Folder {
-  id: string; name: string; count: number; icon: LucideIcon; color: string;
-}
-
-// ============================================
-// CONSTANTS & MOCK DATA
-// ============================================
-const now = new Date();
-const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString();
-
-const fileIcons: Record<string, { icon: LucideIcon; color: string; bg: string }> = {
-  pdf: { icon: FileText, color: "text-red-600", bg: "bg-red-100" },
-  doc: { icon: FileText, color: "text-blue-600", bg: "bg-blue-100" },
-  spreadsheet: { icon: FileSpreadsheet, color: "text-green-600", bg: "bg-green-100" },
-  image: { icon: FileImage, color: "text-purple-600", bg: "bg-purple-100" },
-  video: { icon: FileVideo, color: "text-orange-600", bg: "bg-orange-100" },
-  archive: { icon: FileArchive, color: "text-amber-600", bg: "bg-amber-100" },
-  other: { icon: File, color: "text-[#475569]", bg: "bg-[#F1F5F9]" },
+const typeIcons: Record<string, any> = {
+  pdf: FileText,
+  document: FileText,
+  spreadsheet: FileSpreadsheet,
+  image: FileImage,
+  video: FileVideo,
+  archive: FileArchive,
+  other: File,
 };
 
-const mockFolders: Folder[] = [
-  { id: "f1", name: "Contracts", count: 12, icon: FileText, color: "text-[#0891B2]" },
-  { id: "f2", name: "Proposals", count: 8, icon: FileText, color: "text-purple-600" },
-  { id: "f3", name: "Invoices", count: 24, icon: FileSpreadsheet, color: "text-green-600" },
-  { id: "f4", name: "Marketing", count: 15, icon: FileImage, color: "text-orange-600" },
-  { id: "f5", name: "Reports", count: 6, icon: FileText, color: "text-blue-600" },
-  { id: "f6", name: "Templates", count: 10, icon: FolderOpen, color: "text-amber-600" },
-];
+const typeStyles: Record<string, string> = {
+  pdf: "bg-red-50 text-red-600",
+  document: "bg-blue-50 text-blue-600",
+  spreadsheet: "bg-green-50 text-green-600",
+  image: "bg-purple-50 text-purple-600",
+  video: "bg-orange-50 text-orange-600",
+  archive: "bg-amber-50 text-amber-600",
+  other: "bg-slate-100 text-slate-600",
+};
 
-const mockDocuments: Document[] = [
-  { id: "d1", name: "Master Service Agreement - Maple Leaf Digital.pdf", type: "pdf", size: 2450000, category: "Contracts",
-    tags: ["contract", "active"], uploadedBy: "Admin", uploadedAt: daysAgo(2), updatedAt: daysAgo(1),
-    starred: true, shared: true, version: 3, description: "Master service agreement for Maple Leaf website redesign project.",
-    linkedEntity: { type: "Client", name: "Maple Leaf Digital" } },
-  { id: "d2", name: "Q1 2026 Revenue Report.xlsx", type: "spreadsheet", size: 1240000, category: "Reports",
-    tags: ["report", "finance", "q1"], uploadedBy: "Sarah Chen", uploadedAt: daysAgo(5), updatedAt: daysAgo(3),
-    starred: true, shared: false, version: 2, description: "Quarterly revenue breakdown with projections." },
-  { id: "d3", name: "Website Redesign Proposal - NLS.pdf", type: "pdf", size: 3890000, category: "Proposals",
-    tags: ["proposal", "design"], uploadedBy: "Admin", uploadedAt: daysAgo(7), updatedAt: daysAgo(7),
-    starred: false, shared: true, version: 1, linkedEntity: { type: "Client", name: "Northern Lights Studios" } },
-  { id: "d4", name: "Brand Guidelines 2026.pdf", type: "pdf", size: 8920000, category: "Marketing",
-    tags: ["brand", "design"], uploadedBy: "Design Team", uploadedAt: daysAgo(10), updatedAt: daysAgo(8),
-    starred: false, shared: true, version: 4 },
-  { id: "d5", name: "Employee Handbook v5.docx", type: "doc", size: 1560000, category: "Templates",
-    tags: ["hr", "template"], uploadedBy: "Admin", uploadedAt: daysAgo(15), updatedAt: daysAgo(5),
-    starred: false, shared: false, version: 5 },
-  { id: "d6", name: "Client Meeting Recording - Feb.mp4", type: "video", size: 45000000, category: "Marketing",
-    tags: ["meeting", "recording"], uploadedBy: "Admin", uploadedAt: daysAgo(3), updatedAt: daysAgo(3),
-    starred: false, shared: true, version: 1 },
-  { id: "d7", name: "Project Invoice - PCV Holdings.pdf", type: "pdf", size: 980000, category: "Invoices",
-    tags: ["invoice", "paid"], uploadedBy: "Admin", uploadedAt: daysAgo(8), updatedAt: daysAgo(6),
-    starred: false, shared: false, version: 1, linkedEntity: { type: "Client", name: "PCV Holdings" } },
-  { id: "d8", name: "CRM Data Export - Dec 2025.csv", type: "spreadsheet", size: 4560000, category: "Reports",
-    tags: ["export", "data"], uploadedBy: "System", uploadedAt: daysAgo(20), updatedAt: daysAgo(20),
-    starred: false, shared: false, version: 1 },
-  { id: "d9", name: "Product Screenshots Pack.zip", type: "archive", size: 28000000, category: "Marketing",
-    tags: ["screenshots", "product"], uploadedBy: "Design Team", uploadedAt: daysAgo(4), updatedAt: daysAgo(4),
-    starred: false, shared: true, version: 1 },
-  { id: "d10", name: "NDA Template.docx", type: "doc", size: 320000, category: "Templates",
-    tags: ["legal", "template", "nda"], uploadedBy: "Legal", uploadedAt: daysAgo(30), updatedAt: daysAgo(12),
-    starred: true, shared: false, version: 2 },
-];
-
-const formatFileSize = (bytes: number) => {
+function formatFileSize(bytes = 0) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1073741824) return `${(bytes / 1048576).toFixed(1)} MB`;
   return `${(bytes / 1073741824).toFixed(1)} GB`;
-};
+}
 
-const formatDate = (d: string) => new Date(d).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
-const getInitials = (name: string) => name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-const timeAgo = (d: string) => {
-  const diff = (now.getTime() - new Date(d).getTime()) / 86400000;
-  if (diff < 1) return "Today";
-  if (diff < 2) return "Yesterday";
-  return `${Math.floor(diff)}d ago`;
-};
+function formatDate(value?: string | null) {
+  if (!value) return "-";
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
+}
 
-// ============================================
-// MAIN COMPONENT
-// ============================================
-const DocumentsPage = () => {
+function openDownload(doc: BusinessDocument) {
+  const anchor = document.createElement("a");
+  anchor.href = getDocumentDownloadUrl(doc.id);
+  anchor.download = doc.originalName || doc.name;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+}
+
+export default function DocumentsPage() {
+  const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [documents, setDocuments] = useState(mockDocuments);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [categoryId, setCategoryId] = useState("all");
+  const [documentType, setDocumentType] = useState("all");
+  const [folderId, setFolderId] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [currentDoc, setCurrentDoc] = useState<Document | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<BusinessDocument | null>(null);
+  const [editDoc, setEditDoc] = useState<BusinessDocument | null>(null);
+  const [linkDoc, setLinkDoc] = useState<BusinessDocument | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  // Upload form
-  const [uploadForm, setUploadForm] = useState({ name: "", description: "", category: "Contracts", tags: "" });
+  const [uploadFileValue, setUploadFileValue] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadForm, setUploadForm] = useState({ description: "", categoryId: "", documentType: "document", folderId: "" });
+  const [editForm, setEditForm] = useState({ name: "", description: "", categoryId: "", documentType: "document", version: 1, visibleToClient: false, requiresSignature: false });
+  const [linkForm, setLinkForm] = useState({ linkedEntityType: "Client", linkedEntityId: "" });
 
-  // Stats
+  const filters = useMemo(() => ({
+    search: search || undefined,
+    categoryId: categoryId !== "all" ? categoryId : undefined,
+    documentType: documentType !== "all" ? documentType : undefined,
+    folderId: folderId !== "all" ? folderId : undefined,
+    starred: statusFilter === "starred" ? true : undefined,
+    shared: statusFilter === "shared" ? true : undefined,
+    limit: 100,
+  }), [search, categoryId, documentType, folderId, statusFilter]);
+
+  const documentsQuery = useQuery({ queryKey: ["documents", filters], queryFn: () => getDocuments(filters) });
+  const categoriesQuery = useQuery({ queryKey: ["documents", "categories"], queryFn: getDocumentCategories });
+  const foldersQuery = useQuery({ queryKey: ["folders", "documents"], queryFn: () => getFolders({ limit: 100 }) });
+
+  const documents = documentsQuery.data?.data || [];
+  const categories = categoriesQuery.data || [];
+  const folders = foldersQuery.data || [];
+
   const stats = useMemo(() => ({
-    totalFiles: documents.length,
-    totalSize: documents.reduce((s, d) => s + d.size, 0),
-    sharedFiles: documents.filter(d => d.shared).length,
-    starredFiles: documents.filter(d => d.starred).length,
+    count: documents.length,
+    size: documents.reduce((sum, doc) => sum + (doc.size || 0), 0),
+    shared: documents.filter((doc) => doc.isShared).length,
+    starred: documents.filter((doc) => doc.isStarred).length,
   }), [documents]);
 
-  // AI insights
-  const aiInsights = useMemo(() => {
-    const insights: { icon: LucideIcon; text: string; type: string }[] = [];
-    const largeFiles = documents.filter(d => d.size > 10000000).length;
-    if (largeFiles > 0) insights.push({ icon: HardDrive, text: `${largeFiles} large file${largeFiles > 1 ? 's' : ''} (>10MB) — consider archiving.`, type: "info" });
-    const oldFiles = documents.filter(d => (now.getTime() - new Date(d.updatedAt).getTime()) > 2592000000).length;
-    if (oldFiles > 0) insights.push({ icon: Clock, text: `${oldFiles} file${oldFiles > 1 ? 's' : ''} not updated in 30+ days.`, type: "warning" });
-    const contractCount = documents.filter(d => d.category === "Contracts").length;
-    if (contractCount > 0) insights.push({ icon: FileText, text: `${contractCount} active contract${contractCount > 1 ? 's' : ''} on file.`, type: "success" });
-    return insights;
-  }, [documents]);
-
-  // Filtered
-  const filtered = useMemo(() => {
-    let result = [...documents];
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(d => d.name.toLowerCase().includes(q) || d.tags.some(t => t.includes(q)));
-    }
-    if (categoryFilter !== "all") result = result.filter(d => d.category === categoryFilter);
-    if (typeFilter !== "all") result = result.filter(d => d.type === typeFilter);
-    return result;
-  }, [documents, searchQuery, categoryFilter, typeFilter]);
-
-  // Handlers
-  const handleUpload = () => {
-    const newDoc: Document = {
-      id: `d-${Date.now()}`, name: uploadForm.name || "Untitled Document", type: "pdf",
-      size: Math.floor(Math.random() * 5000000) + 500000, category: uploadForm.category,
-      tags: uploadForm.tags.split(",").map(t => t.trim()).filter(Boolean),
-      uploadedBy: "Admin", uploadedAt: now.toISOString(), updatedAt: now.toISOString(),
-      starred: false, shared: false, version: 1, description: uploadForm.description,
-    };
-    setDocuments(prev => [newDoc, ...prev]);
-    setIsUploadOpen(false);
-    setUploadForm({ name: "", description: "", category: "Contracts", tags: "" });
-    toast({ title: "Document Uploaded", description: `${newDoc.name} has been uploaded.` });
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ["documents"] });
   };
 
-  const toggleStar = (id: string) => setDocuments(prev => prev.map(d => d.id === id ? { ...d, starred: !d.starred } : d));
-  const toggleShare = (id: string) => {
-    setDocuments(prev => prev.map(d => d.id === id ? { ...d, shared: !d.shared } : d));
-    toast({ title: "Sharing Updated" });
-  };
-  const handleDelete = () => {
-    if (!deleteId) return;
-    setDocuments(prev => prev.filter(d => d.id !== deleteId));
-    setDeleteId(null); setIsDetailOpen(false);
-    toast({ title: "Document Deleted" });
-  };
-  const bulkDelete = () => {
-    setDocuments(prev => prev.filter(d => !selectedIds.has(d.id)));
-    toast({ title: `${selectedIds.size} documents deleted` });
-    setSelectedIds(new Set());
-  };
-  const handleDownload = (doc: Document) => toast({ title: "Downloading", description: `${doc.name} download started.` });
-  const handleCopyLink = (doc: Document) => {
-    navigator.clipboard?.writeText(`${window.location.origin}/documents/${doc.id}`);
-    toast({ title: "Link Copied" });
+  const uploadMutation = useMutation({
+    mutationFn: async () => {
+      if (!uploadFileValue) throw new Error("Choose a file first");
+      return uploadDocument(uploadFileValue, uploadForm, setUploadProgress);
+    },
+    onSuccess: () => {
+      toast({ title: "Document uploaded" });
+      setUploadOpen(false);
+      setUploadFileValue(null);
+      setUploadProgress(0);
+      setUploadForm({ description: "", categoryId: "", documentType: "document", folderId: "" });
+      invalidate();
+    },
+    onError: (error: any) => toast({ title: "Upload failed", description: error?.message || "Try again.", variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => updateDocument(id, data),
+    onSuccess: () => { toast({ title: "Document updated" }); setEditDoc(null); invalidate(); },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteDocument,
+    onSuccess: () => { toast({ title: "Document moved to trash" }); setDeleteId(null); setSelected(new Set()); invalidate(); },
+  });
+
+  const shareMutation = useMutation({
+    mutationFn: async (doc: BusinessDocument) => doc.isShared ? revokeDocumentShare(doc.id) : shareDocument(doc.id),
+    onSuccess: (doc) => {
+      toast({ title: doc.isShared ? "Share link created" : "Share link revoked" });
+      invalidate();
+    },
+  });
+
+  const startEdit = (doc: BusinessDocument) => {
+    setEditDoc(doc);
+    setEditForm({
+      name: doc.name,
+      description: doc.description || "",
+      categoryId: doc.categoryId || "",
+      documentType: doc.type || "document",
+      version: doc.version || 1,
+      visibleToClient: doc.visibleToClient,
+      requiresSignature: doc.requiresSignature,
+    });
   };
 
-  const allCategories = ["all", ...Array.from(new Set(mockDocuments.map(d => d.category)))];
+  const IconFor = (doc: BusinessDocument) => typeIcons[doc.type] || typeIcons.other;
+  const styleFor = (doc: BusinessDocument) => typeStyles[doc.type] || typeStyles.other;
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC]">
-      <div className="flex-1 overflow-auto">
-        <div className="p-6 max-w-[1400px] mx-auto">
-          {/* Header */}
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-md bg-[#0891B2]/10 flex items-center justify-center"><FileText size={20} className="text-[#0891B2]" /></div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Documents</h1>
-                <p className="text-sm text-[#94A3B8]">{stats.totalFiles} files · {formatFileSize(stats.totalSize)} total</p>
-              </div>
+    <div className="min-h-screen bg-[#F8FAFC] p-6">
+      <div className="mx-auto max-w-[1500px] space-y-6">
+        <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-md bg-[#0891B2]/10 text-[#0891B2]"><FileText size={22} /></div>
+            <div>
+              <h1 className="text-2xl font-bold text-[#0F172A]">Documents</h1>
+              <p className="text-sm text-[#64748B]">Business document center powered by Files and Folders.</p>
             </div>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]"
-                onClick={() => { setDocuments([...mockDocuments]); toast({ title: "Refreshed" }); }}>
-                <RefreshCw size={16} className="mr-2" />Refresh
-              </Button>
-              <Button size="sm" className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md" onClick={() => setIsUploadOpen(true)}>
-                <Upload size={16} className="mr-2" />Upload
-              </Button>
-            </div>
-          </motion.div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => invalidate()}><RefreshCw size={16} className="mr-2" />Refresh</Button>
+            <Button className="bg-[#0891B2] text-white hover:bg-[#0E7490]" onClick={() => setUploadOpen(true)}><Upload size={16} className="mr-2" />Upload Document</Button>
+          </div>
+        </header>
 
-          {/* AI Insights */}
-          {aiInsights.length > 0 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="flex items-center gap-1.5 px-2 py-1 bg-gradient-to-r from-[#0891B2]/10 to-purple-500/10 rounded-full">
-                  <Sparkles size={12} className="text-[#0891B2]" /><span className="text-xs font-semibold text-[#0891B2]">AI Insights</span>
-                </div>
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["Documents", stats.count, FileText, "bg-[#0891B2]/10 text-[#0891B2]"],
+            ["Storage", formatFileSize(stats.size), FolderOpen, "bg-purple-50 text-purple-600"],
+            ["Shared", stats.shared, Share2, "bg-green-50 text-green-600"],
+            ["Starred", stats.starred, Star, "bg-amber-50 text-amber-600"],
+          ].map(([label, value, Icon, color]) => (
+            <div key={String(label)} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4">
+              <div className="flex items-center justify-between">
+                <div><p className="text-xs text-[#64748B]">{label}</p><p className="mt-1 text-2xl font-semibold text-[#0F172A]">{String(value)}</p></div>
+                <div className={cn("flex h-10 w-10 items-center justify-center rounded-md", String(color))}><Icon size={18} /></div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {aiInsights.map((ins, i) => {
-                  const InsIcon = ins.icon;
+            </div>
+          ))}
+        </section>
+
+        <section className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-[240px] flex-1">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search documents..." className="pl-10" />
+              {search ? <button className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" onClick={() => setSearch("")}><X size={14} /></button> : null}
+            </div>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger className="w-[170px]"><SelectValue placeholder="Category" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Categories</SelectItem>{categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}</SelectContent>
+            </Select>
+            <Select value={documentType} onValueChange={setDocumentType}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Type" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="pdf">PDF</SelectItem>
+                <SelectItem value="document">Documents</SelectItem>
+                <SelectItem value="spreadsheet">Spreadsheets</SelectItem>
+                <SelectItem value="image">Images</SelectItem>
+                <SelectItem value="video">Videos</SelectItem>
+                <SelectItem value="archive">Archives</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={folderId} onValueChange={setFolderId}>
+              <SelectTrigger className="w-[170px]"><SelectValue placeholder="Folder" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Folders</SelectItem><SelectItem value="root">Root</SelectItem>{folders.map((folder: FolderResponse) => <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>)}</SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All</SelectItem><SelectItem value="starred">Starred</SelectItem><SelectItem value="shared">Shared</SelectItem></SelectContent>
+            </Select>
+            <div className="ml-auto flex overflow-hidden rounded-md border">
+              <button className={cn("p-2", viewMode === "list" ? "bg-[#0891B2] text-white" : "text-[#64748B]")} onClick={() => setViewMode("list")}><List size={16} /></button>
+              <button className={cn("p-2", viewMode === "grid" ? "bg-[#0891B2] text-white" : "text-[#64748B]")} onClick={() => setViewMode("grid")}><Grid2X2 size={16} /></button>
+            </div>
+          </div>
+          {selected.size ? (
+            <div className="mt-3 flex items-center gap-3 border-t pt-3 text-sm text-[#475569]">
+              <span>{selected.size} selected</span>
+              <Button size="sm" variant="outline" onClick={() => selected.forEach((id) => deleteMutation.mutate(id))}><Trash2 size={14} className="mr-2" />Delete selected</Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+            </div>
+          ) : null}
+        </section>
+
+        {documentsQuery.isLoading ? (
+          <div className="rounded-md border bg-white p-12 text-center text-[#64748B]">Loading documents...</div>
+        ) : !documents.length ? (
+          <div className="rounded-md border border-dashed bg-white p-12 text-center">
+            <FolderOpen size={42} className="mx-auto text-[#94A3B8]" />
+            <h2 className="mt-4 text-lg font-semibold text-[#0F172A]">No documents found</h2>
+            <p className="mt-1 text-sm text-[#64748B]">Upload a contract, proposal, invoice, report, or client file.</p>
+            <Button className="mt-4 bg-[#0891B2] text-white hover:bg-[#0E7490]" onClick={() => setUploadOpen(true)}><Upload size={16} className="mr-2" />Upload Document</Button>
+          </div>
+        ) : viewMode === "list" ? (
+          <div className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white">
+            <table className="w-full">
+              <thead className="bg-[#F8FAFC] text-left text-xs uppercase tracking-wide text-[#64748B]">
+                <tr>
+                  <th className="w-10 px-4 py-3"><Checkbox checked={selected.size === documents.length} onCheckedChange={(checked) => setSelected(checked ? new Set(documents.map((doc) => doc.id)) : new Set())} /></th>
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Category</th>
+                  <th className="px-4 py-3">Folder</th>
+                  <th className="px-4 py-3">Size</th>
+                  <th className="px-4 py-3">Updated</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {documents.map((doc) => {
+                  const Icon = IconFor(doc);
                   return (
-                    <div key={i} className={cn("p-3 rounded-md border flex items-center gap-3",
-                      ins.type === "info" && "bg-blue-50 border-blue-200",
-                      ins.type === "warning" && "bg-amber-50 border-amber-200",
-                      ins.type === "success" && "bg-green-50 border-green-200")}>
-                      <InsIcon size={16} className={cn(ins.type === "info" && "text-blue-600", ins.type === "warning" && "text-amber-600", ins.type === "success" && "text-green-600")} />
-                      <p className="text-xs text-[#475569]">{ins.text}</p>
-                    </div>
+                    <tr key={doc.id} className="border-t hover:bg-[#F8FAFC]">
+                      <td className="px-4 py-3"><Checkbox checked={selected.has(doc.id)} onCheckedChange={(checked) => { const next = new Set(selected); checked ? next.add(doc.id) : next.delete(doc.id); setSelected(next); }} /></td>
+                      <td className="px-4 py-3">
+                        <button className="flex max-w-[440px] items-center gap-3 text-left" onClick={() => setPreviewDoc(doc)}>
+                          <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-md", styleFor(doc))}><Icon size={18} /></span>
+                          <span className="min-w-0"><span className="block truncate font-medium text-[#0F172A]">{doc.name}</span><span className="text-xs text-[#64748B]">{doc.mimeType}</span></span>
+                        </button>
+                      </td>
+                      <td className="px-4 py-3"><Badge variant="secondary">{doc.category?.name || "Other"}</Badge></td>
+                      <td className="px-4 py-3 text-sm text-[#475569]">{doc.folder?.name || "Root"}</td>
+                      <td className="px-4 py-3 text-sm text-[#475569]">{formatFileSize(doc.size)}</td>
+                      <td className="px-4 py-3 text-sm text-[#475569]">{formatDate(doc.updatedAt)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <DocumentActions doc={doc} onPreview={setPreviewDoc} onEdit={startEdit} onDownload={openDownload} onShare={(item) => shareMutation.mutate(item)} onDelete={(id) => setDeleteId(id)} onStar={(item) => updateMutation.mutate({ id: item.id, data: { isStarred: !item.isStarred } })} onLink={setLinkDoc} />
+                      </td>
+                    </tr>
                   );
                 })}
-              </div>
-            </motion.div>
-          )}
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-            {[
-              { label: "Total Files", value: stats.totalFiles, icon: FileText, color: "text-[#0891B2]", bg: "bg-[#0891B2]/10" },
-              { label: "Storage Used", value: formatFileSize(stats.totalSize), icon: HardDrive, color: "text-purple-600", bg: "bg-purple-100" },
-              { label: "Shared Files", value: stats.sharedFiles, icon: Share2, color: "text-green-600", bg: "bg-green-100" },
-              { label: "Starred", value: stats.starredFiles, icon: Star, color: "text-amber-600", bg: "bg-amber-100" },
-            ].map((s, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                whileHover={{ y: -4 }}
-                className="bg-white rounded-md p-4 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <div><p className="text-xs text-[#94A3B8]">{s.label}</p><p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{s.value}</p></div>
-                  <div className={cn("w-10 h-10 rounded-md flex items-center justify-center", s.bg)}><s.icon size={18} className={s.color} /></div>
-                </div>
-              </motion.div>
-            ))}
+              </tbody>
+            </table>
           </div>
-
-          {/* Folders Quick Access */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6">
-            <p className="text-sm font-semibold text-[#0F172A] mb-3">Quick Access Folders</p>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-              {mockFolders.map(folder => {
-                const FolderIcon = folder.icon;
-                return (
-                  <motion.button key={folder.id} whileHover={{ y: -2 }}
-                    onClick={() => setCategoryFilter(folder.name)}
-                    className={cn("bg-white rounded-md p-3 border border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]/30 hover:shadow transition-all text-left",
-                      categoryFilter === folder.name && "border-[#0891B2] bg-[#0891B2]/5")}>
-                    <FolderOpen size={20} className={folder.color} />
-                    <p className="text-sm font-medium text-[#0F172A] mt-2">{folder.name}</p>
-                    <p className="text-xs text-[#94A3B8]">{folder.count} files</p>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </motion.div>
-
-          {/* Toolbar */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 mb-6">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
-                <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search documents..." className="pl-10 rounded-md border-[rgba(15,23,42,0.06)] h-10" />
-                {searchQuery && <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8]"><X size={14} /></button>}
-              </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[150px] rounded-md border-[rgba(15,23,42,0.06)] h-10"><SelectValue placeholder="Category" /></SelectTrigger>
-                <SelectContent>{allCategories.map(c => <SelectItem key={c} value={c} className="capitalize">{c === "all" ? "All Categories" : c}</SelectItem>)}</SelectContent>
-              </Select>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[130px] rounded-md border-[rgba(15,23,42,0.06)] h-10"><SelectValue placeholder="Type" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="pdf">PDF</SelectItem><SelectItem value="doc">Documents</SelectItem>
-                  <SelectItem value="spreadsheet">Spreadsheets</SelectItem><SelectItem value="image">Images</SelectItem>
-                  <SelectItem value="video">Videos</SelectItem><SelectItem value="archive">Archives</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="flex border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden">
-                <button onClick={() => setViewMode("list")} className={cn("p-2.5 transition-colors", viewMode === "list" ? "bg-[#0891B2] text-white" : "text-[#475569] hover:bg-[#F8FAFC]")}><List size={16} /></button>
-                <button onClick={() => setViewMode("grid")} className={cn("p-2.5 transition-colors", viewMode === "grid" ? "bg-[#0891B2] text-white" : "text-[#475569] hover:bg-[#F8FAFC]")}><LayoutGrid size={16} /></button>
-              </div>
-            </div>
-            {/* Bulk */}
-            <AnimatePresence>
-              {selectedIds.size > 0 && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                  className="flex items-center gap-3 mt-3 pt-3 border-t border-[rgba(15,23,42,0.06)]">
-                  <span className="text-sm text-[#475569]">{selectedIds.size} selected</span>
-                  <Button size="sm" variant="outline" className="h-7 text-xs rounded-md" onClick={() => { selectedIds.forEach(id => handleDownload(documents.find(d => d.id === id)!)); setSelectedIds(new Set()); }}>
-                    <Download size={14} className="mr-1" />Download
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-7 text-xs rounded-md text-red-600 border-red-200" onClick={bulkDelete}>
-                    <Trash2 size={14} className="mr-1" />Delete
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-7 text-xs rounded-md" onClick={() => setSelectedIds(new Set())}>Clear</Button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-
-          {/* Content */}
-          {filtered.length === 0 ? (
-            <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-16 text-center">
-              <FolderOpen size={48} className="text-[#94A3B8] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#0F172A] mb-2">No documents found</h3>
-              <p className="text-[#94A3B8] mb-4">Upload your first document to get started</p>
-              <Button className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md" onClick={() => setIsUploadOpen(true)}>
-                <Upload size={16} className="mr-2" />Upload Document
-              </Button>
-            </div>
-          ) : viewMode === "list" ? (
-            <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-[#F8FAFC] border-b border-[rgba(15,23,42,0.06)]">
-                    <th className="py-3 px-4 text-left w-8">
-                      <Checkbox checked={selectedIds.size === filtered.length && filtered.length > 0}
-                        onCheckedChange={(c) => setSelectedIds(c ? new Set(filtered.map(d => d.id)) : new Set())}
-                        className="border-slate-300 data-[state=checked]:bg-[#0891B2]" />
-                    </th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Name</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Category</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Size</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-[#475569] uppercase tracking-wider">Modified</th>
-                    <th className="py-3 px-4 text-right text-xs font-semibold text-[#475569] uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <AnimatePresence>
-                    {filtered.map(doc => {
-                      const fi = fileIcons[doc.type] || fileIcons.other;
-                      const FileIcon = fi.icon;
-                      return (
-                        <motion.tr key={doc.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                          className="border-b border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC] transition-colors group cursor-pointer"
-                          onClick={() => { setCurrentDoc(doc); setIsDetailOpen(true); }}>
-                          <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
-                            <Checkbox checked={selectedIds.has(doc.id)}
-                              onCheckedChange={(c) => { const s = new Set(selectedIds); c ? s.add(doc.id) : s.delete(doc.id); setSelectedIds(s); }}
-                              className="border-slate-300 data-[state=checked]:bg-[#0891B2]" />
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-3">
-                              <div className={cn("w-10 h-10 rounded-md flex items-center justify-center shrink-0", fi.bg)}><FileIcon size={18} className={fi.color} /></div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-[#0F172A] truncate max-w-[300px] group-hover:text-[#0891B2] transition-colors">{doc.name}</p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  {doc.starred && <Star size={10} className="text-amber-500 fill-amber-500" />}
-                                  {doc.shared && <Globe size={10} className="text-green-500" />}
-                                  <span className="text-xs text-[#94A3B8]">{doc.uploadedBy}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4"><Badge variant="secondary" className="text-[10px] rounded-md">{doc.category}</Badge></td>
-                          <td className="py-3 px-4 text-sm text-[#475569]">{formatFileSize(doc.size)}</td>
-                          <td className="py-3 px-4 text-sm text-[#475569]">{timeAgo(doc.updatedAt)}</td>
-                          <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
-                            <div className="flex items-center justify-end gap-1">
-                              <button onClick={() => toggleStar(doc.id)} className="p-1.5 rounded-md hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all">
-                                {doc.starred ? <Star size={14} className="text-amber-500 fill-amber-500" /> : <StarOff size={14} className="text-[#94A3B8]" />}
-                              </button>
-                              <button onClick={() => handleDownload(doc)} className="p-1.5 rounded-md hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all">
-                                <Download size={14} className="text-[#94A3B8]" />
-                              </button>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <button className="p-1.5 rounded-md hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all"><MoreVertical size={14} className="text-[#94A3B8]" /></button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48 rounded-md">
-                                  <DropdownMenuItem onClick={() => { setCurrentDoc(doc); setIsDetailOpen(true); }} className="rounded-md"><Eye size={14} className="mr-2" />View Details</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleDownload(doc)} className="rounded-md"><Download size={14} className="mr-2" />Download</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleCopyLink(doc)} className="rounded-md"><Link2 size={14} className="mr-2" />Copy Link</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => toggleShare(doc.id)} className="rounded-md"><Share2 size={14} className="mr-2" />{doc.shared ? "Unshare" : "Share"}</DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={() => setDeleteId(doc.id)} className="rounded-md text-red-600"><Trash2 size={14} className="mr-2" />Delete</DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </td>
-                        </motion.tr>
-                      );
-                    })}
-                  </AnimatePresence>
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              <AnimatePresence>
-                {filtered.map(doc => {
-                  const fi = fileIcons[doc.type] || fileIcons.other;
-                  const FileIcon = fi.icon;
-                  return (
-                    <motion.div key={doc.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-                      whileHover={{ y: -4 }}
-                      className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4 hover:border-[#22D3EE]/30 hover:shadow-lg transition-all cursor-pointer group"
-                      onClick={() => { setCurrentDoc(doc); setIsDetailOpen(true); }}>
-                      <div className="flex items-start justify-between mb-3">
-                        <div className={cn("w-12 h-12 rounded-md flex items-center justify-center", fi.bg)}><FileIcon size={22} className={fi.color} /></div>
-                        <div className="flex items-center gap-1">
-                          {doc.starred && <Star size={14} className="text-amber-500 fill-amber-500" />}
-                          {doc.shared && <Globe size={14} className="text-green-500" />}
-                        </div>
-                      </div>
-                      <p className="text-sm font-semibold text-[#0F172A] truncate group-hover:text-[#0891B2] transition-colors">{doc.name}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Badge variant="secondary" className="text-[10px] rounded-md">{doc.category}</Badge>
-                        <span className="text-xs text-[#94A3B8]">{formatFileSize(doc.size)}</span>
-                      </div>
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-[rgba(15,23,42,0.06)]">
-                        <span className="text-xs text-[#94A3B8] flex items-center gap-1"><User size={10} />{doc.uploadedBy}</span>
-                        <span className="text-xs text-[#94A3B8]">{timeAgo(doc.updatedAt)}</span>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Upload Dialog */}
-      <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-        <DialogContent className="sm:max-w-[500px] p-0 rounded-md overflow-hidden">
-          <div className="p-6 border-b border-[rgba(15,23,42,0.06)]">
-            <DialogHeader><DialogTitle className="text-xl font-bold text-[#0F172A]">Upload Document</DialogTitle>
-              <DialogDescription className="text-[#94A3B8]">Add a new document to your CRM.</DialogDescription></DialogHeader>
-          </div>
-          <div className="p-6 space-y-4">
-            {/* Drop zone */}
-            <div className="border-2 border-dashed border-[rgba(15,23,42,0.1)] rounded-md p-8 text-center hover:border-[#0891B2]/30 transition-colors cursor-pointer">
-              <Upload size={32} className="text-[#94A3B8] mx-auto mb-3" />
-              <p className="text-sm font-medium text-[#0F172A]">Drop files here or click to browse</p>
-              <p className="text-xs text-[#94A3B8] mt-1">Supports PDF, DOCX, XLSX, PNG, JPG, MP4, ZIP</p>
-            </div>
-            <div><Label className="text-xs text-[#475569]">Document Name *</Label>
-              <Input value={uploadForm.name} onChange={e => setUploadForm(p => ({ ...p, name: e.target.value }))} placeholder="Enter file name" className="mt-1 rounded-md" /></div>
-            <div><Label className="text-xs text-[#475569]">Description</Label>
-              <Textarea value={uploadForm.description} onChange={e => setUploadForm(p => ({ ...p, description: e.target.value }))} placeholder="Brief description..." className="mt-1 rounded-md h-20" /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label className="text-xs text-[#475569]">Category</Label>
-                <Select value={uploadForm.category} onValueChange={v => setUploadForm(p => ({ ...p, category: v }))}>
-                  <SelectTrigger className="mt-1 rounded-md"><SelectValue /></SelectTrigger>
-                  <SelectContent>{mockFolders.map(f => <SelectItem key={f.id} value={f.name}>{f.name}</SelectItem>)}</SelectContent>
-                </Select></div>
-              <div><Label className="text-xs text-[#475569]">Tags (comma separated)</Label>
-                <Input value={uploadForm.tags} onChange={e => setUploadForm(p => ({ ...p, tags: e.target.value }))} placeholder="contract, active" className="mt-1 rounded-md" /></div>
-            </div>
-          </div>
-          <DialogFooter className="p-6 pt-0 gap-3">
-            <Button variant="outline" onClick={() => setIsUploadOpen(false)} className="rounded-md">Cancel</Button>
-            <Button onClick={handleUpload} disabled={!uploadForm.name} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md"><Upload size={16} className="mr-2" />Upload</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Detail Dialog */}
-      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="sm:max-w-[550px] p-0 rounded-md overflow-hidden">
-          {currentDoc && (() => {
-            const fi = fileIcons[currentDoc.type] || fileIcons.other; const FileIcon = fi.icon;
-            return (<>
-              <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-gradient-to-r from-[#0891B2]/5 to-transparent">
-                <div className="flex items-center gap-4">
-                  <div className={cn("w-14 h-14 rounded-md flex items-center justify-center", fi.bg)}><FileIcon size={28} className={fi.color} /></div>
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-lg font-bold text-[#0F172A] truncate">{currentDoc.name}</h2>
-                    <div className="flex items-center gap-3 mt-1">
-                      <Badge variant="secondary" className="text-xs">{currentDoc.category}</Badge>
-                      <span className="text-xs text-[#94A3B8]">{formatFileSize(currentDoc.size)}</span>
-                      <span className="text-xs text-[#94A3B8]">v{currentDoc.version}</span>
-                    </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {documents.map((doc) => {
+              const Icon = IconFor(doc);
+              return (
+                <div key={doc.id} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 transition hover:border-[#22D3EE]/40 hover:shadow-md">
+                  <div className="flex items-start justify-between">
+                    <button className={cn("flex h-12 w-12 items-center justify-center rounded-md", styleFor(doc))} onClick={() => setPreviewDoc(doc)}><Icon size={22} /></button>
+                    <DocumentActions doc={doc} onPreview={setPreviewDoc} onEdit={startEdit} onDownload={openDownload} onShare={(item) => shareMutation.mutate(item)} onDelete={(id) => setDeleteId(id)} onStar={(item) => updateMutation.mutate({ id: item.id, data: { isStarred: !item.isStarred } })} onLink={setLinkDoc} />
+                  </div>
+                  <button className="mt-4 block w-full text-left" onClick={() => setPreviewDoc(doc)}>
+                    <p className="truncate font-medium text-[#0F172A]">{doc.name}</p>
+                    <p className="mt-1 text-xs text-[#64748B]">{formatFileSize(doc.size)} · {formatDate(doc.updatedAt)}</p>
+                  </button>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Badge variant="secondary">{doc.category?.name || "Other"}</Badge>
+                    {doc.isShared ? <Badge variant="outline" className="gap-1"><Globe size={11} />Shared</Badge> : null}
+                    {doc.isStarred ? <Badge variant="outline" className="gap-1"><Star size={11} />Starred</Badge> : null}
                   </div>
                 </div>
-              </div>
-              <div className="p-6 space-y-4">
-                {currentDoc.description && <div><p className="text-xs text-[#94A3B8] mb-1">Description</p><p className="text-sm text-[#475569]">{currentDoc.description}</p></div>}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><p className="text-xs text-[#94A3B8]">Uploaded By</p><p className="text-[#0F172A] font-medium">{currentDoc.uploadedBy}</p></div>
-                  <div><p className="text-xs text-[#94A3B8]">Upload Date</p><p className="text-[#0F172A]">{formatDate(currentDoc.uploadedAt)}</p></div>
-                  <div><p className="text-xs text-[#94A3B8]">Last Modified</p><p className="text-[#0F172A]">{formatDate(currentDoc.updatedAt)}</p></div>
-                  <div><p className="text-xs text-[#94A3B8]">Access</p><p className="text-[#0F172A] flex items-center gap-1">{currentDoc.shared ? <><Globe size={12} className="text-green-500" /> Shared</> : <><Lock size={12} className="text-[#94A3B8]" /> Private</>}</p></div>
-                </div>
-                {currentDoc.linkedEntity && (
-                  <div className="p-3 bg-[#F8FAFC] rounded-md"><p className="text-xs text-[#94A3B8]">Linked To</p>
-                    <p className="text-sm text-[#0891B2] font-medium">{currentDoc.linkedEntity.type}: {currentDoc.linkedEntity.name}</p></div>
-                )}
-                {currentDoc.tags.length > 0 && (
-                  <div><p className="text-xs text-[#94A3B8] mb-1">Tags</p><div className="flex flex-wrap gap-1">{currentDoc.tags.map(t => <Badge key={t} variant="secondary" className="text-xs rounded-md">#{t}</Badge>)}</div></div>
-                )}
-                <div className="flex items-center gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="rounded-md flex-1" onClick={() => handleDownload(currentDoc)}><Download size={14} className="mr-2" />Download</Button>
-                  <Button variant="outline" size="sm" className="rounded-md flex-1" onClick={() => { toggleShare(currentDoc.id); setCurrentDoc(p => p ? { ...p, shared: !p.shared } : null); }}>
-                    <Share2 size={14} className="mr-2" />{currentDoc.shared ? "Unshare" : "Share"}
-                  </Button>
-                  <Button variant="outline" size="sm" className="rounded-md" onClick={() => handleCopyLink(currentDoc)}><Link2 size={14} /></Button>
-                  <Button variant="outline" size="sm" className="rounded-md text-red-600 border-red-200 hover:bg-red-50" onClick={() => { setDeleteId(currentDoc.id); setIsDetailOpen(false); }}>
-                    <Trash2 size={14} />
-                  </Button>
-                </div>
-              </div>
-            </>); })()}
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader><DialogTitle>Upload Document</DialogTitle><DialogDescription>Upload into the existing CRM file storage and add business metadata.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <Input type="file" onChange={(event) => setUploadFileValue(event.target.files?.[0] || null)} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><Label>Category</Label><Select value={uploadForm.categoryId || "none"} onValueChange={(value) => setUploadForm((prev) => ({ ...prev, categoryId: value === "none" ? "" : value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No category</SelectItem>{categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}</SelectContent></Select></div>
+              <div><Label>Type</Label><Select value={uploadForm.documentType} onValueChange={(value) => setUploadForm((prev) => ({ ...prev, documentType: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="document">Document</SelectItem><SelectItem value="pdf">PDF</SelectItem><SelectItem value="spreadsheet">Spreadsheet</SelectItem><SelectItem value="image">Image</SelectItem><SelectItem value="video">Video</SelectItem><SelectItem value="archive">Archive</SelectItem></SelectContent></Select></div>
+              <div className="sm:col-span-2"><Label>Folder</Label><Select value={uploadForm.folderId || "root"} onValueChange={(value) => setUploadForm((prev) => ({ ...prev, folderId: value === "root" ? "" : value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="root">Root</SelectItem>{folders.map((folder) => <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>)}</SelectContent></Select></div>
+            </div>
+            <div><Label>Description</Label><Textarea value={uploadForm.description} onChange={(event) => setUploadForm((prev) => ({ ...prev, description: event.target.value }))} placeholder="Add context for the sales or operations team..." /></div>
+            {uploadProgress ? <div className="h-2 overflow-hidden rounded bg-[#E2E8F0]"><div className="h-full bg-[#0891B2]" style={{ width: `${uploadProgress}%` }} /></div> : null}
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setUploadOpen(false)}>Cancel</Button><Button disabled={!uploadFileValue || uploadMutation.isPending} onClick={() => uploadMutation.mutate()} className="bg-[#0891B2] text-white hover:bg-[#0E7490]">Upload</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent className="rounded-md"><AlertDialogHeader><AlertDialogTitle>Delete Document</AlertDialogTitle>
-          <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel className="rounded-md">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 rounded-md">Delete</AlertDialogAction></AlertDialogFooter>
+      <Dialog open={Boolean(previewDoc)} onOpenChange={(open) => !open && setPreviewDoc(null)}>
+        <DialogContent className="sm:max-w-5xl">
+          <DialogHeader><DialogTitle>{previewDoc?.name}</DialogTitle><DialogDescription>{previewDoc?.category?.name || "Document"} · {previewDoc ? formatFileSize(previewDoc.size) : ""}</DialogDescription></DialogHeader>
+          {previewDoc ? <iframe title={previewDoc.name} src={getDocumentPreviewUrl(previewDoc.id)} className="h-[70vh] w-full rounded-md border bg-white" /> : null}
+          <DialogFooter><Button variant="outline" onClick={() => previewDoc && openDownload(previewDoc)}><Download size={16} className="mr-2" />Download</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(editDoc)} onOpenChange={(open) => !open && setEditDoc(null)}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader><DialogTitle>Edit Metadata</DialogTitle><DialogDescription>Update the document name, category, and business settings.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Name</Label><Input value={editForm.name} onChange={(event) => setEditForm((prev) => ({ ...prev, name: event.target.value }))} /></div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><Label>Category</Label><Select value={editForm.categoryId || "none"} onValueChange={(value) => setEditForm((prev) => ({ ...prev, categoryId: value === "none" ? "" : value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No category</SelectItem>{categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}</SelectContent></Select></div>
+              <div><Label>Version</Label><Input type="number" min={1} value={editForm.version} onChange={(event) => setEditForm((prev) => ({ ...prev, version: Number(event.target.value || 1) }))} /></div>
+            </div>
+            <div><Label>Description</Label><Textarea value={editForm.description} onChange={(event) => setEditForm((prev) => ({ ...prev, description: event.target.value }))} /></div>
+            <div className="flex flex-wrap gap-4 text-sm"><label className="flex items-center gap-2"><Checkbox checked={editForm.visibleToClient} onCheckedChange={(checked) => setEditForm((prev) => ({ ...prev, visibleToClient: Boolean(checked) }))} />Visible to client</label><label className="flex items-center gap-2"><Checkbox checked={editForm.requiresSignature} onCheckedChange={(checked) => setEditForm((prev) => ({ ...prev, requiresSignature: Boolean(checked) }))} />Requires signature</label></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setEditDoc(null)}>Cancel</Button><Button onClick={() => editDoc && updateMutation.mutate({ id: editDoc.id, data: editForm })} className="bg-[#0891B2] text-white hover:bg-[#0E7490]">Save</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(linkDoc)} onOpenChange={(open) => !open && setLinkDoc(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Link Document</DialogTitle><DialogDescription>Attach this file to a CRM record by type and ID.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Entity Type</Label><Select value={linkForm.linkedEntityType} onValueChange={(value) => setLinkForm((prev) => ({ ...prev, linkedEntityType: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Client">Account / Organization</SelectItem><SelectItem value="Lead">Lead</SelectItem><SelectItem value="Project">Deal</SelectItem><SelectItem value="Quote">Proposal</SelectItem><SelectItem value="Invoice">Invoice</SelectItem><SelectItem value="Contract">Contract</SelectItem></SelectContent></Select></div>
+            <div><Label>Entity ID</Label><Input value={linkForm.linkedEntityId} onChange={(event) => setLinkForm((prev) => ({ ...prev, linkedEntityId: event.target.value }))} placeholder="Paste record ID" /></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setLinkDoc(null)}>Cancel</Button><Button disabled={!linkForm.linkedEntityId} onClick={() => linkDoc && updateMutation.mutate({ id: linkDoc.id, data: linkForm })} className="bg-[#0891B2] text-white hover:bg-[#0E7490]">Link</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={Boolean(deleteId)} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Delete document?</AlertDialogTitle><AlertDialogDescription>This moves the underlying file to trash.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => deleteId && deleteMutation.mutate(deleteId)}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
   );
-};
+}
 
-export default DocumentsPage;
+function DocumentActions({ doc, onPreview, onEdit, onDownload, onShare, onDelete, onStar, onLink }: {
+  doc: BusinessDocument;
+  onPreview: (doc: BusinessDocument) => void;
+  onEdit: (doc: BusinessDocument) => void;
+  onDownload: (doc: BusinessDocument) => void;
+  onShare: (doc: BusinessDocument) => void;
+  onDelete: (id: string) => void;
+  onStar: (doc: BusinessDocument) => void;
+  onLink: (doc: BusinessDocument) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical size={16} /></Button></DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem onClick={() => onPreview(doc)}><Eye size={14} className="mr-2" />Preview</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onDownload(doc)}><Download size={14} className="mr-2" />Download</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onEdit(doc)}><Pencil size={14} className="mr-2" />Edit metadata</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onStar(doc)}>{doc.isStarred ? <StarOff size={14} className="mr-2" /> : <Star size={14} className="mr-2" />}{doc.isStarred ? "Unstar" : "Star"}</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onShare(doc)}><Share2 size={14} className="mr-2" />{doc.isShared ? "Revoke share" : "Create share link"}</DropdownMenuItem>
+        {doc.isShared && doc.shareLink ? <DropdownMenuItem onClick={() => navigator.clipboard?.writeText(getDocumentShareUrl(doc.shareLink || ""))}><Link2 size={14} className="mr-2" />Copy share link</DropdownMenuItem> : null}
+        <DropdownMenuItem onClick={() => onLink(doc)}><Link2 size={14} className="mr-2" />Link to record</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="text-red-600" onClick={() => onDelete(doc.id)}><Trash2 size={14} className="mr-2" />Delete</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}

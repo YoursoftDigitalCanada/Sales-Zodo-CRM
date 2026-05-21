@@ -348,6 +348,13 @@ const navigationItems: NavigationItem[] = [
     featureId: "letterbox",
     permissionModule: "notifications",
   },
+  {
+    title: "Documents",
+    icon: FileStack,
+    path: "/documents",
+    featureId: "files",
+    permissionModule: "files",
+  },
 
   { title: "AI", isHeader: true },
   {

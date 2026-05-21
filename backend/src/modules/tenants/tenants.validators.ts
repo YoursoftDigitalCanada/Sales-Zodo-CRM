@@ -68,6 +68,9 @@ const analyticsSettingsSchema = z.object({
     metrics: z.array(z.enum(ONBOARDING_ANALYTICS_METRICS)).min(1),
 });
 
+const shortText = z.string().trim().max(160);
+const textList = z.array(shortText).max(12);
+
 export const tenantOnboardingSchema = z.object({
     body: z.object({
         modules: z.array(onboardingModuleSchema).min(1),
@@ -76,6 +79,31 @@ export const tenantOnboardingSchema = z.object({
             timezone: z.string().trim().min(1).max(100),
             dateFormat: z.enum(['MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD']),
         }),
+        companyProfile: z.object({
+            workspaceName: shortText.optional(),
+            website: shortText.optional(),
+            industry: shortText.optional(),
+            businessType: shortText.optional(),
+            companySize: shortText.optional(),
+            country: shortText.optional(),
+        }).optional(),
+        salesPreferences: z.object({
+            leadStages: textList.optional(),
+            dealStages: textList.optional(),
+            defaultPipeline: shortText.optional(),
+            taskCadence: shortText.optional(),
+        }).optional(),
+        financePreferences: z.object({
+            proposalPrefix: shortText.optional(),
+            invoicePrefix: shortText.optional(),
+            paymentTermsDays: z.coerce.number().int().min(0).max(365).optional(),
+            defaultBillingCycle: shortText.optional(),
+        }).optional(),
+        documentPreferences: z.object({
+            defaultFolders: textList.optional(),
+            requireFileCategories: z.boolean().optional(),
+            enableClientVisibleFiles: z.boolean().optional(),
+        }).optional(),
         teamInvites: z.array(onboardingTeamInviteSchema).default([]),
         projectSettings: projectSettingsSchema.optional(),
         aiSettings: aiSettingsSchema.optional(),

@@ -183,12 +183,20 @@ export class TenantsService {
             onboarding: {
                 modules: access.selectedModuleIds,
                 settings: data.settings,
+                ...(data.companyProfile ? { companyProfile: data.companyProfile } : {}),
+                ...(data.salesPreferences ? { salesPreferences: data.salesPreferences } : {}),
+                ...(data.financePreferences ? { financePreferences: data.financePreferences } : {}),
+                ...(data.documentPreferences ? { documentPreferences: data.documentPreferences } : {}),
                 teamInvites,
                 ...(projectSettings ? { projectSettings } : {}),
                 ...(aiSettings ? { aiSettings } : {}),
                 ...(analyticsSettings ? { analyticsSettings } : {}),
                 completedAt,
             },
+            ...(data.companyProfile ? { companyProfile: data.companyProfile } : {}),
+            ...(data.salesPreferences ? { salesPreferences: data.salesPreferences } : {}),
+            ...(data.financePreferences ? { financePreferences: data.financePreferences } : {}),
+            ...(data.documentPreferences ? { documentPreferences: data.documentPreferences } : {}),
             ...(projectSettings ? { projectSettings } : {}),
             ...(aiSettings ? { aiSettings } : {}),
             ...(analyticsSettings ? { analyticsSettings } : {}),
@@ -432,6 +440,18 @@ export class TenantsService {
                     timezone: tenant.tenantSettings?.timezone || 'UTC',
                     dateFormat: tenant.tenantSettings?.dateFormat || 'MM/DD/YYYY',
                 },
+                ...(asRecord(onboarding.companyProfile).workspaceName || asRecord(settings.companyProfile).workspaceName
+                    ? { companyProfile: (asRecord(onboarding.companyProfile).workspaceName ? asRecord(onboarding.companyProfile) : asRecord(settings.companyProfile)) as any }
+                    : {}),
+                ...(asRecord(onboarding.salesPreferences).defaultPipeline || asRecord(settings.salesPreferences).defaultPipeline
+                    ? { salesPreferences: (asRecord(onboarding.salesPreferences).defaultPipeline ? asRecord(onboarding.salesPreferences) : asRecord(settings.salesPreferences)) as any }
+                    : {}),
+                ...(asRecord(onboarding.financePreferences).invoicePrefix || asRecord(settings.financePreferences).invoicePrefix
+                    ? { financePreferences: (asRecord(onboarding.financePreferences).invoicePrefix ? asRecord(onboarding.financePreferences) : asRecord(settings.financePreferences)) as any }
+                    : {}),
+                ...(asRecord(onboarding.documentPreferences).defaultFolders || asRecord(settings.documentPreferences).defaultFolders
+                    ? { documentPreferences: (asRecord(onboarding.documentPreferences).defaultFolders ? asRecord(onboarding.documentPreferences) : asRecord(settings.documentPreferences)) as any }
+                    : {}),
                 teamInvites,
                 ...(plan !== 'basic'
                     ? {

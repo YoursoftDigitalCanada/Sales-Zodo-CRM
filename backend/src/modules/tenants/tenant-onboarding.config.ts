@@ -19,6 +19,9 @@ export type OnboardingTaskStatus = (typeof ONBOARDING_TASK_STATUSES)[number];
 
 export const ONBOARDING_AI_BUSINESS_TYPES = [
     'roofing',
+    'saas',
+    'b2b_sales',
+    'professional_services',
     'construction',
     'general_contractor',
     'other',

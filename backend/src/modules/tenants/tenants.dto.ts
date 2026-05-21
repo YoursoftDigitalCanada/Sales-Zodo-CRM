@@ -72,9 +72,42 @@ export interface TenantOnboardingAnalyticsSettingsDto {
     metrics: OnboardingAnalyticsMetric[];
 }
 
+export interface TenantOnboardingCompanyProfileDto {
+    workspaceName?: string;
+    website?: string;
+    industry?: string;
+    businessType?: string;
+    companySize?: string;
+    country?: string;
+}
+
+export interface TenantOnboardingSalesPreferencesDto {
+    leadStages?: string[];
+    dealStages?: string[];
+    defaultPipeline?: string;
+    taskCadence?: string;
+}
+
+export interface TenantOnboardingFinancePreferencesDto {
+    proposalPrefix?: string;
+    invoicePrefix?: string;
+    paymentTermsDays?: number;
+    defaultBillingCycle?: string;
+}
+
+export interface TenantOnboardingDocumentPreferencesDto {
+    defaultFolders?: string[];
+    requireFileCategories?: boolean;
+    enableClientVisibleFiles?: boolean;
+}
+
 export interface TenantOnboardingDto {
     modules: OnboardingModuleId[];
     settings: TenantOnboardingSettingsDto;
+    companyProfile?: TenantOnboardingCompanyProfileDto;
+    salesPreferences?: TenantOnboardingSalesPreferencesDto;
+    financePreferences?: TenantOnboardingFinancePreferencesDto;
+    documentPreferences?: TenantOnboardingDocumentPreferencesDto;
     teamInvites: TenantOnboardingTeamInviteDto[];
     projectSettings?: TenantOnboardingProjectSettingsDto;
     aiSettings?: TenantOnboardingAiSettingsDto;

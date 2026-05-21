@@ -154,6 +154,31 @@ export interface OnboardingPayload {
     timezone: string;
     dateFormat: (typeof DATE_FORMAT_OPTIONS)[number]["value"];
   };
+  companyProfile?: {
+    workspaceName?: string;
+    website?: string;
+    industry?: string;
+    businessType?: string;
+    companySize?: string;
+    country?: string;
+  };
+  salesPreferences?: {
+    leadStages?: string[];
+    dealStages?: string[];
+    defaultPipeline?: string;
+    taskCadence?: string;
+  };
+  financePreferences?: {
+    proposalPrefix?: string;
+    invoicePrefix?: string;
+    paymentTermsDays?: number;
+    defaultBillingCycle?: string;
+  };
+  documentPreferences?: {
+    defaultFolders?: string[];
+    requireFileCategories?: boolean;
+    enableClientVisibleFiles?: boolean;
+  };
   teamInvites: TeamInviteInput[];
   projectSettings?: {
     defaultProjectStatus: ProjectStatusValue;
@@ -201,6 +226,31 @@ export function getDefaultOnboardingPayload(plan: PlanKey): OnboardingPayload {
       dateFormat: "MM/DD/YYYY",
     },
     teamInvites: [{ email: "", role: "manager" }],
+    companyProfile: {
+      workspaceName: "",
+      website: "",
+      industry: "roofing_software_sales",
+      businessType: "b2b_saas",
+      companySize: "1-10",
+      country: "Canada",
+    },
+    salesPreferences: {
+      leadStages: ["New", "Contacted", "Qualified"],
+      dealStages: ["Qualification", "Demo Scheduled", "Proposal Sent", "Negotiation", "Won", "Lost"],
+      defaultPipeline: "Roofer CRM Sales",
+      taskCadence: "daily",
+    },
+    financePreferences: {
+      proposalPrefix: "PROP-",
+      invoicePrefix: "INV-",
+      paymentTermsDays: 14,
+      defaultBillingCycle: "monthly",
+    },
+    documentPreferences: {
+      defaultFolders: ["Proposals", "Contracts", "Invoices", "Client Files"],
+      requireFileCategories: true,
+      enableClientVisibleFiles: false,
+    },
     ...(plan !== "basic"
       ? {
           projectSettings: {

@@ -53,6 +53,12 @@ const typeStyles: Record<string, string> = {
   other: "bg-slate-100 text-slate-600",
 };
 
+function getFolderScope(folderId: string) {
+  if (folderId === "all") return "all";
+  if (folderId === "root") return "root";
+  return folderId;
+}
+
 function formatFileSize(bytes = 0) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -128,6 +134,21 @@ export default function DocumentsPage() {
   const documents = documentsQuery.data?.data || [];
   const categories = categoriesQuery.data || [];
   const folders = foldersQuery.data || [];
+  const folderScope = getFolderScope(folderId);
+  const currentFolder = folderScope !== "all" && folderScope !== "root" ? folders.find((folder) => folder.id === folderScope) : null;
+  const foldersVisibleWithFilters = categoryId === "all" && documentType === "all" && statusFilter === "all";
+  const visibleFolders = useMemo(() => {
+    if (!foldersVisibleWithFilters) return [];
+    const normalizedSearch = search.trim().toLowerCase();
+    return folders.filter((folder) => {
+      const matchesSearch = !normalizedSearch || folder.name.toLowerCase().includes(normalizedSearch);
+      if (!matchesSearch) return false;
+      if (folderScope === "all") return true;
+      if (folderScope === "root") return !folder.parentId;
+      return folder.parentId === folderScope;
+    });
+  }, [folderScope, folders, foldersVisibleWithFilters, search]);
+  const hasItems = documents.length > 0 || visibleFolders.length > 0;
 
   const stats = useMemo(() => ({
     count: documents.length,
@@ -281,13 +302,26 @@ export default function DocumentsPage() {
           ) : null}
         </section>
 
-        {documentsQuery.isLoading ? (
+        {currentFolder ? (
+          <section className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[#CFFAFE] bg-[#ECFEFF] px-4 py-3">
+            <div className="flex items-center gap-3 text-[#0E7490]">
+              <FolderOpen size={18} />
+              <div>
+                <p className="text-sm font-semibold">{currentFolder.name}</p>
+                <p className="text-xs">Showing documents and subfolders inside this folder.</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setFolderId(currentFolder.parentId || "root")}>Back to parent</Button>
+          </section>
+        ) : null}
+
+        {documentsQuery.isLoading || foldersQuery.isLoading ? (
           <div className="rounded-md border bg-white p-12 text-center text-[#64748B]">Loading documents...</div>
-        ) : !documents.length ? (
+        ) : !hasItems ? (
           <div className="rounded-md border border-dashed bg-white p-12 text-center">
             <FolderOpen size={42} className="mx-auto text-[#94A3B8]" />
-            <h2 className="mt-4 text-lg font-semibold text-[#0F172A]">No documents found</h2>
-            <p className="mt-1 text-sm text-[#64748B]">Upload a contract, proposal, invoice, report, or client file.</p>
+            <h2 className="mt-4 text-lg font-semibold text-[#0F172A]">{currentFolder ? "This folder is empty" : "No documents found"}</h2>
+            <p className="mt-1 text-sm text-[#64748B]">{currentFolder ? "Upload a document here or create a subfolder." : "Upload a contract, proposal, invoice, report, or client file."}</p>
             <div className="mt-4 flex justify-center gap-2">
               <Button variant="outline" onClick={() => setFolderOpen(true)}><FolderPlus size={16} className="mr-2" />Create Folder</Button>
               <Button className="bg-[#0891B2] text-white hover:bg-[#0E7490]" onClick={() => setUploadOpen(true)}><Upload size={16} className="mr-2" />Upload Document</Button>
@@ -308,6 +342,24 @@ export default function DocumentsPage() {
                 </tr>
               </thead>
               <tbody>
+                {visibleFolders.map((folder) => (
+                  <tr key={`folder-${folder.id}`} className="border-t hover:bg-[#F8FAFC]">
+                    <td className="px-4 py-3" />
+                    <td className="px-4 py-3">
+                      <button className="flex max-w-[440px] items-center gap-3 text-left" onClick={() => setFolderId(folder.id)}>
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#ECFEFF] text-[#0891B2]"><FolderOpen size={18} /></span>
+                        <span className="min-w-0"><span className="block truncate font-medium text-[#0F172A]">{folder.name}</span><span className="text-xs text-[#64748B]">{folder.filesCount || 0} files · {folder.childrenCount || 0} folders</span></span>
+                      </button>
+                    </td>
+                    <td className="px-4 py-3"><Badge variant="secondary">Folder</Badge></td>
+                    <td className="px-4 py-3 text-sm text-[#475569]">{folder.parent?.name || "Root"}</td>
+                    <td className="px-4 py-3 text-sm text-[#475569]">-</td>
+                    <td className="px-4 py-3 text-sm text-[#475569]">{formatDate(folder.updatedAt)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setFolderId(folder.id)}>Open</Button>
+                    </td>
+                  </tr>
+                ))}
                 {documents.map((doc) => {
                   const Icon = IconFor(doc);
                   return (
@@ -334,6 +386,14 @@ export default function DocumentsPage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {visibleFolders.map((folder) => (
+              <button key={`folder-${folder.id}`} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 text-left transition hover:border-[#22D3EE]/40 hover:shadow-md" onClick={() => setFolderId(folder.id)}>
+                <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#ECFEFF] text-[#0891B2]"><FolderOpen size={22} /></div>
+                <p className="mt-4 truncate font-medium text-[#0F172A]">{folder.name}</p>
+                <p className="mt-1 text-xs text-[#64748B]">{folder.filesCount || 0} files · {folder.childrenCount || 0} folders</p>
+                <div className="mt-3"><Badge variant="secondary">Folder</Badge></div>
+              </button>
+            ))}
             {documents.map((doc) => {
               const Icon = IconFor(doc);
               return (

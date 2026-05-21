@@ -73,7 +73,7 @@ import {
   BadgeDollarSign,
   type LucideIcon,
 } from "lucide-react";
-import { AUTH_ACCESS_UPDATED_EVENT, AUTH_STORAGE_KEYS } from "@/features/auth/lib/auth-storage";
+import { AUTH_ACCESS_UPDATED_EVENT, AUTH_STORAGE_KEYS, getStoredTenant } from "@/features/auth/lib/auth-storage";
 
 // ============================================
 // TYPES
@@ -634,7 +634,8 @@ export function Sidebar({
   const [userPermissions, setUserPermissions] = useState<string[] | null>(() => readStoredPermissions());
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(() => readStoredOwnerOrAdmin());
   const [runtimeNavigationMeta, setRuntimeNavigationMeta] = useState<SidebarRuntimeMeta>({});
-  const brandName = branding?.companyName?.trim() || "ZODO CRM";
+  const storedTenantName = getStoredTenant()?.name?.trim();
+  const brandName = storedTenantName || branding?.companyName?.trim() || "Sales CRM";
   const brandLogoUrl = branding?.logoUrl || null;
   const brandInitials = getBrandInitials(brandName);
 

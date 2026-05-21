@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { PublicV2Shell } from "@/components/public-v2/PublicV2Shell";
 import { BrandLogo } from "@/components/public-v2/BrandLogo";
 import { login, setAuthSession } from "@/features/auth";
+import { getStoredTenant } from "@/features/auth/lib/auth-storage";
 import {
   APP_FEATURE_IDS,
   getFeatureAccessFromTenant,
@@ -28,6 +29,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const rememberedCompanyName = getStoredTenant()?.name?.trim();
 
   const handleSignIn = async () => {
     if (!email.trim() || !password) {
@@ -94,7 +96,19 @@ export default function LoginPage() {
         >
           <div className="mb-8 text-center">
             <Link className="inline-flex justify-center" to="/">
-              <BrandLogo className="justify-center" size="lg" />
+              {rememberedCompanyName ? (
+                <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-sm">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-sm font-bold uppercase text-accent">
+                    {rememberedCompanyName.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 text-left">
+                    <p className="max-w-[260px] truncate text-sm font-semibold text-foreground">{rememberedCompanyName}</p>
+                    <p className="text-xs text-muted-foreground">CRM</p>
+                  </div>
+                </div>
+              ) : (
+                <BrandLogo className="justify-center" size="lg" />
+              )}
             </Link>
             <h1 className="mt-6 text-2xl font-bold text-foreground">Welcome back</h1>
             <p className="mt-2 text-sm text-muted-foreground">Sign in to your Zodo account</p>

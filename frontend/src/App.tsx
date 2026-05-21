@@ -13,7 +13,7 @@ import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate } from
 import { ThemeProvider, useTheme } from "next-themes";
 import { CopilotContextProvider } from "@/contexts/CopilotContext";
 import { Sidebar, SidebarSuppressionContext } from "@/components/Sidebar";
-import { getAccessToken, updateStoredAccessContext } from "@/features/auth/lib/auth-storage";
+import { getAccessToken, getStoredTenant, updateStoredAccessContext } from "@/features/auth/lib/auth-storage";
 import { getCurrentAccessContext } from "@/features/auth/services/access-context-service";
 import { WorkspaceBrandingProvider, useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
 import { getGeneralSettings } from "@/features/settings/services/settings-service";
@@ -305,7 +305,8 @@ const AppRoutes = () => {
     () => !isPublicPath(location.pathname),
     [location.pathname],
   );
-  const companyName = branding?.companyName?.trim() || "ZODO CRM";
+  const storedTenantName = getStoredTenant()?.name?.trim();
+  const companyName = storedTenantName || branding?.companyName?.trim() || "Sales CRM";
   const companyLogoUrl = branding?.logoUrl || null;
 
   useEffect(() => {

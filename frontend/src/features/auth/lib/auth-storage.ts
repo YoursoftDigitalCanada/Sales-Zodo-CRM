@@ -33,6 +33,14 @@ interface StoredAccessContext {
   permissions?: unknown;
 }
 
+export interface StoredTenant {
+  id?: string;
+  name?: string;
+  slug?: string;
+  logo?: string | null;
+  [key: string]: unknown;
+}
+
 export const AUTH_STORAGE_KEYS = {
   accessToken: "accessToken",
   refreshToken: "refreshToken",
@@ -118,6 +126,19 @@ export function getStoredEmployee(): AuthEmployee | null {
 
   try {
     return JSON.parse(rawEmployee) as AuthEmployee;
+  } catch {
+    return null;
+  }
+}
+
+export function getStoredTenant(): StoredTenant | null {
+  const rawTenant = localStorage.getItem(AUTH_STORAGE_KEYS.tenant);
+  if (!rawTenant) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawTenant) as StoredTenant;
   } catch {
     return null;
   }

@@ -20,6 +20,7 @@ router.delete('/categories/:id', requirePermission(PERMISSIONS.FILES_DELETE), va
 
 router.get('/', requirePermission(PERMISSIONS.FILES_VIEW), documentsController.list.bind(documentsController));
 router.post('/upload', requirePermission(PERMISSIONS.FILES_CREATE), uploadSingle, documentsController.upload.bind(documentsController));
+router.post('/folders', requirePermission(PERMISSIONS.FILES_CREATE), documentsController.createFolder.bind(documentsController));
 router.get('/:id', requirePermission(PERMISSIONS.FILES_VIEW), validate(idSchema), documentsController.get.bind(documentsController));
 router.put('/:id', requirePermission(PERMISSIONS.FILES_UPDATE), validate(idSchema), documentsController.update.bind(documentsController));
 router.delete('/:id', requirePermission(PERMISSIONS.FILES_DELETE), validate(idSchema), documentsController.delete.bind(documentsController));

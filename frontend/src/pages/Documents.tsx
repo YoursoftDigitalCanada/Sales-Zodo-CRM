@@ -17,8 +17,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { createFolder, getFolders, type FolderResponse } from "@/features/files/services/files-service";
+import { getFolders, type FolderResponse } from "@/features/files/services/files-service";
 import {
+  createDocumentFolder,
   deleteDocument,
   getDocumentCategories,
   getDocumentDownloadUrl,
@@ -156,7 +157,7 @@ export default function DocumentsPage() {
   });
 
   const createFolderMutation = useMutation({
-    mutationFn: () => createFolder(folderForm.name, folderForm.parentId || null),
+    mutationFn: () => createDocumentFolder({ name: folderForm.name, parentId: folderForm.parentId || null }),
     onSuccess: (folder) => {
       toast({ title: "Folder created", description: folder.name });
       setFolderOpen(false);

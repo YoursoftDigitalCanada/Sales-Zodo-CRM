@@ -109,6 +109,11 @@ export async function createDocumentCategory(data: { name: string; color?: strin
   return extract<DocumentCategory>(res);
 }
 
+export async function createDocumentFolder(data: { name: string; parentId?: string | null }) {
+  const res = await api.post("/documents/folders", data);
+  return extract<{ id: string; name: string; parentId?: string | null }>(res);
+}
+
 export function getDocumentPreviewUrl(id: string): string {
   return `${api.defaults.baseURL}/documents/${id}/preview`;
 }

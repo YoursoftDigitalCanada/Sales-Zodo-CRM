@@ -22,6 +22,13 @@ export class DocumentsController {
     } catch (error) { next(error); }
   }
 
+  async createFolder(req: Request, res: Response, next: NextFunction) {
+    try {
+      const folder = await documentsService.createFolder(req.context.tenantId, sanitizeBody(req.body));
+      sendCreated(res, folder, 'Folder created');
+    } catch (error) { next(error); }
+  }
+
   async get(req: Request, res: Response, next: NextFunction) {
     try { sendSuccess(res, await documentsService.get(req.params.id, req.context.tenantId)); } catch (error) { next(error); }
   }

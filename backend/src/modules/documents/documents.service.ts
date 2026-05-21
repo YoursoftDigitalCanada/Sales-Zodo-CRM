@@ -3,6 +3,7 @@ import { prisma } from '../../config/database';
 import { BadRequestError, NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { filesService } from '../files/files.service';
+import { foldersService } from '../folders/folders.service';
 
 const db = prisma as any;
 
@@ -156,6 +157,15 @@ export class DocumentsService {
     });
     await this.upsertMetadata(saved.id, tenantId, body);
     return this.get(saved.id, tenantId);
+  }
+
+  async createFolder(tenantId: string, body: Record<string, unknown>) {
+    const name = cleanString(body.name, 120);
+    if (!name) throw new BadRequestError('Folder name is required', ErrorCodes.VALIDATION_FAILED);
+    return foldersService.create(tenantId, {
+      name,
+      parentId: cleanString(body.parentId, 80),
+    });
   }
 
   async get(id: string, tenantId: string) {

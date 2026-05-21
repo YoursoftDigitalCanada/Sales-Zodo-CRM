@@ -29,6 +29,12 @@ export class DocumentsController {
     } catch (error) { next(error); }
   }
 
+  async listFolders(req: Request, res: Response, next: NextFunction) {
+    try {
+      sendSuccess(res, await documentsService.listFolders(req.context.tenantId, req.query as Record<string, unknown>));
+    } catch (error) { next(error); }
+  }
+
   async get(req: Request, res: Response, next: NextFunction) {
     try { sendSuccess(res, await documentsService.get(req.params.id, req.context.tenantId)); } catch (error) { next(error); }
   }

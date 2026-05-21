@@ -114,6 +114,12 @@ export async function createDocumentFolder(data: { name: string; parentId?: stri
   return extract<{ id: string; name: string; parentId?: string | null }>(res);
 }
 
+export async function getDocumentFolders(params?: Record<string, unknown>) {
+  const res = await api.get("/documents/folders", { params });
+  const payload = extract<any>(res);
+  return Array.isArray(payload) ? payload : payload?.data || [];
+}
+
 export function getDocumentPreviewUrl(id: string): string {
   return `${api.defaults.baseURL}/documents/${id}/preview`;
 }

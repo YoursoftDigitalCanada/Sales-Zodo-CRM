@@ -17,12 +17,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { getFolders, type FolderResponse } from "@/features/files/services/files-service";
+import type { FolderResponse } from "@/features/files/services/files-service";
 import {
   createDocumentFolder,
   deleteDocument,
   getDocumentCategories,
   getDocumentDownloadUrl,
+  getDocumentFolders,
   getDocumentShareUrl,
   getDocumentPreviewUrl,
   getDocuments,
@@ -129,7 +130,7 @@ export default function DocumentsPage() {
 
   const documentsQuery = useQuery({ queryKey: ["documents", filters], queryFn: () => getDocuments(filters) });
   const categoriesQuery = useQuery({ queryKey: ["documents", "categories"], queryFn: getDocumentCategories });
-  const foldersQuery = useQuery({ queryKey: ["folders", "documents"], queryFn: () => getFolders({ limit: 100 }) });
+  const foldersQuery = useQuery({ queryKey: ["documents", "folders"], queryFn: () => getDocumentFolders({ limit: 100 }) });
 
   const documents = documentsQuery.data?.data || [];
   const categories = categoriesQuery.data || [];
@@ -183,7 +184,7 @@ export default function DocumentsPage() {
       toast({ title: "Folder created", description: folder.name });
       setFolderOpen(false);
       setFolderForm({ name: "", parentId: "" });
-      void queryClient.invalidateQueries({ queryKey: ["folders"] });
+      void queryClient.invalidateQueries({ queryKey: ["documents", "folders"] });
       setFolderId(folder.id);
     },
     onError: (error: any) => toast({ title: "Folder creation failed", description: error?.message || "Try again.", variant: "destructive" }),

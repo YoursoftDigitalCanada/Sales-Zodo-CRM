@@ -168,6 +168,16 @@ export class DocumentsService {
     });
   }
 
+  async listFolders(tenantId: string, query: Record<string, unknown>) {
+    const result = await foldersService.getMany(tenantId, {
+      page: Number(query.page) || 1,
+      limit: Number(query.limit) || 100,
+      parentId: cleanString(query.parentId, 80) || undefined,
+      search: cleanString(query.search, 120) || undefined,
+    });
+    return result;
+  }
+
   async get(id: string, tenantId: string) {
     const file = await db.file.findFirst({
       where: { id, tenantId, deletedAt: null },

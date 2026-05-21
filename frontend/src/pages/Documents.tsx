@@ -144,7 +144,7 @@ export default function DocumentsPage() {
     return folders.filter((folder) => {
       const matchesSearch = !normalizedSearch || folder.name.toLowerCase().includes(normalizedSearch);
       if (!matchesSearch) return false;
-      if (folderScope === "all") return true;
+      if (folderScope === "all") return !folder.parentId;
       if (folderScope === "root") return !folder.parentId;
       return folder.parentId === folderScope;
     });

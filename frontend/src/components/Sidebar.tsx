@@ -312,6 +312,13 @@ const navigationItems: NavigationItem[] = [
     permissionModule: "invoices",
   },
   {
+    title: "Bookkeeping",
+    icon: Landmark,
+    path: "/bookkeeping",
+    featureId: "finance",
+    permissionModule: "bookkeeping",
+  },
+  {
     title: "Subscriptions",
     icon: CreditCard,
     path: "/subscriptions",

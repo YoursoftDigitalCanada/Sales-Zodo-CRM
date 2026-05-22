@@ -120,6 +120,15 @@ export const PERMISSIONS = {
   EXPENSES_APPROVE: 'expenses.approve',
   EXPENSES_REIMBURSE: 'expenses.reimburse',
 
+  // Bookkeeping
+  BOOKKEEPING_VIEW: 'bookkeeping.view',
+  BOOKKEEPING_CREATE: 'bookkeeping.create',
+  BOOKKEEPING_UPDATE: 'bookkeeping.update',
+  BOOKKEEPING_DELETE: 'bookkeeping.delete',
+  BOOKKEEPING_RECONCILE: 'bookkeeping.reconcile',
+  BOOKKEEPING_REPORTS: 'bookkeeping.reports',
+  BOOKKEEPING_EXPORT: 'bookkeeping.export',
+
   // Bookings
   BOOKINGS_VIEW: 'bookings.view',
   BOOKINGS_CREATE: 'bookings.create',
@@ -354,6 +363,15 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { code: PERMISSIONS.EXPENSES_DELETE, name: 'Delete Expenses', description: 'Remove expenses', module: 'expenses', action: 'delete' },
   { code: PERMISSIONS.EXPENSES_APPROVE, name: 'Approve Expenses', description: 'Approve expense reports', module: 'expenses', action: 'approve' },
   { code: PERMISSIONS.EXPENSES_REIMBURSE, name: 'Reimburse Expenses', description: 'Mark expenses as reimbursed', module: 'expenses', action: 'reimburse' },
+
+  // Bookkeeping
+  { code: PERMISSIONS.BOOKKEEPING_VIEW, name: 'View Bookkeeping', description: 'View bookkeeping dashboard, ledger, and records', module: 'bookkeeping', action: 'view' },
+  { code: PERMISSIONS.BOOKKEEPING_CREATE, name: 'Create Bookkeeping Records', description: 'Create accounts, categories, vendors, transactions, and journal entries', module: 'bookkeeping', action: 'create' },
+  { code: PERMISSIONS.BOOKKEEPING_UPDATE, name: 'Update Bookkeeping Records', description: 'Update bookkeeping records', module: 'bookkeeping', action: 'update' },
+  { code: PERMISSIONS.BOOKKEEPING_DELETE, name: 'Delete Bookkeeping Records', description: 'Delete or void bookkeeping records', module: 'bookkeeping', action: 'delete' },
+  { code: PERMISSIONS.BOOKKEEPING_RECONCILE, name: 'Reconcile Bookkeeping', description: 'Reconcile bank and cash accounts', module: 'bookkeeping', action: 'reconcile' },
+  { code: PERMISSIONS.BOOKKEEPING_REPORTS, name: 'View Bookkeeping Reports', description: 'View profit and loss, cash flow, tax, and balance sheet reports', module: 'bookkeeping', action: 'reports' },
+  { code: PERMISSIONS.BOOKKEEPING_EXPORT, name: 'Export Bookkeeping Reports', description: 'Export bookkeeping reports and transactions', module: 'bookkeeping', action: 'export' },
 
   // Bookings
   { code: PERMISSIONS.BOOKINGS_VIEW, name: 'View Bookings', description: 'View bookings', module: 'bookings', action: 'view' },

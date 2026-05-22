@@ -11,6 +11,7 @@ import { logger } from '../../common/utils/logger';
 import { prisma } from '../../config/database';
 import { config } from '../../config';
 import { communicationLogService } from '../communication-logs/communication-log.service';
+import { bookkeepingService } from '../bookkeeping/bookkeeping.service';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -973,8 +974,13 @@ export class InvoicesService {
 
         const invoice = await invoicesRepository.recordPayment(id, tenantId, data);
         const dto = toInvoiceResponseDto(invoice);
+        const latestPayment = Array.isArray((invoice as any).payments) ? (invoice as any).payments[0] : null;
         const clientId = (existing as any).clientId || (existing as any).client?.id;
         const newStatus = amount >= amountDue ? 'PAID' : 'PARTIALLY_PAID';
+
+        if (latestPayment?.id) {
+            bookkeepingService.syncInvoicePayment(tenantId, latestPayment.id).catch(() => { });
+        }
 
         if (clientId) {
             await clientLifecycleService.progressTo(clientId, tenantId, 'ACTIVE');

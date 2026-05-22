@@ -1,0 +1,174 @@
+import api from "@/lib/axios";
+
+export type BookkeepingRecord = Record<string, any>;
+
+export interface BookkeepingList<T = BookkeepingRecord> {
+  data: T[];
+  meta?: { page: number; limit: number; total: number; totalPages: number };
+}
+
+function unwrap<T>(response: any): T {
+  return response.data?.data ?? response.data ?? response;
+}
+
+function unwrapList<T = BookkeepingRecord>(response: any): BookkeepingList<T> {
+  return { data: response.data?.data || [], meta: response.data?.meta };
+}
+
+export async function setupBookkeeping() {
+  return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/setup")));
+}
+
+export async function syncBookkeeping() {
+  return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/sync")));
+}
+
+export async function getBookkeepingDashboard() {
+  return unwrap<BookkeepingRecord>((await api.get("/bookkeeping/dashboard")));
+}
+
+export async function getAccounts(params?: Record<string, unknown>) {
+  return unwrapList((await api.get("/bookkeeping/accounts", { params })));
+}
+
+export async function createAccount(data: BookkeepingRecord) {
+  return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/accounts", data)));
+}
+
+export async function updateAccount(id: string, data: BookkeepingRecord) {
+  return unwrap<BookkeepingRecord>((await api.put(`/bookkeeping/accounts/${id}`, data)));
+}
+
+export async function deleteAccount(id: string) {
+  await api.delete(`/bookkeeping/accounts/${id}`);
+}
+
+export async function getCategories(params?: Record<string, unknown>) {
+  return unwrapList((await api.get("/bookkeeping/categories", { params })));
+}
+
+export async function createCategory(data: BookkeepingRecord) {
+  return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/categories", data)));
+}
+
+export async function updateCategory(id: string, data: BookkeepingRecord) {
+  return unwrap<BookkeepingRecord>((await api.put(`/bookkeeping/categories/${id}`, data)));
+}
+
+export async function deleteCategory(id: string) {
+  await api.delete(`/bookkeeping/categories/${id}`);
+}
+
+export async function getVendors(params?: Record<string, unknown>) {
+  return unwrapList((await api.get("/bookkeeping/vendors", { params })));
+}
+
+export async function createVendor(data: BookkeepingRecord) {
+  return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/vendors", data)));
+}
+
+export async function updateVendor(id: string, data: BookkeepingRecord) {
+  return unwrap<BookkeepingRecord>((await api.put(`/bookkeeping/vendors/${id}`, data)));
+}
+
+export async function deleteVendor(id: string) {
+  await api.delete(`/bookkeeping/vendors/${id}`);
+}
+
+export async function getTransactions(params?: Record<string, unknown>) {
+  return unwrapList((await api.get("/bookkeeping/transactions", { params })));
+}
+
+export async function createTransaction(data: BookkeepingRecord) {
+  return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/transactions", data)));
+}
+
+export async function voidTransaction(id: string) {
+  return unwrap<BookkeepingRecord>((await api.post(`/bookkeeping/transactions/${id}/void`)));
+}
+
+export async function attachReceipt(id: string, fileId: string) {
+  return unwrap<BookkeepingRecord>((await api.post(`/bookkeeping/transactions/${id}/attach-receipt`, { fileId })));
+}
+
+export async function reconcileTransaction(id: string) {
+  return unwrap<BookkeepingRecord>((await api.post(`/bookkeeping/transactions/${id}/reconcile`)));
+}
+
+export async function unreconcileTransaction(id: string) {
+  return unwrap<BookkeepingRecord>((await api.post(`/bookkeeping/transactions/${id}/unreconcile`)));
+}
+
+export async function getTransfers(params?: Record<string, unknown>) {
+  return unwrapList((await api.get("/bookkeeping/transfers", { params })));
+}
+
+export async function createTransfer(data: BookkeepingRecord) {
+  return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/transfers", data)));
+}
+
+export async function getJournalEntries(params?: Record<string, unknown>) {
+  return unwrapList((await api.get("/bookkeeping/journal-entries", { params })));
+}
+
+export async function createJournalEntry(data: BookkeepingRecord) {
+  return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/journal-entries", data)));
+}
+
+export async function postJournalEntry(id: string) {
+  return unwrap<BookkeepingRecord>((await api.post(`/bookkeeping/journal-entries/${id}/post`)));
+}
+
+export async function voidJournalEntry(id: string) {
+  return unwrap<BookkeepingRecord>((await api.post(`/bookkeeping/journal-entries/${id}/void`)));
+}
+
+export async function getReconciliations(params?: Record<string, unknown>) {
+  return unwrapList((await api.get("/bookkeeping/reconciliations", { params })));
+}
+
+export async function createReconciliation(data: BookkeepingRecord) {
+  return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/reconciliations", data)));
+}
+
+export async function completeReconciliation(id: string) {
+  return unwrap<BookkeepingRecord>((await api.post(`/bookkeeping/reconciliations/${id}/complete`)));
+}
+
+export async function getRecurringRules(params?: Record<string, unknown>) {
+  return unwrapList((await api.get("/bookkeeping/recurring-rules", { params })));
+}
+
+export async function createRecurringRule(data: BookkeepingRecord) {
+  return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/recurring-rules", data)));
+}
+
+export async function runDueRecurringRules() {
+  return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/recurring-rules/run-due")));
+}
+
+export async function getProfitLoss(params?: Record<string, unknown>) {
+  return unwrap<BookkeepingRecord>((await api.get("/bookkeeping/reports/profit-loss", { params })));
+}
+
+export async function getCashFlow(params?: Record<string, unknown>) {
+  return unwrap<BookkeepingRecord>((await api.get("/bookkeeping/reports/cash-flow", { params })));
+}
+
+export async function getTaxSummary(params?: Record<string, unknown>) {
+  return unwrap<BookkeepingRecord>((await api.get("/bookkeeping/reports/tax-summary", { params })));
+}
+
+export async function getBalanceSheet(params?: Record<string, unknown>) {
+  return unwrap<BookkeepingRecord>((await api.get("/bookkeeping/reports/balance-sheet", { params })));
+}
+
+export function exportUrl(path: "transactions-export" | "profit-loss-export", params?: Record<string, string>) {
+  const search = new URLSearchParams(params || {}).toString();
+  return `/bookkeeping/reports/${path}${search ? `?${search}` : ""}`;
+}
+
+export async function downloadBookkeepingCsv(path: "transactions-export" | "profit-loss-export", params?: Record<string, unknown>) {
+  const response = await api.get(`/bookkeeping/reports/${path}`, { params, responseType: "blob" });
+  return response.data as Blob;
+}

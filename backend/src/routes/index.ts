@@ -38,8 +38,9 @@ import invoicesRoutes from '../modules/invoices/invoices.routes';
 import billingRoutes from '../modules/billing/billing.routes';
 import quotesRoutes from '../modules/quotes/quotes.routes';
 import quotesPublicRoutes from '../modules/quotes/quotes.public-routes';
+import expensesRoutes from '../modules/expenses/expenses.routes';
+import bookkeepingRoutes from '../modules/bookkeeping/bookkeeping.routes';
 // DRAFT — re-enable next year
-// import expensesRoutes from '../modules/expenses/expenses.routes';
 // import bookingsRoutes from '../modules/bookings/bookings.routes';
 import servicesRoutes from '../modules/services/services.routes';
 import contractsRoutes from '../modules/contracts/contracts.routes';
@@ -183,8 +184,9 @@ export function registerRoutes(app: Application): void {
   protectedRouter.use('/invoices', invoicesRoutes);
   protectedRouter.use('/billing', billingRoutes);
   protectedRouter.use('/quotes', quotesRoutes);
+  protectedRouter.use('/expenses', expensesRoutes);
+  protectedRouter.use('/bookkeeping', bookkeepingRoutes);
   // DRAFT — re-enable next year
-  // protectedRouter.use('/expenses', expensesRoutes);
   // protectedRouter.use('/bookings', bookingsRoutes);
   protectedRouter.use('/services', servicesRoutes);
   protectedRouter.use('/contracts', contractsRoutes);

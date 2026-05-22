@@ -101,6 +101,7 @@ import InvoiceDetailPage from "./pages/InvoiceDetail";
 import SubscriptionsPage from "./pages/Subscriptions";
 import PricingPlansPage from "./pages/PricingPlans";
 import PaymentsPage from "./pages/Payments";
+import BookkeepingPage from "./pages/Bookkeeping";
 // import ExpensesPage from "./pages/Expenses";
 
 // import EcommercePage from "./pages/Ecommerce";
@@ -652,6 +653,7 @@ const AppRoutes = () => {
         <Route path="/subscriptions" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><SubscriptionsPage /></AccessGuard>} />
         <Route path="/pricing-plans" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><PricingPlansPage /></AccessGuard>} />
         <Route path="/payments" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><PaymentsPage /></AccessGuard>} />
+        <Route path="/bookkeeping" element={<AccessGuard featureId="finance" permissionModule="bookkeeping" action="view"><BookkeepingPage /></AccessGuard>} />
         <Route path="/accounts" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><OrganizationsPage /></AccessGuard>} />
         <Route path="/organizations" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><OrganizationsPage /></AccessGuard>} />
         <Route path="/notes" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><NotesPage /></AccessGuard>} />

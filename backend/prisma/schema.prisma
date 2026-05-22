@@ -776,6 +776,15 @@ model Tenant {
   websiteLiveSessionStates WebsiteLiveSessionState[]
   websiteAnalyticsIntegrations WebsiteAnalyticsIntegration[]
   websiteAnalyticsWebhookDeliveries WebsiteAnalyticsWebhookDelivery[]
+  bookkeepingAccounts BookkeepingAccount[]
+  bookkeepingCategories BookkeepingCategory[]
+  bookkeepingVendors BookkeepingVendor[]
+  bookkeepingTransactions BookkeepingTransaction[]
+  bookkeepingTransfers BookkeepingTransfer[]
+  bookkeepingJournalEntries BookkeepingJournalEntry[]
+  bookkeepingJournalLines BookkeepingJournalLine[]
+  bookkeepingReconciliations BookkeepingReconciliation[]
+  bookkeepingRecurringRules BookkeepingRecurringRule[]
 
   @@index([status])
   @@index([slug])
@@ -3861,6 +3870,227 @@ model ExpenseBudget {
   @@index([tenantId])
   @@index([category])
   @@index([startDate, endDate])
+}
+
+// ============================================================================
+// BOOKKEEPING MODULE
+// ============================================================================
+
+model BookkeepingAccount {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name               String
+  code               String?
+  type               String
+  subtype            String?
+  currency           String   @default("CAD")
+  openingBalance     Decimal  @default(0) @db.Decimal(15, 2)
+  currentBalance     Decimal  @default(0) @db.Decimal(15, 2)
+  institutionName    String?
+  accountNumberLast4 String?
+  isBankAccount      Boolean  @default(false)
+  isSystem           Boolean  @default(false)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([type])
+  @@index([isActive])
+  @@unique([tenantId, name])
+}
+
+model BookkeepingCategory {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  type      String
+  accountId String?
+  color     String?
+  isSystem  Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([accountId])
+  @@index([type])
+  @@unique([tenantId, name, type])
+}
+
+model BookkeepingVendor {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  email     String?
+  phone     String?
+  website   String?
+  address   String?
+  taxId     String?
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([isActive])
+  @@unique([tenantId, name])
+}
+
+model BookkeepingTransaction {
+  id                String   @id @default(uuid())
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactionNumber String?
+  accountId         String?
+  categoryId        String?
+  vendorId          String?
+  type              String
+  sourceType        String?
+  sourceId          String?
+  description       String
+  amount            Decimal  @db.Decimal(15, 2)
+  currency          String   @default("CAD")
+  transactionDate   DateTime
+  paymentMethod     String?
+  reference         String?
+  clientId          String?
+  projectId         String?
+  invoiceId         String?
+  expenseId         String?
+  fileId            String?
+  status            String   @default("POSTED")
+  isReconciled      Boolean  @default(false)
+  reconciledAt      DateTime?
+  metadata          Json     @default("{}")
+  createdById       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([accountId])
+  @@index([categoryId])
+  @@index([vendorId])
+  @@index([sourceType, sourceId])
+  @@index([transactionDate])
+  @@index([tenantId, transactionDate])
+  @@index([tenantId, type])
+  @@index([tenantId, status])
+  @@unique([tenantId, transactionNumber])
+  @@unique([tenantId, sourceType, sourceId])
+}
+
+model BookkeepingTransfer {
+  id            String   @id @default(uuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fromAccountId String
+  toAccountId   String
+  amount        Decimal  @db.Decimal(15, 2)
+  currency      String   @default("CAD")
+  transferDate  DateTime
+  reference     String?
+  notes         String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([fromAccountId])
+  @@index([toAccountId])
+}
+
+model BookkeepingJournalEntry {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entryNumber String
+  description String
+  entryDate   DateTime
+  sourceType  String?
+  sourceId    String?
+  status      String   @default("DRAFT")
+  createdById String?
+  postedAt    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lines       BookkeepingJournalLine[]
+
+  @@index([tenantId])
+  @@index([sourceType, sourceId])
+  @@unique([tenantId, entryNumber])
+}
+
+model BookkeepingJournalLine {
+  id             String   @id @default(uuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  journalEntryId String
+  journalEntry   BookkeepingJournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String
+  debit          Decimal  @default(0) @db.Decimal(15, 2)
+  credit         Decimal  @default(0) @db.Decimal(15, 2)
+  description    String?
+  createdAt      DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([journalEntryId])
+  @@index([accountId])
+}
+
+model BookkeepingReconciliation {
+  id                       String   @id @default(uuid())
+  tenantId                 String
+  tenant                   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  accountId                String
+  statementDate            DateTime
+  statementStartingBalance Decimal  @default(0) @db.Decimal(15, 2)
+  statementEndingBalance   Decimal  @db.Decimal(15, 2)
+  systemEndingBalance      Decimal  @db.Decimal(15, 2)
+  difference               Decimal  @db.Decimal(15, 2)
+  status                   String   @default("DRAFT")
+  reconciledAt             DateTime?
+  reconciledById           String?
+  notes                    String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([accountId])
+}
+
+model BookkeepingRecurringRule {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type        String
+  name        String
+  description String?
+  amount      Decimal  @db.Decimal(15, 2)
+  currency    String   @default("CAD")
+  accountId   String?
+  categoryId  String?
+  vendorId    String?
+  clientId    String?
+  projectId   String?
+  frequency   String
+  nextRunAt   DateTime
+  endAt       DateTime?
+  lastRunAt   DateTime?
+  isActive    Boolean  @default(true)
+  metadata    Json     @default("{}")
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([accountId])
+  @@index([categoryId])
+  @@index([vendorId])
+  @@index([nextRunAt])
 }
 
 // ============================================================================

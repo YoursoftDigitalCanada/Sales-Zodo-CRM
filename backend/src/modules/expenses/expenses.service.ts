@@ -4,6 +4,7 @@ import { NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { eventBus } from '../../common/events/event-bus';
 import { activityLogger } from '../../common/services/activity-logger.service';
+import { bookkeepingService } from '../bookkeeping/bookkeeping.service';
 
 export class ExpensesService {
     async create(tenantId: string, data: CreateExpenseDto, submittedById?: string) {
@@ -25,6 +26,8 @@ export class ExpensesService {
             userId: submittedById,
             metadata: { amount: (expense as any).amount, category: (expense as any).category },
         });
+
+        bookkeepingService.syncExpense(tenantId, dto.id).catch(() => { });
 
         return dto;
     }
@@ -93,6 +96,8 @@ export class ExpensesService {
             userId: approvedById,
             metadata: { newStatus: 'APPROVED' },
         });
+
+        bookkeepingService.syncExpense(tenantId, dto.id).catch(() => { });
 
         return dto;
     }

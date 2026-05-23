@@ -117,6 +117,10 @@ export interface InvoiceCreatedEvent {
     invoiceId: string;
     invoiceNumber: string;
     clientId?: string;
+    contactId?: string;
+    projectId?: string;
+    proposalId?: string;
+    contractId?: string;
     amount?: number | string;
 }
 
@@ -336,6 +340,16 @@ export interface InvoiceSentEvent {
     clientId?: string;
     recipientEmail?: string;
 }
+
+export interface InvoiceDueEvent {
+    tenantId: string;
+    invoiceId: string;
+    invoiceNumber: string;
+    clientId?: string;
+    ownerUserId?: string;
+    dueDate?: Date;
+    amountDue?: number | string;
+}
 // ── Calendar Completion Events ──────────────────────────────────────────
 
 export interface CalendarEventCompletedEvent {
@@ -542,10 +556,36 @@ export interface ContractSentEvent {
     projectId?: string;
     quoteId?: string;
     ownerUserId?: string;
+    recipientEmail?: string;
 }
 
 export interface ContractSignedEvent extends ContractSentEvent {
     signedAt?: Date;
+}
+
+export interface ContractCreatedEvent extends ContractSentEvent {
+    value?: number | string;
+}
+
+export interface ContractViewedEvent extends ContractSentEvent {
+    viewCount?: number;
+}
+
+export interface ContractReminderDueEvent extends ContractSentEvent {
+    reminderType: string;
+}
+
+export interface ContractDeclinedEvent extends ContractSentEvent {
+    reason?: string;
+}
+
+export interface ContractExpiringEvent extends ContractSentEvent {
+    expiresAt?: Date;
+    daysUntilExpiry?: number;
+}
+
+export interface ContractExpiredEvent extends ContractSentEvent {
+    expiredAt?: Date;
 }
 
 export interface DealWonEvent {
@@ -675,10 +715,15 @@ export interface CRMEventMap {
     'invoice.created': InvoiceCreatedEvent;
     'invoice.updated': InvoiceUpdatedEvent;
     'invoice.statusChanged': InvoiceStatusChangedEvent;
+    'invoice.dueSoon': InvoiceDueEvent;
+    'invoice.overdue': InvoiceDueEvent;
+    'invoice.paid': InvoiceStatusChangedEvent;
+    'invoice.partiallyPaid': InvoiceStatusChangedEvent;
     'payment.received': PaymentReceivedEvent;
     'payment.failed': PaymentReceivedEvent;
     'payment.refunded': PaymentReceivedEvent;
     'payment.partially_refunded': PaymentReceivedEvent;
+    'payment.partiallyRefunded': PaymentReceivedEvent;
     'payment.voided': PaymentReceivedEvent;
     'booking.created': BookingCreatedEvent;
     'booking.confirmed': BookingConfirmedEvent;
@@ -727,8 +772,14 @@ export interface CRMEventMap {
     'deal.valueChanged': DealValueChangedEvent;
     'deal.ownerChanged': DealOwnerChangedEvent;
     'deal.stale': DealStaleEvent;
+    'contract.created': ContractCreatedEvent;
     'contract.sent': ContractSentEvent;
+    'contract.viewed': ContractViewedEvent;
+    'contract.reminderDue': ContractReminderDueEvent;
     'contract.signed': ContractSignedEvent;
+    'contract.declined': ContractDeclinedEvent;
+    'contract.expiring': ContractExpiringEvent;
+    'contract.expired': ContractExpiredEvent;
     'deal.won': DealWonEvent;
     'deal.lost': DealLostEvent;
     // Stage 6: Project Execution

@@ -15,6 +15,15 @@ const db = prisma as any;
 export class ContractsService {
     async create(tenantId: string, data: CreateContractDto, createdById?: string) {
         const contract = await contractsRepository.create(tenantId, data, createdById);
+        eventBus.emit('contract.created', {
+            tenantId,
+            contractId: contract.id,
+            contractNumber: contract.contractNumber,
+            clientId: contract.client?.id || (contract as any).clientId || undefined,
+            projectId: contract.projectId || undefined,
+            quoteId: contract.quoteId || undefined,
+            value: contract.value ? Number(contract.value) : undefined,
+        });
         return toContractResponseDto(contract);
     }
 
@@ -54,6 +63,7 @@ export class ContractsService {
                 clientId: contract.client?.id,
                 projectId: contract.projectId || undefined,
                 quoteId: contract.quoteId || undefined,
+                recipientEmail: (contract as any).client?.primaryEmail || undefined,
             });
         }
         if (status === 'ACTIVE') {
@@ -65,6 +75,28 @@ export class ContractsService {
                 projectId: contract.projectId || undefined,
                 quoteId: contract.quoteId || undefined,
                 signedAt: contract.signedAt || undefined,
+                recipientEmail: (contract as any).client?.primaryEmail || undefined,
+            });
+        }
+        if (status === 'CANCELLED') {
+            eventBus.emit('contract.declined', {
+                tenantId,
+                contractId: id,
+                contractNumber: contract.contractNumber,
+                clientId: contract.client?.id,
+                projectId: contract.projectId || undefined,
+                quoteId: contract.quoteId || undefined,
+            });
+        }
+        if (status === 'EXPIRED') {
+            eventBus.emit('contract.expired', {
+                tenantId,
+                contractId: id,
+                contractNumber: contract.contractNumber,
+                clientId: contract.client?.id,
+                projectId: contract.projectId || undefined,
+                quoteId: contract.quoteId || undefined,
+                expiredAt: new Date(),
             });
         }
         return toContractResponseDto(contract);
@@ -192,6 +224,21 @@ export class ContractsService {
             linkedEntityId: contractId,
             description,
         });
+        await db.documentMetadata.updateMany({
+            where: { tenantId, fileId: saved.id },
+            data: {
+                metadata: {
+                    variant,
+                    relatedEntities: {
+                        contractId,
+                        dealId: (contract as any).projectId || null,
+                        projectId: (contract as any).projectId || null,
+                        quoteId: (contract as any).quoteId || null,
+                        clientId: (contract as any).client?.id || (contract as any).clientId || null,
+                    },
+                },
+            },
+        }).catch(() => null);
         activityLogger.log({
             tenantId,
             entityType: 'Contract',

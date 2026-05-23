@@ -44,7 +44,11 @@ jest.mock('../../src/modules/notifications/notifications.service', () => ({
   notificationsService: { create: jest.fn() },
 }));
 jest.mock('../../src/modules/bookkeeping/bookkeeping.service', () => ({
-  bookkeepingService: { syncInvoicePayment: jest.fn() },
+  bookkeepingService: {
+    syncInvoicePayment: jest.fn(),
+    createInvoicePaymentReversal: jest.fn(),
+    voidSourceTransaction: jest.fn(),
+  },
 }));
 jest.mock('../../src/modules/invoices/invoices.service', () => ({
   invoicesService: { saveInvoicePdfToDocuments: jest.fn() },
@@ -57,6 +61,9 @@ jest.mock('../../src/modules/contracts/contracts.service', () => ({
 }));
 jest.mock('../../src/common/services/tenant-mailer.service', () => ({
   tenantMailerService: { sendTenantEmail: jest.fn() },
+}));
+jest.mock('../../src/common/services/client-lifecycle.service', () => ({
+  clientLifecycleService: { progressTo: jest.fn() },
 }));
 
 import { salesAutomationService } from '../../src/modules/automation/sales-automation.service';
@@ -102,7 +109,16 @@ describe('SalesAutomationService', () => {
       dueDate: new Date('2026-06-10T00:00:00.000Z'),
       amountDue: 500,
       total: 500,
+      status: 'SENT',
       client: { assignedOwner: { userId: 'user-owner' } },
+    });
+    mockDb.invoicePayment.findFirst.mockResolvedValue({
+      id: 'payment-1',
+      tenantId: 'tenant-1',
+      invoiceId: 'invoice-1',
+      amount: 500,
+      status: 'SUCCESSFUL',
+      paymentDate: new Date('2026-06-01T00:00:00.000Z'),
     });
     mockDb.lead.findFirst.mockResolvedValue({ id: 'lead-1', tenantId: 'tenant-1' });
     mockDb.lead.findUnique.mockResolvedValue({ id: 'lead-1', tenantId: 'tenant-1', email: 'lead@example.com' });
@@ -122,7 +138,21 @@ describe('SalesAutomationService', () => {
       client: { id: 'client-1', primaryEmail: 'buyer@example.com' },
       project: { id: 'deal-1', clientId: 'client-1', dealOwnerId: 'employee-1' },
     });
-    mockDb.contract.findFirst.mockResolvedValue({ id: 'contract-1', tenantId: 'tenant-1' });
+    mockDb.contract.findFirst.mockResolvedValue({
+      id: 'contract-1',
+      tenantId: 'tenant-1',
+      contractNumber: 'CT-1',
+      title: 'Sales Contract',
+      clientId: 'client-1',
+      projectId: 'deal-1',
+      quoteId: 'quote-1',
+      value: 1200,
+      currency: 'CAD',
+      client: { id: 'client-1', primaryEmail: 'buyer@example.com', email: 'buyer@example.com' },
+      quote: { id: 'quote-1', total: 1200, subtotal: 1200, taxAmount: 0, discountAmount: 0, currency: 'CAD', items: [] },
+      project: { id: 'deal-1', clientId: 'client-1', dealOwnerId: 'employee-1' },
+      createdBy: { id: 'employee-1', userId: 'user-1', user: { id: 'user-1' } },
+    });
     mockDb.contract.create.mockImplementation(({ data }) => Promise.resolve({ id: 'contract-created', ...data }));
     mockDb.invoice.create.mockImplementation(({ data }) => Promise.resolve({ id: 'invoice-created', ...data }));
     mockDb.project.findFirst.mockResolvedValue({
@@ -157,9 +187,9 @@ describe('SalesAutomationService', () => {
       where: { tenantId: 'tenant-1', entityType: 'Invoice', entityId: 'invoice-1', status: 'SCHEDULED' },
       data: { status: 'CANCELLED', cancelledAt: expect.any(Date) },
     });
-    expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledTimes(7);
+    expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledTimes(10);
     expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledWith(expect.objectContaining({
-      create: expect.objectContaining({ tenantId: 'tenant-1', entityType: 'Invoice', entityId: 'invoice-1', reminderType: 'invoice.overdue' }),
+      create: expect.objectContaining({ tenantId: 'tenant-1', entityType: 'Invoice', entityId: 'invoice-1', reminderType: 'invoice.overdue.14d', channel: 'EMAIL' }),
     }));
     expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledWith(expect.objectContaining({
       create: expect.objectContaining({ tenantId: 'tenant-1', entityType: 'Invoice', entityId: 'invoice-1', reminderType: 'invoice.due.today', channel: 'EMAIL' }),
@@ -637,6 +667,233 @@ describe('SalesAutomationService', () => {
     });
 
     expect(contractsService.saveContractPdfToDocuments).toHaveBeenCalledWith('tenant-2', 'contract-1', 'user-2', 'signed');
+  });
+
+  it('contract.sent sends email and saves PDF once', async () => {
+    const { contractsService } = require('../../src/modules/contracts/contracts.service');
+    const { tenantMailerService } = require('../../src/common/services/tenant-mailer.service');
+    tenantMailerService.sendTenantEmail.mockResolvedValue({ sent: true });
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-contract-sent', conditions: {}, actions: ['send_contract_email', 'save_contract_document', 'schedule_contract_reminders'], runOncePerEntity: false },
+    ]);
+
+    const event = { tenantId: 'tenant-1', contractId: 'contract-1', contractNumber: 'CT-1', recipientEmail: 'buyer@example.com', ownerUserId: 'user-1' };
+    await salesAutomationService.executeTrigger('contract.sent', 'Contract', 'contract-1', event);
+    await salesAutomationService.executeTrigger('contract.sent', 'Contract', 'contract-1', event);
+
+    expect(contractsService.saveContractPdfToDocuments).toHaveBeenCalledTimes(1);
+    expect(contractsService.saveContractPdfToDocuments).toHaveBeenCalledWith('tenant-1', 'contract-1', 'user-1', 'sent');
+    expect(tenantMailerService.sendTenantEmail).toHaveBeenCalledTimes(1);
+    expect(tenantMailerService.sendTenantEmail).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: 'tenant-1',
+      to: 'buyer@example.com',
+      subject: 'Contract CT-1 ready for review',
+    }));
+    expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledTimes(2);
+  });
+
+  it('contract.signed saves signed PDF, creates invoice when enabled, and updates customer lifecycle', async () => {
+    const { contractsService } = require('../../src/modules/contracts/contracts.service');
+    const { clientLifecycleService } = require('../../src/common/services/client-lifecycle.service');
+    mockDb.tenant.findUnique.mockResolvedValue({
+      id: 'tenant-1',
+      settings: { contractAutomation: { createDraftInvoiceOnSigned: true } },
+    });
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-contract-signed', conditions: {}, actions: ['save_contract_document', 'create_invoice_draft', 'update_customer_lifecycle'], runOncePerEntity: false },
+    ]);
+
+    await salesAutomationService.executeTrigger('contract.signed', 'Contract', 'contract-1', {
+      tenantId: 'tenant-1',
+      contractId: 'contract-1',
+      ownerUserId: 'user-1',
+    });
+    await salesAutomationService.executeTrigger('contract.signed', 'Contract', 'contract-1', {
+      tenantId: 'tenant-1',
+      contractId: 'contract-1',
+      ownerUserId: 'user-1',
+    });
+
+    expect(contractsService.saveContractPdfToDocuments).toHaveBeenCalledTimes(1);
+    expect(contractsService.saveContractPdfToDocuments).toHaveBeenCalledWith('tenant-1', 'contract-1', 'user-1', 'signed');
+    expect(mockDb.project.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'deal-1' },
+      data: expect.objectContaining({ dealStatus: 'Won', probability: 100 }),
+    }));
+    expect(mockDb.invoice.create).toHaveBeenCalledTimes(1);
+    expect(clientLifecycleService.progressTo).toHaveBeenCalledWith('client-1', 'tenant-1', 'ONBOARDING');
+    expect(mockDb.salesReminderSchedule.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ tenantId: 'tenant-1', entityType: 'Contract', entityId: 'contract-1', status: 'SCHEDULED' }),
+    }));
+  });
+
+  it('contract.declined creates follow-up task and owner notification', async () => {
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-contract-declined', conditions: {}, actions: ['create_contract_followup_task', 'notify_owner'], runOncePerEntity: false },
+    ]);
+
+    await salesAutomationService.executeTrigger('contract.declined', 'Contract', 'contract-1', {
+      tenantId: 'tenant-1',
+      contractId: 'contract-1',
+      reason: 'Terms not accepted',
+      ownerUserId: 'user-1',
+    });
+
+    const { notificationsService } = require('../../src/modules/notifications/notifications.service');
+    expect(mockDb.task.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ referenceDocname: 'contract-1:declined-followup-task' }),
+    }));
+    expect(notificationsService.create).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Contract declined',
+      userId: 'user-1',
+    }));
+  });
+
+  it('contract.expiring creates renewal task and owner reminder', async () => {
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-contract-expiring', conditions: {}, actions: ['create_contract_renewal_task', 'notify_owner'], runOncePerEntity: false },
+    ]);
+
+    await salesAutomationService.executeTrigger('contract.expiring', 'Contract', 'contract-1', {
+      tenantId: 'tenant-1',
+      contractId: 'contract-1',
+      ownerUserId: 'user-1',
+      daysUntilExpiry: 14,
+    });
+
+    const { notificationsService } = require('../../src/modules/notifications/notifications.service');
+    expect(mockDb.task.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ referenceDocname: 'contract-1:expiring-renewal-task' }),
+    }));
+    expect(notificationsService.create).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Contract expiring soon',
+      userId: 'user-1',
+    }));
+  });
+
+  it('invoice.created archives a draft PDF document once', async () => {
+    const { invoicesService } = require('../../src/modules/invoices/invoices.service');
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-invoice-created', conditions: {}, actions: ['save_invoice_pdf'], runOncePerEntity: false },
+    ]);
+
+    const event = { tenantId: 'tenant-1', invoiceId: 'invoice-1', invoiceNumber: 'INV-1', ownerUserId: 'user-1' };
+    await salesAutomationService.executeTrigger('invoice.created', 'Invoice', 'invoice-1', event);
+    await salesAutomationService.executeTrigger('invoice.created', 'Invoice', 'invoice-1', event);
+
+    expect(invoicesService.saveInvoicePdfToDocuments).toHaveBeenCalledTimes(1);
+    expect(invoicesService.saveInvoicePdfToDocuments).toHaveBeenCalledWith('tenant-1', 'invoice-1', 'user-1');
+  });
+
+  it('invoice.sent saves PDF and schedules the production reminder cadence once', async () => {
+    const { invoicesService } = require('../../src/modules/invoices/invoices.service');
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-invoice-sent', conditions: {}, actions: ['save_invoice_pdf', 'schedule_invoice_reminders'], runOncePerEntity: false },
+    ]);
+
+    const event = { tenantId: 'tenant-1', invoiceId: 'invoice-1', invoiceNumber: 'INV-1', ownerUserId: 'user-1' };
+    await salesAutomationService.executeTrigger('invoice.sent', 'Invoice', 'invoice-1', event);
+    await salesAutomationService.executeTrigger('invoice.sent', 'Invoice', 'invoice-1', event);
+
+    expect(invoicesService.saveInvoicePdfToDocuments).toHaveBeenCalledTimes(1);
+    expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledTimes(10);
+    expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ reminderType: 'invoice.due.soon', channel: 'EMAIL' }),
+    }));
+    expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ reminderType: 'invoice.overdue.14d', channel: 'EMAIL' }),
+    }));
+  });
+
+  it('payment.received syncs bookkeeping once and cancels reminders only when invoice is fully paid', async () => {
+    const { bookkeepingService } = require('../../src/modules/bookkeeping/bookkeeping.service');
+    mockDb.invoice.findFirst.mockResolvedValueOnce({
+      id: 'invoice-1',
+      tenantId: 'tenant-1',
+      invoiceNumber: 'INV-1',
+      amountDue: 0,
+      status: 'PAID',
+    });
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-payment-received', conditions: {}, actions: ['sync_bookkeeping', 'cancel_invoice_reminders'], runOncePerEntity: false },
+    ]);
+
+    const event = { tenantId: 'tenant-1', invoiceId: 'invoice-1', paymentId: 'payment-1', status: 'PAID', ownerUserId: 'user-1' };
+    await salesAutomationService.executeTrigger('payment.received', 'InvoicePayment', 'payment-1', event);
+    await salesAutomationService.executeTrigger('payment.received', 'InvoicePayment', 'payment-1', event);
+
+    expect(bookkeepingService.syncInvoicePayment).toHaveBeenCalledTimes(1);
+    expect(bookkeepingService.syncInvoicePayment).toHaveBeenCalledWith('tenant-1', 'payment-1');
+    expect(mockDb.salesReminderSchedule.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ tenantId: 'tenant-1', entityType: 'Invoice', entityId: 'invoice-1', status: 'SCHEDULED' }),
+    }));
+  });
+
+  it('partial payment keeps remaining reminders active and syncs bookkeeping', async () => {
+    const { bookkeepingService } = require('../../src/modules/bookkeeping/bookkeeping.service');
+    mockDb.invoice.findFirst.mockResolvedValueOnce({
+      id: 'invoice-1',
+      tenantId: 'tenant-1',
+      invoiceNumber: 'INV-1',
+      dueDate: new Date('2026-06-10T00:00:00.000Z'),
+      amountDue: 250,
+      total: 500,
+      status: 'PARTIALLY_PAID',
+      client: { assignedOwner: { userId: 'user-owner' } },
+    });
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-partial-payment', conditions: {}, actions: ['sync_bookkeeping', 'schedule_invoice_reminders'], runOncePerEntity: false },
+    ]);
+
+    await salesAutomationService.executeTrigger('payment.received', 'InvoicePayment', 'payment-1', {
+      tenantId: 'tenant-1',
+      invoiceId: 'invoice-1',
+      paymentId: 'payment-1',
+      status: 'PARTIALLY_PAID',
+      ownerUserId: 'user-1',
+    });
+
+    expect(bookkeepingService.syncInvoicePayment).toHaveBeenCalledWith('tenant-1', 'payment-1');
+    expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledTimes(10);
+  });
+
+  it('refund and partial refund create bookkeeping reversals without duplicating repeated events', async () => {
+    const { bookkeepingService } = require('../../src/modules/bookkeeping/bookkeeping.service');
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-refund', conditions: {}, actions: ['sync_bookkeeping_reversal'], runOncePerEntity: false },
+    ]);
+
+    const refundEvent = { tenantId: 'tenant-1', invoiceId: 'invoice-1', paymentId: 'payment-1', amount: 500 };
+    await salesAutomationService.executeTrigger('payment.refunded', 'InvoicePayment', 'payment-1', refundEvent);
+    await salesAutomationService.executeTrigger('payment.refunded', 'InvoicePayment', 'payment-1', refundEvent);
+
+    const partialEvent = { tenantId: 'tenant-1', invoiceId: 'invoice-1', paymentId: 'payment-1', refundAmount: 125 };
+    await salesAutomationService.executeTrigger('payment.partiallyRefunded', 'InvoicePayment', 'payment-1', partialEvent);
+
+    expect(bookkeepingService.createInvoicePaymentReversal).toHaveBeenCalledTimes(2);
+    expect(bookkeepingService.createInvoicePaymentReversal).toHaveBeenCalledWith('tenant-1', 'payment-1', 500, 'REFUNDED');
+    expect(bookkeepingService.createInvoicePaymentReversal).toHaveBeenCalledWith('tenant-1', 'payment-1', 125, 'PARTIALLY_REFUNDED');
+  });
+
+  it('failed and voided payments use bookkeeping sync so revenue is corrected', async () => {
+    const { bookkeepingService } = require('../../src/modules/bookkeeping/bookkeeping.service');
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-payment-correction', conditions: {}, actions: ['sync_bookkeeping_reversal'], runOncePerEntity: false },
+    ]);
+
+    await salesAutomationService.executeTrigger('payment.failed', 'InvoicePayment', 'payment-1', {
+      tenantId: 'tenant-1',
+      invoiceId: 'invoice-1',
+      paymentId: 'payment-1',
+    });
+    await salesAutomationService.executeTrigger('payment.voided', 'InvoicePayment', 'payment-2', {
+      tenantId: 'tenant-1',
+      invoiceId: 'invoice-1',
+      paymentId: 'payment-2',
+    });
+
+    expect(bookkeepingService.syncInvoicePayment).toHaveBeenCalledWith('tenant-1', 'payment-1');
+    expect(bookkeepingService.syncInvoicePayment).toHaveBeenCalledWith('tenant-1', 'payment-2');
   });
 
   it('idempotency keys are tenant-scoped', async () => {

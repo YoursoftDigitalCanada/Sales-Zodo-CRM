@@ -569,6 +569,9 @@ export class InvoicesService {
             invoiceId: dto.id,
             invoiceNumber: (invoice as any).invoiceNumber || '',
             clientId: (invoice as any).clientId,
+            projectId: (invoice as any).projectId || undefined,
+            proposalId: (data as any).proposalId || undefined,
+            contractId: (data as any).contractId || undefined,
             amount: (invoice as any).totalAmount || (invoice as any).total,
         });
 
@@ -1133,6 +1136,7 @@ export class InvoicesService {
             invoiceNumber: (existing as any).invoiceNumber || '',
             clientId,
             amount,
+            status: newStatus,
             paidByUserId: actorUserId,
         });
 
@@ -1324,7 +1328,7 @@ export class InvoicesService {
     private paymentEventName(status: string) {
         if (status === 'FAILED') return 'payment.failed';
         if (status === 'REFUNDED') return 'payment.refunded';
-        if (status === 'PARTIALLY_REFUNDED') return 'payment.partially_refunded';
+        if (status === 'PARTIALLY_REFUNDED') return 'payment.partiallyRefunded';
         if (['VOIDED', 'VOID', 'CANCELLED', 'CANCELED'].includes(status)) return 'payment.voided';
         return 'payment.received';
     }

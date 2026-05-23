@@ -13,6 +13,7 @@ import { automationIdempotencyService } from './automation-idempotency.service';
 import { automationOrchestratorService } from './automation-orchestrator.service';
 import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 import { leadAutomationService } from '../leads/lead-automation.service';
+import { clientLifecycleService } from '../../common/services/client-lifecycle.service';
 
 const db = prisma as any;
 
@@ -146,28 +147,76 @@ const DEFAULT_RULES = [
     runOncePerEntity: true,
   },
   {
+    name: 'Contract created activity',
+    description: 'Log contract creation and prepare contract lifecycle automation context.',
+    triggerType: 'contract.created',
+    actions: ['create_activity_log'],
+    priority: 20,
+    runOncePerEntity: true,
+  },
+  {
     name: 'Contract sent document archive',
-    description: 'Archive sent contract PDFs in Documents.',
+    description: 'Send contract email, archive PDF, schedule signing reminders, and notify owner.',
     triggerType: 'contract.sent',
-    actions: ['save_contract_document'],
+    actions: ['send_contract_email', 'save_contract_document', 'schedule_contract_reminders', 'notify_owner'],
     priority: 20,
     runOncePerEntity: true,
   },
   {
     name: 'Contract signed document archive',
-    description: 'Archive signed contract PDFs in Documents.',
+    description: 'Archive signed contract PDFs, cancel reminders, update deal/customer lifecycle, and create next steps.',
     triggerType: 'contract.signed',
-    actions: ['save_contract_document'],
+    actions: ['save_contract_document', 'cancel_contract_reminders', 'update_deal_stage', 'create_invoice_draft', 'create_onboarding_task', 'update_customer_lifecycle'],
     priority: 20,
     runOncePerEntity: true,
   },
   {
+    name: 'Contract declined follow-up',
+    description: 'Notify the owner and create follow-up when a contract is declined.',
+    triggerType: 'contract.declined',
+    actions: ['notify_owner', 'create_contract_followup_task'],
+    priority: 20,
+    runOncePerEntity: true,
+  },
+  {
+    name: 'Contract expiring follow-up',
+    description: 'Create renewal/expiry follow-up and notify owner before a contract expires.',
+    triggerType: 'contract.expiring',
+    actions: ['notify_owner', 'create_contract_renewal_task'],
+    priority: 20,
+    runOncePerEntity: false,
+  },
+  {
+    name: 'Contract expired follow-up',
+    description: 'Create expiry follow-up and notify owner when a contract expires.',
+    triggerType: 'contract.expired',
+    actions: ['notify_owner', 'create_contract_expired_task'],
+    priority: 20,
+    runOncePerEntity: true,
+  },
+  {
+    name: 'Invoice created document draft',
+    description: 'Archive draft invoice PDF and log invoice creation context.',
+    triggerType: 'invoice.created',
+    actions: ['save_invoice_pdf', 'create_activity_log'],
+    priority: 15,
+    runOncePerEntity: true,
+  },
+  {
     name: 'Invoice sent reminders',
-    description: 'Save invoice PDFs and schedule due-soon, due-today, overdue, and escalation reminders.',
+    description: 'Save invoice PDFs and schedule payment reminders before and after due date.',
     triggerType: 'invoice.sent',
     actions: ['save_invoice_pdf', 'schedule_invoice_reminders'],
     priority: 10,
     runOncePerEntity: true,
+  },
+  {
+    name: 'Invoice partial payment follow-up',
+    description: 'Keep payment reminders active and sync bookkeeping when an invoice is partially paid.',
+    triggerType: 'invoice.partiallyPaid',
+    actions: ['sync_bookkeeping', 'schedule_invoice_reminders', 'notify_owner'],
+    priority: 10,
+    runOncePerEntity: false,
   },
   {
     name: 'Invoice paid closeout',
@@ -204,7 +253,7 @@ const DEFAULT_RULES = [
   {
     name: 'Partial refund bookkeeping',
     description: 'Create partial refund bookkeeping entries when part of a payment is refunded.',
-    triggerType: 'payment.partially_refunded',
+    triggerType: 'payment.partiallyRefunded',
     actions: ['sync_bookkeeping_reversal'],
     priority: 10,
     runOncePerEntity: false,
@@ -309,13 +358,24 @@ class SalesAutomationService {
     eventBus.on('proposal.accepted', (event) => this.executeTrigger('proposal.accepted', 'Proposal', event.proposalId, event));
     eventBus.on('proposal.declined', (event) => this.executeTrigger('proposal.declined', 'Proposal', event.proposalId, event));
     eventBus.on('proposal.expired', (event) => this.executeTrigger('proposal.expired', 'Proposal', event.proposalId, event));
+    eventBus.on('contract.created', (event) => this.executeTrigger('contract.created', 'Contract', event.contractId, event));
     eventBus.on('contract.sent', (event) => this.executeTrigger('contract.sent', 'Contract', event.contractId, event));
+    eventBus.on('contract.viewed', (event) => this.executeTrigger('contract.viewed', 'Contract', event.contractId, event));
+    eventBus.on('contract.reminderDue', (event) => this.executeTrigger('contract.reminderDue', 'Contract', event.contractId, event));
     eventBus.on('contract.signed', (event) => this.executeTrigger('contract.signed', 'Contract', event.contractId, event));
+    eventBus.on('contract.declined', (event) => this.executeTrigger('contract.declined', 'Contract', event.contractId, event));
+    eventBus.on('contract.expiring', (event) => this.executeTrigger('contract.expiring', 'Contract', event.contractId, event));
+    eventBus.on('contract.expired', (event) => this.executeTrigger('contract.expired', 'Contract', event.contractId, event));
+    eventBus.on('invoice.created', (event) => this.executeTrigger('invoice.created', 'Invoice', event.invoiceId, event));
     eventBus.on('invoice.sent', (event) => this.executeTrigger('invoice.sent', 'Invoice', event.invoiceId, event));
+    eventBus.on('invoice.dueSoon', (event) => this.executeTrigger('invoice.dueSoon', 'Invoice', event.invoiceId, event));
+    eventBus.on('invoice.overdue', (event) => this.executeTrigger('invoice.overdue', 'Invoice', event.invoiceId, event));
+    eventBus.on('invoice.paid', (event) => this.executeTrigger('invoice.paid', 'Invoice', event.invoiceId, event));
+    eventBus.on('invoice.partiallyPaid', (event) => this.executeTrigger('invoice.partiallyPaid', 'Invoice', event.invoiceId, event));
     eventBus.on('invoice.statusChanged', (event) => {
       const status = cleanStatus(event.newStatus);
       if (status === 'PAID') this.executeTrigger('invoice.paid', 'Invoice', event.invoiceId, event);
-      else if (status === 'PARTIALLY_PAID') this.executeTrigger('invoice.partially.paid', 'Invoice', event.invoiceId, event);
+      else if (status === 'PARTIALLY_PAID') this.executeTrigger('invoice.partiallyPaid', 'Invoice', event.invoiceId, event);
       else if (status === 'CANCELLED' || status === 'CANCELED') this.executeTrigger('invoice.cancelled', 'Invoice', event.invoiceId, event);
       else this.executeTrigger('invoice.status.changed', 'Invoice', event.invoiceId, event);
     });
@@ -323,6 +383,7 @@ class SalesAutomationService {
     eventBus.on('payment.failed', (event) => this.executeTrigger('payment.failed', 'InvoicePayment', event.paymentId || event.invoiceId, event));
     eventBus.on('payment.refunded', (event) => this.executeTrigger('payment.refunded', 'InvoicePayment', event.paymentId || event.invoiceId, event));
     eventBus.on('payment.partially_refunded', (event) => this.executeTrigger('payment.partially_refunded', 'InvoicePayment', event.paymentId || event.invoiceId, event));
+    eventBus.on('payment.partiallyRefunded', (event) => this.executeTrigger('payment.partiallyRefunded', 'InvoicePayment', event.paymentId || event.invoiceId, event));
     eventBus.on('payment.voided', (event) => this.executeTrigger('payment.voided', 'InvoicePayment', event.paymentId || event.invoiceId, event));
     eventBus.on('expense.created', (event) => this.executeTrigger('expense.created', 'Expense', event.expenseId, event));
     eventBus.on('expense.approved', (event) => this.executeTrigger('expense.approved', 'Expense', event.expenseId, event));
@@ -619,10 +680,31 @@ class SalesAutomationService {
       add('notify_owner', { channel: 'NOTIFICATION' });
     }
     if (triggerType === 'contract.sent') {
+      add('send_contract_email', { channel: 'EMAIL' });
       add('save_contract_document', { documentType: 'pdf', linkedEntityType: 'Contract', linkedEntityId: input.contractId || entityId });
+      add('schedule_contract_signing_reminder_1d', { channel: 'EMAIL', dueInDays: 1 });
+      add('schedule_contract_signing_reminder_3d', { channel: 'NOTIFICATION', dueInDays: 3 });
+      add('notify_owner', { channel: 'NOTIFICATION' });
     }
     if (triggerType === 'contract.signed') {
       add('save_signed_contract_document', { documentType: 'pdf', linkedEntityType: 'Contract', linkedEntityId: input.contractId || entityId });
+      add('cancel_contract_reminders');
+      add('update_deal_stage', { stage: 'Won' });
+      add('create_invoice_draft');
+      add('create_onboarding_task', { channel: 'TASK' });
+      add('update_customer_lifecycle');
+    }
+    if (triggerType === 'contract.declined') {
+      add('create_contract_declined_followup_task', { channel: 'TASK' });
+      add('notify_owner', { channel: 'NOTIFICATION' });
+    }
+    if (triggerType === 'contract.expiring' || triggerType === 'contract.expired') {
+      add('create_contract_renewal_task', { channel: 'TASK' });
+      add('notify_owner', { channel: 'NOTIFICATION' });
+    }
+    if (triggerType === 'invoice.created') {
+      add('save_invoice_document', { documentType: 'pdf', linkedEntityType: 'Invoice', linkedEntityId: input.invoiceId || entityId, status: 'DRAFT' });
+      add('create_activity_log');
     }
     if (triggerType === 'invoice.sent') {
       add('save_invoice_document', { documentType: 'pdf', linkedEntityType: 'Invoice', linkedEntityId: input.invoiceId || entityId });
@@ -631,13 +713,19 @@ class SalesAutomationService {
       add('schedule_invoice_overdue_task', { channel: 'TASK' });
       add('schedule_invoice_escalation_reminder', { channel: 'NOTIFICATION' });
     }
-    if (triggerType === 'invoice.paid' || triggerType === 'payment.received') {
-      add('cancel_invoice_reminders');
+    if (triggerType === 'invoice.partiallyPaid') {
       add('sync_bookkeeping_income');
+      add('schedule_invoice_remaining_balance_reminders');
       add('notify_owner', { channel: 'NOTIFICATION' });
     }
-    if (['payment.failed', 'payment.refunded', 'payment.partially_refunded', 'payment.voided'].includes(triggerType)) {
+    if (triggerType === 'invoice.paid' || triggerType === 'payment.received') {
+      add('sync_bookkeeping_income');
+      add('cancel_invoice_reminders');
+      add('notify_owner', { channel: 'NOTIFICATION' });
+    }
+    if (['payment.failed', 'payment.refunded', 'payment.partially_refunded', 'payment.partiallyRefunded', 'payment.voided'].includes(triggerType)) {
       add('sync_bookkeeping_reversal');
+      add('notify_accounting', { channel: 'NOTIFICATION' });
     }
     if (triggerType === 'expense.deleted') {
       add('void_bookkeeping_expense');
@@ -873,21 +961,84 @@ class SalesAutomationService {
       await this.createProposalFollowupTask(input.tenantId, input.proposalId || entityId, proposalContext, 'expired-followup-task', 'Follow up on expired proposal', 'Proposal expired. Confirm whether to revise, resend, or close the deal.', 'HIGH', 1, triggerType);
       output.actions.push('proposal_expired_reminders_cancelled', 'proposal_expired_followup_created');
     }
-    if (triggerType === 'contract.sent' || triggerType === 'contract.signed') {
-      const variant = triggerType === 'contract.signed' ? 'signed' : 'sent';
+    if (triggerType === 'contract.sent') {
+      const contractContext = await this.loadContractContext(input.tenantId, input.contractId || entityId);
       await this.runSideEffect(
         input.tenantId,
         triggerType,
         'Contract',
         input.contractId || entityId,
-        `save-${variant}-contract-pdf-document`,
+        'save-sent-contract-pdf-document',
         'documents',
-        () => contractsService.saveContractPdfToDocuments(input.tenantId, input.contractId || entityId, input.ownerUserId, variant),
+        () => contractsService.saveContractPdfToDocuments(input.tenantId, input.contractId || entityId, input.ownerUserId, 'sent'),
         input,
       ).catch((error) => {
-        logger.warn('[SalesAutomation] Contract PDF document save failed', { tenantId: input.tenantId, contractId: input.contractId || entityId, variant, error: (error as Error)?.message || String(error) });
+        logger.warn('[SalesAutomation] Contract PDF document save failed', { tenantId: input.tenantId, contractId: input.contractId || entityId, variant: 'sent', error: (error as Error)?.message || String(error) });
       });
-      output.actions.push(`${variant}_contract_pdf_saved`);
+      await this.sendContractEmail(input.tenantId, input.contractId || entityId, { ...input, contract: contractContext });
+      await this.scheduleReminder(input.tenantId, 'Contract', input.contractId || entityId, 'contract.signing.1d', addDays(new Date(), 1), 'EMAIL', { ...input, recipientEmail: input.recipientEmail || contractContext?.client?.primaryEmail || contractContext?.client?.email });
+      await this.scheduleReminder(input.tenantId, 'Contract', input.contractId || entityId, 'contract.signing.3d', addDays(new Date(), 3), 'NOTIFICATION', input);
+      await this.notifyOwner(input.tenantId, input.ownerUserId || contractContext?.createdBy?.userId, 'Contract sent', `${contractContext?.contractNumber || 'Contract'} was sent.`, `/contracts/${input.contractId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, 'owner-notification'), triggerType, entityType, entityId);
+      output.actions.push('sent_contract_pdf_saved', 'contract_email_sent', 'contract_signing_reminders_scheduled');
+    }
+    if (triggerType === 'contract.viewed') {
+      const contractContext = await this.loadContractContext(input.tenantId, input.contractId || entityId);
+      await this.notifyOwner(input.tenantId, input.ownerUserId || contractContext?.createdBy?.userId, 'Contract viewed', `${contractContext?.contractNumber || 'Contract'} was viewed.`, `/contracts/${input.contractId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, `owner-notification:${input.viewCount || 1}`), triggerType, entityType, entityId);
+      output.actions.push('contract_view_owner_notified');
+    }
+    if (triggerType === 'contract.signed') {
+      const contractContext = await this.loadContractContext(input.tenantId, input.contractId || entityId);
+      await this.runSideEffect(
+        input.tenantId,
+        triggerType,
+        'Contract',
+        input.contractId || entityId,
+        'save-signed-contract-pdf-document',
+        'documents',
+        () => contractsService.saveContractPdfToDocuments(input.tenantId, input.contractId || entityId, input.ownerUserId, 'signed'),
+        input,
+      ).catch((error) => {
+        logger.warn('[SalesAutomation] Contract PDF document save failed', { tenantId: input.tenantId, contractId: input.contractId || entityId, variant: 'signed', error: (error as Error)?.message || String(error) });
+      });
+      await this.cancelEntityReminders(input.tenantId, 'Contract', input.contractId || entityId);
+      await this.updateContractDealStage(input.tenantId, input.contractId || entityId, contractContext, 'Won', triggerType);
+      await this.createDraftInvoiceFromContract(input.tenantId, input.contractId || entityId, contractContext, input);
+      await this.updateContractCustomerLifecycle(input.tenantId, input.contractId || entityId, contractContext);
+      await this.createContractFollowupTask(input.tenantId, input.contractId || entityId, contractContext, 'signed-onboarding-task', 'Start customer onboarding', 'Contract signed. Confirm invoice, kickoff date, implementation owner, and customer-success handoff.', 'HIGH', 1, triggerType);
+      await this.notifyOwner(input.tenantId, input.ownerUserId || contractContext?.createdBy?.userId, 'Contract signed', `${contractContext?.contractNumber || 'Contract'} was signed.`, `/contracts/${input.contractId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, 'owner-notification'), triggerType, entityType, entityId, 'SUCCESS');
+      output.actions.push('signed_contract_pdf_saved', 'contract_reminders_cancelled', 'contract_deal_won', 'contract_customer_lifecycle_updated');
+    }
+    if (triggerType === 'contract.declined') {
+      const contractContext = await this.loadContractContext(input.tenantId, input.contractId || entityId);
+      await this.createContractFollowupTask(input.tenantId, input.contractId || entityId, contractContext, 'declined-followup-task', 'Follow up on declined contract', 'Contract was declined. Review feedback, objections, and whether the deal should return to negotiation.', 'HIGH', 1, triggerType);
+      await this.notifyOwner(input.tenantId, input.ownerUserId || contractContext?.createdBy?.userId, 'Contract declined', `${contractContext?.contractNumber || 'Contract'} was declined${input.reason ? `: ${input.reason}` : '.'}`, `/contracts/${input.contractId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, 'owner-notification'), triggerType, entityType, entityId, 'WARNING');
+      output.actions.push('contract_declined_followup_created');
+    }
+    if (triggerType === 'contract.expiring' || triggerType === 'contract.expired') {
+      const contractContext = await this.loadContractContext(input.tenantId, input.contractId || entityId);
+      const actionType = triggerType === 'contract.expired' ? 'expired-followup-task' : 'expiring-renewal-task';
+      const title = triggerType === 'contract.expired' ? 'Review expired contract' : 'Prepare contract renewal';
+      const description = triggerType === 'contract.expired'
+        ? 'Contract has expired. Review renewal, replacement agreement, or account follow-up.'
+        : 'Contract is approaching expiry. Prepare renewal or extension discussion.';
+      await this.createContractFollowupTask(input.tenantId, input.contractId || entityId, contractContext, actionType, title, description, 'HIGH', 1, triggerType);
+      await this.notifyOwner(input.tenantId, input.ownerUserId || contractContext?.createdBy?.userId, triggerType === 'contract.expired' ? 'Contract expired' : 'Contract expiring soon', `${contractContext?.contractNumber || 'Contract'} ${triggerType === 'contract.expired' ? 'has expired.' : 'is expiring soon.'}`, `/contracts/${input.contractId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, 'owner-notification'), triggerType, entityType, entityId, 'WARNING');
+      output.actions.push('contract_expiry_followup_created');
+    }
+    if (triggerType === 'invoice.created') {
+      await this.runSideEffect(
+        input.tenantId,
+        triggerType,
+        'Invoice',
+        input.invoiceId || entityId,
+        'save-draft-invoice-pdf-document',
+        'documents',
+        () => invoicesService.saveInvoicePdfToDocuments(input.tenantId, input.invoiceId || entityId, input.actorUserId || input.ownerUserId),
+        input,
+      ).catch((error) => {
+        logger.warn('[SalesAutomation] Draft invoice PDF document save failed', { tenantId: input.tenantId, invoiceId: input.invoiceId || entityId, error: (error as Error)?.message || String(error) });
+      });
+      output.actions.push('draft_invoice_pdf_saved');
     }
     if (triggerType === 'invoice.sent') {
       await this.runSideEffect(
@@ -897,17 +1048,20 @@ class SalesAutomationService {
         input.invoiceId || entityId,
         'save-invoice-pdf-document',
         'documents',
-        () => invoicesService.saveInvoicePdfToDocuments(input.tenantId, input.invoiceId || entityId),
+        () => invoicesService.saveInvoicePdfToDocuments(input.tenantId, input.invoiceId || entityId, input.actorUserId || input.ownerUserId),
         input,
       ).catch((error) => {
         logger.warn('[SalesAutomation] Invoice PDF document save failed', { tenantId: input.tenantId, invoiceId: input.invoiceId || entityId, error: (error as Error)?.message || String(error) });
       });
-      await this.scheduleInvoiceReminders(input.tenantId, input.invoiceId);
+      await this.scheduleInvoiceReminders(input.tenantId, input.invoiceId || entityId, triggerType);
       output.actions.push('invoice_pdf_saved', 'invoice_reminders_scheduled');
     }
-    if (triggerType === 'invoice.paid' || triggerType === 'payment.received') {
+    if (triggerType === 'invoice.partiallyPaid' || triggerType === 'invoice.paid' || triggerType === 'payment.received') {
       const invoiceId = input.invoiceId || entityId;
-      await this.cancelEntityReminders(input.tenantId, 'Invoice', invoiceId);
+      const invoice = await db.invoice.findFirst({ where: { tenantId: input.tenantId, id: invoiceId } });
+      const status = String(input.status || input.newStatus || invoice?.status || '').toUpperCase();
+      const amountDue = Number(invoice?.amountDue || input.amountDue || 0);
+      const fullyPaid = triggerType === 'invoice.paid' || status === 'PAID' || amountDue <= 0;
       const payment = input.paymentId
         ? await db.invoicePayment.findFirst({ where: { tenantId: input.tenantId, id: input.paymentId, invoiceId } })
         : await db.invoicePayment.findFirst({ where: { tenantId: input.tenantId, invoiceId }, orderBy: { paymentDate: 'desc' } });
@@ -921,20 +1075,27 @@ class SalesAutomationService {
         () => bookkeepingService.syncInvoicePayment(input.tenantId, payment.id),
         input,
       );
+      if (fullyPaid) {
+        await this.cancelEntityReminders(input.tenantId, 'Invoice', invoiceId);
+      } else {
+        await this.scheduleInvoiceReminders(input.tenantId, invoiceId, triggerType);
+      }
       await this.notifyOwner(
         input.tenantId,
         input.ownerUserId || input.paidByUserId,
-        'Payment received',
-        `Payment recorded for invoice ${input.invoiceNumber || invoiceId}.`,
+        fullyPaid ? 'Invoice paid' : 'Partial payment received',
+        fullyPaid
+          ? `Invoice ${input.invoiceNumber || invoiceId} is fully paid.`
+          : `Partial payment recorded for invoice ${input.invoiceNumber || invoiceId}. Remaining reminders are still active.`,
         `/invoices/${invoiceId}`,
         this.idempotencyKey(input.tenantId, triggerType, 'Invoice', invoiceId, 'payment-notification'),
         triggerType,
         'Invoice',
         invoiceId,
       );
-      output.actions.push('invoice_reminders_cancelled', 'bookkeeping_synced');
+      output.actions.push(fullyPaid ? 'invoice_reminders_cancelled' : 'invoice_reminders_rescheduled', 'bookkeeping_synced');
     }
-    if (['payment.failed', 'payment.refunded', 'payment.partially_refunded', 'payment.voided'].includes(triggerType)) {
+    if (['payment.failed', 'payment.refunded', 'payment.partially_refunded', 'payment.partiallyRefunded', 'payment.voided'].includes(triggerType)) {
       if (input.paymentId) {
         await this.runSideEffect(
           input.tenantId,
@@ -945,12 +1106,18 @@ class SalesAutomationService {
           'bookkeeping',
           () => {
             if (triggerType === 'payment.refunded') return bookkeepingService.createInvoicePaymentReversal(input.tenantId, input.paymentId, Number(input.amount || 0), 'REFUNDED');
-            if (triggerType === 'payment.partially_refunded') return bookkeepingService.createInvoicePaymentReversal(input.tenantId, input.paymentId, Number(input.refundAmount || 0), 'PARTIALLY_REFUNDED');
+            if (triggerType === 'payment.partially_refunded' || triggerType === 'payment.partiallyRefunded') return bookkeepingService.createInvoicePaymentReversal(input.tenantId, input.paymentId, Number(input.refundAmount || input.amount || 0), 'PARTIALLY_REFUNDED');
             return bookkeepingService.syncInvoicePayment(input.tenantId, input.paymentId);
           },
           input,
         );
       }
+      await this.notifyAdmins(
+        input.tenantId,
+        'Payment needs accounting review',
+        `Payment ${input.paymentId || entityId} was ${triggerType.replace('payment.', '').replace(/([A-Z])/g, ' $1').toLowerCase()}. Bookkeeping has been queued for correction.`,
+        input.invoiceId ? `/invoices/${input.invoiceId}` : '/bookkeeping',
+      );
       output.actions.push('bookkeeping_reversal_synced');
     }
     if (triggerType === 'expense.deleted') {
@@ -1281,13 +1448,13 @@ class SalesAutomationService {
     }
   }
 
-  async scheduleInvoiceReminders(tenantId: string, invoiceId: string) {
+  async scheduleInvoiceReminders(tenantId: string, invoiceId: string, reason = 'invoice.sent') {
     const run = await this.runSideEffect(
       tenantId,
-      'invoice.sent',
+      reason,
       'Invoice',
       invoiceId,
-      'reminder-set',
+      `reminder-set:${reason}`,
       'automation',
       async () => {
         const invoice = await prisma.invoice.findFirst({
@@ -1306,13 +1473,16 @@ class SalesAutomationService {
           recipientEmail: (invoice as any).client?.primaryEmail || (invoice as any).client?.email || null,
           recipientName: (invoice as any).client?.clientName || null,
         };
-        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.due.soon', addDays(dueDate, -2), 'NOTIFICATION', payload);
-        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.due.soon', addDays(dueDate, -2), 'EMAIL', payload);
+        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.due.soon', addDays(dueDate, -3), 'NOTIFICATION', payload);
+        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.due.soon', addDays(dueDate, -3), 'EMAIL', payload);
         await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.due.today', dueDate, 'NOTIFICATION', payload);
         await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.due.today', dueDate, 'EMAIL', payload);
-        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.overdue', addDays(dueDate, 1), 'TASK', payload);
-        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.overdue', addDays(dueDate, 1), 'EMAIL', payload);
-        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.escalation', addDays(dueDate, 7), 'NOTIFICATION', payload);
+        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.overdue.3d', addDays(dueDate, 3), 'TASK', payload);
+        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.overdue.3d', addDays(dueDate, 3), 'EMAIL', payload);
+        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.overdue.7d', addDays(dueDate, 7), 'NOTIFICATION', payload);
+        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.overdue.7d', addDays(dueDate, 7), 'EMAIL', payload);
+        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.overdue.14d', addDays(dueDate, 14), 'NOTIFICATION', payload);
+        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.overdue.14d', addDays(dueDate, 14), 'EMAIL', payload);
       },
       { invoiceId },
     );
@@ -1470,6 +1640,179 @@ class SalesAutomationService {
       module: 'automation',
       description: `Email reminder delivered to ${recipient}`,
       metadata: { reminderId: reminder.id, channel: 'EMAIL', recipient, senderEmail: delivery.senderEmail },
+    });
+  }
+
+  private async loadContractContext(tenantId: string, contractId: string) {
+    return db.contract.findFirst({
+      where: { id: contractId, tenantId },
+      include: {
+        client: true,
+        quote: { include: { items: { orderBy: { sortOrder: 'asc' } } } },
+        project: true,
+        createdBy: { include: { user: true } },
+      },
+    });
+  }
+
+  private async sendContractEmail(tenantId: string, contractId: string, input: Record<string, any>) {
+    const contract = input.contract || await this.loadContractContext(tenantId, contractId);
+    const recipient = input.recipientEmail || contract?.client?.primaryEmail || contract?.client?.email;
+    if (!recipient) return null;
+    const contractNumber = contract?.contractNumber || input.contractNumber || contractId;
+    const link = `/contracts/${contractId}`;
+    const subject = `Contract ${contractNumber} ready for review`;
+    const text = `Your contract ${contractNumber} is ready for review: ${link}`;
+    const html = `<p>Your contract <strong>${contractNumber}</strong> is ready for review.</p><p><a href="${link}">View contract</a></p>`;
+    return this.runSideEffect(
+      tenantId,
+      'contract.sent',
+      'Contract',
+      contractId,
+      `email:${recipient}`,
+      'emails',
+      () => tenantMailerService.sendTenantEmail({
+        tenantId,
+        preferredUserId: input.ownerUserId || contract?.createdBy?.userId || undefined,
+        to: recipient,
+        subject,
+        html,
+        text,
+      }),
+      { contractId, recipient },
+    );
+  }
+
+  private async updateContractDealStage(tenantId: string, contractId: string, contract: any, stage: string, eventName: string) {
+    const dealId = contract?.projectId || contract?.project?.id;
+    if (!dealId) return null;
+    return this.runSideEffect(
+      tenantId,
+      eventName,
+      'Contract',
+      contractId,
+      `deal-stage:${stage}`,
+      'deals',
+      () => db.project.update({
+        where: { id: dealId },
+        data: {
+          dealStatus: stage,
+          probability: stage === 'Won' ? 100 : undefined,
+          status: stage === 'Won' ? 'COMPLETED' : undefined,
+          closedDate: stage === 'Won' ? new Date() : undefined,
+          nextStep: stage === 'Won' ? 'Prepare invoice and customer onboarding' : undefined,
+        },
+      }),
+      { contractId, dealId, stage },
+    ).catch((error) => {
+      logger.warn('[SalesAutomation] Contract deal stage update failed', { tenantId, contractId, dealId, stage, error: (error as Error)?.message || String(error) });
+      return null;
+    });
+  }
+
+  private contractAutomationSettings(tenant: any) {
+    const settings = (tenant?.settings || {}) as Record<string, any>;
+    return {
+      createDraftInvoiceOnSigned: settings.contractAutomation?.createDraftInvoiceOnSigned ?? settings.createDraftInvoiceOnContractSigned ?? false,
+    };
+  }
+
+  private async createDraftInvoiceFromContract(tenantId: string, contractId: string, contract: any, input: Record<string, any>) {
+    const tenant = await db.tenant?.findUnique?.({ where: { id: tenantId }, select: { settings: true } });
+    const settings = this.contractAutomationSettings(tenant);
+    const clientId = contract?.clientId || contract?.client?.id || input.clientId;
+    if (!settings.createDraftInvoiceOnSigned || !clientId) return null;
+    const quoteItems = Array.isArray(contract?.quote?.items) && contract.quote.items.length
+      ? contract.quote.items
+      : [{ description: contract?.title || `Contract ${contract?.contractNumber || contractId}`, quantity: 1, unitPrice: Number(contract?.value || input.value || 0) }];
+    const total = Number(contract?.quote?.total || contract?.value || input.value || 0);
+    return this.runSideEffect(
+      tenantId,
+      'contract.signed',
+      'Contract',
+      contractId,
+      'create-draft-invoice',
+      'finance',
+      () => db.invoice.create({
+        data: {
+          tenantId,
+          invoiceNumber: `INV-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+          clientId,
+          quoteId: contract?.quoteId || null,
+          projectId: contract?.projectId || contract?.project?.id || null,
+          issueDate: new Date(),
+          dueDate: addDays(new Date(), 14),
+          currency: contract?.currency || contract?.quote?.currency || 'CAD',
+          status: 'DRAFT',
+          subtotal: Number(contract?.quote?.subtotal || total),
+          taxAmount: Number(contract?.quote?.taxAmount || 0),
+          discountAmount: Number(contract?.quote?.discountAmount || 0),
+          total,
+          amountPaid: 0,
+          amountDue: total,
+          notes: `Draft invoice created from signed contract ${contract?.contractNumber || contractId}.`,
+          items: {
+            create: quoteItems.map((item: any, index: number) => ({
+              tenantId,
+              description: item.description || `Contract item ${index + 1}`,
+              quantity: Number(item.quantity || 1),
+              unitPrice: Number(item.unitPrice || item.rate || item.total || total),
+              amount: Number(item.amount || item.total || ((Number(item.quantity || 1)) * Number(item.unitPrice || item.rate || total))),
+              sortOrder: index,
+            })),
+          },
+        },
+      }),
+      { contractId, clientId },
+    ).catch((error) => {
+      logger.warn('[SalesAutomation] Draft invoice creation from contract failed', { tenantId, contractId, error: (error as Error)?.message || String(error) });
+      return null;
+    });
+  }
+
+  private async updateContractCustomerLifecycle(tenantId: string, contractId: string, contract: any) {
+    const clientId = contract?.clientId || contract?.client?.id;
+    if (!clientId) return null;
+    return this.runSideEffect(
+      tenantId,
+      'contract.signed',
+      'Contract',
+      contractId,
+      'customer-lifecycle',
+      'clients',
+      async () => {
+        await clientLifecycleService.progressTo(clientId, tenantId, 'ONBOARDING');
+        return { id: clientId, status: 'ONBOARDING' };
+      },
+      { contractId, clientId },
+    );
+  }
+
+  private async createContractFollowupTask(
+    tenantId: string,
+    contractId: string,
+    contract: any,
+    actionType: string,
+    title: string,
+    description: string,
+    priority: 'LOW' | 'MEDIUM' | 'HIGH',
+    dueInBusinessDays: number,
+    eventName: string,
+  ) {
+    return this.createTaskOnce(tenantId, {
+      eventName,
+      entityType: 'Contract',
+      entityId: contractId,
+      actionType,
+      title: `${title}: ${contract?.contractNumber || contractId}`,
+      description,
+      priority,
+      dueDate: addBusinessDays(new Date(), dueInBusinessDays),
+      assignedToId: contract?.createdById || contract?.project?.dealOwnerId || contract?.project?.salesRepId || null,
+      clientId: contract?.clientId || contract?.client?.id || null,
+      projectId: contract?.projectId || contract?.project?.id || null,
+      referenceDoctype: 'SalesAutomation',
+      referenceDocname: `${contractId}:${actionType}`,
     });
   }
 

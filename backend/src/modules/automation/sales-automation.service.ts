@@ -10,7 +10,9 @@ import { invoicesService } from '../invoices/invoices.service';
 import { proposalsService } from '../proposals/proposals.service';
 import { contractsService } from '../contracts/contracts.service';
 import { automationIdempotencyService } from './automation-idempotency.service';
+import { automationOrchestratorService } from './automation-orchestrator.service';
 import { tenantMailerService } from '../../common/services/tenant-mailer.service';
+import { leadAutomationService } from '../leads/lead-automation.service';
 
 const db = prisma as any;
 
@@ -32,6 +34,22 @@ const DEFAULT_RULES = [
     runOncePerEntity: false,
   },
   {
+    name: 'Lead contacted next step',
+    description: 'Log contact automation, schedule next follow-up, and start a no-response reminder.',
+    triggerType: 'lead.contacted',
+    actions: ['create_contacted_followup_task', 'schedule_no_response_reminder', 'score_lead'],
+    priority: 15,
+    runOncePerEntity: false,
+  },
+  {
+    name: 'Lead qualified conversion',
+    description: 'Prepare account, contact, deal, default task, and owner notification when a lead qualifies.',
+    triggerType: 'lead.qualified',
+    actions: ['prepare_lead_conversion', 'create_default_deal_task', 'notify_owner'],
+    priority: 10,
+    runOncePerEntity: true,
+  },
+  {
     name: 'Lead converted handoff',
     description: 'Notify the owner and create a deal follow-up after lead conversion.',
     triggerType: 'lead.converted',
@@ -40,9 +58,25 @@ const DEFAULT_RULES = [
     runOncePerEntity: true,
   },
   {
+    name: 'Lead disqualified cleanup',
+    description: 'Cancel lead reminders and create nurture follow-up when a lead is disqualified.',
+    triggerType: 'lead.disqualified',
+    actions: ['cancel_lead_reminders', 'create_nurture_followup'],
+    priority: 15,
+    runOncePerEntity: false,
+  },
+  {
+    name: 'New deal kickoff',
+    description: 'Set safe defaults, create the first deal task, prepare a document folder, and notify the owner.',
+    triggerType: 'deal.created',
+    actions: ['set_deal_defaults', 'create_first_deal_task', 'create_deal_document_folder', 'notify_owner'],
+    priority: 15,
+    runOncePerEntity: true,
+  },
+  {
     name: 'Deal stage changed follow-up',
     description: 'Create stage-specific sales tasks and reminders as deals move through the pipeline.',
-    triggerType: 'deal.stage.changed',
+    triggerType: 'deal.stageChanged',
     actions: ['create_stage_followup_task', 'schedule_stage_reminder'],
     priority: 20,
     runOncePerEntity: false,
@@ -56,10 +90,34 @@ const DEFAULT_RULES = [
     runOncePerEntity: true,
   },
   {
+    name: 'Deal lost nurture',
+    description: 'Cancel open deal reminders and create a future nurture task when a deal is lost.',
+    triggerType: 'deal.lost',
+    actions: ['cancel_deal_reminders', 'create_lost_nurture_task'],
+    priority: 10,
+    runOncePerEntity: true,
+  },
+  {
+    name: 'Stale deal follow-up',
+    description: 'Create a recovery task and notify the owner when a deal has stalled.',
+    triggerType: 'deal.stale',
+    actions: ['create_stale_deal_task', 'notify_owner'],
+    priority: 15,
+    runOncePerEntity: false,
+  },
+  {
+    name: 'Proposal created activity',
+    description: 'Log proposal creation and prepare tracking context.',
+    triggerType: 'proposal.created',
+    actions: ['create_activity_log'],
+    priority: 20,
+    runOncePerEntity: true,
+  },
+  {
     name: 'Proposal sent follow-up',
-    description: 'Schedule proposal follow-up reminders and save available proposal documents.',
+    description: 'Move deal to Proposal Sent, send proposal email, schedule follow-ups, save documents, and notify owner.',
     triggerType: 'proposal.sent',
-    actions: ['schedule_proposal_followup', 'save_proposal_document'],
+    actions: ['update_deal_stage', 'send_proposal_email', 'schedule_proposal_followup', 'save_proposal_document', 'notify_owner'],
     priority: 20,
     runOncePerEntity: true,
   },
@@ -68,6 +126,22 @@ const DEFAULT_RULES = [
     description: 'Mark linked sales work ready for billing and create onboarding follow-up.',
     triggerType: 'proposal.accepted',
     actions: ['mark_deal_won', 'create_onboarding_task', 'save_proposal_document'],
+    priority: 20,
+    runOncePerEntity: true,
+  },
+  {
+    name: 'Proposal declined follow-up',
+    description: 'Notify the owner and create a follow-up task when a proposal is declined.',
+    triggerType: 'proposal.declined',
+    actions: ['create_declined_followup_task', 'notify_owner'],
+    priority: 20,
+    runOncePerEntity: true,
+  },
+  {
+    name: 'Proposal expired follow-up',
+    description: 'Cancel reminders and create a follow-up task when a proposal expires.',
+    triggerType: 'proposal.expired',
+    actions: ['cancel_proposal_reminders', 'create_expired_followup_task', 'notify_owner'],
     priority: 20,
     runOncePerEntity: true,
   },
@@ -213,14 +287,28 @@ class SalesAutomationService {
     this.initialized = true;
 
     eventBus.on('lead.created', (event) => this.executeTrigger('lead.created', 'Lead', event.leadId, event));
+    eventBus.on('lead.updated', (event) => this.executeTrigger('lead.updated', 'Lead', event.leadId, event));
+    eventBus.on('lead.contacted', (event) => this.executeTrigger('lead.contacted', 'Lead', event.leadId, event));
+    eventBus.on('lead.qualified', (event) => this.executeTrigger('lead.qualified', 'Lead', event.leadId, event));
     eventBus.on('lead.stale', (event) => this.executeTrigger('lead.stale', 'Lead', event.leadId, event));
     eventBus.on('lead.converted', (event) => this.executeTrigger('lead.converted', 'Lead', event.leadId, event));
+    eventBus.on('lead.disqualified', (event) => this.executeTrigger('lead.disqualified', 'Lead', event.leadId, event));
     eventBus.on('lead.statusChanged', (event) => this.executeTrigger('lead.status.changed', 'Lead', event.leadId, event));
-    eventBus.on('project.stageChanged', (event) => this.executeTrigger('deal.stage.changed', 'Deal', event.projectId, event));
-    eventBus.on('deal.won', (event) => this.executeTrigger('deal.won', 'Deal', event.leadId, event));
+    eventBus.on('deal.created', (event) => this.executeTrigger('deal.created', 'Deal', event.dealId || event.projectId, event));
+    eventBus.on('deal.stageChanged', (event) => this.executeTrigger('deal.stageChanged', 'Deal', event.dealId || event.projectId, event));
+    eventBus.on('deal.valueChanged', (event) => this.executeTrigger('deal.valueChanged', 'Deal', event.dealId || event.projectId, event));
+    eventBus.on('deal.ownerChanged', (event) => this.executeTrigger('deal.ownerChanged', 'Deal', event.dealId || event.projectId, event));
+    eventBus.on('deal.stale', (event) => this.executeTrigger('deal.stale', 'Deal', event.dealId || event.projectId, event));
+    eventBus.on('deal.lost', (event) => this.executeTrigger('deal.lost', 'Deal', event.dealId || event.projectId, event));
+    eventBus.on('project.stageChanged', (event) => this.executeTrigger('deal.stageChanged', 'Deal', event.projectId, event));
+    eventBus.on('deal.won', (event) => this.executeTrigger('deal.won', 'Deal', event.dealId || event.projectId || event.leadId || '', event));
+    eventBus.on('proposal.created', (event) => this.executeTrigger('proposal.created', 'Proposal', event.proposalId, event));
     eventBus.on('proposal.sent', (event) => this.executeTrigger('proposal.sent', 'Proposal', event.proposalId, event));
     eventBus.on('proposal.viewed', (event) => this.executeTrigger('proposal.viewed', 'Proposal', event.proposalId, event));
+    eventBus.on('proposal.reminderDue', (event) => this.executeTrigger('proposal.reminderDue', 'Proposal', event.proposalId, event));
     eventBus.on('proposal.accepted', (event) => this.executeTrigger('proposal.accepted', 'Proposal', event.proposalId, event));
+    eventBus.on('proposal.declined', (event) => this.executeTrigger('proposal.declined', 'Proposal', event.proposalId, event));
+    eventBus.on('proposal.expired', (event) => this.executeTrigger('proposal.expired', 'Proposal', event.proposalId, event));
     eventBus.on('contract.sent', (event) => this.executeTrigger('contract.sent', 'Contract', event.contractId, event));
     eventBus.on('contract.signed', (event) => this.executeTrigger('contract.signed', 'Contract', event.contractId, event));
     eventBus.on('invoice.sent', (event) => this.executeTrigger('invoice.sent', 'Invoice', event.invoiceId, event));
@@ -489,14 +577,29 @@ class SalesAutomationService {
       add('create_conversion_followup_task', { channel: 'TASK', leadId: input.leadId || entityId, dealId: input.dealId || null });
       add('notify_owner', { channel: 'NOTIFICATION' });
     }
-    if (triggerType === 'deal.stage.changed') {
-      add('create_stage_followup_task', { channel: 'TASK', dealId: input.projectId || entityId, stage: input.newStageName || input.newStageSlug || null });
+    if (triggerType === 'deal.created') {
+      add('create_first_deal_task', { channel: 'TASK', dealId: input.dealId || input.projectId || entityId });
+      add('create_deal_document_folder', { dealId: input.dealId || input.projectId || entityId });
+      add('notify_owner', { channel: 'NOTIFICATION' });
+    }
+    if (triggerType === 'deal.stageChanged' || triggerType === 'deal.stage.changed') {
+      add('create_stage_followup_task', { channel: 'TASK', dealId: input.dealId || input.projectId || entityId, stage: input.newStageName || input.newStageSlug || null });
       add('schedule_stage_reminder', { channel: 'TASK' });
     }
     if (triggerType === 'deal.won') {
       add('create_onboarding_task', { channel: 'TASK' });
     }
+    if (triggerType === 'deal.lost') {
+      add('cancel_deal_reminders');
+      add('create_lost_nurture_task', { channel: 'TASK' });
+    }
+    if (triggerType === 'deal.stale') {
+      add('create_stale_deal_task', { channel: 'TASK' });
+      add('notify_owner', { channel: 'NOTIFICATION' });
+    }
     if (triggerType === 'proposal.sent') {
+      add('update_deal_stage', { stage: 'Proposal Sent' });
+      add('send_proposal_email', { channel: 'EMAIL' });
       add('save_proposal_document', { documentType: 'pdf', linkedEntityType: 'Proposal', linkedEntityId: input.proposalId || entityId });
       add('schedule_proposal_followup_1d', { channel: 'TASK', dueInDays: 1 });
       add('schedule_proposal_followup_2d', { channel: 'NOTIFICATION', dueInDays: 2 });
@@ -505,6 +608,15 @@ class SalesAutomationService {
       add('save_accepted_proposal_document', { documentType: 'pdf', linkedEntityType: 'Proposal', linkedEntityId: input.proposalId || entityId });
       add('mark_deal_won');
       add('create_onboarding_task', { channel: 'TASK' });
+    }
+    if (triggerType === 'proposal.declined') {
+      add('create_declined_followup_task', { channel: 'TASK' });
+      add('notify_owner', { channel: 'NOTIFICATION' });
+    }
+    if (triggerType === 'proposal.expired') {
+      add('cancel_proposal_reminders');
+      add('create_expired_followup_task', { channel: 'TASK' });
+      add('notify_owner', { channel: 'NOTIFICATION' });
     }
     if (triggerType === 'contract.sent') {
       add('save_contract_document', { documentType: 'pdf', linkedEntityType: 'Contract', linkedEntityId: input.contractId || entityId });
@@ -554,6 +666,22 @@ class SalesAutomationService {
     });
   }
 
+  private async runSideEffect<T>(
+    tenantId: string,
+    eventName: string,
+    entityType: string,
+    entityId: string,
+    actionType: string,
+    module: string,
+    fn: () => Promise<T>,
+    input: Record<string, any> = {},
+  ) {
+    return automationOrchestratorService.runSideEffect(
+      { tenantId, eventName, entityType, entityId, actionType, module, input },
+      fn,
+    );
+  }
+
   private async applyBuiltInActions(triggerType: string, entityType: string, entityId: string, input: Record<string, any>, actions: any[]) {
     const output: Record<string, any> = { actions: [] };
     if (triggerType === 'lead.created') {
@@ -569,7 +697,9 @@ class SalesAutomationService {
         entityType,
         entityId,
       );
-      output.actions.push('lead_followup_created');
+      await this.scoreLead(input.tenantId, input.leadId || entityId, triggerType);
+      await this.flagDuplicateLead(input.tenantId, input.leadId || entityId, input);
+      output.actions.push('lead_followup_created', 'lead_scored', 'duplicate_checked');
     }
     if (triggerType === 'lead.stale') {
       await this.createTaskOnce(input.tenantId, {
@@ -588,6 +718,34 @@ class SalesAutomationService {
       });
       await this.notifyOwner(input.tenantId, input.ownerUserId, 'Lead needs follow-up', `${input.leadName || 'A lead'} has gone stale.`, `/leads/${input.leadId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, 'owner-notification'), triggerType, entityType, entityId);
       output.actions.push('stale_lead_task_created');
+    }
+    if (triggerType === 'lead.contacted') {
+      await this.createTaskOnce(input.tenantId, {
+        eventName: triggerType,
+        entityType,
+        entityId,
+        actionType: 'contacted-next-followup-task',
+        title: `Next follow-up: ${input.leadName || 'Lead'}`,
+        description: 'Lead was contacted. Confirm next step, demo timing, or qualification details.',
+        priority: 'MEDIUM',
+        dueDate: addBusinessDays(new Date(), 2),
+        assignedToId: input.ownerId || null,
+        leadId: input.leadId || entityId,
+        referenceDoctype: 'SalesAutomation',
+        referenceDocname: `${input.leadId || entityId}:contacted-next-followup`,
+      });
+      await this.scheduleReminder(input.tenantId, 'Lead', input.leadId || entityId, 'lead.no-response', addDays(new Date(), 3), 'NOTIFICATION', {
+        ...input,
+        ownerUserId: input.ownerUserId,
+      });
+      await this.scoreLead(input.tenantId, input.leadId || entityId, triggerType);
+      output.actions.push('lead_contacted_followup_scheduled', 'lead_scored');
+    }
+    if (triggerType === 'lead.qualified') {
+      await this.createQualifiedLeadDealTask(input.tenantId, input.leadId || entityId, input);
+      await this.notifyOwner(input.tenantId, input.ownerUserId, 'Lead qualified', `${input.leadName || 'A lead'} is ready for a deal follow-up.`, `/leads/${input.leadId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, 'owner-notification'), triggerType, entityType, entityId);
+      await this.scoreLead(input.tenantId, input.leadId || entityId, triggerType);
+      output.actions.push('qualified_lead_deal_task_created', 'lead_scored');
     }
     if (triggerType === 'lead.converted') {
       await this.createTaskOnce(input.tenantId, {
@@ -609,56 +767,138 @@ class SalesAutomationService {
       await this.notifyOwner(input.tenantId, input.ownerUserId, 'Lead converted', `${input.leadName || 'A lead'} was converted.`, input.dealId ? `/deals?dealId=${input.dealId}` : `/leads/${input.leadId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, 'owner-notification'), triggerType, entityType, entityId);
       output.actions.push('lead_conversion_handoff_created');
     }
-    if (triggerType === 'deal.stage.changed') {
+    if (triggerType === 'lead.disqualified') {
+      if (!input.reason) throw new BadRequestError('Disqualified lead reason is required', ErrorCodes.VALIDATION_FAILED);
+      await this.cancelEntityReminders(input.tenantId, 'Lead', input.leadId || entityId);
+      await this.createTaskOnce(input.tenantId, {
+        eventName: triggerType,
+        entityType,
+        entityId,
+        actionType: 'disqualified-nurture-task',
+        title: `Nurture follow-up: ${input.leadName || 'Disqualified lead'}`,
+        description: `Lead was disqualified. Reason: ${input.reason}. Revisit later if timing or fit changes.`,
+        priority: 'LOW',
+        dueDate: addDays(new Date(), 30),
+        assignedToId: input.ownerId || null,
+        leadId: input.leadId || entityId,
+        referenceDoctype: 'SalesAutomation',
+        referenceDocname: `${input.leadId || entityId}:disqualified-nurture`,
+      });
+      output.actions.push('lead_reminders_cancelled', 'lead_nurture_task_created');
+    }
+    if (triggerType === 'deal.created') {
+      await this.handleDealCreated(entityId, input, output);
+    }
+    if (triggerType === 'deal.stageChanged' || triggerType === 'deal.stage.changed') {
       await this.handleDealStageChanged(entityId, input, output);
     }
     if (triggerType === 'deal.won') {
       await this.createOnboardingTask(input.tenantId, entityId, input);
-      output.actions.push('deal_onboarding_task_created');
+      await this.createDealWorkflowTask(input.tenantId, entityId, { ...input, triggerType }, 'won-next-workflow', 'Prepare contract and invoice workflow', 'Deal is won. Confirm contract, invoice draft, billing handoff, and onboarding timing.', 'HIGH', 1);
+      output.actions.push('deal_onboarding_task_created', 'deal_won_next_workflow_created');
+    }
+    if (triggerType === 'deal.lost') {
+      if (!input.lostReason) throw new BadRequestError('Lost reason is required when a deal is marked Lost', ErrorCodes.VALIDATION_FAILED);
+      await this.cancelEntityReminders(input.tenantId, 'Deal', input.dealId || input.projectId || entityId);
+      await this.createDealWorkflowTask(input.tenantId, entityId, { ...input, triggerType }, 'lost-nurture-task', 'Plan nurture follow-up', `Deal was lost. Reason: ${input.lostReason}. Revisit if timing or fit changes.`, 'LOW', 30);
+      output.actions.push('deal_reminders_cancelled', 'deal_lost_nurture_task_created');
+    }
+    if (triggerType === 'deal.stale') {
+      await this.createDealWorkflowTask(input.tenantId, entityId, { ...input, triggerType }, 'stale-deal-task', 'Reconnect with stalled deal', `This deal has had no recent activity${input.daysInactive ? ` for ${input.daysInactive} days` : ''}. Review the next step and follow up.`, 'HIGH', 1);
+      await this.notifyOwner(input.tenantId, input.ownerUserId, 'Deal needs follow-up', `${input.dealName || input.projectName || 'A deal'} has stalled.`, `/deals/${input.dealId || input.projectId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, 'owner-notification'), triggerType, entityType, entityId);
+      if (input.escalate) {
+        await this.notifyAdmins(input.tenantId, 'Stalled deal needs attention', `${input.dealName || input.projectName || 'A deal'} needs manager review.`, `/deals/${input.dealId || input.projectId || entityId}`);
+      }
+      output.actions.push('deal_stale_task_created', 'deal_stale_owner_notified');
     }
     if (triggerType === 'proposal.sent') {
-      await automationIdempotencyService.runOnce(
+      const proposalContext = await this.loadProposalContext(input.tenantId, input.proposalId || entityId);
+      await this.updateProposalDealStage(input.tenantId, input.proposalId || entityId, proposalContext, 'Proposal Sent', triggerType);
+      await this.runSideEffect(
         input.tenantId,
-        this.idempotencyKey(input.tenantId, triggerType, 'Proposal', input.proposalId || entityId, 'save-proposal-pdf-document'),
-        { eventName: triggerType, entityType: 'Proposal', entityId: input.proposalId || entityId, actionType: 'save-proposal-pdf-document' },
-        async () => proposalsService.saveProposalPdfToDocuments(input.tenantId, input.proposalId || entityId, input.salesRepId, 'sent'),
+        triggerType,
+        'Proposal',
+        input.proposalId || entityId,
+        'save-proposal-pdf-document',
+        'documents',
+        () => proposalsService.saveProposalPdfToDocuments(input.tenantId, input.proposalId || entityId, input.salesRepId, 'sent'),
+        input,
       ).catch((error) => {
         logger.warn('[SalesAutomation] Proposal PDF document save failed', { tenantId: input.tenantId, proposalId: input.proposalId || entityId, error: (error as Error)?.message || String(error) });
       });
+      await this.sendProposalEmail(input.tenantId, input.proposalId || entityId, { ...input, proposal: proposalContext });
       await this.scheduleReminder(input.tenantId, 'Proposal', entityId, 'proposal.followup.1d', addDays(new Date(), 1), 'TASK', input);
       await this.scheduleReminder(input.tenantId, 'Proposal', entityId, 'proposal.followup.2d', addDays(new Date(), 2), 'NOTIFICATION', input);
-      output.actions.push('proposal_pdf_saved', 'proposal_followups_scheduled');
+      await this.notifyOwner(input.tenantId, input.ownerUserId || proposalContext?.lead?.assignedTo?.userId, 'Proposal sent', `${proposalContext?.proposalNumber || 'Proposal'} was sent.`, `/proposals/${input.proposalId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, 'owner-notification'), triggerType, entityType, entityId);
+      output.actions.push('proposal_deal_stage_updated', 'proposal_pdf_saved', 'proposal_email_sent', 'proposal_followups_scheduled');
+    }
+    if (triggerType === 'proposal.viewed') {
+      const proposalContext = await this.loadProposalContext(input.tenantId, input.proposalId || entityId);
+      await this.notifyOwner(input.tenantId, input.ownerUserId || proposalContext?.lead?.assignedTo?.userId, 'Proposal viewed', `${proposalContext?.proposalNumber || 'Proposal'} was viewed.`, `/proposals/${input.proposalId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, `owner-notification:${input.viewCount || 1}`), triggerType, entityType, entityId);
+      output.actions.push('proposal_view_owner_notified');
     }
     if (triggerType === 'proposal.accepted') {
-      await automationIdempotencyService.runOnce(
+      const proposalContext = await this.loadProposalContext(input.tenantId, input.proposalId || entityId);
+      await this.updateProposalDealStage(input.tenantId, input.proposalId || entityId, proposalContext, 'Won', triggerType);
+      await this.cancelEntityReminders(input.tenantId, 'Proposal', input.proposalId || entityId);
+      await this.runSideEffect(
         input.tenantId,
-        this.idempotencyKey(input.tenantId, triggerType, 'Proposal', input.proposalId || entityId, 'save-accepted-proposal-pdf-document'),
-        { eventName: triggerType, entityType: 'Proposal', entityId: input.proposalId || entityId, actionType: 'save-accepted-proposal-pdf-document' },
-        async () => proposalsService.saveProposalPdfToDocuments(input.tenantId, input.proposalId || entityId, input.salesRepId, 'accepted'),
+        triggerType,
+        'Proposal',
+        input.proposalId || entityId,
+        'save-accepted-proposal-pdf-document',
+        'documents',
+        () => proposalsService.saveProposalPdfToDocuments(input.tenantId, input.proposalId || entityId, input.salesRepId, 'accepted'),
+        input,
       ).catch((error) => {
         logger.warn('[SalesAutomation] Accepted proposal PDF document save failed', { tenantId: input.tenantId, proposalId: input.proposalId || entityId, error: (error as Error)?.message || String(error) });
       });
+      await this.createContractFromProposal(input.tenantId, input.proposalId || entityId, proposalContext, input);
+      await this.createDraftInvoiceFromProposal(input.tenantId, input.proposalId || entityId, proposalContext, input);
       await this.handleProposalAccepted(input);
-      output.actions.push('accepted_proposal_pdf_saved', 'proposal_acceptance_handoff');
+      await this.notifyOwner(input.tenantId, input.ownerUserId || proposalContext?.lead?.assignedTo?.userId, 'Proposal accepted', `${proposalContext?.proposalNumber || 'Proposal'} was accepted.`, `/proposals/${input.proposalId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, 'owner-notification'), triggerType, entityType, entityId, 'SUCCESS');
+      await this.createProposalFollowupTask(input.tenantId, input.proposalId || entityId, proposalContext, 'accepted-next-step-task', 'Confirm accepted proposal next step', 'Proposal accepted. Confirm contract, invoice, kickoff date, and customer handoff.', 'HIGH', 1, triggerType);
+      output.actions.push('proposal_deal_won', 'proposal_reminders_cancelled', 'accepted_proposal_pdf_saved', 'proposal_acceptance_handoff');
+    }
+    if (triggerType === 'proposal.declined') {
+      const proposalContext = await this.loadProposalContext(input.tenantId, input.proposalId || entityId);
+      await this.notifyOwner(input.tenantId, input.ownerUserId || proposalContext?.lead?.assignedTo?.userId, 'Proposal declined', `${proposalContext?.proposalNumber || 'Proposal'} was declined${input.reason ? `: ${input.reason}` : '.'}`, `/proposals/${input.proposalId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, 'owner-notification'), triggerType, entityType, entityId, 'WARNING');
+      await this.createProposalFollowupTask(input.tenantId, input.proposalId || entityId, proposalContext, 'declined-followup-task', 'Follow up on declined proposal', 'Proposal was declined. Review feedback, objections, and whether this should move to negotiation or lost.', 'HIGH', 1, triggerType);
+      output.actions.push('proposal_declined_followup_created');
+    }
+    if (triggerType === 'proposal.expired') {
+      const proposalContext = await this.loadProposalContext(input.tenantId, input.proposalId || entityId);
+      await this.cancelEntityReminders(input.tenantId, 'Proposal', input.proposalId || entityId);
+      await this.notifyOwner(input.tenantId, input.ownerUserId || proposalContext?.lead?.assignedTo?.userId, 'Proposal expired', `${proposalContext?.proposalNumber || 'Proposal'} expired without acceptance.`, `/proposals/${input.proposalId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, 'owner-notification'), triggerType, entityType, entityId, 'WARNING');
+      await this.createProposalFollowupTask(input.tenantId, input.proposalId || entityId, proposalContext, 'expired-followup-task', 'Follow up on expired proposal', 'Proposal expired. Confirm whether to revise, resend, or close the deal.', 'HIGH', 1, triggerType);
+      output.actions.push('proposal_expired_reminders_cancelled', 'proposal_expired_followup_created');
     }
     if (triggerType === 'contract.sent' || triggerType === 'contract.signed') {
       const variant = triggerType === 'contract.signed' ? 'signed' : 'sent';
-      await automationIdempotencyService.runOnce(
+      await this.runSideEffect(
         input.tenantId,
-        this.idempotencyKey(input.tenantId, triggerType, 'Contract', input.contractId || entityId, `save-${variant}-contract-pdf-document`),
-        { eventName: triggerType, entityType: 'Contract', entityId: input.contractId || entityId, actionType: `save-${variant}-contract-pdf-document` },
-        async () => contractsService.saveContractPdfToDocuments(input.tenantId, input.contractId || entityId, input.ownerUserId, variant),
+        triggerType,
+        'Contract',
+        input.contractId || entityId,
+        `save-${variant}-contract-pdf-document`,
+        'documents',
+        () => contractsService.saveContractPdfToDocuments(input.tenantId, input.contractId || entityId, input.ownerUserId, variant),
+        input,
       ).catch((error) => {
         logger.warn('[SalesAutomation] Contract PDF document save failed', { tenantId: input.tenantId, contractId: input.contractId || entityId, variant, error: (error as Error)?.message || String(error) });
       });
       output.actions.push(`${variant}_contract_pdf_saved`);
     }
     if (triggerType === 'invoice.sent') {
-      await automationIdempotencyService.runOnce(
+      await this.runSideEffect(
         input.tenantId,
-        this.idempotencyKey(input.tenantId, triggerType, 'Invoice', input.invoiceId || entityId, 'save-invoice-pdf-document'),
-        { eventName: triggerType, entityType: 'Invoice', entityId: input.invoiceId || entityId, actionType: 'save-invoice-pdf-document' },
-        async () => invoicesService.saveInvoicePdfToDocuments(input.tenantId, input.invoiceId || entityId),
+        triggerType,
+        'Invoice',
+        input.invoiceId || entityId,
+        'save-invoice-pdf-document',
+        'documents',
+        () => invoicesService.saveInvoicePdfToDocuments(input.tenantId, input.invoiceId || entityId),
+        input,
       ).catch((error) => {
         logger.warn('[SalesAutomation] Invoice PDF document save failed', { tenantId: input.tenantId, invoiceId: input.invoiceId || entityId, error: (error as Error)?.message || String(error) });
       });
@@ -671,11 +911,15 @@ class SalesAutomationService {
       const payment = input.paymentId
         ? await db.invoicePayment.findFirst({ where: { tenantId: input.tenantId, id: input.paymentId, invoiceId } })
         : await db.invoicePayment.findFirst({ where: { tenantId: input.tenantId, invoiceId }, orderBy: { paymentDate: 'desc' } });
-      if (payment) await automationIdempotencyService.runOnce(
+      if (payment) await this.runSideEffect(
         input.tenantId,
-        `${input.tenantId}:${invoiceId}:${payment.id}:bookkeeping-sync`,
-        { eventName: triggerType, entityType: 'InvoicePayment', entityId: payment.id, actionType: 'bookkeeping-sync' },
-        async () => bookkeepingService.syncInvoicePayment(input.tenantId, payment.id),
+        triggerType,
+        'InvoicePayment',
+        payment.id,
+        'bookkeeping-sync',
+        'bookkeeping',
+        () => bookkeepingService.syncInvoicePayment(input.tenantId, payment.id),
+        input,
       );
       await this.notifyOwner(
         input.tenantId,
@@ -692,25 +936,33 @@ class SalesAutomationService {
     }
     if (['payment.failed', 'payment.refunded', 'payment.partially_refunded', 'payment.voided'].includes(triggerType)) {
       if (input.paymentId) {
-        await automationIdempotencyService.runOnce(
+        await this.runSideEffect(
           input.tenantId,
-          `${input.tenantId}:${input.invoiceId || entityId}:${input.paymentId}:bookkeeping-reversal:${triggerType}:${input.refundAmount || ''}`,
-          { eventName: triggerType, entityType: 'InvoicePayment', entityId: input.paymentId, actionType: 'bookkeeping-reversal' },
-          async () => {
+          triggerType,
+          'InvoicePayment',
+          input.paymentId,
+          `bookkeeping-reversal:${input.refundAmount || ''}`,
+          'bookkeeping',
+          () => {
             if (triggerType === 'payment.refunded') return bookkeepingService.createInvoicePaymentReversal(input.tenantId, input.paymentId, Number(input.amount || 0), 'REFUNDED');
             if (triggerType === 'payment.partially_refunded') return bookkeepingService.createInvoicePaymentReversal(input.tenantId, input.paymentId, Number(input.refundAmount || 0), 'PARTIALLY_REFUNDED');
             return bookkeepingService.syncInvoicePayment(input.tenantId, input.paymentId);
           },
+          input,
         );
       }
       output.actions.push('bookkeeping_reversal_synced');
     }
     if (triggerType === 'expense.deleted') {
-      await automationIdempotencyService.runOnce(
+      await this.runSideEffect(
         input.tenantId,
-        this.idempotencyKey(input.tenantId, triggerType, 'Expense', input.expenseId || entityId, 'void-bookkeeping-expense'),
-        { eventName: triggerType, entityType: 'Expense', entityId: input.expenseId || entityId, actionType: 'void-bookkeeping-expense' },
-        async () => bookkeepingService.voidSourceTransaction(input.tenantId, 'EXPENSE', input.expenseId || entityId),
+        triggerType,
+        'Expense',
+        input.expenseId || entityId,
+        'void-bookkeeping-expense',
+        'bookkeeping',
+        () => bookkeepingService.voidSourceTransaction(input.tenantId, 'EXPENSE', input.expenseId || entityId),
+        input,
       );
       output.actions.push('expense_bookkeeping_voided');
     }
@@ -722,18 +974,19 @@ class SalesAutomationService {
   }
 
   private async createLeadFollowUp(input: Record<string, any>) {
-    const key = `${input.tenantId}:lead:${input.leadId}:first-followup-task`;
-    const run = await automationIdempotencyService.runOnce(
+    const run = await this.runSideEffect(
       input.tenantId,
-      key,
-      { eventName: 'lead.created', entityType: 'Lead', entityId: input.leadId, actionType: 'first-followup-task' },
-      async () => this.createLeadFollowUpTask(input),
+      'lead.created',
+      'Lead',
+      input.leadId,
+      'first-followup-task',
+      'tasks',
+      () => this.createLeadFollowUpTask(input),
+      input,
     );
-    if (!run.executed) {
-      return db.task.findFirst({
-        where: { tenantId: input.tenantId, leadId: input.leadId, referenceDoctype: 'SalesAutomation', referenceDocname: `${input.leadId}:first-followup` },
-      });
-    }
+    if (!run.executed) return db.task.findFirst({
+      where: { tenantId: input.tenantId, leadId: input.leadId, referenceDoctype: 'SalesAutomation', referenceDocname: `${input.leadId}:first-followup` },
+    });
     return run.result;
   }
 
@@ -767,11 +1020,14 @@ class SalesAutomationService {
     const referenceDocname = task.referenceDocname || `${entityId}:${actionType}`;
     const existing = await db.task.findFirst({ where: { tenantId, referenceDoctype, referenceDocname } });
     if (existing) return existing;
-    const run = await automationIdempotencyService.runOnce(
+    const run = await this.runSideEffect(
       tenantId,
-      this.idempotencyKey(tenantId, eventName, entityType, entityId, actionType),
-      { eventName, entityType, entityId, actionType },
-      async () => db.task.create({
+      eventName,
+      entityType,
+      entityId,
+      actionType,
+      'tasks',
+      () => db.task.create({
         data: {
           tenantId,
           title: task.title,
@@ -787,6 +1043,7 @@ class SalesAutomationService {
           referenceDocname,
         },
       }),
+      task,
     );
     if (!run.executed) return db.task.findFirst({ where: { tenantId, referenceDoctype, referenceDocname } });
     return run.result;
@@ -815,62 +1072,223 @@ class SalesAutomationService {
     });
   }
 
+  private async createQualifiedLeadDealTask(tenantId: string, leadId: string, input: Record<string, any>) {
+    const lead = await db.lead.findFirst({
+      where: { id: leadId, tenantId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        companyName: true,
+        assignedToId: true,
+        convertedToClientId: true,
+        convertedToDealId: true,
+      },
+    });
+    if (!lead) throw new NotFoundError('Lead not found for automation', ErrorCodes.RESOURCE_NOT_FOUND);
+    const dealId = lead.convertedToDealId || input.dealId || null;
+    return this.createTaskOnce(tenantId, {
+      eventName: 'lead.qualified',
+      entityType: 'Lead',
+      entityId: leadId,
+      actionType: 'qualified-default-deal-task',
+      title: `Prepare qualified deal: ${lead.companyName || [lead.firstName, lead.lastName].filter(Boolean).join(' ') || 'Lead'}`,
+      description: 'Lead qualified. Confirm account, contact, deal value, decision makers, and next sales step.',
+      priority: 'HIGH',
+      dueDate: addBusinessDays(new Date(), 1),
+      assignedToId: lead.assignedToId || input.ownerId || null,
+      leadId,
+      clientId: lead.convertedToClientId || input.clientId || null,
+      projectId: dealId,
+      referenceDoctype: 'SalesAutomation',
+      referenceDocname: `${leadId}:qualified-default-deal-task`,
+    });
+  }
+
+  private async scoreLead(tenantId: string, leadId: string, eventName: string) {
+    return this.runSideEffect(
+      tenantId,
+      eventName,
+      'Lead',
+      leadId,
+      'score-lead',
+      'leads',
+      async () => {
+        await leadAutomationService.scoreAndSave(tenantId, leadId);
+        return { id: leadId, status: 'scored' };
+      },
+      { leadId },
+    ).catch((error) => {
+      logger.warn('[SalesAutomation] Lead scoring failed', { tenantId, leadId, error: (error as Error)?.message || String(error) });
+      return null;
+    });
+  }
+
+  private async flagDuplicateLead(tenantId: string, leadId: string, input: Record<string, any>) {
+    return this.runSideEffect(
+      tenantId,
+      'lead.created',
+      'Lead',
+      leadId,
+      'duplicate-check',
+      'leads',
+      async () => {
+        const or: any[] = [];
+        if (input.email) or.push({ email: input.email });
+        if (input.phone) or.push({ phone: input.phone }, { mobileNo: input.phone });
+        if (!or.length) return { id: leadId, status: 'no_match_fields' };
+        const duplicate = await db.lead.findFirst({
+          where: { tenantId, id: { not: leadId }, OR: or },
+          select: { id: true },
+        });
+        if (!duplicate) return { id: leadId, status: 'unique' };
+        await db.lead.update({
+          where: { id: leadId },
+          data: { status: 'DUPLICATE', duplicateOfLeadId: duplicate.id, closureReason: 'Potential duplicate email or phone detected by automation', closedAt: new Date() },
+        });
+        return { id: leadId, status: 'duplicate', duplicateOfLeadId: duplicate.id };
+      },
+      { leadId, email: input.email || null, phone: input.phone || null },
+    ).catch((error) => {
+      logger.warn('[SalesAutomation] Duplicate lead check failed', { tenantId, leadId, error: (error as Error)?.message || String(error) });
+      return null;
+    });
+  }
+
+  private async handleDealCreated(entityId: string, input: Record<string, any>, output: Record<string, any>) {
+    const dealId = input.dealId || input.projectId || entityId;
+    const deal = await db.project.findFirst({ where: { id: dealId, tenantId: input.tenantId } });
+    if (!deal) throw new NotFoundError('Deal not found for automation', ErrorCodes.RESOURCE_NOT_FOUND);
+
+    const updates: Record<string, any> = {};
+    if (!deal.dealStatus) updates.dealStatus = 'Qualification';
+    if (deal.probability === null || deal.probability === undefined) updates.probability = 25;
+    if (!deal.expectedClosureDate) updates.expectedClosureDate = addDays(new Date(), 30);
+    if (Object.keys(updates).length) {
+      await this.runSideEffect(
+        input.tenantId,
+        'deal.created',
+        'Deal',
+        dealId,
+        'set-defaults',
+        'deals',
+        () => db.project.update({ where: { id: dealId }, data: updates }),
+        { dealId, updates },
+      );
+      output.actions.push('deal_defaults_set');
+    }
+
+    await this.createDealWorkflowTask(input.tenantId, dealId, { ...input, ...deal, triggerType: 'deal.created' }, 'first-deal-task', 'Plan first deal step', 'New deal created. Confirm buying process, stakeholders, value, expected close date, and next sales step.', 'HIGH', 1);
+    await this.ensureDealDocumentFolder(input.tenantId, dealId, { ...input, ...deal });
+    await this.notifyOwner(input.tenantId, input.ownerUserId, 'New deal created', `${input.dealName || deal.name || 'A deal'} needs a next step.`, `/deals/${dealId}`, this.idempotencyKey(input.tenantId, 'deal.created', 'Deal', dealId, 'owner-notification'), 'deal.created', 'Deal', dealId);
+
+    const value = Number(input.value ?? deal.expectedDealValue ?? deal.dealValue ?? deal.contractValue ?? 0);
+    if (value >= 10000) {
+      await this.notifyAdmins(input.tenantId, 'High-value deal created', `${input.dealName || deal.name || 'A deal'} is valued at ${value}.`, `/deals/${dealId}`);
+      output.actions.push('high_value_manager_notified');
+    }
+    output.actions.push('first_deal_task_created', 'deal_document_folder_ready');
+  }
+
+  private async createDealWorkflowTask(
+    tenantId: string,
+    entityId: string,
+    input: Record<string, any>,
+    actionType: string,
+    title: string,
+    description: string,
+    priority: 'LOW' | 'MEDIUM' | 'HIGH',
+    dueInBusinessDays: number,
+  ) {
+    const dealId = input.dealId || input.projectId || entityId;
+    return this.createTaskOnce(tenantId, {
+      eventName: String(input.triggerType || 'deal.automation'),
+      entityType: 'Deal',
+      entityId: dealId,
+      actionType,
+      title: `${title}: ${input.dealName || input.projectName || input.name || 'Deal'}`,
+      description,
+      priority,
+      dueDate: dueInBusinessDays >= 5 ? addDays(new Date(), dueInBusinessDays) : addBusinessDays(new Date(), dueInBusinessDays),
+      assignedToId: input.ownerId || input.dealOwnerId || input.salesRepId || input.projectManagerId || null,
+      leadId: input.leadId || null,
+      clientId: input.clientId || null,
+      projectId: dealId,
+      referenceDoctype: 'SalesAutomation',
+      referenceDocname: `${dealId}:${actionType}`,
+    });
+  }
+
+  private async ensureDealDocumentFolder(tenantId: string, dealId: string, input: Record<string, any>) {
+    const folderName = `Deal - ${input.dealName || input.projectName || input.name || dealId}`;
+    const existing = await db.folder?.findFirst?.({
+      where: { tenantId, name: folderName, deletedAt: null },
+    });
+    if (existing) return existing;
+    const run = await this.runSideEffect(
+      tenantId,
+      'deal.created',
+      'Deal',
+      dealId,
+      'document-folder',
+      'files',
+      () => db.folder.create({ data: { tenantId, name: folderName } }),
+      { dealId, folderName },
+    );
+    if (!run.executed) {
+      return db.folder?.findFirst?.({ where: { tenantId, name: folderName, deletedAt: null } });
+    }
+    return run.result;
+  }
+
   private async handleDealStageChanged(entityId: string, input: Record<string, any>, output: Record<string, any>) {
-    const stage = cleanStatus(input.newStageName || input.newStageSlug);
-    const dealId = input.projectId || entityId;
-    if (stage.includes('QUALIFIED')) {
-      await this.createTaskOnce(input.tenantId, {
-        eventName: 'deal.stage.changed',
-        entityType: 'Deal',
-        entityId: dealId,
-        actionType: 'qualified-stage-followup',
-        title: `Schedule discovery follow-up: ${input.projectName || 'Deal'}`,
-        description: 'Deal moved to Qualified. Confirm discovery notes, decision makers, and next step.',
-        priority: 'HIGH',
-        dueDate: addBusinessDays(new Date(), 1),
-        assignedToId: input.salesRepId || input.projectManagerId || null,
-        clientId: input.clientId || null,
-        projectId: dealId,
-        referenceDoctype: 'SalesAutomation',
-        referenceDocname: `${dealId}:qualified-followup`,
-      });
-      output.actions.push('deal_qualified_followup_created');
+    const stage = cleanStatus(input.newStageName || input.newStageSlug || input.stageName);
+    const dealId = input.dealId || input.projectId || entityId;
+    const stageKey = stage.toLowerCase().replace(/_/g, '-');
+    const stageInput = { ...input, triggerType: 'deal.stageChanged' };
+    if (stage.includes('DISCOVERY') || stage.includes('QUALIFICATION') || stage.includes('QUALIFIED')) {
+      await this.createDealWorkflowTask(input.tenantId, dealId, stageInput, `${stageKey}:requirements-demo-task`, 'Confirm requirements and demo plan', 'Deal moved into discovery/qualification. Confirm requirements, decision makers, use case, and demo plan.', 'HIGH', 1);
+      output.actions.push('deal_discovery_task_created');
+    }
+    if (stage.includes('DEMO')) {
+      await this.createDealWorkflowTask(input.tenantId, dealId, stageInput, `${stageKey}:demo-followup-task`, 'Follow up after demo', 'Deal is in demo stage. Confirm attendee feedback, blockers, decision timeline, and next step.', 'HIGH', 1);
+      await this.scheduleReminder(input.tenantId, 'Deal', dealId, `deal.${stageKey}.followup`, addBusinessDays(new Date(), 1), 'TASK', input);
+      output.actions.push('deal_demo_followup_created');
     }
     if (stage.includes('PROPOSAL')) {
+      await this.createDealWorkflowTask(input.tenantId, dealId, stageInput, `${stageKey}:proposal-task`, 'Prepare and send proposal', 'Deal moved to proposal stage. Confirm pricing, terms, approval path, and send the proposal.', 'HIGH', 1);
       await this.scheduleReminder(input.tenantId, 'Deal', dealId, 'deal.proposal.followup.1d', addDays(new Date(), 1), 'TASK', input);
       await this.scheduleReminder(input.tenantId, 'Deal', dealId, 'deal.proposal.followup.3d', addDays(new Date(), 3), 'NOTIFICATION', input);
-      output.actions.push('deal_proposal_followups_scheduled');
+      output.actions.push('deal_proposal_task_created', 'deal_proposal_followups_scheduled');
+    }
+    if (stage.includes('NEGOTIATION')) {
+      await this.createDealWorkflowTask(input.tenantId, dealId, stageInput, `${stageKey}:negotiation-followup-task`, 'Follow up on negotiation', 'Deal moved to negotiation. Confirm final blockers, discount approvals, stakeholder alignment, and close plan.', 'HIGH', 1);
+      if (Number(input.discountAmount || input.discountPercent || 0) > 0 || input.discountApprovalRequired) {
+        await this.notifyAdmins(input.tenantId, 'Discount approval may be needed', `${input.dealName || input.projectName || 'A deal'} is in negotiation and may need manager approval.`, `/deals/${dealId}`);
+      }
+      output.actions.push('deal_negotiation_followup_created');
     }
     if (stage === 'WON' || stage.includes('CLOSED_WON')) {
       await this.createOnboardingTask(input.tenantId, dealId, input);
-      output.actions.push('deal_onboarding_task_created');
+      await this.createDealWorkflowTask(input.tenantId, dealId, stageInput, `${stageKey}:contract-invoice-workflow`, 'Start contract and invoice workflow', 'Deal is won. Prepare contract, invoice draft, billing handoff, and customer onboarding.', 'HIGH', 1);
+      output.actions.push('deal_onboarding_task_created', 'deal_contract_invoice_task_created');
     }
     if (stage === 'LOST' || stage.includes('CLOSED_LOST')) {
-      await this.createTaskOnce(input.tenantId, {
-        eventName: 'deal.stage.changed',
-        entityType: 'Deal',
-        entityId: dealId,
-        actionType: 'lost-nurture-task',
-        title: `Plan nurture follow-up: ${input.projectName || 'Lost deal'}`,
-        description: 'Deal moved to Lost. Review lost reason and schedule a future nurture touch if appropriate.',
-        priority: 'LOW',
-        dueDate: addDays(new Date(), 30),
-        assignedToId: input.salesRepId || input.projectManagerId || null,
-        clientId: input.clientId || null,
-        projectId: dealId,
-        referenceDoctype: 'SalesAutomation',
-        referenceDocname: `${dealId}:lost-nurture`,
-      });
-      output.actions.push('deal_lost_nurture_task_created');
+      if (!input.lostReason) throw new BadRequestError('Lost reason is required when a deal is marked Lost', ErrorCodes.VALIDATION_FAILED);
+      await this.cancelEntityReminders(input.tenantId, 'Deal', dealId);
+      await this.createDealWorkflowTask(input.tenantId, dealId, stageInput, `${stageKey}:lost-nurture-task`, 'Plan nurture follow-up', `Deal moved to Lost. Reason: ${input.lostReason}. Review and schedule a future touch if appropriate.`, 'LOW', 30);
+      output.actions.push('deal_reminders_cancelled', 'deal_lost_nurture_task_created');
     }
   }
 
   async scheduleInvoiceReminders(tenantId: string, invoiceId: string) {
-    const key = this.idempotencyKey(tenantId, 'invoice.sent', 'Invoice', invoiceId, 'reminder-set');
-    const run = await automationIdempotencyService.runOnce(
+    const run = await this.runSideEffect(
       tenantId,
-      key,
-      { eventName: 'invoice.sent', entityType: 'Invoice', entityId: invoiceId, actionType: 'reminder-set' },
+      'invoice.sent',
+      'Invoice',
+      invoiceId,
+      'reminder-set',
+      'automation',
       async () => {
         const invoice = await prisma.invoice.findFirst({
           where: { id: invoiceId, tenantId },
@@ -896,6 +1314,7 @@ class SalesAutomationService {
         await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.overdue', addDays(dueDate, 1), 'EMAIL', payload);
         await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.escalation', addDays(dueDate, 7), 'NOTIFICATION', payload);
       },
+      { invoiceId },
     );
     if (!run.executed) {
       return db.salesReminderSchedule.findMany({ where: { tenantId, entityType: 'Invoice', entityId: invoiceId } });
@@ -904,16 +1323,19 @@ class SalesAutomationService {
   }
 
   async scheduleReminder(tenantId: string, entityType: string, entityId: string, reminderType: string, scheduledFor: Date, channel = 'NOTIFICATION', payload: Record<string, any> = {}) {
-    const key = `${tenantId}:${entityType}:${entityId}:${reminderType}:${channel}:reminder`;
-    const run = await automationIdempotencyService.runOnce(
+    const run = await this.runSideEffect(
       tenantId,
-      key,
-      { eventName: `${entityType.toLowerCase()}.reminder`, entityType, entityId, actionType: `${reminderType}:${channel}` },
-      async () => db.salesReminderSchedule.upsert({
+      `${entityType.toLowerCase()}.reminder`,
+      entityType,
+      entityId,
+      `${reminderType}:${channel}`,
+      'automation',
+      () => db.salesReminderSchedule.upsert({
         where: { tenantId_entityType_entityId_reminderType_channel: { tenantId, entityType, entityId, reminderType, channel } },
         create: { tenantId, entityType, entityId, reminderType, scheduledFor, channel, payload, status: 'SCHEDULED' },
         update: { scheduledFor, payload, status: 'SCHEDULED', sentAt: null, cancelledAt: null },
       }),
+      { reminderType, scheduledFor: scheduledFor.toISOString(), channel, payload },
     );
     if (!run.executed) {
       return db.salesReminderSchedule.findFirst({ where: { tenantId, entityType, entityId, reminderType, channel } });
@@ -922,10 +1344,11 @@ class SalesAutomationService {
   }
 
   async cancelEntityReminders(tenantId: string, entityType: string, entityId: string) {
-    return db.salesReminderSchedule.updateMany({
+    const run = await this.runSideEffect(tenantId, `${entityType.toLowerCase()}.reminder.cancel`, entityType, entityId, 'cancel-reminders', 'automation', () => db.salesReminderSchedule.updateMany({
       where: { tenantId, entityType, entityId, status: 'SCHEDULED' },
       data: { status: 'CANCELLED', cancelledAt: new Date() },
-    });
+    }));
+    return run.result;
   }
 
   async processDueReminders(limit = 100) {
@@ -972,11 +1395,14 @@ class SalesAutomationService {
   private async sendTaskReminder(reminder: any) {
       const existingTask = await db.task.findFirst({ where: { tenantId: reminder.tenantId, referenceDoctype: 'SalesReminderSchedule', referenceDocname: reminder.id } });
       if (!existingTask) {
-        await automationIdempotencyService.runOnce(
+        await this.runSideEffect(
           reminder.tenantId,
-          `${reminder.tenantId}:SalesReminderSchedule:${reminder.id}:task`,
-          { eventName: 'reminder.sent', entityType: 'SalesReminderSchedule', entityId: reminder.id, actionType: 'task' },
-          async () => db.task.create({
+          'reminder.sent',
+          'SalesReminderSchedule',
+          reminder.id,
+          'task',
+          'tasks',
+          () => db.task.create({
             data: {
               tenantId: reminder.tenantId,
               title: this.reminderTitle(reminder),
@@ -988,6 +1414,7 @@ class SalesAutomationService {
               referenceDocname: reminder.id,
             },
           }),
+          { reminderId: reminder.id, reminderType: reminder.reminderType },
         );
       }
   }
@@ -1016,14 +1443,24 @@ class SalesAutomationService {
     const link = this.entityUrl(reminder);
     const html = this.emailReminderHtml(reminder, payload, link);
     const text = this.emailReminderText(reminder, payload, link);
-    const delivery = await tenantMailerService.sendTenantEmail({
-      tenantId: reminder.tenantId,
-      preferredUserId: payload.ownerUserId || payload.senderUserId || payload.createdByUserId || undefined,
-      to: recipient,
-      subject,
-      html,
-      text,
-    });
+    const deliveryRun = await this.runSideEffect(
+      reminder.tenantId,
+      'reminder.sent',
+      'SalesReminderSchedule',
+      reminder.id,
+      `email:${reminder.reminderType}:${recipient}`,
+      'emails',
+      () => tenantMailerService.sendTenantEmail({
+        tenantId: reminder.tenantId,
+        preferredUserId: payload.ownerUserId || payload.senderUserId || payload.createdByUserId || undefined,
+        to: recipient,
+        subject,
+        html,
+        text,
+      }),
+      { reminderId: reminder.id, reminderType: reminder.reminderType, recipient },
+    );
+    const delivery = deliveryRun.result || { sent: true, senderEmail: null };
     if (!delivery.sent) throw new Error(delivery.error || 'Email reminder delivery failed');
     activityLogger.log({
       tenantId: reminder.tenantId,
@@ -1036,17 +1473,232 @@ class SalesAutomationService {
     });
   }
 
+  private async loadProposalContext(tenantId: string, proposalId: string) {
+    return db.proposal.findFirst({
+      where: { id: proposalId, tenantId },
+      include: {
+        quote: { include: { items: { orderBy: { sortOrder: 'asc' } } } },
+        lead: { include: { assignedTo: { select: { userId: true } } } },
+        client: true,
+        contact: true,
+        project: true,
+      },
+    });
+  }
+
+  private async updateProposalDealStage(tenantId: string, proposalId: string, proposal: any, stage: string, eventName: string) {
+    const dealId = proposal?.projectId || proposal?.project?.id || await this.findProposalDealId(tenantId, proposal);
+    if (!dealId) return null;
+    return this.runSideEffect(
+      tenantId,
+      eventName,
+      'Proposal',
+      proposalId,
+      `deal-stage:${stage}`,
+      'deals',
+      () => db.project.update({
+        where: { id: dealId },
+        data: {
+          dealStatus: stage,
+          probability: stage === 'Won' ? 100 : stage === 'Proposal Sent' ? 50 : undefined,
+          status: stage === 'Won' ? 'COMPLETED' : undefined,
+          closedDate: stage === 'Won' ? new Date() : undefined,
+          nextStep: stage === 'Proposal Sent' ? 'Follow up on proposal response' : stage === 'Won' ? 'Prepare contract, invoice, and onboarding' : undefined,
+        },
+      }),
+      { proposalId, dealId, stage },
+    ).catch((error) => {
+      logger.warn('[SalesAutomation] Proposal deal stage update failed', { tenantId, proposalId, dealId, stage, error: (error as Error)?.message || String(error) });
+      return null;
+    });
+  }
+
+  private async findProposalDealId(tenantId: string, proposal: any) {
+    if (!proposal) return null;
+    const deal = await db.project.findFirst({
+      where: {
+        tenantId,
+        OR: [
+          ...(proposal.quoteId ? [{ quoteId: proposal.quoteId }] : []),
+          ...(proposal.leadId ? [{ leadId: proposal.leadId }] : []),
+        ],
+      },
+      orderBy: { updatedAt: 'desc' },
+      select: { id: true },
+    });
+    return deal?.id || null;
+  }
+
+  private async sendProposalEmail(tenantId: string, proposalId: string, input: Record<string, any>) {
+    const proposal = input.proposal || await this.loadProposalContext(tenantId, proposalId);
+    const deliveryMethod = String(input.deliveryMethod || proposal?.deliveryMethod || '').toLowerCase();
+    const shouldEmail = !deliveryMethod || deliveryMethod.includes('email');
+    const recipient = input.recipientEmail || input.leadEmail || proposal?.lead?.email || proposal?.contact?.email || proposal?.client?.primaryEmail || proposal?.client?.email;
+    if (!shouldEmail || !recipient) return null;
+    const proposalNumber = proposal?.proposalNumber || input.quoteNumber || proposalId;
+    const proposalLink = input.proposalLink || `/proposal-view/${proposalId}${input.publicToken ? `?token=${input.publicToken}` : ''}`;
+    const subject = `Proposal ${proposalNumber} from your sales team`;
+    const text = `Your proposal ${proposalNumber} is ready: ${proposalLink}`;
+    const html = `<p>Your proposal <strong>${proposalNumber}</strong> is ready.</p><p><a href="${proposalLink}">View proposal</a></p>`;
+    return this.runSideEffect(
+      tenantId,
+      'proposal.sent',
+      'Proposal',
+      proposalId,
+      `email:${recipient}`,
+      'emails',
+      () => tenantMailerService.sendTenantEmail({
+        tenantId,
+        preferredUserId: input.ownerUserId || input.senderUserId || undefined,
+        to: recipient,
+        subject,
+        html,
+        text,
+      }),
+      { proposalId, recipient },
+    );
+  }
+
+  private async createProposalFollowupTask(
+    tenantId: string,
+    proposalId: string,
+    proposal: any,
+    actionType: string,
+    title: string,
+    description: string,
+    priority: 'LOW' | 'MEDIUM' | 'HIGH',
+    dueInBusinessDays: number,
+    eventName: string,
+  ) {
+    const dealId = proposal?.projectId || proposal?.project?.id || await this.findProposalDealId(tenantId, proposal);
+    return this.createTaskOnce(tenantId, {
+      eventName,
+      entityType: 'Proposal',
+      entityId: proposalId,
+      actionType,
+      title: `${title}: ${proposal?.proposalNumber || 'Proposal'}`,
+      description,
+      priority,
+      dueDate: addBusinessDays(new Date(), dueInBusinessDays),
+      assignedToId: proposal?.lead?.assignedToId || proposal?.project?.dealOwnerId || proposal?.project?.salesRepId || null,
+      leadId: proposal?.leadId || null,
+      clientId: proposal?.clientId || proposal?.quote?.clientId || proposal?.project?.clientId || null,
+      projectId: dealId,
+      referenceDoctype: 'SalesAutomation',
+      referenceDocname: `${proposalId}:${actionType}`,
+    });
+  }
+
+  private proposalAutomationSettings(tenant: any) {
+    const settings = (tenant?.settings || {}) as Record<string, any>;
+    return {
+      createContractOnAcceptance: settings.proposalAutomation?.createContractOnAcceptance ?? settings.createContractOnProposalAccepted ?? true,
+      createDraftInvoiceOnAcceptance: settings.proposalAutomation?.createDraftInvoiceOnAcceptance ?? settings.createDraftInvoiceOnProposalAccepted ?? false,
+    };
+  }
+
+  private async createContractFromProposal(tenantId: string, proposalId: string, proposal: any, input: Record<string, any>) {
+    const tenant = await db.tenant?.findUnique?.({ where: { id: tenantId }, select: { settings: true } });
+    const settings = this.proposalAutomationSettings(tenant);
+    const clientId = proposal?.clientId || proposal?.quote?.clientId || proposal?.project?.clientId || input.clientId;
+    if (!settings.createContractOnAcceptance || !clientId) return null;
+    return this.runSideEffect(
+      tenantId,
+      'proposal.accepted',
+      'Proposal',
+      proposalId,
+      'create-contract',
+      'contracts',
+      () => db.contract.create({
+        data: {
+          tenantId,
+          contractNumber: `CON-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+          title: `Contract for ${proposal?.proposalNumber || proposalId}`,
+          description: 'Created automatically from accepted proposal.',
+          clientId,
+          quoteId: proposal?.quoteId || null,
+          projectId: proposal?.projectId || proposal?.project?.id || null,
+          value: Number(proposal?.quote?.total || input.total || 0),
+          currency: proposal?.quote?.currency || 'CAD',
+          startDate: new Date(),
+          endDate: addDays(new Date(), 365),
+          terms: proposal?.termsAndConditions || proposal?.quote?.terms || null,
+          createdById: input.salesRepId || null,
+        },
+      }),
+      { proposalId, clientId },
+    ).catch((error) => {
+      logger.warn('[SalesAutomation] Contract creation from proposal failed', { tenantId, proposalId, error: (error as Error)?.message || String(error) });
+      return null;
+    });
+  }
+
+  private async createDraftInvoiceFromProposal(tenantId: string, proposalId: string, proposal: any, input: Record<string, any>) {
+    const tenant = await db.tenant?.findUnique?.({ where: { id: tenantId }, select: { settings: true } });
+    const settings = this.proposalAutomationSettings(tenant);
+    const clientId = proposal?.clientId || proposal?.quote?.clientId || proposal?.project?.clientId || input.clientId;
+    if (!settings.createDraftInvoiceOnAcceptance || !clientId) return null;
+    const quoteItems = Array.isArray(proposal?.quote?.items) && proposal.quote.items.length
+      ? proposal.quote.items
+      : [{ description: `Accepted proposal ${proposal?.proposalNumber || proposalId}`, quantity: 1, unitPrice: Number(proposal?.quote?.total || input.total || 0) }];
+    return this.runSideEffect(
+      tenantId,
+      'proposal.accepted',
+      'Proposal',
+      proposalId,
+      'create-draft-invoice',
+      'finance',
+      () => db.invoice.create({
+        data: {
+          tenantId,
+          invoiceNumber: `INV-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+          clientId,
+          quoteId: proposal?.quoteId || null,
+          projectId: proposal?.projectId || proposal?.project?.id || null,
+          issueDate: new Date(),
+          dueDate: addDays(new Date(), 14),
+          currency: proposal?.quote?.currency || 'CAD',
+          status: 'DRAFT',
+          subtotal: Number(proposal?.quote?.subtotal || proposal?.quote?.total || input.total || 0),
+          taxAmount: Number(proposal?.quote?.taxAmount || 0),
+          discountAmount: Number(proposal?.quote?.discountAmount || 0),
+          total: Number(proposal?.quote?.total || input.total || 0),
+          amountPaid: 0,
+          amountDue: Number(proposal?.quote?.total || input.total || 0),
+          notes: `Draft invoice created from accepted proposal ${proposal?.proposalNumber || proposalId}.`,
+          items: {
+            create: quoteItems.map((item: any, index: number) => ({
+              tenantId,
+              description: item.description || `Proposal item ${index + 1}`,
+              quantity: Number(item.quantity || 1),
+              unitPrice: Number(item.unitPrice || item.rate || item.total || 0),
+              amount: Number(item.amount || item.total || ((Number(item.quantity || 1)) * Number(item.unitPrice || item.rate || 0))),
+              sortOrder: index,
+            })),
+          },
+        },
+      }),
+      { proposalId, clientId },
+    ).catch((error) => {
+      logger.warn('[SalesAutomation] Draft invoice creation from proposal failed', { tenantId, proposalId, error: (error as Error)?.message || String(error) });
+      return null;
+    });
+  }
+
   private async handleProposalAccepted(input: Record<string, any>) {
     const deal = await db.project.findFirst({ where: { tenantId: input.tenantId, OR: [{ quoteId: input.quoteId }, { leadId: input.leadId }] }, orderBy: { updatedAt: 'desc' } });
     if (deal) {
       await db.project.update({ where: { id: deal.id }, data: { dealStatus: 'Won', probability: 100, closedDate: new Date() } }).catch(() => null);
       const existingTask = await db.task.findFirst({ where: { tenantId: input.tenantId, projectId: deal.id, referenceDoctype: 'SalesAutomation', referenceDocname: `${deal.id}:onboarding` } });
       if (!existingTask) {
-        await automationIdempotencyService.runOnce(
+        await this.runSideEffect(
           input.tenantId,
-          `${input.tenantId}:proposal.accepted:Deal:${deal.id}:onboarding-task`,
-          { eventName: 'proposal.accepted', entityType: 'Deal', entityId: deal.id, actionType: 'onboarding-task' },
-          async () => db.task.create({
+          'proposal.accepted',
+          'Deal',
+          deal.id,
+          'onboarding-task',
+          'tasks',
+          () => db.task.create({
             data: {
               tenantId: input.tenantId,
               title: `Start onboarding for ${deal.name || input.leadName || 'new customer'}`,
@@ -1062,6 +1714,7 @@ class SalesAutomationService {
               referenceDocname: `${deal.id}:onboarding`,
             },
           }),
+          input,
         );
       }
     }
@@ -1090,12 +1743,15 @@ class SalesAutomationService {
       actionUrl,
       metadata: { automation: true, ...metadata },
     });
-    if (!idempotencyKey) return createNotification();
-    return automationIdempotencyService.runOnce(
+    return this.runSideEffect(
       tenantId,
-      idempotencyKey,
-      { eventName, entityType, entityId, actionType: `notification:${userId}` },
+      eventName,
+      entityType,
+      entityId,
+      `notification:${userId}`,
+      'notifications',
       createNotification,
+      { idempotencyKey, title, actionUrl, ...metadata },
     );
   }
 

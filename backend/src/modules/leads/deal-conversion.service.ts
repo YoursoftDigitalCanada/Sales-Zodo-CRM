@@ -37,6 +37,14 @@ export class DealConversionService {
         const ctx = { leadId: event.leadId, tenantId: event.tenantId };
         logger.info('[DealConversion] deal.won received', ctx);
 
+        if (!event.leadId) {
+            logger.debug('[DealConversion] deal.won has no leadId; skipping lead conversion workflow', {
+                tenantId: event.tenantId,
+                dealId: event.dealId || event.projectId,
+            });
+            return;
+        }
+
         try {
             // ── Pre-flight checks ──────────────────────────────────────────
             const lead = await prisma.lead.findUnique({

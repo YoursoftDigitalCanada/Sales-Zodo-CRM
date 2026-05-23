@@ -62,7 +62,7 @@ const INACTIVE_STATUSES: LeadStatus[] = [
 ];
 
 // Statuses that require a mandatory closureReason
-const REASON_REQUIRED_STATUSES: LeadStatus[] = ['LOST', 'DUPLICATE'];
+const REASON_REQUIRED_STATUSES: LeadStatus[] = ['LOST', 'DUPLICATE', 'UNQUALIFIED'];
 
 // Statuses that require reactivateAt date
 const REACTIVATION_REQUIRED_STATUSES: LeadStatus[] = ['FUTURE_FOLLOW_UP'];
@@ -752,6 +752,15 @@ export class LeadsService {
       });
     }
 
+    eventBus.emit('lead.updated', {
+      tenantId,
+      leadId: id,
+      leadName: dto.fullName,
+      changedFields,
+      ownerId: dto.assignedTo?.id,
+      ownerUserId: dto.assignedTo?.userId,
+    });
+
     // ▸ Audit: centralized audit trail
     activityLogger.log({
       tenantId, entityType: 'Lead', entityId: id,
@@ -805,6 +814,9 @@ export class LeadsService {
     }
 
     const oldStatus = existing.status;
+    if (REASON_REQUIRED_STATUSES.includes(status as LeadStatus)) {
+      throw new BadRequestError('A reason is required for this lead status', ErrorCodes.VALIDATION_FAILED);
+    }
     const oldLifecycle = (existing as any).lifecycleStage;
 
     // ▸ Lifecycle: auto-progress lifecycle stage based on new status
@@ -858,6 +870,28 @@ export class LeadsService {
       email: dto.email,
       companyName: dto.companyName,
     });
+
+    if (status === 'QUALIFIED') {
+      eventBus.emit('lead.qualified', {
+        tenantId,
+        leadId: id,
+        leadName: `${existing.firstName} ${existing.lastName}`,
+        estimationMethod: 'SALES_QUALIFICATION',
+        ownerId: existing.assignedToId || undefined,
+        ownerUserId: dto.assignedTo?.userId,
+      });
+    }
+
+    if (status === 'CONTACTED') {
+      eventBus.emit('lead.contacted', {
+        tenantId,
+        leadId: id,
+        leadName: `${existing.firstName} ${existing.lastName}`,
+        ownerId: existing.assignedToId || undefined,
+        ownerUserId: dto.assignedTo?.userId,
+        contactedAt: new Date(),
+      });
+    }
 
     // ▸ Audit: centralized audit trail
     activityLogger.log({
@@ -979,6 +1013,17 @@ export class LeadsService {
       email: dto.email,
       companyName: dto.companyName,
     });
+
+    if (status === 'UNQUALIFIED' || status === 'LOST') {
+      eventBus.emit('lead.disqualified', {
+        tenantId,
+        leadId: id,
+        leadName: `${existing.firstName} ${existing.lastName}`,
+        ownerId: existing.assignedToId || undefined,
+        ownerUserId: dto.assignedTo?.userId,
+        reason: closureReason || status,
+      });
+    }
 
     // ▸ Audit
     activityLogger.log({

@@ -104,6 +104,25 @@ export class ProposalsService {
             metadata: { proposalNumber, quoteId: data.quoteId, leadId: data.leadId },
         });
 
+        const linkedDeal = await (prisma as any).project.findFirst({
+            where: { tenantId, OR: [{ quoteId: data.quoteId }, { leadId: data.leadId }] },
+            orderBy: { updatedAt: 'desc' },
+            select: { id: true, clientId: true, contactId: true, dealOwnerId: true, salesRepId: true },
+        });
+        eventBus.emit('proposal.created', {
+            tenantId,
+            proposalId: dto.id,
+            proposalNumber,
+            leadId: data.leadId,
+            quoteId: data.quoteId,
+            dealId: linkedDeal?.id,
+            projectId: linkedDeal?.id,
+            clientId: linkedDeal?.clientId || (quote as any).clientId || undefined,
+            contactId: linkedDeal?.contactId || undefined,
+            total: Number((quote as any).total || 0),
+            ownerId: linkedDeal?.dealOwnerId || linkedDeal?.salesRepId || undefined,
+        });
+
         return dto;
     }
 
@@ -317,6 +336,13 @@ export class ProposalsService {
         });
         const categories = await documentsService.categories(tenantId);
         const proposalsCategory = categories.find((category: any) => String(category.name).toLowerCase() === 'proposals');
+        const relatedDeal = (proposal as any).projectId
+            ? { id: (proposal as any).projectId, clientId: (proposal as any).clientId || null, contactId: (proposal as any).contactId || null }
+            : await (prisma as any).project.findFirst({
+                where: { tenantId, OR: [{ quoteId: proposal.quoteId }, ...(proposal.leadId ? [{ leadId: proposal.leadId }] : [])] },
+                select: { id: true, clientId: true, contactId: true },
+                orderBy: { updatedAt: 'desc' },
+            });
         const document = await documentsService.update(saved.id, tenantId, {
             categoryId: proposalsCategory?.id,
             documentType: 'pdf',
@@ -324,6 +350,28 @@ export class ProposalsService {
             linkedEntityId: proposalId,
             description,
         });
+        await (prisma as any).documentMetadata.updateMany({
+            where: { tenantId, fileId: saved.id },
+            data: {
+                metadata: {
+                    variant,
+                    relatedEntities: {
+                        proposalId,
+                        quoteId: proposal.quoteId,
+                        leadId: proposal.leadId || null,
+                        dealId: relatedDeal?.id || null,
+                        projectId: relatedDeal?.id || null,
+                        clientId: relatedDeal?.clientId || (proposal as any).clientId || null,
+                        contactId: relatedDeal?.contactId || (proposal as any).contactId || null,
+                    },
+                },
+            },
+        }).catch((error: any) => logger.warn('[ProposalsService] Failed to enrich proposal document metadata', {
+            tenantId,
+            proposalId,
+            fileId: saved.id,
+            error: error?.message || String(error),
+        }));
         activityLogger.log({
             tenantId,
             entityType: 'Proposal',
@@ -467,6 +515,10 @@ export class ProposalsService {
             proposalId: proposal.id,
             leadId: proposal.leadId || '',
             leadName,
+            dealId: p.projectId || undefined,
+            projectId: p.projectId || undefined,
+            clientId: p.clientId || p.quote?.clientId || undefined,
+            contactId: p.contactId || undefined,
             leadEmail,
             leadPhone,
             quoteId: proposal.quoteId,
@@ -553,6 +605,10 @@ export class ProposalsService {
                 proposalId: proposal.id,
                 leadId: proposal.leadId || '',
                 leadName,
+                dealId: p.projectId || undefined,
+                projectId: p.projectId || undefined,
+                clientId: p.clientId || p.quote?.clientId || undefined,
+                contactId: p.contactId || undefined,
                 ownerUserId: lead?.assignedTo?.userId || undefined,
                 viewCount: newViewCount,
             });
@@ -636,6 +692,10 @@ export class ProposalsService {
             proposalId: proposal.id,
             leadId: proposal.leadId || '',
             leadName,
+            dealId: (proposal as any).projectId || undefined,
+            projectId: (proposal as any).projectId || undefined,
+            clientId: (proposal as any).clientId || (proposal as any).quote?.clientId || undefined,
+            contactId: (proposal as any).contactId || undefined,
             quoteId: proposal.quoteId,
             quoteNumber: (proposal as any).quote?.quoteNumber || '',
             total: (proposal as any).quote ? Number((proposal as any).quote.total) : 0,
@@ -674,7 +734,12 @@ export class ProposalsService {
 
         eventBus.emit('proposal.declined', {
             tenantId: proposal.tenantId,
+            proposalId: proposal.id,
             leadId: proposal.leadId || '',
+            dealId: (proposal as any).projectId || undefined,
+            projectId: (proposal as any).projectId || undefined,
+            clientId: (proposal as any).clientId || (proposal as any).quote?.clientId || undefined,
+            contactId: (proposal as any).contactId || undefined,
             quoteId: proposal.quoteId,
             quoteNumber: (proposal as any).quote?.quoteNumber || '',
             ownerUserId: undefined,

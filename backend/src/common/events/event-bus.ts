@@ -30,6 +30,25 @@ export interface LeadStatusChangedEvent {
     companyName?: string;
 }
 
+export interface LeadUpdatedEvent {
+    tenantId: string;
+    leadId: string;
+    leadName?: string;
+    changedFields: string[];
+    ownerId?: string;
+    ownerUserId?: string;
+}
+
+export interface LeadContactedEvent {
+    tenantId: string;
+    leadId: string;
+    leadName?: string;
+    ownerId?: string;
+    ownerUserId?: string;
+    contactMethod?: string;
+    contactedAt?: Date;
+}
+
 export interface LeadConvertedEvent {
     tenantId: string;
     leadId: string;
@@ -49,6 +68,15 @@ export interface LeadStaleEvent {
     ownerId?: string;
     ownerUserId?: string;
     daysInactive?: number;
+}
+
+export interface LeadDisqualifiedEvent {
+    tenantId: string;
+    leadId: string;
+    leadName?: string;
+    ownerId?: string;
+    ownerUserId?: string;
+    reason: string;
 }
 
 export interface ClientCreatedEvent {
@@ -353,7 +381,7 @@ export interface LeadQualifiedEvent {
     tenantId: string;
     leadId: string;
     leadName: string;
-    estimationMethod: 'PHYSICAL_INSPECTION' | 'AI_ESTIMATION' | 'BOTH';
+    estimationMethod: 'PHYSICAL_INSPECTION' | 'AI_ESTIMATION' | 'BOTH' | 'SALES_QUALIFICATION';
     propertyAddress?: string;
     ownerId?: string;
     ownerUserId?: string;
@@ -391,6 +419,10 @@ export interface ProposalSentEvent {
     proposalId: string;
     leadId: string;
     leadName: string;
+    dealId?: string;
+    projectId?: string;
+    clientId?: string;
+    contactId?: string;
     leadEmail?: string;
     leadPhone?: string;
     quoteId: string;
@@ -411,6 +443,10 @@ export interface ProposalViewedEvent {
     proposalId: string;
     leadId: string;
     leadName: string;
+    dealId?: string;
+    projectId?: string;
+    clientId?: string;
+    contactId?: string;
     ownerUserId?: string;
     viewCount: number;
 }
@@ -420,6 +456,10 @@ export interface ProposalAcceptedEvent {
     proposalId: string;
     leadId: string;
     leadName: string;
+    dealId?: string;
+    projectId?: string;
+    clientId?: string;
+    contactId?: string;
     quoteId: string;
     quoteNumber: string;
     total: number;
@@ -432,9 +472,51 @@ export interface ProposalAcceptedEvent {
 
 export interface ProposalDeclinedEvent {
     tenantId: string;
+    proposalId: string;
     leadId: string;
+    dealId?: string;
+    projectId?: string;
+    clientId?: string;
+    contactId?: string;
     quoteId: string;
     quoteNumber: string;
+    ownerUserId?: string;
+    reason?: string;
+}
+
+export interface ProposalCreatedEvent {
+    tenantId: string;
+    proposalId: string;
+    proposalNumber: string;
+    leadId?: string;
+    dealId?: string;
+    projectId?: string;
+    clientId?: string;
+    contactId?: string;
+    quoteId: string;
+    total?: number;
+    ownerId?: string;
+    ownerUserId?: string;
+}
+
+export interface ProposalReminderDueEvent {
+    tenantId: string;
+    proposalId: string;
+    reminderType: string;
+    leadId?: string;
+    dealId?: string;
+    projectId?: string;
+    clientId?: string;
+    ownerUserId?: string;
+}
+
+export interface ProposalExpiredEvent {
+    tenantId: string;
+    proposalId: string;
+    leadId?: string;
+    dealId?: string;
+    projectId?: string;
+    clientId?: string;
     ownerUserId?: string;
 }
 
@@ -468,12 +550,94 @@ export interface ContractSignedEvent extends ContractSentEvent {
 
 export interface DealWonEvent {
     tenantId: string;
-    leadId: string;
-    leadName: string;
+    leadId?: string;
+    leadName?: string;
+    dealId?: string;
+    projectId?: string;
+    dealName?: string;
+    clientId?: string;
     quoteId?: string;
     total?: number;
     ownerUserId?: string;
     ownerId?: string;
+}
+
+export interface DealCreatedEvent {
+    tenantId: string;
+    dealId: string;
+    projectId: string;
+    dealName: string;
+    clientId?: string;
+    contactId?: string;
+    leadId?: string;
+    stageName?: string;
+    value?: number;
+    probability?: number;
+    expectedCloseDate?: Date;
+    ownerId?: string;
+    ownerUserId?: string;
+}
+
+export interface DealStageChangedEvent {
+    tenantId: string;
+    dealId: string;
+    projectId: string;
+    dealName: string;
+    clientId?: string;
+    contactId?: string;
+    leadId?: string;
+    previousStageName?: string;
+    newStageName: string;
+    value?: number;
+    probability?: number;
+    lostReason?: string;
+    changedById?: string;
+    ownerId?: string;
+    ownerUserId?: string;
+}
+
+export interface DealValueChangedEvent {
+    tenantId: string;
+    dealId: string;
+    projectId: string;
+    dealName: string;
+    previousValue?: number;
+    newValue?: number;
+    ownerId?: string;
+    ownerUserId?: string;
+}
+
+export interface DealOwnerChangedEvent {
+    tenantId: string;
+    dealId: string;
+    projectId: string;
+    dealName: string;
+    previousOwnerId?: string;
+    newOwnerId?: string;
+}
+
+export interface DealStaleEvent {
+    tenantId: string;
+    dealId: string;
+    projectId: string;
+    dealName?: string;
+    clientId?: string;
+    daysInactive?: number;
+    ownerId?: string;
+    ownerUserId?: string;
+    escalate?: boolean;
+}
+
+export interface DealLostEvent {
+    tenantId: string;
+    dealId: string;
+    projectId: string;
+    dealName: string;
+    clientId?: string;
+    leadId?: string;
+    lostReason: string;
+    ownerId?: string;
+    ownerUserId?: string;
 }
 
 // ── Stage 6: Project Stage Changed ──────────────────────────────────────
@@ -498,9 +662,12 @@ export interface ProjectStageChangedEvent {
 
 export interface CRMEventMap {
     'lead.created': LeadCreatedEvent;
+    'lead.updated': LeadUpdatedEvent;
     'lead.statusChanged': LeadStatusChangedEvent;
+    'lead.contacted': LeadContactedEvent;
     'lead.stale': LeadStaleEvent;
     'lead.converted': LeadConvertedEvent;
+    'lead.disqualified': LeadDisqualifiedEvent;
     'client.created': ClientCreatedEvent;
     'client.updated': ClientUpdatedEvent;
     'client.deleted': ClientDeletedEvent;
@@ -548,13 +715,22 @@ export interface CRMEventMap {
     'ai_estimate.completed': AIEstimateCompletedEvent;
     'reports.ready': ReportsReadyEvent;
     'proposal.generated': ProposalGeneratedEvent;
+    'proposal.created': ProposalCreatedEvent;
     'proposal.sent': ProposalSentEvent;
     'proposal.viewed': ProposalViewedEvent;
+    'proposal.reminderDue': ProposalReminderDueEvent;
     'proposal.accepted': ProposalAcceptedEvent;
     'proposal.declined': ProposalDeclinedEvent;
+    'proposal.expired': ProposalExpiredEvent;
+    'deal.created': DealCreatedEvent;
+    'deal.stageChanged': DealStageChangedEvent;
+    'deal.valueChanged': DealValueChangedEvent;
+    'deal.ownerChanged': DealOwnerChangedEvent;
+    'deal.stale': DealStaleEvent;
     'contract.sent': ContractSentEvent;
     'contract.signed': ContractSignedEvent;
     'deal.won': DealWonEvent;
+    'deal.lost': DealLostEvent;
     // Stage 6: Project Execution
     'project.stageChanged': ProjectStageChangedEvent;
 }

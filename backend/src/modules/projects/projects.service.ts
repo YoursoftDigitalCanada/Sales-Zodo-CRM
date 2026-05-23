@@ -11,6 +11,7 @@ import { ErrorCodes } from '../../common/errors/errorCodes';
 import { DataAccessContext } from '../../common/access/data-access';
 import { liveInvoiceSyncService } from './live-invoice-sync.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
+import { eventBus } from '../../common/events/event-bus';
 
 const NOT_FOUND_MESSAGES = new Set([
   'PROJECT_NOT_FOUND',
@@ -121,7 +122,9 @@ export class ProjectsService {
       const deal = await projectsRepository.create(tenantId, dto, createdById);
       await this.ensureDealContactLink(tenantId, deal.id, (deal as any).contactId, createdById);
       await this.syncProjectRevenueState(deal.id, tenantId);
-      return this.getProjectDetailOrThrow(deal.id, tenantId);
+      const detail = await this.getProjectDetailOrThrow(deal.id, tenantId);
+      this.emitDealCreated(tenantId, detail as any);
+      return detail;
     });
   }
 
@@ -228,11 +231,36 @@ export class ProjectsService {
 
       const project = await projectsRepository.update(id, tenantId, dto);
       await this.ensureDealContactLink(tenantId, project.id, (project as any).contactId, actorUserId);
+      const updatedDetail = await this.getProjectDetailOrThrow(project.id, tenantId);
+      const previousStage = this.canonicalDealStage((current as any).dealStatus);
+      const nextStage = this.canonicalDealStage((updatedDetail as any).dealStatus);
       if (dto.dealStatus) {
         await this.runDealStageAutomation(tenantId, project.id, dto.dealStatus, current as any, actorUserId);
       }
       await this.syncProjectRevenueState(project.id, tenantId);
-      return this.getProjectDetailOrThrow(project.id, tenantId);
+      if (previousStage !== nextStage) {
+        this.emitDealStageChanged(tenantId, updatedDetail as any, current as any, actorUserId);
+        if (nextStage === 'Won') {
+          this.emitDealWon(tenantId, updatedDetail as any);
+        }
+        if (nextStage === 'Lost') {
+          this.emitDealLost(tenantId, updatedDetail as any);
+        }
+      }
+
+      const previousValue = this.getDealValue(current as any);
+      const nextValue = this.getDealValue(updatedDetail as any);
+      if (previousValue !== nextValue) {
+        this.emitDealValueChanged(tenantId, updatedDetail as any, previousValue, nextValue);
+      }
+
+      const previousOwner = this.getDealOwner(current as any);
+      const nextOwner = this.getDealOwner(updatedDetail as any);
+      if (previousOwner !== nextOwner) {
+        this.emitDealOwnerChanged(tenantId, updatedDetail as any, previousOwner, nextOwner);
+      }
+
+      return updatedDetail;
     });
   }
 
@@ -465,6 +493,92 @@ export class ProjectsService {
 
   private getDealValue(project: any): number {
     return toNumber(project.dealValue || project.expectedDealValue || project.contractValue || project.budget || project.total || 0);
+  }
+
+  private dealEventPayload(tenantId: string, project: any) {
+    const ownerId = this.getDealOwner(project) || undefined;
+    return {
+      tenantId,
+      dealId: project.id,
+      projectId: project.id,
+      dealName: project.name || project.organizationName || project.leadName || 'Deal',
+      clientId: project.clientId || undefined,
+      contactId: project.contactId || undefined,
+      leadId: project.leadId || undefined,
+      value: this.getDealValue(project),
+      probability: project.probability !== null && project.probability !== undefined ? Number(project.probability) : undefined,
+      ownerId,
+      ownerUserId: undefined,
+    };
+  }
+
+  private emitDealCreated(tenantId: string, project: any) {
+    eventBus.emit('deal.created', {
+      ...this.dealEventPayload(tenantId, project),
+      stageName: this.canonicalDealStage(project.dealStatus),
+      expectedCloseDate: project.expectedClosureDate || undefined,
+    });
+  }
+
+  private emitDealStageChanged(tenantId: string, project: any, previousProject: any, changedById?: string) {
+    eventBus.emit('deal.stageChanged', {
+      ...this.dealEventPayload(tenantId, project),
+      previousStageName: this.canonicalDealStage(previousProject?.dealStatus),
+      newStageName: this.canonicalDealStage(project.dealStatus),
+      lostReason: project.lostReason || previousProject?.lostReason || undefined,
+      changedById,
+    });
+  }
+
+  private emitDealValueChanged(tenantId: string, project: any, previousValue: number, newValue: number) {
+    eventBus.emit('deal.valueChanged', {
+      tenantId,
+      dealId: project.id,
+      projectId: project.id,
+      dealName: project.name || project.organizationName || 'Deal',
+      previousValue,
+      newValue,
+      ownerId: this.getDealOwner(project) || undefined,
+    });
+  }
+
+  private emitDealOwnerChanged(tenantId: string, project: any, previousOwnerId?: string | null, newOwnerId?: string | null) {
+    eventBus.emit('deal.ownerChanged', {
+      tenantId,
+      dealId: project.id,
+      projectId: project.id,
+      dealName: project.name || project.organizationName || 'Deal',
+      previousOwnerId: previousOwnerId || undefined,
+      newOwnerId: newOwnerId || undefined,
+    });
+  }
+
+  private emitDealWon(tenantId: string, project: any) {
+    eventBus.emit('deal.won', {
+      tenantId,
+      dealId: project.id,
+      projectId: project.id,
+      dealName: project.name || project.organizationName || 'Deal',
+      leadId: project.leadId || undefined,
+      leadName: project.leadName || project.name || undefined,
+      clientId: project.clientId || undefined,
+      quoteId: project.quoteId || undefined,
+      total: this.getDealValue(project),
+      ownerId: this.getDealOwner(project) || undefined,
+    });
+  }
+
+  private emitDealLost(tenantId: string, project: any) {
+    eventBus.emit('deal.lost', {
+      tenantId,
+      dealId: project.id,
+      projectId: project.id,
+      dealName: project.name || project.organizationName || 'Deal',
+      clientId: project.clientId || undefined,
+      leadId: project.leadId || undefined,
+      lostReason: project.lostReason || 'Not specified',
+      ownerId: this.getDealOwner(project) || undefined,
+    });
   }
 
   private async calculateWonDealBilling(tenantId: string, project: any, fallbackTotal: number) {

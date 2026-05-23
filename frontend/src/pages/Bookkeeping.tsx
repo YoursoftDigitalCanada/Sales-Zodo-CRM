@@ -60,6 +60,16 @@ const money = (value: unknown, currency = "CAD") =>
 const today = () => new Date().toISOString().slice(0, 10);
 const monthStart = () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
 
+function syncStatusBadge(tx: BookkeepingRecord) {
+  const syncStatus = String(tx.metadata?.syncStatus || tx.syncStatus || "").toLowerCase();
+  if (syncStatus === "synced") return <Badge className="bg-emerald-600">Synced</Badge>;
+  if (syncStatus === "failed") return <Badge variant="destructive">Failed</Badge>;
+  if (syncStatus === "needs_review") return <Badge className="bg-amber-500">Needs review</Badge>;
+  if (syncStatus === "voided" || syncStatus === "reversed") return <Badge variant="secondary">{syncStatus === "voided" ? "Voided" : "Reversed"}</Badge>;
+  if (tx.sourceType && tx.sourceType !== "MANUAL") return <Badge variant="outline">Automated</Badge>;
+  return <Badge variant="outline">Manual</Badge>;
+}
+
 async function ensureReceiptsCategoryId() {
   const categories = await getDocumentCategories();
   const existing = categories.find((category) => category.name.toLowerCase() === "receipts");
@@ -391,7 +401,7 @@ function TransactionTable({ rows, accountName, categoryName, vendorName, onVoid 
   return (
     <div className="overflow-x-auto">
       <Table>
-        <TableHeader><TableRow>{["Date", "Number", "Type", "Description", "Account", "Category", "Vendor", "Receipt", "Amount", "Status", "Actions"].map((h) => <TableHead key={h}>{h}</TableHead>)}</TableRow></TableHeader>
+        <TableHeader><TableRow>{["Date", "Number", "Type", "Description", "Account", "Category", "Vendor", "Source", "Sync", "Receipt", "Amount", "Status", "Actions"].map((h) => <TableHead key={h}>{h}</TableHead>)}</TableRow></TableHeader>
         <TableBody>{rows.map((tx) => (
           <TableRow key={tx.id}>
             <TableCell>{tx.transactionDate ? new Date(tx.transactionDate).toLocaleDateString() : "-"}</TableCell>
@@ -401,6 +411,8 @@ function TransactionTable({ rows, accountName, categoryName, vendorName, onVoid 
             <TableCell>{accountName(tx.accountId)}</TableCell>
             <TableCell>{categoryName(tx.categoryId)}</TableCell>
             <TableCell>{vendorName(tx.vendorId)}</TableCell>
+            <TableCell><Badge variant="outline">{tx.sourceType || "MANUAL"}</Badge></TableCell>
+            <TableCell>{syncStatusBadge(tx)}</TableCell>
             <TableCell>
               {tx.fileId ? (
                 <Button variant="ghost" size="sm" onClick={() => window.open(getDocumentPreviewUrl(tx.fileId), "_blank", "noopener,noreferrer")}>

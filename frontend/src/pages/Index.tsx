@@ -665,7 +665,7 @@ function mapQuote(quote: DashboardQuote): EstimateItem {
     quoteNumber: quote.quoteNumber,
     status: normalizedStatus,
     total: Number(quote.total || 0),
-    recipientName: readText(quote.client?.clientName) || leadName || readText(quote.lead?.companyName) || "Estimate recipient",
+    recipientName: readText(quote.client?.clientName) || leadName || readText(quote.lead?.companyName) || "Proposal recipient",
     createdAt: quote.createdAt,
     validUntil: quote.validUntil,
     sentAt: quote.sentAt || null,
@@ -696,7 +696,7 @@ function mapInspection(inspection: DashboardInspection): SiteVisitItem {
     leadId: inspection.leadId,
     clientName: customerName,
     address: address || "Address pending",
-    inspectionType: readText(inspection.inspectionType) || "Inspection",
+    inspectionType: readText(inspection.inspectionType) || "Meeting",
     scheduledAt: inspection.inspectionDate ? new Date(inspection.inspectionDate) : null,
     estimateValue: Number(inspection.totalEstimate || 0),
   };
@@ -925,16 +925,16 @@ const Index = () => {
 
   const handleLeadSuggestion = (lead: LeadItem) => {
     if (lead.stage === "lead" || lead.stage === "contacted") {
-      navigate(dashboardAccess.canViewSiteVisits ? "/inspections/new" : "/leads/pipeline");
+      navigate(dashboardAccess.canViewSiteVisits ? "/calendar" : "/leads/pipeline");
       return;
     }
 
     if (lead.stage === "won") {
-      navigate("/projects");
+      navigate("/deals");
       return;
     }
 
-    navigate(dashboardAccess.canViewQuotes ? "/quotes" : "/leads/pipeline");
+    navigate(dashboardAccess.canViewQuotes ? "/proposals" : "/leads/pipeline");
   };
 
   const handleLeadDragStart = (event: DragEvent<HTMLDivElement>, leadId: string) => {
@@ -1149,29 +1149,29 @@ const Index = () => {
 
     if (dashboardAccess.canViewQuotes) {
       items.push({
-        id: "estimates-not-sent",
+        id: "proposals-not-sent",
         tone: "warning",
-        label: `${draftEstimates.length} estimate${draftEstimates.length === 1 ? "" : "s"} not sent`,
+        label: `${draftEstimates.length} proposal${draftEstimates.length === 1 ? "" : "s"} not sent`,
         detail: draftEstimates.length > 0
           ? `${formatMoney(estimateNotSentValue)} still sitting in draft`
-          : "Every estimate in the queue has been sent",
-        actionLabel: "Open Estimates",
-        path: "/quotes",
+          : "Every proposal in the queue has been sent",
+        actionLabel: "Open Proposals",
+        path: "/proposals",
       });
     }
 
     if (dashboardAccess.canViewSiteVisits) {
       items.push({
-        id: "next-site-visit",
+        id: "next-meeting",
         tone: "success",
         label: nextSiteVisit
-          ? `Visit at ${formatTimeLabel(nextSiteVisit.scheduledAt)} - ${nextSiteVisit.clientName}`
-          : "Inspection schedule is open",
+          ? `Meeting at ${formatTimeLabel(nextSiteVisit.scheduledAt)} - ${nextSiteVisit.clientName}`
+          : "Meeting calendar is open",
         detail: nextSiteVisit
-          ? `${nextSiteVisit.inspectionType} at ${nextSiteVisit.address}`
-          : "Book the next inspection before the day fills up",
-        actionLabel: nextSiteVisit ? "Open Inspection" : "Schedule Inspection",
-        path: nextSiteVisit ? "/inspections" : "/inspections/new",
+          ? `${nextSiteVisit.inspectionType} with ${nextSiteVisit.clientName}`
+          : "Schedule the next demo, call, or customer meeting",
+        actionLabel: nextSiteVisit ? "Open Calendar" : "Schedule Meeting",
+        path: "/calendar",
       });
     }
 
@@ -1205,7 +1205,7 @@ const Index = () => {
   const kanbanColumns = useMemo(() => ([
     { id: "lead" as const, title: "Lead", leads: leads.filter((lead) => lead.stage === "lead") },
     { id: "contacted" as const, title: "Contacted", leads: leads.filter((lead) => lead.stage === "contacted") },
-    { id: "estimate-sent" as const, title: "Estimate Sent", leads: leads.filter((lead) => lead.stage === "estimate-sent") },
+    { id: "estimate-sent" as const, title: "Proposal Sent", leads: leads.filter((lead) => lead.stage === "estimate-sent") },
     { id: "negotiation" as const, title: "Negotiation", leads: leads.filter((lead) => lead.stage === "negotiation") },
     { id: "won" as const, title: "Won", leads: leads.filter((lead) => lead.stage === "won") },
   ]), [leads]);
@@ -1903,7 +1903,7 @@ const Index = () => {
             <div className={`${sectionCardClassName} px-5 py-4`}>
               <h2 className="text-sm font-semibold text-[#0F172A]">Dashboard Access Limited</h2>
               <p className="mt-1 text-sm text-[#475569]">
-                This account can access the dashboard shell, but roofing revenue widgets are hidden by permissions.
+                This account can access the dashboard shell, but revenue widgets are hidden by permissions.
               </p>
             </div>
           ) : null}
@@ -1965,7 +1965,7 @@ const Index = () => {
                         <p className="mt-1 text-[11px] text-[#94A3B8]">
                           {dashboardAccess.canViewTasks
                             ? `${pendingTasksCount} open task${pendingTasksCount === 1 ? "" : "s"} plus follow-up work across the CRM`
-                            : "Priority work from leads, estimates, inspections, and collections"}
+                            : "Priority work from leads, proposals, meetings, and collections"}
                         </p>
                       </div>
                       <button
@@ -2024,7 +2024,7 @@ const Index = () => {
                 >
                   <div>
                     <h2 className="text-sm font-semibold text-[#0F172A]">Revenue Snapshot</h2>
-                    <p className="mt-1 text-[11px] text-[#94A3B8]">Pipeline, estimates, and collections in one swipeable row.</p>
+                    <p className="mt-1 text-[11px] text-[#94A3B8]">Pipeline, proposals, and collections in one swipeable row.</p>
                   </div>
                   <div className="-mx-1 overflow-x-auto pb-1">
                     <div className="flex items-stretch gap-3 px-1">
@@ -2046,7 +2046,7 @@ const Index = () => {
                         <StatCard
                           title="Hot Leads Value"
                           value={formatMoney(hotLeadsValue)}
-                          subtitle={`${hotLeads.length} hot roofing opportunities`}
+                          subtitle={`${hotLeads.length} hot sales opportunities`}
                           trend={hotLeadsTrend}
                           comparison="of open leads"
                           icon={Target}
@@ -2058,9 +2058,9 @@ const Index = () => {
                       </div>
                       <div className="flex min-w-[250px] flex-none">
                         <StatCard
-                          title="Estimates Sent Value"
+                          title="Proposals Sent Value"
                           value={formatMoney(estimatesSentValue)}
-                          subtitle={`${sentEstimates.length} estimate${sentEstimates.length === 1 ? "" : "s"} out with clients`}
+                          subtitle={`${sentEstimates.length} proposal${sentEstimates.length === 1 ? "" : "s"} out with clients`}
                           trend={estimatesSentTrend}
                           comparison="sent rate"
                           icon={FileText}
@@ -2260,11 +2260,11 @@ const Index = () => {
                     >
                       <div className="flex items-center justify-between gap-3 border-b border-[rgba(15,23,42,0.06)] p-4">
                         <div>
-                          <h2 className="text-sm font-semibold text-[#0F172A]">Active Jobs</h2>
-                          <p className="mt-1 text-[11px] text-[#94A3B8]">Production work already sold and underway.</p>
+                          <h2 className="text-sm font-semibold text-[#0F172A]">Active Deals</h2>
+                          <p className="mt-1 text-[11px] text-[#94A3B8]">Open customer opportunities already moving through the pipeline.</p>
                         </div>
                         <button
-                          onClick={() => navigate("/projects")}
+                          onClick={() => navigate("/deals")}
                           className="text-xs font-medium text-[#0891B2] hover:underline"
                         >
                           View
@@ -2274,7 +2274,7 @@ const Index = () => {
                         {activeJobs.length > 0 ? activeJobs.map((job) => (
                           <button
                             key={job.id}
-                            onClick={() => navigate("/projects")}
+                            onClick={() => navigate("/deals")}
                             className="w-full px-4 py-4 text-left transition-colors hover:bg-[#F7F7FB]"
                           >
                             <div className="flex items-start justify-between gap-3">
@@ -2362,8 +2362,8 @@ const Index = () => {
                           className={sectionCardClassName}
                         >
                           <div className="border-b border-[rgba(15,23,42,0.06)] p-4">
-                            <h2 className="text-sm font-semibold text-[#0F172A]">Estimate Queue</h2>
-                            <p className="mt-1 text-[11px] text-[#94A3B8]">Drafts and sent estimates ready for follow-up.</p>
+                            <h2 className="text-sm font-semibold text-[#0F172A]">Proposal Queue</h2>
+                            <p className="mt-1 text-[11px] text-[#94A3B8]">Drafts and sent proposals ready for follow-up.</p>
                           </div>
                           <div className="divide-y divide-[rgba(15,23,42,0.04)]">
                             {[...draftEstimates, ...sentEstimates].slice(0, 4).map((estimate) => (
@@ -2387,7 +2387,7 @@ const Index = () => {
                               </button>
                             ))}
                             {draftEstimates.length + sentEstimates.length === 0 ? (
-                              <div className="px-4 py-6 text-sm text-[#475569]">No estimates are in the queue yet.</div>
+                              <div className="px-4 py-6 text-sm text-[#475569]">No proposals are in the queue yet.</div>
                             ) : null}
                           </div>
                         </motion.section>
@@ -2405,8 +2405,8 @@ const Index = () => {
                           className={sectionCardClassName}
                         >
                           <div className="border-b border-[rgba(15,23,42,0.06)] p-4">
-                            <h2 className="text-sm font-semibold text-[#0F172A]">Inspections</h2>
-                            <p className="mt-1 text-[11px] text-[#94A3B8]">Upcoming inspections and property visits.</p>
+                            <h2 className="text-sm font-semibold text-[#0F172A]">Meetings</h2>
+                            <p className="mt-1 text-[11px] text-[#94A3B8]">Upcoming demos, calls, and customer meetings.</p>
                           </div>
                           <div className="divide-y divide-[rgba(15,23,42,0.04)]">
                             {siteVisits
@@ -2416,7 +2416,7 @@ const Index = () => {
                               .map((visit) => (
                                 <button
                                   key={visit.id}
-                                  onClick={() => navigate("/inspections")}
+                                  onClick={() => navigate("/calendar")}
                                   className="w-full px-4 py-4 text-left transition-colors hover:bg-[#F7F7FB]"
                                 >
                                   <div className="flex items-start justify-between gap-3">
@@ -2432,7 +2432,7 @@ const Index = () => {
                                 </button>
                               ))}
                             {siteVisits.filter((visit) => visit.scheduledAt).length === 0 ? (
-                              <div className="px-4 py-6 text-sm text-[#475569]">No inspections are scheduled yet.</div>
+                              <div className="px-4 py-6 text-sm text-[#475569]">No meetings are scheduled yet.</div>
                             ) : null}
                           </div>
                         </motion.section>
@@ -2538,7 +2538,7 @@ const Index = () => {
                               <span className="font-semibold text-[#0F172A]">{formatMoney(stalledLeadValue)}</span>
                             </div>
                             <div className="flex items-center justify-between gap-3 text-xs">
-                              <span className="text-[#475569]">Estimate not sent</span>
+                              <span className="text-[#475569]">Proposal not sent</span>
                               <span className="font-semibold text-[#0F172A]">{formatMoney(estimateNotSentValue)}</span>
                             </div>
                           </div>
@@ -2546,7 +2546,7 @@ const Index = () => {
                             variant="outline"
                             size="sm"
                             className="mt-4"
-                            onClick={() => navigate(draftEstimates.length > 0 ? "/quotes" : "/leads/pipeline")}
+                            onClick={() => navigate(draftEstimates.length > 0 ? "/proposals" : "/leads/pipeline")}
                           >
                             Recover Revenue
                           </Button>
@@ -2565,7 +2565,7 @@ const Index = () => {
                 <div className="mb-3 flex items-center justify-between">
                   <div>
                     <h2 className="text-sm font-semibold text-[#0F172A]">Revenue Snapshot</h2>
-                    <p className="text-[11px] text-[#94A3B8]">Pipeline, estimates, and collections in one view</p>
+                    <p className="text-[11px] text-[#94A3B8]">Pipeline, proposals, and collections in one view</p>
                   </div>
                 </div>
 
@@ -2585,7 +2585,7 @@ const Index = () => {
                   <StatCard
                     title="Hot Leads Value"
                     value={formatMoney(hotLeadsValue)}
-                    subtitle={`${hotLeads.length} hot roofing opportunities`}
+                    subtitle={`${hotLeads.length} hot sales opportunities`}
                     trend={hotLeadsTrend}
                     comparison="of open leads"
                     icon={Target}
@@ -2595,9 +2595,9 @@ const Index = () => {
                     aiInsight={hotLeads.length > 0 ? "Call these first for fastest revenue" : undefined}
                   />
                   <StatCard
-                    title="Estimates Sent Value"
+                    title="Proposals Sent Value"
                     value={formatMoney(estimatesSentValue)}
-                    subtitle={`${sentEstimates.length} estimate${sentEstimates.length === 1 ? "" : "s"} out with clients`}
+                    subtitle={`${sentEstimates.length} proposal${sentEstimates.length === 1 ? "" : "s"} out with clients`}
                     trend={estimatesSentTrend}
                     comparison="sent rate"
                     icon={FileText}
@@ -2752,15 +2752,15 @@ const Index = () => {
                               <Briefcase size={16} className="text-[#0891B2]" />
                             </div>
                             <div>
-                              <h2 className="text-sm font-semibold text-[#0F172A]">Active Jobs</h2>
-                              <p className="text-[11px] text-[#94A3B8]">Production work already sold and scheduled</p>
+                              <h2 className="text-sm font-semibold text-[#0F172A]">Active Deals</h2>
+                              <p className="text-[11px] text-[#94A3B8]">Customer opportunities already sold or in active follow-up</p>
                             </div>
                           </div>
                           <button
-                            onClick={() => navigate("/projects")}
+                            onClick={() => navigate("/deals")}
                             className="text-xs text-[#0891B2] font-medium hover:underline flex items-center gap-1"
                           >
-                            View Jobs
+                            View Deals
                             <ArrowUpRight size={12} />
                           </button>
                         </div>
@@ -2789,7 +2789,7 @@ const Index = () => {
                                 <span className="font-semibold text-[#0F172A]">{formatMoney(job.value)}</span>
                               </div>
                               <div className="flex items-center justify-between gap-3">
-                                <span className="text-[#94A3B8]">Crew</span>
+                                <span className="text-[#94A3B8]">Owner</span>
                                 <span className="font-medium text-[#475569]">{job.crew}</span>
                               </div>
                               <div className="flex items-center justify-between gap-3">
@@ -2803,9 +2803,9 @@ const Index = () => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => navigate("/projects")}
+                                onClick={() => navigate("/deals")}
                               >
-                                View Job
+                                View Deal
                               </Button>
                             </div>
                           </div>
@@ -2867,7 +2867,7 @@ const Index = () => {
                                   onClick={() => navigate("/quotes")}
                                 >
                                   <Sparkles />
-                                  <span>Send estimate?</span>
+                                  <span>Send proposal?</span>
                                 </Button>
                               ) : null}
                             </div>
@@ -2887,15 +2887,15 @@ const Index = () => {
                                 onClick={() => navigate("/quotes")}
                               >
                                 <FileText />
-                                <span>Send Estimate</span>
+                                <span>Send Proposal</span>
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => navigate("/projects")}
+                                onClick={() => navigate("/deals")}
                               >
                                 <Briefcase />
-                                <span>View Jobs</span>
+                                <span>View Deals</span>
                               </Button>
                             </div>
                           </div>
@@ -2923,8 +2923,8 @@ const Index = () => {
                     ) : (
                     <div className={sectionCardClassName}>
                       <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
-                        <h2 className="text-sm font-semibold text-[#0F172A]">Estimate Queue</h2>
-                        <p className="text-[11px] text-[#94A3B8]">Drafts and sent estimates ready for follow-up</p>
+                        <h2 className="text-sm font-semibold text-[#0F172A]">Proposal Queue</h2>
+                        <p className="text-[11px] text-[#94A3B8]">Drafts and sent proposals ready for follow-up</p>
                       </div>
                       <div className="divide-y divide-[rgba(15,23,42,0.04)]">
                         {[...draftEstimates, ...sentEstimates].slice(0, 4).map((estimate) => (
@@ -2942,7 +2942,7 @@ const Index = () => {
                           </div>
                         ))}
                         {draftEstimates.length + sentEstimates.length === 0 ? (
-                          <div className="px-5 py-8 text-sm text-[#475569]">No estimates are in the queue yet.</div>
+                          <div className="px-5 py-8 text-sm text-[#475569]">No proposals are in the queue yet.</div>
                         ) : null}
                       </div>
                     </div>
@@ -2955,8 +2955,8 @@ const Index = () => {
                     ) : (
                     <div className={sectionCardClassName}>
                       <div className="p-5 border-b border-[rgba(15,23,42,0.06)]">
-                        <h2 className="text-sm font-semibold text-[#0F172A]">Inspections</h2>
-                        <p className="text-[11px] text-[#94A3B8]">Upcoming inspections and property visits</p>
+                        <h2 className="text-sm font-semibold text-[#0F172A]">Meetings</h2>
+                        <p className="text-[11px] text-[#94A3B8]">Upcoming demos, calls, and customer meetings</p>
                       </div>
                       <div className="divide-y divide-[rgba(15,23,42,0.04)]">
                         {siteVisits
@@ -2978,7 +2978,7 @@ const Index = () => {
                             </div>
                           ))}
                         {siteVisits.filter((visit) => visit.scheduledAt).length === 0 ? (
-                          <div className="px-5 py-8 text-sm text-[#475569]">No inspections are scheduled yet.</div>
+                          <div className="px-5 py-8 text-sm text-[#475569]">No meetings are scheduled yet.</div>
                         ) : null}
                       </div>
                     </div>

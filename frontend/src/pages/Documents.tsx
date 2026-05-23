@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import {
   Download, Eye, File, FileArchive, FileImage, FileSpreadsheet, FileText, FileVideo,
   FolderOpen, Globe, Grid2X2, Link2, List, MoreVertical, Pencil, RefreshCw, Search,
@@ -98,6 +99,7 @@ function detectDocumentType(file: File | null) {
 export default function DocumentsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("all");
   const [documentType, setDocumentType] = useState("all");
@@ -117,6 +119,9 @@ export default function DocumentsPage() {
   const [folderForm, setFolderForm] = useState({ name: "", parentId: "" });
   const [editForm, setEditForm] = useState({ name: "", description: "", categoryId: "", documentType: "document", version: 1, visibleToClient: false, requiresSignature: false });
   const [linkForm, setLinkForm] = useState({ linkedEntityType: "Client", linkedEntityId: "" });
+  const linkedEntityType = searchParams.get("linkedEntityType") || undefined;
+  const linkedEntityId = searchParams.get("linkedEntityId") || undefined;
+  const documentId = searchParams.get("documentId") || undefined;
 
   const filters = useMemo(() => ({
     search: search || undefined,
@@ -125,8 +130,11 @@ export default function DocumentsPage() {
     folderId: folderId !== "all" ? folderId : undefined,
     starred: statusFilter === "starred" ? true : undefined,
     shared: statusFilter === "shared" ? true : undefined,
+    linkedEntityType,
+    linkedEntityId,
+    documentId,
     limit: 100,
-  }), [search, categoryId, documentType, folderId, statusFilter]);
+  }), [search, categoryId, documentType, folderId, statusFilter, linkedEntityType, linkedEntityId, documentId]);
 
   const documentsQuery = useQuery({ queryKey: ["documents", filters], queryFn: () => getDocuments(filters) });
   const categoriesQuery = useQuery({ queryKey: ["documents", "categories"], queryFn: getDocumentCategories });
@@ -150,6 +158,11 @@ export default function DocumentsPage() {
     });
   }, [folderScope, folders, foldersVisibleWithFilters, search]);
   const hasItems = documents.length > 0 || visibleFolders.length > 0;
+  const linkedFilterLabel = linkedEntityType
+    ? `${linkedEntityType}${linkedEntityId ? ` ${linkedEntityId}` : ""}`
+    : documentId
+      ? `Document ${documentId}`
+      : null;
 
   const stats = useMemo(() => ({
     count: documents.length,
@@ -233,6 +246,12 @@ export default function DocumentsPage() {
             <div>
               <h1 className="text-2xl font-bold text-[#0F172A]">Documents</h1>
               <p className="text-sm text-[#64748B]">Business document center powered by Files and Folders.</p>
+              {linkedFilterLabel ? (
+                <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-cyan-100 bg-cyan-50 px-2.5 py-1 text-xs font-medium text-cyan-700">
+                  Filtered to {linkedFilterLabel}
+                  <button className="text-cyan-900 underline-offset-2 hover:underline" onClick={() => setSearchParams({})}>Clear</button>
+                </div>
+              ) : null}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -336,6 +355,7 @@ export default function DocumentsPage() {
                   <th className="w-10 px-4 py-3"><Checkbox checked={selected.size === documents.length} onCheckedChange={(checked) => setSelected(checked ? new Set(documents.map((doc) => doc.id)) : new Set())} /></th>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Category</th>
+                  <th className="px-4 py-3">Automation</th>
                   <th className="px-4 py-3">Folder</th>
                   <th className="px-4 py-3">Size</th>
                   <th className="px-4 py-3">Updated</th>
@@ -353,6 +373,7 @@ export default function DocumentsPage() {
                       </button>
                     </td>
                     <td className="px-4 py-3"><Badge variant="secondary">Folder</Badge></td>
+                    <td className="px-4 py-3 text-sm text-[#475569]">Manual</td>
                     <td className="px-4 py-3 text-sm text-[#475569]">{folder.parent?.name || "Root"}</td>
                     <td className="px-4 py-3 text-sm text-[#475569]">-</td>
                     <td className="px-4 py-3 text-sm text-[#475569]">{formatDate(folder.updatedAt)}</td>
@@ -373,6 +394,13 @@ export default function DocumentsPage() {
                         </button>
                       </td>
                       <td className="px-4 py-3"><Badge variant="secondary">{doc.category?.name || "Other"}</Badge></td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {doc.linkedEntityType ? <Badge variant="outline">{doc.linkedEntityType}</Badge> : <Badge variant="secondary">Manual</Badge>}
+                          {doc.isShared ? <Badge variant="outline" className="gap-1"><Globe size={11} />Shared</Badge> : null}
+                          {doc.requiresSignature ? <Badge variant="outline">Signature</Badge> : null}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-sm text-[#475569]">{doc.folder?.name || "Root"}</td>
                       <td className="px-4 py-3 text-sm text-[#475569]">{formatFileSize(doc.size)}</td>
                       <td className="px-4 py-3 text-sm text-[#475569]">{formatDate(doc.updatedAt)}</td>
@@ -409,6 +437,7 @@ export default function DocumentsPage() {
                   </button>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Badge variant="secondary">{doc.category?.name || "Other"}</Badge>
+                    {doc.linkedEntityType ? <Badge variant="outline">Generated / {doc.linkedEntityType}</Badge> : null}
                     {doc.isShared ? <Badge variant="outline" className="gap-1"><Globe size={11} />Shared</Badge> : null}
                     {doc.isStarred ? <Badge variant="outline" className="gap-1"><Star size={11} />Starred</Badge> : null}
                   </div>

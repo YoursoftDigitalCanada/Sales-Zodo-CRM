@@ -100,7 +100,7 @@ describe('SalesAutomationService', () => {
     mockDb.tenant.findUnique.mockResolvedValue({ id: 'tenant-1', settings: {} });
     mockDb.task.findFirst.mockResolvedValue(null);
     mockDb.task.create.mockImplementation(({ data }) => Promise.resolve({ id: 'task-1', ...data }));
-    mockDb.salesReminderSchedule.updateMany.mockResolvedValue({ count: 0 });
+    mockDb.salesReminderSchedule.updateMany.mockResolvedValue({ count: 1 });
     mockDb.salesReminderSchedule.upsert.mockImplementation(({ create }) => Promise.resolve({ id: `${create.reminderType}-${create.channel}`, ...create }));
     mockDb.salesReminderSchedule.findMany.mockResolvedValue([]);
     mockDb.salesReminderSchedule.update.mockImplementation(({ data }) => Promise.resolve({ id: 'reminder-1', ...data }));
@@ -1036,11 +1036,12 @@ describe('SalesAutomationService', () => {
         entityId: 'invoice-1',
         reminderType: 'invoice.due.today',
         channel: 'EMAIL',
+        scheduledFor: new Date('2026-05-01T00:00:00.000Z'),
         payload: { recipientEmail: 'customer@example.com', recipientName: 'Customer', ownerUserId: 'user-1', invoiceNumber: 'INV-1', amountDue: 500 },
       },
     ]);
 
-    await salesAutomationService.processDueReminders();
+    await salesAutomationService.processDueReminders(100, { workerId: 'worker-a' });
 
     expect(tenantMailerService.sendTenantEmail).toHaveBeenCalledWith(expect.objectContaining({
       tenantId: 'tenant-1',
@@ -1048,7 +1049,10 @@ describe('SalesAutomationService', () => {
       to: 'customer@example.com',
       subject: 'Invoice due today',
     }));
-    expect(mockDb.salesReminderSchedule.update).toHaveBeenCalledWith({ where: { id: 'reminder-email-1' }, data: { status: 'SENT', sentAt: expect.any(Date) } });
+    expect(mockDb.salesReminderSchedule.updateMany).toHaveBeenCalledWith({
+      where: { id: 'reminder-email-1', status: 'PROCESSING', claimedBy: 'worker-a' },
+      data: { status: 'SENT', sentAt: expect.any(Date), lastError: null, processingStartedAt: null },
+    });
   });
 
   it('failed email reminder marks reminder failed', async () => {
@@ -1062,14 +1066,21 @@ describe('SalesAutomationService', () => {
         entityId: 'invoice-1',
         reminderType: 'invoice.due.today',
         channel: 'EMAIL',
+        scheduledFor: new Date('2026-05-01T00:00:00.000Z'),
         payload: { recipientEmail: 'customer@example.com' },
       },
     ]);
 
-    await salesAutomationService.processDueReminders();
+    await salesAutomationService.processDueReminders(100, { workerId: 'worker-a' });
 
-    expect(mockDb.salesReminderSchedule.update).toHaveBeenCalledWith({ where: { id: 'reminder-email-2' }, data: { status: 'FAILED' } });
-    expect(mockDb.salesReminderSchedule.update).not.toHaveBeenCalledWith({ where: { id: 'reminder-email-2' }, data: expect.objectContaining({ status: 'SENT' }) });
+    expect(mockDb.salesReminderSchedule.updateMany).toHaveBeenCalledWith({
+      where: { id: 'reminder-email-2', status: 'PROCESSING', claimedBy: 'worker-a' },
+      data: { status: 'FAILED', lastError: 'smtp rejected', processingStartedAt: null },
+    });
+    expect(mockDb.salesReminderSchedule.updateMany).not.toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: 'reminder-email-2' }),
+      data: expect.objectContaining({ status: 'SENT' }),
+    }));
   });
 
   it('task reminder still creates a task and marks sent', async () => {
@@ -1081,16 +1092,20 @@ describe('SalesAutomationService', () => {
         entityId: 'invoice-1',
         reminderType: 'invoice.overdue',
         channel: 'TASK',
+        scheduledFor: new Date('2026-05-01T00:00:00.000Z'),
         payload: {},
       },
     ]);
 
-    await salesAutomationService.processDueReminders();
+    await salesAutomationService.processDueReminders(100, { workerId: 'worker-a' });
 
     expect(mockDb.task.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ tenantId: 'tenant-1', referenceDoctype: 'SalesReminderSchedule', referenceDocname: 'reminder-task-1' }),
     }));
-    expect(mockDb.salesReminderSchedule.update).toHaveBeenCalledWith({ where: { id: 'reminder-task-1' }, data: { status: 'SENT', sentAt: expect.any(Date) } });
+    expect(mockDb.salesReminderSchedule.updateMany).toHaveBeenCalledWith({
+      where: { id: 'reminder-task-1', status: 'PROCESSING', claimedBy: 'worker-a' },
+      data: { status: 'SENT', sentAt: expect.any(Date), lastError: null, processingStartedAt: null },
+    });
   });
 
   it('missing email recipient fails instead of silently marking sent', async () => {
@@ -1103,14 +1118,18 @@ describe('SalesAutomationService', () => {
         entityId: 'invoice-1',
         reminderType: 'invoice.due.today',
         channel: 'EMAIL',
+        scheduledFor: new Date('2026-05-01T00:00:00.000Z'),
         payload: {},
       },
     ]);
 
-    await salesAutomationService.processDueReminders();
+    await salesAutomationService.processDueReminders(100, { workerId: 'worker-a' });
 
     expect(tenantMailerService.sendTenantEmail).not.toHaveBeenCalled();
-    expect(mockDb.salesReminderSchedule.update).toHaveBeenCalledWith({ where: { id: 'reminder-email-3' }, data: { status: 'FAILED' } });
+    expect(mockDb.salesReminderSchedule.updateMany).toHaveBeenCalledWith({
+      where: { id: 'reminder-email-3', status: 'PROCESSING', claimedBy: 'worker-a' },
+      data: { status: 'FAILED', lastError: 'Email reminder is missing recipient email', processingStartedAt: null },
+    });
   });
 
   it('email reminder delivery uses the reminder tenant scope', async () => {
@@ -1124,13 +1143,103 @@ describe('SalesAutomationService', () => {
         entityId: 'proposal-1',
         reminderType: 'proposal.followup.2d',
         channel: 'EMAIL',
+        scheduledFor: new Date('2026-05-01T00:00:00.000Z'),
         payload: { recipientEmail: 'buyer@example.com', ownerUserId: 'user-2' },
       },
     ]);
 
-    await salesAutomationService.processDueReminders();
+    await salesAutomationService.processDueReminders(100, { workerId: 'worker-a' });
 
     expect(tenantMailerService.sendTenantEmail).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-2', preferredUserId: 'user-2' }));
+  });
+
+  it('two simulated workers cannot process the same reminder twice', async () => {
+    const { tenantMailerService } = require('../../src/common/services/tenant-mailer.service');
+    tenantMailerService.sendTenantEmail.mockResolvedValue({ sent: true });
+    const dueReminder = {
+      id: 'reminder-race',
+      tenantId: 'tenant-1',
+      entityType: 'Invoice',
+      entityId: 'invoice-1',
+      reminderType: 'invoice.due.today',
+      channel: 'EMAIL',
+      scheduledFor: new Date('2026-05-01T00:00:00.000Z'),
+      payload: { recipientEmail: 'customer@example.com' },
+    };
+    mockDb.salesReminderSchedule.findMany.mockResolvedValue([dueReminder]);
+    let claimAttempts = 0;
+    mockDb.salesReminderSchedule.updateMany.mockImplementation(({ data }) => {
+      if (data.status === 'PROCESSING') {
+        claimAttempts += 1;
+        return Promise.resolve({ count: claimAttempts === 1 ? 1 : 0 });
+      }
+      return Promise.resolve({ count: 1 });
+    });
+
+    const first = await salesAutomationService.processDueReminders(100, { workerId: 'worker-a' });
+    const second = await salesAutomationService.processDueReminders(100, { workerId: 'worker-b' });
+
+    expect(first.processed).toBe(1);
+    expect(second.processed).toBe(0);
+    expect(tenantMailerService.sendTenantEmail).toHaveBeenCalledTimes(1);
+    expect(mockDb.salesReminderSchedule.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: 'reminder-race' }),
+      data: expect.objectContaining({ status: 'PROCESSING', claimedBy: 'worker-a' }),
+    }));
+  });
+
+  it('claimed reminder is not picked by another worker before the processing timeout', async () => {
+    const { tenantMailerService } = require('../../src/common/services/tenant-mailer.service');
+    tenantMailerService.sendTenantEmail.mockResolvedValue({ sent: true });
+    mockDb.salesReminderSchedule.findMany.mockResolvedValueOnce([]);
+
+    const result = await salesAutomationService.processDueReminders(100, { workerId: 'worker-b' });
+
+    expect(result.processed).toBe(0);
+    expect(tenantMailerService.sendTenantEmail).not.toHaveBeenCalled();
+    expect(mockDb.salesReminderSchedule.updateMany).not.toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'PROCESSING', claimedBy: 'worker-b' }),
+    }));
+  });
+
+  it('stuck PROCESSING reminder can be retried after timeout', async () => {
+    const { tenantMailerService } = require('../../src/common/services/tenant-mailer.service');
+    tenantMailerService.sendTenantEmail.mockResolvedValue({ sent: true });
+    const oldProcessingStartedAt = new Date('2026-05-01T00:00:00.000Z');
+    mockDb.salesReminderSchedule.findMany.mockResolvedValueOnce([
+      {
+        id: 'reminder-stuck',
+        tenantId: 'tenant-1',
+        entityType: 'Invoice',
+        entityId: 'invoice-1',
+        reminderType: 'invoice.due.today',
+        channel: 'EMAIL',
+        status: 'PROCESSING',
+        claimedBy: 'dead-worker',
+        processingStartedAt: oldProcessingStartedAt,
+        scheduledFor: new Date('2026-05-01T00:00:00.000Z'),
+        attemptCount: 1,
+        payload: { recipientEmail: 'customer@example.com' },
+      },
+    ]);
+
+    const result = await salesAutomationService.processDueReminders(100, { workerId: 'worker-retry', stuckAfterMs: 1 });
+
+    expect(result.processed).toBe(1);
+    expect(tenantMailerService.sendTenantEmail).toHaveBeenCalledTimes(1);
+    expect(mockDb.salesReminderSchedule.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        id: 'reminder-stuck',
+        OR: expect.arrayContaining([
+          { status: 'PROCESSING', processingStartedAt: { lte: expect.any(Date) } },
+        ]),
+      }),
+      data: expect.objectContaining({
+        status: 'PROCESSING',
+        claimedBy: 'worker-retry',
+        attemptCount: { increment: 1 },
+      }),
+    }));
   });
 
   it('test-trigger defaults to dry-run and creates no side effects', async () => {

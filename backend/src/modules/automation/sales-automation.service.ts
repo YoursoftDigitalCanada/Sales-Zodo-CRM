@@ -1,3 +1,4 @@
+import os from 'os';
 import { prisma } from '../../config/database';
 import { eventBus } from '../../common/events/event-bus';
 import { activityLogger } from '../../common/services/activity-logger.service';
@@ -16,6 +17,8 @@ import { leadAutomationService } from '../leads/lead-automation.service';
 import { clientLifecycleService } from '../../common/services/client-lifecycle.service';
 
 const db = prisma as any;
+const REMINDER_PROCESSING_TIMEOUT_MS = Number(process.env.SALES_REMINDER_PROCESSING_TIMEOUT_MS || 15 * 60 * 1000);
+const DEFAULT_REMINDER_WORKER_ID = process.env.SALES_AUTOMATION_WORKER_ID || `${os.hostname()}-${process.pid}`;
 
 const DEFAULT_RULES = [
   {
@@ -1711,19 +1714,71 @@ class SalesAutomationService {
     return run.result;
   }
 
-  async processDueReminders(limit = 100) {
-    const reminders = await db.salesReminderSchedule.findMany({
-      where: { status: { in: ['SCHEDULED', 'PENDING'] }, scheduledFor: { lte: new Date() } },
-      orderBy: { scheduledFor: 'asc' },
-      take: limit,
-    });
+  async processDueReminders(
+    limit = 100,
+    options: { workerId?: string; stuckAfterMs?: number } = {},
+  ) {
+    const workerId = options.workerId || DEFAULT_REMINDER_WORKER_ID;
+    const reminders = await this.claimDueReminders(limit, workerId, options.stuckAfterMs);
+
     for (const reminder of reminders) {
       await this.sendReminder(reminder).catch(async (error) => {
-        logger.warn('[SalesAutomation] Reminder failed', { reminderId: reminder.id, tenantId: reminder.tenantId, error: (error as Error)?.message || String(error) });
-        await db.salesReminderSchedule.update({ where: { id: reminder.id }, data: { status: 'FAILED' } });
+        const message = (error as Error)?.message || String(error);
+        logger.warn('[SalesAutomation] Reminder failed', { reminderId: reminder.id, tenantId: reminder.tenantId, workerId, error: message });
+        await this.markReminderFailed(reminder.id, workerId, message);
       });
     }
     return { processed: reminders.length };
+  }
+
+  private async claimDueReminders(limit: number, workerId: string, stuckAfterMs = REMINDER_PROCESSING_TIMEOUT_MS) {
+    const now = new Date();
+    const staleBefore = new Date(now.getTime() - stuckAfterMs);
+    const candidates = await db.salesReminderSchedule.findMany({
+      where: {
+        scheduledFor: { lte: now },
+        OR: [
+          { status: { in: ['SCHEDULED', 'PENDING'] } },
+          { status: 'PROCESSING', processingStartedAt: { lte: staleBefore } },
+        ],
+      },
+      orderBy: { scheduledFor: 'asc' },
+      take: Math.max(limit * 3, limit),
+    });
+
+    const claimed: any[] = [];
+    for (const candidate of candidates) {
+      if (claimed.length >= limit) break;
+      const wasStaleProcessing = candidate.status === 'PROCESSING';
+      const result = await db.salesReminderSchedule.updateMany({
+        where: {
+          id: candidate.id,
+          scheduledFor: { lte: now },
+          OR: [
+            { status: { in: ['SCHEDULED', 'PENDING'] } },
+            { status: 'PROCESSING', processingStartedAt: { lte: staleBefore } },
+          ],
+        },
+        data: {
+          status: 'PROCESSING',
+          claimedAt: now,
+          claimedBy: workerId,
+          processingStartedAt: now,
+          lastError: wasStaleProcessing ? candidate.lastError || 'Retrying stuck reminder processing claim' : null,
+          attemptCount: { increment: 1 },
+        },
+      });
+      if (result.count !== 1) continue;
+      claimed.push({
+        ...candidate,
+        status: 'PROCESSING',
+        claimedAt: now,
+        claimedBy: workerId,
+        processingStartedAt: now,
+        attemptCount: Number(candidate.attemptCount || 0) + 1,
+      });
+    }
+    return claimed;
   }
 
   private async sendReminder(reminder: any) {
@@ -1740,7 +1795,19 @@ class SalesAutomationService {
         throw new Error(`Unsupported reminder channel: ${channel}`);
       }
     }
-    await db.salesReminderSchedule.update({ where: { id: reminder.id }, data: { status: 'SENT', sentAt: new Date() } });
+    const sentAt = new Date();
+    const sentUpdate = await db.salesReminderSchedule.updateMany({
+      where: { id: reminder.id, status: 'PROCESSING', claimedBy: reminder.claimedBy },
+      data: {
+        status: 'SENT',
+        sentAt,
+        lastError: null,
+        processingStartedAt: null,
+      },
+    });
+    if (sentUpdate.count !== 1) {
+      throw new Error('Reminder processing claim was lost before marking sent');
+    }
     activityLogger.log({
       tenantId: reminder.tenantId,
       entityType: reminder.entityType,
@@ -1749,6 +1816,17 @@ class SalesAutomationService {
       module: 'automation',
       description: `Sent ${reminder.reminderType} automation reminder`,
       metadata: { reminderId: reminder.id, channel: reminder.channel },
+    });
+  }
+
+  private async markReminderFailed(reminderId: string, workerId: string, error: string) {
+    await db.salesReminderSchedule.updateMany({
+      where: { id: reminderId, status: 'PROCESSING', claimedBy: workerId },
+      data: {
+        status: 'FAILED',
+        lastError: error,
+        processingStartedAt: null,
+      },
     });
   }
 

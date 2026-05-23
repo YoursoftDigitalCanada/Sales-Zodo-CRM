@@ -6612,6 +6612,11 @@ model SalesReminderSchedule {
   payload       Json      @default("{}")
   sentAt        DateTime?
   cancelledAt   DateTime?
+  claimedAt     DateTime?
+  claimedBy     String?
+  processingStartedAt DateTime?
+  lastError     String?   @db.Text
+  attemptCount  Int       @default(0)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -6619,7 +6624,9 @@ model SalesReminderSchedule {
   @@index([entityType, entityId])
   @@index([scheduledFor])
   @@index([status])
+  @@index([processingStartedAt])
   @@index([tenantId, scheduledFor, status])
+  @@index([tenantId, status, processingStartedAt])
   @@index([tenantId, entityType, entityId])
   @@unique([tenantId, entityType, entityId, reminderType, channel])
 }

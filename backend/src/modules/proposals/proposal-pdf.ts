@@ -2,15 +2,13 @@
  * Proposal PDF Generator — Stage 3C
  *
  * Generates a multi-section PDF proposal document:
- *   1. Cover Page (company branding, lead name, property address)
+ *   1. Cover Page (company branding, prospect/account name, address if provided)
  *   2. Custom Message (if provided)
- *   3. Project Scope (roof replacement description)
- *   4. Quote Section (line items, totals, payment schedule, warranty)
- *   5. AI Estimate Section (roof measurements, material summary)
+ *   3. Scope of Services
+ *   4. Pricing Section (line items, totals, payment schedule, service terms)
+ *   5. Project Details Section
  *   6. Terms and Conditions
  *   7. E-Signature Block (Accept / Decline / Sign)
- *
- * Uses jsPDF + jspdf-autotable (same stack as roof-estimate-pdf.ts).
  */
 
 import { jsPDF } from 'jspdf';
@@ -72,6 +70,42 @@ function fmtCurrency(value: number, currency = 'CAD'): string {
     return new Intl.NumberFormat('en-CA', { style: 'currency', currency }).format(value);
 }
 
+export function buildGenericProposalScope(clientName = 'the client'): string {
+    return [
+        `Provide the agreed products, services, and implementation support for ${clientName}.`,
+        '',
+        'The scope of services includes:',
+        '- Discovery and confirmation of business requirements',
+        '- Configuration, delivery, or implementation of the approved solution',
+        '- Coordination with the client team on timelines, milestones, and responsibilities',
+        '- Quality review before handoff',
+        '- Client onboarding and knowledge transfer as applicable',
+        '- Post-delivery support according to the selected plan or agreement',
+    ].join('\n');
+}
+
+export function buildGenericProposalTerms(): string {
+    return [
+        '1. This proposal is valid for 30 days from the date of issue unless otherwise stated.',
+        '2. Work will begin after signed acceptance and receipt of any required deposit or initial payment.',
+        '3. Deliverables, timelines, and responsibilities are based on the approved scope of services.',
+        '4. Any changes to the approved scope after acceptance may require a written change order and additional charges.',
+        '5. Client delays, missing information, or third-party dependencies may affect delivery timelines.',
+        '6. Payment is due according to the payment schedule specified in this proposal.',
+        '7. The client is responsible for timely access to required systems, contacts, approvals, and materials.',
+        '8. Any required approvals, access, or compliance requirements must be provided before the affected work begins.',
+        '9. Support, onboarding, and service coverage follow the selected package or signed agreement.',
+        '10. This proposal supersedes any previous verbal or written estimates for the same scope.',
+    ].join('\n');
+}
+
+export function resolveProposalScopeText(data: Pick<ProposalPdfData, 'scopeOfWork' | 'leadName'>): string {
+    if (typeof data.scopeOfWork === 'string' && data.scopeOfWork.trim().length > 0) {
+        return data.scopeOfWork;
+    }
+    return buildGenericProposalScope(data.leadName || 'the client');
+}
+
 function addPageFooter(doc: jsPDF, companyName: string): void {
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
@@ -108,7 +142,7 @@ export function generateProposalPdfBuffer(data: ProposalPdfData): {
 
     doc.setFontSize(14);
     doc.setFont('helvetica', 'normal');
-    doc.text('ROOFING PROPOSAL', pageWidth / 2, 50, { align: 'center' });
+    doc.text('SALES PROPOSAL', pageWidth / 2, 50, { align: 'center' });
 
     doc.setFontSize(10);
     doc.text(`Proposal #${data.proposalNumber}`, pageWidth / 2, 65, { align: 'center' });
@@ -172,17 +206,7 @@ export function generateProposalPdfBuffer(data: ProposalPdfData): {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(50, 50, 50);
 
-    const scopeText = data.scopeOfWork || [
-        `Complete roof replacement for the property at ${data.propertyAddress || 'the specified address'}.`,
-        '',
-        'The scope of work includes:',
-        '• Removal of existing roofing materials and disposal',
-        '• Inspection and repair of roof decking as needed',
-        '• Installation of new underlayment and ice/water shield',
-        '• Installation of new roofing materials as specified',
-        '• Installation of new flashing, ridge caps, and ventilation',
-        '• Cleanup and final inspection',
-    ].join('\n');
+    const scopeText = resolveProposalScopeText(data);
 
     const scopeLines = doc.splitTextToSize(scopeText, contentWidth);
     doc.text(scopeLines, margin, y);
@@ -254,7 +278,7 @@ export function generateProposalPdfBuffer(data: ProposalPdfData): {
 
     y = (doc as any).lastAutoTable.finalY + 10;
 
-    // Payment schedule & warranty
+    // Payment schedule & service terms
     if (data.paymentScheduleType || data.warrantySelected) {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
@@ -276,12 +300,12 @@ export function generateProposalPdfBuffer(data: ProposalPdfData): {
                 extended: 'Extended Warranty (10 Years)',
                 premium: 'Premium Warranty (Lifetime / 25 Years)',
             };
-            doc.text(`Warranty: ${warrantyLabels[data.warrantySelected] || data.warrantySelected}`, margin, y);
+            doc.text(`Service Coverage: ${warrantyLabels[data.warrantySelected] || data.warrantySelected}`, margin, y);
             y += 6;
         }
     }
 
-    // ── 5. AI Estimate Section ───────────────────────────────────────────
+    // ── 5. Project Details Section ───────────────────────────────────────
 
     if (data.roofAreaSqft && data.roofAreaSqft > 0) {
         doc.addPage();
@@ -289,18 +313,18 @@ export function generateProposalPdfBuffer(data: ProposalPdfData): {
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(8, 145, 178);
-        doc.text('Roof Measurements (AI Estimate)', margin, y);
+        doc.text('Project Details', margin, y);
         y += 12;
 
         const measRows: string[][] = [];
-        measRows.push(['Roof Area', `${data.roofAreaSqft.toLocaleString()} sq ft`]);
-        if (data.roofPitch) measRows.push(['Pitch', data.roofPitch]);
-        if (data.roofType) measRows.push(['Roof Type', data.roofType]);
+        measRows.push(['Estimated Area', `${data.roofAreaSqft.toLocaleString()} sq ft`]);
+        if (data.roofPitch) measRows.push(['Configuration', data.roofPitch]);
+        if (data.roofType) measRows.push(['Solution Type', data.roofType]);
         if (data.stories) measRows.push(['Stories', String(data.stories)]);
-        if (data.ridgeLengthFt) measRows.push(['Ridge Length', `${data.ridgeLengthFt.toFixed(1)} ft`]);
-        if (data.valleyLengthFt) measRows.push(['Valley Length', `${data.valleyLengthFt.toFixed(1)} ft`]);
-        if (data.eaveLengthFt) measRows.push(['Eave Length', `${data.eaveLengthFt.toFixed(1)} ft`]);
-        if (data.totalEstimate) measRows.push(['AI Estimate', fmtCurrency(data.totalEstimate, data.currency)]);
+        if (data.ridgeLengthFt) measRows.push(['Primary Length', `${data.ridgeLengthFt.toFixed(1)} ft`]);
+        if (data.valleyLengthFt) measRows.push(['Secondary Length', `${data.valleyLengthFt.toFixed(1)} ft`]);
+        if (data.eaveLengthFt) measRows.push(['Perimeter Length', `${data.eaveLengthFt.toFixed(1)} ft`]);
+        if (data.totalEstimate) measRows.push(['Estimated Total', fmtCurrency(data.totalEstimate, data.currency)]);
 
         autoTable(doc, {
             startY: y,
@@ -318,7 +342,7 @@ export function generateProposalPdfBuffer(data: ProposalPdfData): {
         doc.setFontSize(8);
         doc.setFont('helvetica', 'italic');
         doc.setTextColor(130, 130, 130);
-        doc.text('* Measurements generated using AI satellite imagery analysis. See attached AI Estimate Report for details.', margin, y);
+        doc.text('* Details are provided for planning context and should be confirmed against the final approved scope.', margin, y);
     }
 
     // ── 6. Terms and Conditions ──────────────────────────────────────────
@@ -334,18 +358,7 @@ export function generateProposalPdfBuffer(data: ProposalPdfData): {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(50, 50, 50);
 
-    const termsText = data.termsAndConditions || [
-        '1. This proposal is valid for 30 days from the date of issue.',
-        '2. Work will commence within 5-10 business days of signed acceptance and deposit receipt.',
-        '3. All materials and workmanship are covered under the selected warranty plan.',
-        '4. Any changes to the scope of work after acceptance may result in additional charges.',
-        '5. The contractor is not responsible for pre-existing structural damage discovered during work.',
-        '6. Payment is due according to the payment schedule specified in this proposal.',
-        '7. The homeowner is responsible for providing clear access to the work area.',
-        '8. The contractor will obtain all necessary permits and inspections.',
-        '9. Clean-up and debris removal is included in the project price.',
-        '10. This proposal supersedes any previous verbal or written estimates.',
-    ].join('\n');
+    const termsText = data.termsAndConditions || buildGenericProposalTerms();
 
     const termsLines = doc.splitTextToSize(termsText, contentWidth);
     doc.text(termsLines, margin, y);

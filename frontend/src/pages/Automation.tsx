@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Activity, Bell, CheckCircle2, Play, RefreshCw, Settings2, ToggleLeft, ToggleRight, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
   getAutomationRuns,
   seedAutomationDefaults,
 } from "@/features/automation";
+import { resolveNotificationTarget } from "@/features/notifications/utils/notification-navigation";
 
 function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <section className={`rounded-lg border border-slate-200 bg-white p-4 shadow-sm ${className}`}>{children}</section>;
@@ -42,7 +44,35 @@ function statusBadge(status: string) {
   return <Badge variant="outline">{value || "ACTIVE"}</Badge>;
 }
 
+function automationTarget(row: AutomationRecord) {
+  const entityType = String(row.entityType || "").toLowerCase();
+  const entityId = String(row.entityId || "");
+  const metadata = {
+    invoiceId: entityType === "invoice" ? entityId : row.input?.invoiceId,
+    projectId: entityType === "deal" || entityType === "project" ? entityId : row.input?.dealId || row.input?.projectId,
+    leadId: entityType === "lead" ? entityId : row.input?.leadId,
+    clientId: entityType === "customer" || entityType === "client" ? entityId : row.input?.clientId || row.input?.customerId,
+    proposalId: entityType === "proposal" ? entityId : row.input?.proposalId,
+    quoteId: entityType === "quote" ? entityId : row.input?.quoteId,
+    contractId: entityType === "contract" ? entityId : row.input?.contractId,
+    taskId: entityType === "task" ? entityId : row.input?.taskId,
+    expenseId: entityType === "expense" ? entityId : row.input?.expenseId,
+    documentId: entityType === "document" || entityType === "file" ? entityId : row.input?.documentId || row.output?.documentId,
+  };
+  return resolveNotificationTarget({ actionUrl: row.actionUrl, link: row.link, metadata });
+}
+
+function actionSummary(row: AutomationRecord) {
+  const actions = Array.isArray(row.output?.actions) ? row.output.actions : [];
+  const sideEffects = Array.isArray(row.output?.sideEffects) ? row.output.sideEffects : [];
+  const planned = Array.isArray(row.plannedActions) ? row.plannedActions : [];
+  const values = [...actions, ...sideEffects, ...planned.map((item: any) => item.action || item)].filter(Boolean);
+  if (values.length) return values.slice(0, 3).join(", ") + (values.length > 3 ? ` +${values.length - 3}` : "");
+  return row.output?.reason || row.input?.actionType || "-";
+}
+
 export default function AutomationPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [rules, setRules] = useState<AutomationRecord[]>([]);
   const [runs, setRuns] = useState<AutomationRecord[]>([]);
@@ -139,7 +169,7 @@ export default function AutomationPage() {
           <TabsContent value="overview">
             <Panel>
               <h2 className="mb-3 text-base font-semibold text-slate-950">Recent Automation Activity</h2>
-              <RunsTable rows={runs.slice(0, 8)} />
+              <RunsTable rows={runs.slice(0, 8)} onOpen={(target) => navigate(target)} />
             </Panel>
           </TabsContent>
 
@@ -174,14 +204,19 @@ export default function AutomationPage() {
                     <TableCell>{reminder.entityType} · {reminder.entityId}</TableCell>
                     <TableCell>{reminder.channel}</TableCell>
                     <TableCell>{statusBadge(reminder.status)}</TableCell>
-                    <TableCell>{reminder.status === "SCHEDULED" ? <Button variant="ghost" size="sm" onClick={() => cancelReminder(reminder.id)}>Cancel</Button> : "-"}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {automationTarget(reminder) ? <Button variant="ghost" size="sm" onClick={() => navigate(automationTarget(reminder)!)}>Open</Button> : null}
+                        {reminder.status === "SCHEDULED" ? <Button variant="ghost" size="sm" onClick={() => cancelReminder(reminder.id)}>Cancel</Button> : null}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}</TableBody>
               </Table>
             </Panel>
           </TabsContent>
 
-          <TabsContent value="runs"><Panel><RunsTable rows={runs} /></Panel></TabsContent>
+          <TabsContent value="runs"><Panel><RunsTable rows={runs} onOpen={(target) => navigate(target)} /></Panel></TabsContent>
           <TabsContent value="defaults">
             <Panel>
               <h2 className="mb-2 text-base font-semibold text-slate-950">Default Sales Automation Templates</h2>
@@ -195,19 +230,24 @@ export default function AutomationPage() {
   );
 }
 
-function RunsTable({ rows }: { rows: AutomationRecord[] }) {
+function RunsTable({ rows, onOpen }: { rows: AutomationRecord[]; onOpen: (target: string) => void }) {
   return (
     <Table>
-      <TableHeader><TableRow><TableHead>Created</TableHead><TableHead>Trigger</TableHead><TableHead>Entity</TableHead><TableHead>Status</TableHead><TableHead>Error</TableHead></TableRow></TableHeader>
-      <TableBody>{rows.map((run) => (
-        <TableRow key={run.id}>
-          <TableCell>{run.createdAt ? new Date(run.createdAt).toLocaleString() : "-"}</TableCell>
-          <TableCell className="font-mono text-xs">{run.triggerType}</TableCell>
-          <TableCell>{run.entityType} · {run.entityId}</TableCell>
-          <TableCell>{statusBadge(run.status)}</TableCell>
-          <TableCell className="max-w-md truncate text-xs text-rose-600">{run.error || "-"}</TableCell>
-        </TableRow>
-      ))}</TableBody>
+      <TableHeader><TableRow><TableHead>Created</TableHead><TableHead>Trigger</TableHead><TableHead>Entity</TableHead><TableHead>Status</TableHead><TableHead>Side Effects</TableHead><TableHead>Error</TableHead><TableHead>Open</TableHead></TableRow></TableHeader>
+      <TableBody>{rows.map((run) => {
+        const target = automationTarget(run);
+        return (
+          <TableRow key={run.id}>
+            <TableCell>{run.createdAt ? new Date(run.createdAt).toLocaleString() : "-"}</TableCell>
+            <TableCell className="font-mono text-xs">{run.triggerType}</TableCell>
+            <TableCell>{run.entityType} · {run.entityId}</TableCell>
+            <TableCell>{statusBadge(run.status)}</TableCell>
+            <TableCell className="max-w-xs truncate text-xs text-slate-600">{actionSummary(run)}</TableCell>
+            <TableCell className="max-w-md truncate text-xs text-rose-600">{run.error || "-"}</TableCell>
+            <TableCell>{target ? <Button variant="ghost" size="sm" onClick={() => onOpen(target)}>Open</Button> : "-"}</TableCell>
+          </TableRow>
+        );
+      })}</TableBody>
     </Table>
   );
 }

@@ -5,7 +5,7 @@ import { NotFoundError, BadRequestError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { eventBus } from '../../common/events/event-bus';
-import { generateProposalPdfBuffer } from './proposal-pdf';
+import { buildGenericProposalScope, generateProposalPdfBuffer } from './proposal-pdf';
 import { documentsService } from '../documents/documents.service';
 import { filesService } from '../files/files.service';
 import { PrismaClient } from '@prisma/client';
@@ -65,20 +65,7 @@ export class ProposalsService {
         const leadName = quote.lead
             ? `${quote.lead.firstName} ${quote.lead.lastName}`.trim()
             : 'the client';
-        const propertyAddr = quote.lead?.propertyAddress || 'the specified address';
-
-        const defaultScope = [
-            `Complete roof replacement for ${leadName} at ${propertyAddr}.`,
-            '',
-            'The scope of work includes:',
-            '• Removal and disposal of existing roofing materials',
-            '• Inspection and repair of roof decking as needed',
-            '• Installation of new underlayment and ice/water shield',
-            '• Installation of new roofing materials as specified in the quote',
-            '• Installation of new flashing, ridge caps, and ventilation',
-            '• Full cleanup and debris removal',
-            '• Final walkthrough and inspection',
-        ].join('\n');
+        const defaultScope = buildGenericProposalScope(leadName);
 
         // 6. Create the proposal
         const proposal = await proposalsRepository.create(
@@ -233,7 +220,7 @@ export class ProposalsService {
 
         // Generate PDF
         const { buffer, fileName } = generateProposalPdfBuffer({
-            companyName: settings?.companyName || 'ZODO Roofing',
+            companyName: settings?.companyName || 'Zodo Sales CRM',
             companyPhone: settings?.companyPhone || undefined,
             companyEmail: settings?.companyEmail || undefined,
             companyAddress: settings?.companyAddress || undefined,

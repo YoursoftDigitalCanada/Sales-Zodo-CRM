@@ -9,7 +9,7 @@ import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { SessionTakeoverGuard } from "@/components/SessionTakeoverGuard";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ThemeProvider, useTheme } from "next-themes";
 import { CopilotContextProvider } from "@/contexts/CopilotContext";
 import { Sidebar, SidebarSuppressionContext } from "@/components/Sidebar";
@@ -235,6 +235,14 @@ const SETTINGS_ROUTE_PERMISSIONS = [
 
 const EMAIL_ROUTE_PERMISSIONS = ["emails.view", "emails.send"];
 
+const ContractDocumentRedirect = () => {
+  const { id } = useParams();
+  const target = id
+    ? `/documents?linkedEntityType=Contract&linkedEntityId=${encodeURIComponent(id)}`
+    : "/documents?linkedEntityType=Contract";
+  return <Navigate to={target} replace />;
+};
+
 const resolveCreateRoute = (pathname: string): {
   path: string;
   permissionModule?: string;
@@ -245,7 +253,6 @@ const resolveCreateRoute = (pathname: string): {
   if (pathname.startsWith("/client-list")) return { path: "/client-list/add", permissionModule: "clients", action: "create" };
   if (pathname.startsWith("/projects") || pathname.startsWith("/kanban") || pathname.startsWith("/deals") || pathname.startsWith("/pipeline")) return { path: "/deals?create=1", permissionModule: "projects", action: "create" };
   if (pathname.startsWith("/inspections")) return { path: "/leads", permissionModule: "leads", action: "create" };
-  if (pathname.startsWith("/roof-estimator")) return { path: "/roof-estimator/new", permissionModule: "roof-estimator", action: "create" };
   return null;
 };
 
@@ -861,6 +868,8 @@ const AppRoutes = () => {
             </AccessGuard>
           }
         />
+        <Route path="/contracts" element={<ContractDocumentRedirect />} />
+        <Route path="/contracts/:id" element={<ContractDocumentRedirect />} />
 
         {/* Invoice routes using Layout wrapper */}
         <Route element={<Layout />}>

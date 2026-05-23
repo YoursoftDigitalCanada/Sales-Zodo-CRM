@@ -41,17 +41,23 @@ export function resolveNotificationTarget(source?: NotificationNavigationSource 
   const metadataBookingId = readString(metadata.bookingId);
   const metadataEventId = readString(metadata.eventId);
   const metadataQuoteId = readString(metadata.quoteId);
+  const metadataProposalId = readString(metadata.proposalId);
+  const metadataContractId = readString(metadata.contractId);
+  const metadataDocumentId = readString(metadata.documentId) || readString(metadata.fileId);
 
   if (!rawTarget) {
     if (metadataInvoiceId) return `/invoice/${metadataInvoiceId}`;
     if (metadataProjectId) return withQuery("/deals", "dealId", metadataProjectId);
     if (metadataLeadId) return `/leads/${metadataLeadId}`;
     if (metadataClientId) return `/client-list/${metadataClientId}`;
+    if (metadataProposalId) return withQuery("/proposals", "proposalId", metadataProposalId);
     if (metadataQuoteId) return withQuery("/proposals", "quoteId", metadataQuoteId);
+    if (metadataContractId) return `/documents?linkedEntityType=Contract&linkedEntityId=${encodeURIComponent(metadataContractId)}`;
+    if (metadataDocumentId) return `/documents?documentId=${encodeURIComponent(metadataDocumentId)}`;
     if (metadataRoomId) return withQuery("/chats", "conversationId", metadataRoomId);
     if (metadataTaskId) return withQuery("/tasks", "taskId", metadataTaskId);
     if (metadataExpenseId) return withQuery("/expenses", "expenseId", metadataExpenseId);
-    if (metadataBookingId) return withQuery("/bookings", "bookingId", metadataBookingId);
+    if (metadataBookingId) return withQuery("/calendar", "bookingId", metadataBookingId);
     if (metadataEventId) return withQuery("/calendar", "event", metadataEventId);
     return undefined;
   }
@@ -73,11 +79,24 @@ export function resolveNotificationTarget(source?: NotificationNavigationSource 
     const dealId = pathname.split("/")[2];
     return withQuery("/deals", "dealId", dealId);
   }
+  if (/^\/projects\/[^/]+\/documents$/.test(pathname)) {
+    const dealId = pathname.split("/")[2];
+    return `/documents?linkedEntityType=Deal&linkedEntityId=${encodeURIComponent(dealId)}`;
+  }
+  if (/^\/deals\/[^/]+$/.test(pathname)) {
+    const dealId = pathname.split("/")[2];
+    return withQuery("/deals", "dealId", dealId);
+  }
   if (pathname === "/quotes") return `/proposals${search}`;
   if (pathname === "/proposals") return `/proposals${search}`;
   if (/^\/proposals\/[^/]+$/.test(pathname)) {
     const proposalId = pathname.split("/")[2];
     return withQuery("/proposals", "proposalId", proposalId);
+  }
+  if (pathname === "/contracts") return `/documents?linkedEntityType=Contract`;
+  if (/^\/contracts\/[^/]+$/.test(pathname)) {
+    const contractId = pathname.split("/")[2];
+    return `/documents?linkedEntityType=Contract&linkedEntityId=${encodeURIComponent(contractId)}`;
   }
   if (pathname === "/chat") return `/chats${search}`;
   if (/^\/chat\/[^/]+$/.test(pathname)) {
@@ -98,8 +117,9 @@ export function resolveNotificationTarget(source?: NotificationNavigationSource 
   }
   if (/^\/bookings\/[^/]+$/.test(pathname)) {
     const bookingId = pathname.split("/")[2];
-    return withQuery("/bookings", "bookingId", bookingId);
+    return withQuery("/calendar", "bookingId", bookingId);
   }
+  if (pathname === "/bookings") return `/calendar${search}`;
 
   return normalized;
 }

@@ -69,6 +69,9 @@ import { stage4SendWorkflowService } from '../proposals/stage4-send-workflow.ser
 import { proposalReminderService } from '../proposals/proposal-reminder.service';
 import { quoteSignatureReminderService } from '../quotes/quote-signature-reminder.service';
 import { seedProjectStages } from '../projects/seed-project-stages';
+import { salesAutomationService } from './sales-automation.service';
+import { isLegacyRoofingAutomationEnabled } from './legacy-automation.guard';
+import { automationIdempotencyService } from './automation-idempotency.service';
 
 // ── Extensible Hook Types ────────────────────────────────────────────────
 
@@ -133,6 +136,7 @@ export class AutomationService {
         stage4SendWorkflowService.initialize();
         proposalReminderService.initialize();
         quoteSignatureReminderService.initialize();
+        salesAutomationService.initialize();
         // Sales CRM uses deal/subscription billing automation instead of legacy roofing project execution workflows.
 
         // Seed default Kanban stages
@@ -142,7 +146,7 @@ export class AutomationService {
         logger.info('[Automation] Initialized', {
             builtInRules: this.getBuiltInRuleNames(),
             externalHooks: this.hooks.map(h => `${h.event} → ${h.name}`),
-            workflowServices: ['EstimationWorkflow', 'ProposalAutomation', 'DealConversion', 'Stage3Workflow', 'Stage4SendWorkflow', 'ProposalReminder'],
+            workflowServices: ['EstimationWorkflow', 'ProposalAutomation', 'DealConversion', 'Stage3Workflow', 'Stage4SendWorkflow', 'ProposalReminder', 'SalesAutomation'],
         });
     }
 
@@ -283,6 +287,26 @@ export class AutomationService {
         }
     }
 
+    private automationKey(tenantId: string, eventName: string, entityType: string, entityId: string, actionType: string) {
+        return automationIdempotencyService.buildKey(tenantId, eventName, entityType, entityId, actionType);
+    }
+
+    private async runOnce<T>(
+        tenantId: string,
+        eventName: string,
+        entityType: string,
+        entityId: string,
+        actionType: string,
+        fn: () => Promise<T>,
+    ) {
+        return automationIdempotencyService.runOnce(
+            tenantId,
+            this.automationKey(tenantId, eventName, entityType, entityId, actionType),
+            { eventName, entityType, entityId, actionType },
+            fn,
+        );
+    }
+
     /**
      * Register an external hook for future extensibility.
      * Call this BEFORE `initialize()` at application startup.
@@ -310,6 +334,7 @@ export class AutomationService {
     private registerBuiltInNotifications(): void {
         // ── Lead Created — Full Automation Workflow ──
         eventBus.on('lead.created', async (event: LeadCreatedEvent) => {
+            if (!(await this.shouldRunLegacyRoofingAutomation(event.tenantId, 'lead.created'))) return;
             const ctx = { leadId: event.leadId, tenantId: event.tenantId };
             const label = event.companyName
                 ? `${event.leadName} (${event.companyName})`
@@ -628,6 +653,8 @@ export class AutomationService {
                 clientId: event.clientId,
             });
 
+            if (!(await this.shouldRunLegacyRoofingAutomation(event.tenantId, 'lead.converted'))) return;
+
             // ── Auto-create project from lead data ──────────────────────────
             // Always create a project when a lead converts, regardless of
             // whether a quote exists. If `client.created` already bootstrapped
@@ -771,16 +798,17 @@ export class AutomationService {
             if (event.newStatus === 'QUALIFIED') {
                 // 1️⃣  Notify lead owner about qualification
                 if (event.ownerUserId) {
+                    const ownerUserId = event.ownerUserId;
                     try {
-                        await notificationsService.create({
+                        await this.runOnce(event.tenantId, 'lead.statusChanged', 'Lead', event.leadId, 'qualified-owner-notification', () => notificationsService.create({
                             title: '🎯 Lead Qualified',
                             message: `"${label}" is now qualified! A qualification meeting and proposal task have been auto-created.`,
                             type: 'SUCCESS',
-                            userId: event.ownerUserId,
+                            userId: ownerUserId,
                             tenantId: event.tenantId,
                             actionUrl: `/leads/${event.leadId}`,
                             actionLabel: 'View Lead',
-                        });
+                        }));
                         logger.debug('[Automation] lead.statusChanged (QUALIFIED) → owner notification sent', ctx);
                     } catch (err) {
                         logger.error('[Automation] lead.statusChanged (QUALIFIED) → owner notification failed', { ...ctx, err });
@@ -794,7 +822,7 @@ export class AutomationService {
                     const endTime = new Date(meetingDate);
                     endTime.setMinutes(endTime.getMinutes() + 45);
 
-                    await calendarService.create(event.tenantId, {
+                    await this.runOnce(event.tenantId, 'lead.statusChanged', 'Lead', event.leadId, 'qualification-meeting', () => calendarService.create(event.tenantId, {
                         title: `Qualification Meeting — ${label}`,
                         description: [
                             `Qualified lead "${event.leadName}" is ready for a deeper conversation.`,
@@ -813,7 +841,7 @@ export class AutomationService {
                         priority: 'HIGH',
                         category: 'lead-qualification',
                         color: '#A855F7', // purple for qualification stage
-                    });
+                    }));
                     logger.info('[Automation] lead.statusChanged (QUALIFIED) → qualification meeting created', ctx);
                 } catch (err) {
                     logger.error('[Automation] lead.statusChanged (QUALIFIED) → calendar event failed', { ...ctx, err });
@@ -824,7 +852,7 @@ export class AutomationService {
                     const dueDate = new Date();
                     dueDate.setDate(dueDate.getDate() + 3);
 
-                    await tasksService.create(event.tenantId, {
+                    await this.runOnce(event.tenantId, 'lead.statusChanged', 'Lead', event.leadId, 'prepare-proposal-task', () => tasksService.create(event.tenantId, {
                         title: `Prepare proposal for: ${label}`,
                         description: [
                             `Lead "${event.leadName}" moved to QUALIFIED.`,
@@ -840,7 +868,7 @@ export class AutomationService {
                         priority: 'HIGH',
                         dueDate,
                         assignedToId: event.ownerId || null,
-                    });
+                    }));
                     logger.info('[Automation] lead.statusChanged (QUALIFIED) → proposal task created', ctx);
                 } catch (err) {
                     logger.error('[Automation] lead.statusChanged (QUALIFIED) → task creation failed', { ...ctx, err });
@@ -881,16 +909,17 @@ export class AutomationService {
 
             const statusConf = inactiveStatusConfig[event.newStatus];
             if (event.ownerUserId && statusConf) {
+                const ownerUserId = event.ownerUserId;
                 try {
-                    await notificationsService.create({
+                    await this.runOnce(event.tenantId, 'lead.statusChanged', 'Lead', event.leadId, `inactive-${event.newStatus}-notification`, () => notificationsService.create({
                         title: `${statusConf.emoji} Lead ${statusConf.label}`,
                         message: `Lead "${event.leadName}" has been marked as ${statusConf.label}.`,
                         type: statusConf.type,
-                        userId: event.ownerUserId,
+                        userId: ownerUserId,
                         tenantId: event.tenantId,
                         actionUrl: `/leads/${event.leadId}`,
                         actionLabel: 'View Lead',
-                    });
+                    }));
                     logger.debug('[Automation] lead.statusChanged (inactive) → notification sent', ctx);
                 } catch (err) {
                     logger.error('[Automation] lead.statusChanged (inactive) → notification failed', { ...ctx, err });
@@ -912,6 +941,8 @@ export class AutomationService {
                 });
                 logger.debug('[Automation] client.created → notification sent', { clientId: event.clientId });
             }
+
+            if (!(await this.shouldRunLegacyRoofingAutomation(event.tenantId, 'client.created accepted-quote project bootstrap'))) return;
 
             // Auto-bootstrap project + milestones from latest accepted quote context
             // when a client was auto-created from a lead conversion.
@@ -980,6 +1011,7 @@ export class AutomationService {
         // Each step is error-isolated.
         // ══════════════════════════════════════════════════════════════════
         eventBus.on('project.created', async (event: ProjectCreatedEvent) => {
+            if (!(await this.shouldRunLegacyRoofingAutomation(event.tenantId, 'project.created'))) return;
             const ctx = { projectId: event.projectId, projectName: event.projectName, tenantId: event.tenantId };
             logger.info('[Automation] project.created received', ctx);
 
@@ -1570,7 +1602,7 @@ export class AutomationService {
                 const endDate = new Date(confirmDate);
                 endDate.setMinutes(endDate.getMinutes() + 15);
 
-                await calendarService.create(event.tenantId, {
+                await this.runOnce(event.tenantId, 'payment.received', 'Invoice', event.invoiceId, 'payment-confirmation-calendar', () => calendarService.create(event.tenantId, {
                     title: `✅ Payment confirmed: ${clientName || `Invoice #${event.invoiceNumber}`}`,
                     description: `Payment of ${paymentAmount} received for invoice #${event.invoiceNumber}.\n\nAction items:\n1. Send payment receipt to client\n2. Update accounting records\n3. Close out invoice`,
                     eventType: 'REMINDER',
@@ -1579,7 +1611,7 @@ export class AutomationService {
                     priority: 'LOW',
                     category: 'PAYMENT',
                     notes: `Client: ${clientName} | Invoice: ${event.invoiceNumber}`,
-                }, event.paidByUserId);
+                }, event.paidByUserId));
                 logger.info('[Automation] Step 3 ✓ Payment confirmation event created', ctx);
             } catch (err) {
                 logger.error('[Automation] Step 3 ✗ Calendar event failed', { ...ctx, err });
@@ -1588,15 +1620,16 @@ export class AutomationService {
             // Step 4: Notifications — recorder + admin team
             try {
                 if (event.paidByUserId) {
-                    await notificationsService.create({
+                    const paidByUserId = event.paidByUserId;
+                    await this.runOnce(event.tenantId, 'payment.received', 'Invoice', event.invoiceId, 'payment-recorder-notification', () => notificationsService.create({
                         title: '💰 Payment Recorded Successfully',
                         message: `Payment of ${paymentAmount} received for invoice #${event.invoiceNumber}${clientName ? ` from ${clientName}` : ''}.\n\nAuto-actions:\n• Client lifecycle updated\n• CRM timeline entry created\n• Payment confirmation scheduled`,
                         type: 'SUCCESS',
-                        userId: event.paidByUserId,
+                        userId: paidByUserId,
                         tenantId: event.tenantId,
                         actionUrl: `/invoices/${event.invoiceId}`,
                         actionLabel: 'View Invoice',
-                    });
+                    }));
                 }
 
                 const admins = await prisma.employee.findMany({
@@ -1609,7 +1642,7 @@ export class AutomationService {
 
                 for (const admin of admins) {
                     if (admin.userId === event.paidByUserId) continue;
-                    await notificationsService.create({
+                    await this.runOnce(event.tenantId, 'payment.received', 'Invoice', event.invoiceId, `payment-admin-notification:${admin.userId}`, () => notificationsService.create({
                         title: '💵 Webhook Payment Received',
                         message: `${paymentAmount} received from ${clientName || 'client'} for invoice #${event.invoiceNumber}.`,
                         type: 'INFO',
@@ -1617,7 +1650,7 @@ export class AutomationService {
                         tenantId: event.tenantId,
                         actionUrl: `/invoices/${event.invoiceId}`,
                         actionLabel: 'View Details',
-                    });
+                    }));
                 }
                 logger.info('[Automation] Step 4 ✓ Notifications sent', ctx);
             } catch (err) {
@@ -1657,7 +1690,7 @@ export class AutomationService {
                     select: { userId: true },
                 });
                 for (const admin of adminEmployees) {
-                    await notificationsService.create({
+                    await this.runOnce(event.tenantId, 'expense.created', 'Expense', event.expenseId, `admin-notification:${admin.userId}`, () => notificationsService.create({
                         title: '💸 New Expense Submitted',
                         message: `An expense of $${event.amount || 'N/A'}${event.category ? ` (${event.category})` : ''} needs review.`,
                         type: 'INFO',
@@ -1665,7 +1698,7 @@ export class AutomationService {
                         tenantId: event.tenantId,
                         actionUrl: `/expenses`,
                         actionLabel: 'Review Expense',
-                    });
+                    }));
                 }
             } catch (err) {
                 logger.error('[Automation] expense.created → notification failed', { err });
@@ -1678,7 +1711,7 @@ export class AutomationService {
 
             if (event.approvedById) {
                 try {
-                    await notificationsService.create({
+                    await this.runOnce(event.tenantId, 'expense.approved', 'Expense', event.expenseId, `submitter-notification:${event.approvedById}`, () => notificationsService.create({
                         title: '✅ Expense Approved',
                         message: `Your expense of $${event.amount || 'N/A'} has been approved.`,
                         type: 'SUCCESS',
@@ -1686,7 +1719,7 @@ export class AutomationService {
                         tenantId: event.tenantId,
                         actionUrl: `/expenses`,
                         actionLabel: 'View Expenses',
-                    });
+                    }));
                 } catch (err) {
                     logger.error('[Automation] expense.approved → notification failed', { err });
                 }
@@ -1893,6 +1926,7 @@ export class AutomationService {
         // Each step is error-isolated.
         // ══════════════════════════════════════════════════════════════════
         eventBus.on('project.statusChanged', async (event: ProjectStatusChangedEvent) => {
+            if (!(await this.shouldRunLegacyRoofingAutomation(event.tenantId, 'project.statusChanged'))) return;
             const ctx = {
                 projectId: event.projectId, projectName: event.projectName,
                 previousStatus: event.previousStatus, newStatus: event.newStatus,
@@ -2173,6 +2207,7 @@ export class AutomationService {
 
         // ── Calendar Completed → Auto-create Quote Draft + Notification + Task ──
         eventBus.on('calendar.completed', async (event: CalendarEventCompletedEvent) => {
+            if (!(await this.shouldRunLegacyRoofingAutomation(event.tenantId, 'calendar.completed quote draft'))) return;
             const ctx = { eventId: event.eventId, tenantId: event.tenantId, title: event.title };
             logger.info('[Automation] calendar.completed received', ctx);
 
@@ -2251,6 +2286,7 @@ export class AutomationService {
 
         // ── Quote Created (direct draft) → move proposal task to REVIEW ──
         eventBus.on('quote.created', async (event: QuoteCreatedEvent) => {
+            if (!(await this.shouldRunLegacyRoofingAutomation(event.tenantId, 'quote.created'))) return;
             const ctx = {
                 quoteId: event.quoteId,
                 quoteNumber: event.quoteNumber,
@@ -2317,6 +2353,7 @@ export class AutomationService {
         // Each step is error-isolated: a failure in one does NOT cascade.
         // ════════════════════════════════════════════════════════════════════
         eventBus.on('quote.statusChanged', async (event: QuoteStatusChangedEvent) => {
+            if (!(await this.shouldRunLegacyRoofingAutomation(event.tenantId, 'quote.statusChanged'))) return;
             const ctx = {
                 quoteId: event.quoteId, quoteNumber: event.quoteNumber,
                 tenantId: event.tenantId, newStatus: event.newStatus,
@@ -3090,6 +3127,17 @@ export class AutomationService {
             date.setDate(date.getDate() + 1);
         }
         return date;
+    }
+
+    private async shouldRunLegacyRoofingAutomation(tenantId: string, handler: string): Promise<boolean> {
+        const enabled = await isLegacyRoofingAutomationEnabled(tenantId);
+        if (!enabled) {
+            logger.debug('[Automation] Legacy roofing automation skipped for Sales CRM tenant', {
+                tenantId,
+                handler,
+            });
+        }
+        return enabled;
     }
 
     // ── Observability ───────────────────────────────────────────────────

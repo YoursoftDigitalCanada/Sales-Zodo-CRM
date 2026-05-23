@@ -220,19 +220,17 @@ export class EngagementService {
     this.initialized = true;
 
     eventBus.on('lead.created', async (event) => {
-      await this.ensureFollowUpTask(event.tenantId, { leadId: event.leadId, ownerId: event.ownerId, title: `Follow up: ${event.leadName}`, key: `lead-created:${event.leadId}` });
       await this.autoEnrollColdSequence(event.tenantId, 'Lead', event.leadId, event.ownerId);
     });
 
     eventBus.on('lead.statusChanged', async (event) => {
       if (String(event.newStatus).toUpperCase() === 'QUALIFIED') {
-        await this.ensureFollowUpTask(event.tenantId, { leadId: event.leadId, ownerId: event.ownerId, title: `Schedule demo: ${event.leadName}`, key: `lead-qualified:${event.leadId}`, priority: 'HIGH' });
+        await this.autoEnrollProposalSequence(event.tenantId, 'Lead', event.leadId);
       }
     });
 
     eventBus.on('proposal.sent', async (event: any) => {
       if (event.leadId) {
-        await this.ensureFollowUpTask(event.tenantId, { leadId: event.leadId, title: `Follow up on proposal ${event.quoteNumber || ''}`.trim(), key: `proposal-sent:${event.quoteId || event.leadId}`, priority: 'HIGH', days: 2 });
         await this.autoEnrollProposalSequence(event.tenantId, 'Lead', event.leadId);
       }
     });

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Download, Landmark, Plus, RefreshCw, Search, WalletCards } from "lucide-react";
+import { Download, Eye, Landmark, Plus, RefreshCw, Search, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,9 @@ import {
   createTransaction,
   createTransfer,
   createVendor,
+  deleteReconciliation,
+  deleteRecurringRule,
+  deleteVendor,
   downloadBookkeepingCsv,
   getAccounts,
   getBalanceSheet,
@@ -42,13 +46,27 @@ import {
   syncBookkeeping,
   voidTransaction,
 } from "@/features/bookkeeping";
-import { uploadDocument } from "@/features/documents/services/documents-service";
+import {
+  createDocumentCategory,
+  getDocumentCategories,
+  getDocumentPreviewUrl,
+  linkDocument,
+  uploadDocument,
+} from "@/features/documents/services/documents-service";
 
 const money = (value: unknown, currency = "CAD") =>
   new Intl.NumberFormat("en-CA", { style: "currency", currency }).format(Number(value || 0));
 
 const today = () => new Date().toISOString().slice(0, 10);
 const monthStart = () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+
+async function ensureReceiptsCategoryId() {
+  const categories = await getDocumentCategories();
+  const existing = categories.find((category) => category.name.toLowerCase() === "receipts");
+  if (existing) return existing.id;
+  const created = await createDocumentCategory({ name: "Receipts", color: "#059669" });
+  return created.id;
+}
 
 function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <section className={`rounded-lg border border-slate-200 bg-white p-4 shadow-sm ${className}`}>{children}</section>;
@@ -78,10 +96,14 @@ function TransactionDialog({ accounts, categories, vendors, onSaved }: { account
       setSaving(true);
       let fileId: string | undefined;
       if (receipt) {
-        const uploaded = await uploadDocument(receipt, { documentType: "receipt", category: "Receipts" });
+        const categoryId = await ensureReceiptsCategoryId();
+        const uploaded = await uploadDocument(receipt, { documentType: "receipt", categoryId });
         fileId = uploaded.fileId;
       }
-      await createTransaction({ ...form, fileId });
+      const transaction = await createTransaction({ ...form, fileId });
+      if (fileId && transaction?.id) {
+        await linkDocument(fileId, "BookkeepingTransaction", transaction.id);
+      }
       toast.success("Transaction saved");
       setOpen(false);
       onSaved();
@@ -339,12 +361,12 @@ export default function BookkeepingPage() {
                 <h2 className="text-base font-semibold">Vendors</h2>
                 <SimpleCreateDialog title="Vendor" trigger={<Button><Plus className="mr-2 h-4 w-4" />Vendor</Button>} fields={[{ key: "name", label: "Name" }, { key: "email", label: "Email" }, { key: "phone", label: "Phone" }, { key: "website", label: "Website" }, { key: "taxId", label: "Tax ID" }]} onSubmit={async (data) => { await createVendor(data); reload(); }} />
               </div>
-              <DataTable columns={["Name", "Email", "Phone", "Tax ID", "Status"]} rows={vendors.map((v) => ({ Name: v.name, Email: v.email || "-", Phone: v.phone || "-", "Tax ID": v.taxId || "-", Status: v.isActive ? "Active" : "Inactive" }))} />
+              <DataTable columns={["Name", "Email", "Phone", "Tax ID", "Status", "Actions"]} rows={vendors.map((v) => ({ Name: v.name, Email: v.email || "-", Phone: v.phone || "-", "Tax ID": v.taxId || "-", Status: v.isActive ? "Active" : "Inactive", Actions: v.isActive ? <Button variant="ghost" size="sm" onClick={async () => { await deleteVendor(v.id); toast.success("Vendor deactivated"); reload(); }}>Deactivate</Button> : "-" }))} />
             </Panel>
           </TabsContent>
 
           <TabsContent value="reconciliation">
-            <ReconciliationPanel accounts={accounts} reconciliations={reconciliations} onSaved={reload} />
+            <ReconciliationPanel accounts={accounts} transactions={transactions} reconciliations={reconciliations} onSaved={reload} />
           </TabsContent>
 
           <TabsContent value="recurring">
@@ -369,7 +391,7 @@ function TransactionTable({ rows, accountName, categoryName, vendorName, onVoid 
   return (
     <div className="overflow-x-auto">
       <Table>
-        <TableHeader><TableRow>{["Date", "Number", "Type", "Description", "Account", "Category", "Vendor", "Amount", "Status", "Actions"].map((h) => <TableHead key={h}>{h}</TableHead>)}</TableRow></TableHeader>
+        <TableHeader><TableRow>{["Date", "Number", "Type", "Description", "Account", "Category", "Vendor", "Receipt", "Amount", "Status", "Actions"].map((h) => <TableHead key={h}>{h}</TableHead>)}</TableRow></TableHeader>
         <TableBody>{rows.map((tx) => (
           <TableRow key={tx.id}>
             <TableCell>{tx.transactionDate ? new Date(tx.transactionDate).toLocaleDateString() : "-"}</TableCell>
@@ -379,6 +401,13 @@ function TransactionTable({ rows, accountName, categoryName, vendorName, onVoid 
             <TableCell>{accountName(tx.accountId)}</TableCell>
             <TableCell>{categoryName(tx.categoryId)}</TableCell>
             <TableCell>{vendorName(tx.vendorId)}</TableCell>
+            <TableCell>
+              {tx.fileId ? (
+                <Button variant="ghost" size="sm" onClick={() => window.open(getDocumentPreviewUrl(tx.fileId), "_blank", "noopener,noreferrer")}>
+                  <Eye className="mr-1 h-3.5 w-3.5" />Open
+                </Button>
+              ) : "-"}
+            </TableCell>
             <TableCell className={tx.type === "EXPENSE" ? "text-rose-600" : "text-emerald-600"}>{money(tx.amount, tx.currency || "CAD")}</TableCell>
             <TableCell>{tx.isReconciled ? <Badge>Reconciled</Badge> : <Badge variant="outline">{tx.status}</Badge>}</TableCell>
             <TableCell>{tx.status !== "VOID" && <Button variant="ghost" size="sm" onClick={() => onVoid(tx.id)}>Void</Button>}</TableCell>
@@ -398,8 +427,20 @@ function DataTable({ columns, rows }: { columns: string[]; rows: BookkeepingReco
   );
 }
 
-function ReconciliationPanel({ accounts, reconciliations, onSaved }: { accounts: BookkeepingRecord[]; reconciliations: BookkeepingRecord[]; onSaved: () => void }) {
-  const [form, setForm] = useState<BookkeepingRecord>({ statementDate: today(), statementStartingBalance: "0", statementEndingBalance: "" });
+function ReconciliationPanel({ accounts, transactions, reconciliations, onSaved }: { accounts: BookkeepingRecord[]; transactions: BookkeepingRecord[]; reconciliations: BookkeepingRecord[]; onSaved: () => void }) {
+  const [form, setForm] = useState<BookkeepingRecord>({ statementDate: today(), statementStartingBalance: "0", statementEndingBalance: "", transactionIds: [] });
+  const selectedIds = Array.isArray(form.transactionIds) ? form.transactionIds : [];
+  const accountTransactions = transactions.filter((tx) => tx.accountId === form.accountId && tx.status !== "VOID" && !tx.isReconciled);
+  const selectedTotal = accountTransactions
+    .filter((tx) => selectedIds.includes(tx.id))
+    .reduce((sum, tx) => sum + (tx.type === "EXPENSE" || tx.type === "REFUND" ? -Number(tx.amount || 0) : Number(tx.amount || 0)), 0);
+  const calculatedDifference = Number(form.statementEndingBalance || 0) - Number(form.statementStartingBalance || 0) - selectedTotal;
+  const toggleTransaction = (id: string) => {
+    setForm({
+      ...form,
+      transactionIds: selectedIds.includes(id) ? selectedIds.filter((value) => value !== id) : [...selectedIds, id],
+    });
+  };
   const save = async () => {
     try {
       await createReconciliation(form);
@@ -418,12 +459,23 @@ function ReconciliationPanel({ accounts, reconciliations, onSaved }: { accounts:
           <Field label="Statement Date"><Input type="date" value={form.statementDate} onChange={(e) => setForm({ ...form, statementDate: e.target.value })} /></Field>
           <Field label="Starting Balance"><Input type="number" value={form.statementStartingBalance} onChange={(e) => setForm({ ...form, statementStartingBalance: e.target.value })} /></Field>
           <Field label="Ending Balance"><Input type="number" value={form.statementEndingBalance} onChange={(e) => setForm({ ...form, statementEndingBalance: e.target.value })} /></Field>
+          <Metric label="Selected movement" value={money(selectedTotal)} />
+          <Metric label="Calculated difference" value={money(calculatedDifference)} />
+          <div className="max-h-56 space-y-2 overflow-auto rounded-md border border-slate-200 p-2">
+            {accountTransactions.length ? accountTransactions.map((tx) => (
+              <label key={tx.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-slate-50">
+                <Checkbox checked={selectedIds.includes(tx.id)} onCheckedChange={() => toggleTransaction(tx.id)} />
+                <span className="min-w-0 flex-1 truncate">{tx.description}</span>
+                <span className={tx.type === "EXPENSE" ? "text-rose-600" : "text-emerald-600"}>{money(tx.amount, tx.currency || "CAD")}</span>
+              </label>
+            )) : <p className="py-3 text-center text-sm text-slate-500">Select an account to choose unreconciled transactions.</p>}
+          </div>
           <Button onClick={save} className="w-full">Create Draft</Button>
         </div>
       </Panel>
       <Panel className="lg:col-span-2">
         <h2 className="mb-3 text-base font-semibold">Reconciliations</h2>
-        <DataTable columns={["Date", "Account", "Ending", "Difference", "Status", "Action"]} rows={reconciliations.map((r) => ({ Date: r.statementDate ? new Date(r.statementDate).toLocaleDateString() : "-", Account: accounts.find((a) => a.id === r.accountId)?.name || "-", Ending: money(r.statementEndingBalance), Difference: money(r.difference), Status: r.status, Action: r.status === "DRAFT" ? <Button variant="ghost" size="sm" onClick={async () => { await completeReconciliation(r.id); onSaved(); }}>Complete</Button> : "-" }))} />
+        <DataTable columns={["Date", "Account", "Ending", "Difference", "Status", "Action"]} rows={reconciliations.map((r) => ({ Date: r.statementDate ? new Date(r.statementDate).toLocaleDateString() : "-", Account: accounts.find((a) => a.id === r.accountId)?.name || "-", Ending: money(r.statementEndingBalance), Difference: money(r.difference), Status: r.status, Action: r.status === "DRAFT" ? <div className="flex gap-1"><Button variant="ghost" size="sm" onClick={async () => { await completeReconciliation(r.id); onSaved(); }}>Complete</Button><Button variant="ghost" size="sm" onClick={async () => { await deleteReconciliation(r.id); onSaved(); }}>Void</Button></div> : "-" }))} />
       </Panel>
     </div>
   );
@@ -445,7 +497,7 @@ function RecurringPanel({ accounts, categories, vendors, rules, onSaved }: { acc
           ]} onSubmit={create} />
         </div>
       </div>
-      <DataTable columns={["Name", "Type", "Amount", "Frequency", "Next Run", "Status"]} rows={rules.map((r) => ({ Name: r.name, Type: r.type, Amount: money(r.amount, r.currency || "CAD"), Frequency: r.frequency, "Next Run": r.nextRunAt ? new Date(r.nextRunAt).toLocaleDateString() : "-", Status: r.isActive ? "Active" : "Inactive" }))} />
+      <DataTable columns={["Name", "Type", "Amount", "Frequency", "Next Run", "Status", "Actions"]} rows={rules.map((r) => ({ Name: r.name, Type: r.type, Amount: money(r.amount, r.currency || "CAD"), Frequency: r.frequency, "Next Run": r.nextRunAt ? new Date(r.nextRunAt).toLocaleDateString() : "-", Status: r.isActive ? "Active" : "Inactive", Actions: r.isActive ? <Button variant="ghost" size="sm" onClick={async () => { await deleteRecurringRule(r.id); toast.success("Recurring rule deactivated"); onSaved(); }}>Deactivate</Button> : "-" }))} />
     </Panel>
   );
 }

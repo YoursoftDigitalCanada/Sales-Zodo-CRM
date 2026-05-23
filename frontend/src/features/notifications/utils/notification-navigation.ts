@@ -44,10 +44,10 @@ export function resolveNotificationTarget(source?: NotificationNavigationSource 
 
   if (!rawTarget) {
     if (metadataInvoiceId) return `/invoice/${metadataInvoiceId}`;
-    if (metadataProjectId) return `/projects/${metadataProjectId}`;
+    if (metadataProjectId) return withQuery("/deals", "dealId", metadataProjectId);
     if (metadataLeadId) return `/leads/${metadataLeadId}`;
     if (metadataClientId) return `/client-list/${metadataClientId}`;
-    if (metadataQuoteId) return withQuery("/quotes", "quoteId", metadataQuoteId);
+    if (metadataQuoteId) return withQuery("/proposals", "quoteId", metadataQuoteId);
     if (metadataRoomId) return withQuery("/chats", "conversationId", metadataRoomId);
     if (metadataTaskId) return withQuery("/tasks", "taskId", metadataTaskId);
     if (metadataExpenseId) return withQuery("/expenses", "expenseId", metadataExpenseId);
@@ -68,9 +68,16 @@ export function resolveNotificationTarget(source?: NotificationNavigationSource 
   if (/^\/clients\/[^/]+$/.test(pathname)) {
     return pathname.replace(/^\/clients\//, "/client-list/") + search;
   }
-  if (pathname === "/proposals") return `/quotes${search}`;
+  if (pathname === "/projects" || pathname === "/kanban") return `/deals${search}`;
+  if (/^\/projects\/[^/]+$/.test(pathname)) {
+    const dealId = pathname.split("/")[2];
+    return withQuery("/deals", "dealId", dealId);
+  }
+  if (pathname === "/quotes") return `/proposals${search}`;
+  if (pathname === "/proposals") return `/proposals${search}`;
   if (/^\/proposals\/[^/]+$/.test(pathname)) {
-    return "/quotes";
+    const proposalId = pathname.split("/")[2];
+    return withQuery("/proposals", "proposalId", proposalId);
   }
   if (pathname === "/chat") return `/chats${search}`;
   if (/^\/chat\/[^/]+$/.test(pathname)) {
@@ -79,7 +86,7 @@ export function resolveNotificationTarget(source?: NotificationNavigationSource 
   }
   if (/^\/quotes\/[^/]+$/.test(pathname)) {
     const quoteId = pathname.split("/")[2];
-    return withQuery("/quotes", "quoteId", quoteId);
+    return withQuery("/proposals", "quoteId", quoteId);
   }
   if (/^\/tasks\/[^/]+$/.test(pathname)) {
     const taskId = pathname.split("/")[2];

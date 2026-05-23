@@ -75,6 +75,11 @@ export async function downloadInvoicePdf(id: number | string, fileName?: string)
   downloadPdfBlob(blob, fileName || `invoice-${id}.pdf`);
 }
 
+export async function saveInvoicePdfToDocuments(id: number | string): Promise<InvoiceEntity> {
+  const response = await api.post(`/invoices/${id}/save-document`);
+  return extractApiData<InvoiceEntity>(response.data);
+}
+
 export async function printInvoicePdf(id: number | string, fileName?: string): Promise<void> {
   const blob = await fetchInvoicePdfBlob(id);
   const url = window.URL.createObjectURL(blob);

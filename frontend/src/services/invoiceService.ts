@@ -8,5 +8,6 @@ export {
   recordInvoicePayment,
   markInvoiceAsPaid,
   downloadInvoicePdf,
+  saveInvoicePdfToDocuments,
   printInvoicePdf,
 } from "@/features/invoices";

@@ -51,7 +51,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { getInvoices, getInvoiceById, deleteInvoice, createInvoice, downloadInvoicePdf, recordInvoicePayment, sendInvoice } from "@/services/invoiceService";
+import { getInvoices, getInvoiceById, deleteInvoice, createInvoice, downloadInvoicePdf, saveInvoicePdfToDocuments, recordInvoicePayment, sendInvoice } from "@/services/invoiceService";
 import { printInvoiceDocument } from "@/features/invoices/utils/invoice-print";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import {
@@ -515,6 +515,7 @@ const InvoiceRow = ({
   onDelete,
   onSend,
   onDownload,
+  onSaveDocument,
   onDuplicate,
   onRecordPayment,
   onPrint,
@@ -533,6 +534,7 @@ const InvoiceRow = ({
   onDelete: () => void;
   onSend: () => void;
   onDownload: () => void;
+  onSaveDocument: () => void;
   onDuplicate: () => void;
   onRecordPayment: () => void;
   onPrint: () => void;
@@ -729,6 +731,10 @@ const InvoiceRow = ({
               <DropdownMenuItem onClick={onDownload} className="rounded-md">
                 <FileDown size={14} className="mr-2" />
                 Download PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onSaveDocument} className="rounded-md">
+                <FileText size={14} className="mr-2" />
+                Save PDF to Documents
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onPrint} className="rounded-md">
                 <Printer size={14} className="mr-2" />
@@ -1630,6 +1636,22 @@ const InvoicePage = () => {
     }
   };
 
+  const handleSavePdfToDocuments = async (invoice: Invoice) => {
+    try {
+      await saveInvoicePdfToDocuments(invoice.id);
+      toast({
+        title: "Saved to Documents",
+        description: `${invoice.invoiceNumber} PDF is linked to this invoice.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save invoice PDF to Documents",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handlePrintInvoice = async (invoice: Invoice) => {
     try {
       const detailedInvoice = await getInvoiceById(invoice.id);
@@ -2482,6 +2504,7 @@ const InvoicePage = () => {
                                 onDelete={() => openDeleteDialog(invoice)}
                                 onSend={() => openSendDialog(invoice)}
                                 onDownload={() => handleDownloadPDF(invoice)}
+                                onSaveDocument={() => handleSavePdfToDocuments(invoice)}
                                 onDuplicate={() => handleDuplicate(invoice)}
                                 onRecordPayment={() => openPaymentDialog(invoice)}
                                 onPrint={() => handlePrintInvoice(invoice)}

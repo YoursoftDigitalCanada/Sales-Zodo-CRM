@@ -135,12 +135,24 @@ export async function completeReconciliation(id: string) {
   return unwrap<BookkeepingRecord>((await api.post(`/bookkeeping/reconciliations/${id}/complete`)));
 }
 
+export async function deleteReconciliation(id: string) {
+  await api.delete(`/bookkeeping/reconciliations/${id}`);
+}
+
 export async function getRecurringRules(params?: Record<string, unknown>) {
   return unwrapList((await api.get("/bookkeeping/recurring-rules", { params })));
 }
 
 export async function createRecurringRule(data: BookkeepingRecord) {
   return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/recurring-rules", data)));
+}
+
+export async function updateRecurringRule(id: string, data: BookkeepingRecord) {
+  return unwrap<BookkeepingRecord>((await api.put(`/bookkeeping/recurring-rules/${id}`, data)));
+}
+
+export async function deleteRecurringRule(id: string) {
+  await api.delete(`/bookkeeping/recurring-rules/${id}`);
 }
 
 export async function runDueRecurringRules() {

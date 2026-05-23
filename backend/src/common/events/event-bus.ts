@@ -350,6 +350,21 @@ export interface InvoiceDueEvent {
     dueDate?: Date;
     amountDue?: number | string;
 }
+
+export interface CustomerSuccessEvent {
+    tenantId: string;
+    customerId: string;
+    clientId?: string;
+    contactId?: string;
+    dealId?: string;
+    projectId?: string;
+    invoiceId?: string;
+    contractId?: string;
+    ownerId?: string;
+    ownerUserId?: string;
+    customerName?: string;
+    trigger?: string;
+}
 // ── Calendar Completion Events ──────────────────────────────────────────
 
 export interface CalendarEventCompletedEvent {
@@ -725,6 +740,11 @@ export interface CRMEventMap {
     'payment.partially_refunded': PaymentReceivedEvent;
     'payment.partiallyRefunded': PaymentReceivedEvent;
     'payment.voided': PaymentReceivedEvent;
+    'customer.created': CustomerSuccessEvent;
+    'customer.activated': CustomerSuccessEvent;
+    'onboarding.started': CustomerSuccessEvent;
+    'onboarding.completed': CustomerSuccessEvent;
+    'customer.followupDue': CustomerSuccessEvent;
     'booking.created': BookingCreatedEvent;
     'booking.confirmed': BookingConfirmedEvent;
     'booking.cancelled': BookingCancelledEvent;

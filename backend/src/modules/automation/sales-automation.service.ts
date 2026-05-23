@@ -84,9 +84,9 @@ const DEFAULT_RULES = [
   },
   {
     name: 'Deal won onboarding',
-    description: 'Create the customer onboarding task when a deal is won.',
+    description: 'Start customer success onboarding when a deal is won.',
     triggerType: 'deal.won',
-    actions: ['create_onboarding_task'],
+    actions: ['start_customer_onboarding'],
     priority: 10,
     runOncePerEntity: true,
   },
@@ -166,7 +166,7 @@ const DEFAULT_RULES = [
     name: 'Contract signed document archive',
     description: 'Archive signed contract PDFs, cancel reminders, update deal/customer lifecycle, and create next steps.',
     triggerType: 'contract.signed',
-    actions: ['save_contract_document', 'cancel_contract_reminders', 'update_deal_stage', 'create_invoice_draft', 'create_onboarding_task', 'update_customer_lifecycle'],
+    actions: ['save_contract_document', 'cancel_contract_reminders', 'update_deal_stage', 'create_invoice_draft', 'start_customer_onboarding', 'update_customer_lifecycle'],
     priority: 20,
     runOncePerEntity: true,
   },
@@ -220,9 +220,9 @@ const DEFAULT_RULES = [
   },
   {
     name: 'Invoice paid closeout',
-    description: 'Cancel payment reminders, sync bookkeeping, and notify the account owner.',
+    description: 'Cancel payment reminders, sync bookkeeping, start customer success onboarding, and notify the account owner.',
     triggerType: 'invoice.paid',
-    actions: ['cancel_invoice_reminders', 'sync_bookkeeping', 'notify_owner'],
+    actions: ['cancel_invoice_reminders', 'sync_bookkeeping', 'start_customer_onboarding', 'notify_owner'],
     priority: 10,
     runOncePerEntity: true,
   },
@@ -272,6 +272,14 @@ const DEFAULT_RULES = [
     triggerType: 'expense.deleted',
     actions: ['void_bookkeeping_expense'],
     priority: 10,
+    runOncePerEntity: false,
+  },
+  {
+    name: 'Customer success follow-up',
+    description: 'Create a customer-success follow-up task and notify the owner when post-sale follow-up is due.',
+    triggerType: 'customer.followupDue',
+    actions: ['create_customer_followup_task', 'notify_owner'],
+    priority: 20,
     runOncePerEntity: false,
   },
   {
@@ -385,6 +393,11 @@ class SalesAutomationService {
     eventBus.on('payment.partially_refunded', (event) => this.executeTrigger('payment.partially_refunded', 'InvoicePayment', event.paymentId || event.invoiceId, event));
     eventBus.on('payment.partiallyRefunded', (event) => this.executeTrigger('payment.partiallyRefunded', 'InvoicePayment', event.paymentId || event.invoiceId, event));
     eventBus.on('payment.voided', (event) => this.executeTrigger('payment.voided', 'InvoicePayment', event.paymentId || event.invoiceId, event));
+    eventBus.on('customer.created', (event) => this.executeTrigger('customer.created', 'Customer', event.customerId || event.clientId || '', event));
+    eventBus.on('customer.activated', (event) => this.executeTrigger('customer.activated', 'Customer', event.customerId || event.clientId || '', event));
+    eventBus.on('onboarding.started', (event) => this.executeTrigger('onboarding.started', 'Customer', event.customerId || event.clientId || '', event));
+    eventBus.on('onboarding.completed', (event) => this.executeTrigger('onboarding.completed', 'Customer', event.customerId || event.clientId || '', event));
+    eventBus.on('customer.followupDue', (event) => this.executeTrigger('customer.followupDue', 'Customer', event.customerId || event.clientId || '', event));
     eventBus.on('expense.created', (event) => this.executeTrigger('expense.created', 'Expense', event.expenseId, event));
     eventBus.on('expense.approved', (event) => this.executeTrigger('expense.approved', 'Expense', event.expenseId, event));
     eventBus.on('expense.deleted', (event) => this.executeTrigger('expense.deleted', 'Expense', event.expenseId, event));
@@ -648,7 +661,7 @@ class SalesAutomationService {
       add('schedule_stage_reminder', { channel: 'TASK' });
     }
     if (triggerType === 'deal.won') {
-      add('create_onboarding_task', { channel: 'TASK' });
+      add('start_customer_onboarding', { channel: 'TASK' });
     }
     if (triggerType === 'deal.lost') {
       add('cancel_deal_reminders');
@@ -691,7 +704,7 @@ class SalesAutomationService {
       add('cancel_contract_reminders');
       add('update_deal_stage', { stage: 'Won' });
       add('create_invoice_draft');
-      add('create_onboarding_task', { channel: 'TASK' });
+      add('start_customer_onboarding', { channel: 'TASK' });
       add('update_customer_lifecycle');
     }
     if (triggerType === 'contract.declined') {
@@ -721,6 +734,11 @@ class SalesAutomationService {
     if (triggerType === 'invoice.paid' || triggerType === 'payment.received') {
       add('sync_bookkeeping_income');
       add('cancel_invoice_reminders');
+      add('start_customer_onboarding', { channel: 'TASK' });
+      add('notify_owner', { channel: 'NOTIFICATION' });
+    }
+    if (triggerType === 'customer.followupDue') {
+      add('create_customer_followup_task', { channel: 'TASK' });
       add('notify_owner', { channel: 'NOTIFICATION' });
     }
     if (['payment.failed', 'payment.refunded', 'payment.partially_refunded', 'payment.partiallyRefunded', 'payment.voided'].includes(triggerType)) {
@@ -881,7 +899,7 @@ class SalesAutomationService {
       await this.handleDealStageChanged(entityId, input, output);
     }
     if (triggerType === 'deal.won') {
-      await this.createOnboardingTask(input.tenantId, entityId, input);
+      await this.startCustomerSuccessOnboarding(input.tenantId, 'deal.won', 'Deal', entityId, input);
       await this.createDealWorkflowTask(input.tenantId, entityId, { ...input, triggerType }, 'won-next-workflow', 'Prepare contract and invoice workflow', 'Deal is won. Confirm contract, invoice draft, billing handoff, and onboarding timing.', 'HIGH', 1);
       output.actions.push('deal_onboarding_task_created', 'deal_won_next_workflow_created');
     }
@@ -1004,7 +1022,7 @@ class SalesAutomationService {
       await this.updateContractDealStage(input.tenantId, input.contractId || entityId, contractContext, 'Won', triggerType);
       await this.createDraftInvoiceFromContract(input.tenantId, input.contractId || entityId, contractContext, input);
       await this.updateContractCustomerLifecycle(input.tenantId, input.contractId || entityId, contractContext);
-      await this.createContractFollowupTask(input.tenantId, input.contractId || entityId, contractContext, 'signed-onboarding-task', 'Start customer onboarding', 'Contract signed. Confirm invoice, kickoff date, implementation owner, and customer-success handoff.', 'HIGH', 1, triggerType);
+      await this.startCustomerSuccessOnboarding(input.tenantId, 'contract.signed', 'Contract', input.contractId || entityId, { ...input, contract: contractContext });
       await this.notifyOwner(input.tenantId, input.ownerUserId || contractContext?.createdBy?.userId, 'Contract signed', `${contractContext?.contractNumber || 'Contract'} was signed.`, `/contracts/${input.contractId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, 'owner-notification'), triggerType, entityType, entityId, 'SUCCESS');
       output.actions.push('signed_contract_pdf_saved', 'contract_reminders_cancelled', 'contract_deal_won', 'contract_customer_lifecycle_updated');
     }
@@ -1077,6 +1095,7 @@ class SalesAutomationService {
       );
       if (fullyPaid) {
         await this.cancelEntityReminders(input.tenantId, 'Invoice', invoiceId);
+        await this.startCustomerSuccessOnboarding(input.tenantId, 'invoice.paid', 'Invoice', invoiceId, { ...input, invoice });
       } else {
         await this.scheduleInvoiceReminders(input.tenantId, invoiceId, triggerType);
       }
@@ -1094,6 +1113,11 @@ class SalesAutomationService {
         invoiceId,
       );
       output.actions.push(fullyPaid ? 'invoice_reminders_cancelled' : 'invoice_reminders_rescheduled', 'bookkeeping_synced');
+    }
+    if (triggerType === 'customer.followupDue') {
+      await this.createCustomerFollowupTask(input.tenantId, input.customerId || input.clientId || entityId, input);
+      await this.notifyOwner(input.tenantId, input.ownerUserId, 'Customer follow-up due', `${input.customerName || 'A customer'} is due for post-sale follow-up.`, `/organizations/${input.customerId || input.clientId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, 'Customer', input.customerId || input.clientId || entityId, 'owner-notification'), triggerType, 'Customer', input.customerId || input.clientId || entityId);
+      output.actions.push('customer_followup_task_created');
     }
     if (['payment.failed', 'payment.refunded', 'payment.partially_refunded', 'payment.partiallyRefunded', 'payment.voided'].includes(triggerType)) {
       if (input.paymentId) {
@@ -1236,6 +1260,172 @@ class SalesAutomationService {
       projectId: deal?.id || null,
       referenceDoctype: 'SalesAutomation',
       referenceDocname: `${deal?.id || dealId || input.leadId || entityId}:onboarding`,
+    });
+  }
+
+  private async startCustomerSuccessOnboarding(tenantId: string, triggerType: string, entityType: string, entityId: string, input: Record<string, any>) {
+    const context = await this.resolveCustomerSuccessContext(tenantId, entityType, entityId, input);
+    if (!context?.clientId) return null;
+    const tenant = await db.tenant.findUnique({ where: { id: tenantId } }).catch(() => null);
+    const followUpDays = Math.max(Number((tenant?.settings as any)?.customerSuccess?.followUpDays || 14), 1);
+    return this.runSideEffect(
+      tenantId,
+      'onboarding.started',
+      'Customer',
+      context.clientId,
+      'onboarding-started',
+      'tasks',
+      async () => {
+        await clientLifecycleService.progressTo(context.clientId, tenantId, 'ONBOARDING');
+        if (context.contactId && db.contact?.updateMany) {
+          await db.contact.updateMany({
+            where: { tenantId, id: context.contactId },
+            data: { relationshipStatus: 'Customer' },
+          }).catch((error: Error) => logger.warn('[SalesAutomation] Contact customer status update failed', { tenantId, contactId: context.contactId, error: error.message }));
+        }
+        const task = await db.task.create({
+          data: {
+            tenantId,
+            title: `Start customer onboarding for ${context.customerName || 'new customer'}`,
+            description: 'Post-sale handoff started. Confirm kickoff, implementation owner, customer-success owner, billing, documents, and first success milestone.',
+            status: 'TODO',
+            priority: 'HIGH',
+            dueDate: addBusinessDays(new Date(), 1),
+            assignedToId: context.ownerId || null,
+            clientId: context.clientId,
+            projectId: context.dealId || null,
+            referenceDoctype: 'CustomerSuccess',
+            referenceDocname: `${context.clientId}:onboarding-started`,
+          },
+        });
+        await this.scheduleReminder(tenantId, 'Customer', context.clientId, 'customer.success.followup', addDays(new Date(), followUpDays), 'TASK', {
+          customerId: context.clientId,
+          clientId: context.clientId,
+          customerName: context.customerName,
+          ownerId: context.ownerId || null,
+          ownerUserId: context.ownerUserId || null,
+          dealId: context.dealId || null,
+          trigger: triggerType,
+        });
+        await this.notifyOwner(
+          tenantId,
+          context.ownerUserId,
+          'Customer onboarding started',
+          `${context.customerName || 'A customer'} is ready for post-sale onboarding.`,
+          `/organizations/${context.clientId}`,
+          this.idempotencyKey(tenantId, 'onboarding.started', 'Customer', context.clientId, 'owner-notification'),
+          'onboarding.started',
+          'Customer',
+          context.clientId,
+          'SUCCESS',
+        );
+        activityLogger.log({
+          tenantId,
+          entityType: 'Customer',
+          entityId: context.clientId,
+          action: 'STATUS_CHANGE',
+          module: 'automation',
+          description: 'Customer success onboarding started',
+          userId: context.ownerUserId || undefined,
+          metadata: { trigger: triggerType, sourceEntityType: entityType, sourceEntityId: entityId, dealId: context.dealId || null, taskId: task.id },
+        });
+        eventBus.emit('onboarding.started', {
+          tenantId,
+          customerId: context.clientId,
+          clientId: context.clientId,
+          contactId: context.contactId || undefined,
+          dealId: context.dealId || undefined,
+          projectId: context.dealId || undefined,
+          invoiceId: context.invoiceId || undefined,
+          contractId: context.contractId || undefined,
+          ownerId: context.ownerId || undefined,
+          ownerUserId: context.ownerUserId || undefined,
+          customerName: context.customerName || undefined,
+          trigger: triggerType,
+        });
+        return { taskId: task.id, customerId: context.clientId, followUpDays };
+      },
+      { ...input, customerId: context.clientId, followUpDays },
+    );
+  }
+
+  private async resolveCustomerSuccessContext(tenantId: string, entityType: string, entityId: string, input: Record<string, any>) {
+    let clientId = input.customerId || input.clientId || input.companyId || null;
+    let contactId = input.contactId || null;
+    let dealId = input.dealId || input.projectId || null;
+    let ownerId = input.customerSuccessOwnerId || input.ownerId || null;
+    let ownerUserId = input.ownerUserId || null;
+    let customerName = input.customerName || null;
+    let invoiceId = input.invoiceId || null;
+    let contractId = input.contractId || null;
+
+    if (entityType === 'Deal' || dealId) {
+      const deal = await db.project.findFirst({ where: { tenantId, id: dealId || entityId } });
+      if (deal) {
+        clientId = clientId || deal.clientId;
+        contactId = contactId || deal.contactId;
+        dealId = deal.id;
+        ownerId = ownerId || deal.customerSuccessOwnerId || deal.dealOwnerId || deal.salesRepId;
+        customerName = customerName || deal.organizationName || deal.name;
+      }
+    }
+    if (entityType === 'Contract' || contractId || input.contract) {
+      const contract = input.contract || await this.loadContractContext(tenantId, contractId || entityId);
+      if (contract) {
+        clientId = clientId || contract.clientId || contract.client?.id;
+        contactId = contactId || contract.contactId;
+        dealId = dealId || contract.projectId;
+        contractId = contractId || contract.id;
+        ownerId = ownerId || contract.createdById || contract.project?.dealOwnerId || contract.project?.salesRepId;
+        ownerUserId = ownerUserId || contract.createdBy?.userId;
+        customerName = customerName || contract.client?.clientName || contract.title || contract.contractNumber;
+      }
+    }
+    if (entityType === 'Invoice' || invoiceId || input.invoice) {
+      const invoice = input.invoice || await db.invoice.findFirst({ where: { tenantId, id: invoiceId || entityId }, include: { client: { include: { assignedOwner: true } } } });
+      if (invoice) {
+        clientId = clientId || invoice.clientId || invoice.client?.id;
+        dealId = dealId || invoice.projectId;
+        invoiceId = invoiceId || invoice.id;
+        ownerId = ownerId || invoice.client?.assignedOwnerId || invoice.client?.assignedOwner?.id;
+        ownerUserId = ownerUserId || invoice.client?.assignedOwner?.userId;
+        customerName = customerName || invoice.client?.clientName || invoice.invoiceNumber;
+      }
+    }
+    if (!clientId) return null;
+    const client = await db.client.findFirst({
+      where: { tenantId, id: clientId },
+      include: { assignedOwner: true },
+    });
+    if (!client) throw new BadRequestError('Customer does not belong to this tenant', ErrorCodes.VALIDATION_FAILED);
+    return {
+      clientId,
+      contactId,
+      dealId,
+      invoiceId,
+      contractId,
+      ownerId: ownerId || client.assignedOwnerId || client.assignedOwner?.id || null,
+      ownerUserId: ownerUserId || client.assignedOwner?.userId || null,
+      customerName: customerName || client.clientName || null,
+    };
+  }
+
+  private async createCustomerFollowupTask(tenantId: string, customerId: string, input: Record<string, any>) {
+    const client = await db.client.findFirst({ where: { tenantId, id: customerId }, include: { assignedOwner: true } });
+    if (!client) throw new BadRequestError('Customer does not belong to this tenant', ErrorCodes.VALIDATION_FAILED);
+    return this.createTaskOnce(tenantId, {
+      eventName: 'customer.followupDue',
+      entityType: 'Customer',
+      entityId: customerId,
+      actionType: 'customer-success-followup',
+      title: `Follow up with ${client.clientName || input.customerName || 'customer'}`,
+      description: 'Post-sale follow-up is due. Review onboarding progress, product adoption, open issues, and next success milestone.',
+      priority: 'MEDIUM',
+      dueDate: addBusinessDays(new Date(), 1),
+      assignedToId: input.ownerId || client.assignedOwnerId || null,
+      clientId: customerId,
+      referenceDoctype: 'CustomerSuccess',
+      referenceDocname: `${customerId}:customer-success-followup:${new Date().toISOString().slice(0, 10)}`,
     });
   }
 

@@ -32,6 +32,8 @@ const mockDb = {
   invoicePayment: { findFirst: jest.fn() },
   task: { findFirst: jest.fn(), create: jest.fn() },
   project: { findFirst: jest.fn(), update: jest.fn() },
+  client: { findFirst: jest.fn() },
+  contact: { updateMany: jest.fn() },
   folder: { findFirst: jest.fn(), create: jest.fn() },
   employee: { findMany: jest.fn() },
 };
@@ -110,7 +112,9 @@ describe('SalesAutomationService', () => {
       amountDue: 500,
       total: 500,
       status: 'SENT',
-      client: { assignedOwner: { userId: 'user-owner' } },
+      clientId: 'client-1',
+      projectId: 'deal-1',
+      client: { id: 'client-1', clientName: 'Acme', assignedOwnerId: 'employee-1', assignedOwner: { id: 'employee-1', userId: 'user-owner' } },
     });
     mockDb.invoicePayment.findFirst.mockResolvedValue({
       id: 'payment-1',
@@ -166,6 +170,8 @@ describe('SalesAutomationService', () => {
       probability: 25,
     });
     mockDb.project.update.mockImplementation(({ data }) => Promise.resolve({ id: 'deal-1', tenantId: 'tenant-1', ...data }));
+    mockDb.client.findFirst.mockResolvedValue({ id: 'client-1', tenantId: 'tenant-1', clientName: 'Acme', assignedOwnerId: 'employee-1', assignedOwner: { id: 'employee-1', userId: 'user-1' } });
+    mockDb.contact.updateMany.mockResolvedValue({ count: 1 });
     mockDb.folder.findFirst.mockResolvedValue(null);
     mockDb.folder.create.mockImplementation(({ data }) => Promise.resolve({ id: 'folder-1', ...data }));
     mockDb.employee.findMany.mockResolvedValue([]);
@@ -382,7 +388,7 @@ describe('SalesAutomationService', () => {
 
   it('deal.won triggers next workflow once', async () => {
     mockDb.salesAutomationRule.findMany.mockResolvedValue([
-      { id: 'rule-deal-won', conditions: {}, actions: ['create_onboarding_task'], runOncePerEntity: false },
+      { id: 'rule-deal-won', conditions: {}, actions: ['start_customer_onboarding'], runOncePerEntity: false },
     ]);
     const event = { tenantId: 'tenant-1', dealId: 'deal-1', projectId: 'deal-1', dealName: 'Acme Expansion', ownerId: 'employee-1' };
 
@@ -391,7 +397,7 @@ describe('SalesAutomationService', () => {
 
     expect(mockDb.task.create).toHaveBeenCalledTimes(2);
     expect(mockDb.task.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ referenceDocname: 'deal-1:onboarding' }),
+      data: expect.objectContaining({ clientId: 'client-1', referenceDocname: 'client-1:onboarding-started' }),
     }));
     expect(mockDb.task.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ referenceDocname: 'deal-1:won-next-workflow' }),
@@ -724,6 +730,108 @@ describe('SalesAutomationService', () => {
     expect(clientLifecycleService.progressTo).toHaveBeenCalledWith('client-1', 'tenant-1', 'ONBOARDING');
     expect(mockDb.salesReminderSchedule.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ tenantId: 'tenant-1', entityType: 'Contract', entityId: 'contract-1', status: 'SCHEDULED' }),
+    }));
+  });
+
+  it('contract.signed starts customer success onboarding once', async () => {
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-contract-signed', conditions: {}, actions: ['start_customer_onboarding'], runOncePerEntity: false },
+    ]);
+
+    await salesAutomationService.executeTrigger('contract.signed', 'Contract', 'contract-1', {
+      tenantId: 'tenant-1',
+      contractId: 'contract-1',
+      ownerUserId: 'user-1',
+    });
+    await salesAutomationService.executeTrigger('contract.signed', 'Contract', 'contract-1', {
+      tenantId: 'tenant-1',
+      contractId: 'contract-1',
+      ownerUserId: 'user-1',
+    });
+
+    const onboardingTasks = mockDb.task.create.mock.calls.filter(([arg]) => arg.data?.referenceDocname === 'client-1:onboarding-started');
+    expect(onboardingTasks).toHaveLength(1);
+    expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ tenantId: 'tenant-1', entityType: 'Customer', entityId: 'client-1', reminderType: 'customer.success.followup', channel: 'TASK' }),
+    }));
+  });
+
+  it('invoice.paid starts customer success onboarding once', async () => {
+    mockDb.invoice.findFirst.mockResolvedValue({
+      id: 'invoice-1',
+      tenantId: 'tenant-1',
+      invoiceNumber: 'INV-1',
+      amountDue: 0,
+      status: 'PAID',
+      clientId: 'client-1',
+      projectId: 'deal-1',
+      client: { id: 'client-1', clientName: 'Acme', assignedOwnerId: 'employee-1', assignedOwner: { id: 'employee-1', userId: 'user-1' } },
+    });
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-invoice-paid', conditions: {}, actions: ['start_customer_onboarding'], runOncePerEntity: false },
+    ]);
+
+    await salesAutomationService.executeTrigger('invoice.paid', 'Invoice', 'invoice-1', {
+      tenantId: 'tenant-1',
+      invoiceId: 'invoice-1',
+      ownerUserId: 'user-1',
+    });
+    await salesAutomationService.executeTrigger('invoice.paid', 'Invoice', 'invoice-1', {
+      tenantId: 'tenant-1',
+      invoiceId: 'invoice-1',
+      ownerUserId: 'user-1',
+    });
+
+    const onboardingTasks = mockDb.task.create.mock.calls.filter(([arg]) => arg.data?.referenceDocname === 'client-1:onboarding-started');
+    expect(onboardingTasks).toHaveLength(1);
+  });
+
+  it('contract.signed and invoice.paid do not duplicate customer onboarding for the same customer', async () => {
+    mockDb.invoice.findFirst.mockResolvedValue({
+      id: 'invoice-1',
+      tenantId: 'tenant-1',
+      invoiceNumber: 'INV-1',
+      amountDue: 0,
+      status: 'PAID',
+      clientId: 'client-1',
+      projectId: 'deal-1',
+      client: { id: 'client-1', clientName: 'Acme', assignedOwnerId: 'employee-1', assignedOwner: { id: 'employee-1', userId: 'user-1' } },
+    });
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-onboarding', conditions: {}, actions: ['start_customer_onboarding'], runOncePerEntity: false },
+    ]);
+
+    await salesAutomationService.executeTrigger('contract.signed', 'Contract', 'contract-1', {
+      tenantId: 'tenant-1',
+      contractId: 'contract-1',
+      ownerUserId: 'user-1',
+    });
+    await salesAutomationService.executeTrigger('invoice.paid', 'Invoice', 'invoice-1', {
+      tenantId: 'tenant-1',
+      invoiceId: 'invoice-1',
+      ownerUserId: 'user-1',
+    });
+
+    const onboardingTasks = mockDb.task.create.mock.calls.filter(([arg]) => arg.data?.referenceDocname === 'client-1:onboarding-started');
+    expect(onboardingTasks).toHaveLength(1);
+  });
+
+  it('cross-tenant customer success automation is blocked', async () => {
+    mockDb.client.findFirst.mockResolvedValueOnce(null);
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-onboarding', conditions: {}, actions: ['start_customer_onboarding'], runOncePerEntity: false },
+    ]);
+
+    await salesAutomationService.executeTrigger('deal.won', 'Deal', 'deal-1', {
+      tenantId: 'tenant-1',
+      dealId: 'deal-1',
+      projectId: 'deal-1',
+    });
+
+    const onboardingTasks = mockDb.task.create.mock.calls.filter(([arg]) => arg.data?.referenceDocname === 'client-1:onboarding-started');
+    expect(onboardingTasks).toHaveLength(0);
+    expect(mockDb.salesAutomationRun.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'FAILED', error: 'Customer does not belong to this tenant' }),
     }));
   });
 

@@ -4,6 +4,7 @@ import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { eventBus } from '../../common/events/event-bus';
 import { logger } from '../../common/utils/logger';
+import { bookkeepingService } from '../bookkeeping/bookkeeping.service';
 
 const prismaAny = prisma as any;
 
@@ -499,6 +500,24 @@ export class BillingService {
     }
     await prisma.client.update({ where: { id: invoice.clientId }, data: { status: 'ACTIVE', totalRevenue: { increment: amount } } }).catch(() => null);
     activityLogger.log({ tenantId, entityType: 'InvoicePayment', entityId: payment.id, action: 'CREATE', module: 'billing', description: `Payment recorded for invoice ${invoice.invoiceNumber}`, userId: actorUserId, metadata: { invoiceId, amount, status } });
+    bookkeepingService.syncInvoicePayment(tenantId, payment.id).catch((error) => {
+      logger.warn('[Billing] Bookkeeping sync failed for invoice payment', {
+        tenantId,
+        invoiceId,
+        paymentId: payment.id,
+        error: (error as Error)?.message || String(error),
+      });
+      activityLogger.log({
+        tenantId,
+        entityType: 'InvoicePayment',
+        entityId: payment.id,
+        action: 'UPDATE',
+        module: 'bookkeeping',
+        description: 'Bookkeeping sync failed for invoice payment',
+        userId: actorUserId,
+        metadata: { invoiceId, error: (error as Error)?.message || String(error) },
+      });
+    });
     return { payment, invoice: updatedInvoice };
   }
 

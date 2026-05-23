@@ -4,7 +4,7 @@ import { authenticate, loadEmployee } from '../../common/middleware/auth.middlew
 import { requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
-import { createInvoiceSchema, updateInvoiceSchema, invoiceQuerySchema, invoiceIdSchema, recordInvoicePaymentSchema } from './invoices.validators';
+import { createInvoiceSchema, updateInvoiceSchema, invoiceQuerySchema, invoiceIdSchema, recordInvoicePaymentSchema, updateInvoicePaymentStatusSchema } from './invoices.validators';
 
 const router = Router();
 router.use(authenticate);
@@ -14,9 +14,11 @@ router.get('/', requirePermission(PERMISSIONS.INVOICES_VIEW), validate(invoiceQu
 router.post('/', requirePermission(PERMISSIONS.INVOICES_CREATE), validate(createInvoiceSchema), invoicesController.create.bind(invoicesController));
 router.get('/:id', requirePermission(PERMISSIONS.INVOICES_VIEW), validate(invoiceIdSchema), invoicesController.getById.bind(invoicesController));
 router.get('/:id/pdf', requirePermission(PERMISSIONS.INVOICES_VIEW), validate(invoiceIdSchema), invoicesController.downloadPdf.bind(invoicesController));
+router.post('/:id/save-document', requirePermission(PERMISSIONS.INVOICES_UPDATE), validate(invoiceIdSchema), invoicesController.saveDocument.bind(invoicesController));
 router.put('/:id', requirePermission(PERMISSIONS.INVOICES_UPDATE), validate(invoiceIdSchema), validate(updateInvoiceSchema), invoicesController.update.bind(invoicesController));
 router.post('/:id/send', requirePermission(PERMISSIONS.INVOICES_UPDATE), validate(invoiceIdSchema), invoicesController.send.bind(invoicesController));
 router.post('/:id/payments', requirePermission(PERMISSIONS.INVOICES_MARK_PAID), validate(invoiceIdSchema), validate(recordInvoicePaymentSchema), invoicesController.recordPayment.bind(invoicesController));
+router.patch('/:id/payments/:paymentId/status', requirePermission(PERMISSIONS.INVOICES_MARK_PAID), validate(updateInvoicePaymentStatusSchema), invoicesController.updatePaymentStatus.bind(invoicesController));
 router.patch('/:id/paid', requirePermission(PERMISSIONS.INVOICES_MARK_PAID), validate(invoiceIdSchema), invoicesController.markAsPaid.bind(invoicesController));
 router.delete('/:id', requirePermission(PERMISSIONS.INVOICES_DELETE), validate(invoiceIdSchema), invoicesController.delete.bind(invoicesController));
 

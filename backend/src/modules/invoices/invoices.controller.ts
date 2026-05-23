@@ -34,6 +34,13 @@ export class InvoicesController {
         } catch (e) { next(e); }
     }
 
+    async saveDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const document = await invoicesService.saveInvoicePdfToDocuments(req.context.tenantId, req.params.id, req.user?.userId);
+            sendSuccess(res, document, 'Invoice PDF saved to Documents');
+        } catch (e) { next(e); }
+    }
+
     async update(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const invoice = await invoicesService.update(req.params.id, req.context.tenantId, sanitizeBody(req.body));
@@ -69,6 +76,19 @@ export class InvoicesController {
                 req.user?.userId,
             );
             sendSuccess(res, invoice, 'Invoice payment recorded');
+        } catch (e) { next(e); }
+    }
+
+    async updatePaymentStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const result = await invoicesService.updatePaymentStatus(
+                req.params.id,
+                req.params.paymentId,
+                req.context.tenantId,
+                sanitizeBody(req.body),
+                req.user?.userId,
+            );
+            sendSuccess(res, result, 'Payment status updated');
         } catch (e) { next(e); }
     }
 

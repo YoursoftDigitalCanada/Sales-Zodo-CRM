@@ -26,3 +26,12 @@ export const invoiceIdSchema = z.object({
 export const recordInvoicePaymentSchema = z.object({
   body: RecordInvoicePaymentSchema,
 });
+
+export const updateInvoicePaymentStatusSchema = z.object({
+  params: InvoiceIdParamsSchema.extend({ paymentId: z.string().uuid() }),
+  body: z.object({
+    status: z.enum(['SUCCESSFUL', 'FAILED', 'REFUNDED', 'PARTIALLY_REFUNDED', 'VOIDED', 'VOID', 'CANCELLED', 'CANCELED']),
+    refundAmount: z.number().positive().optional(),
+    notes: z.string().optional().nullable(),
+  }),
+});

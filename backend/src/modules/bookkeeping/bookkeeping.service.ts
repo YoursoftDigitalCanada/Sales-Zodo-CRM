@@ -219,9 +219,11 @@ export class BookkeepingService {
     return updated;
   }
 
-  async deleteVendor(id: string, tenantId: string) {
+  async deleteVendor(id: string, tenantId: string, actorUserId?: string) {
     await this.getVendor(id, tenantId);
-    return bookkeepingRepository.deactivate('bookkeepingVendor', id, tenantId);
+    const deleted = await bookkeepingRepository.deactivate('bookkeepingVendor', id, tenantId);
+    activityLogger.log({ tenantId, entityType: 'BookkeepingVendor', entityId: id, action: 'DELETE', module: 'bookkeeping', description: 'Deactivated vendor', userId: actorUserId });
+    return deleted;
   }
 
   async listTransactions(tenantId: string, query: Record<string, any>) {
@@ -252,6 +254,14 @@ export class BookkeepingService {
     if (data.expenseId) {
       const expense = await prisma.expense.findFirst({ where: { id: data.expenseId, tenantId } });
       if (!expense) throw new BadRequestError('Expense does not belong to this tenant', ErrorCodes.INVALID_INPUT);
+    }
+    if (data.clientId) {
+      const client = await prisma.client.findFirst({ where: { id: data.clientId, tenantId } });
+      if (!client) throw new BadRequestError('Client does not belong to this tenant', ErrorCodes.INVALID_INPUT);
+    }
+    if (data.projectId) {
+      const project = await prisma.project.findFirst({ where: { id: data.projectId, tenantId } });
+      if (!project) throw new BadRequestError('Deal/project does not belong to this tenant', ErrorCodes.INVALID_INPUT);
     }
   }
 
@@ -293,6 +303,7 @@ export class BookkeepingService {
   async updateTransaction(id: string, tenantId: string, data: Record<string, any>, actorUserId?: string) {
     const existing = await this.getTransaction(id, tenantId);
     if (existing.status === 'VOID') throw new BadRequestError('Void transactions cannot be edited', ErrorCodes.INVALID_INPUT);
+    if (existing.status === 'RECONCILED' || existing.isReconciled) throw new BadRequestError('Unreconcile this transaction before editing or voiding it.', ErrorCodes.INVALID_INPUT);
     await this.validateTransactionLinks(tenantId, data);
     if (existing.status === 'POSTED' && existing.accountId) await this.applyTransactionBalance(existing, -1);
     const updated = await db().bookkeepingTransaction.update({ where: { id }, data: { ...data, amount: data.amount !== undefined ? requirePositiveAmount(data.amount) : undefined, transactionDate: data.transactionDate ? toDate(data.transactionDate) : undefined } });
@@ -303,10 +314,52 @@ export class BookkeepingService {
 
   async voidTransaction(id: string, tenantId: string, actorUserId?: string) {
     const existing = await this.getTransaction(id, tenantId);
+    if (existing.status === 'RECONCILED' || existing.isReconciled) throw new BadRequestError('Unreconcile this transaction before editing or voiding it.', ErrorCodes.INVALID_INPUT);
+    if (existing.status === 'VOID') return existing;
     if (existing.status !== 'VOID' && existing.status === 'POSTED' && existing.accountId) await this.applyTransactionBalance(existing, -1);
     const updated = await db().bookkeepingTransaction.update({ where: { id }, data: { status: 'VOID', isReconciled: false } });
     activityLogger.log({ tenantId, entityType: 'BookkeepingTransaction', entityId: id, action: 'STATUS_CHANGE', module: 'bookkeeping', description: 'Voided bookkeeping transaction', userId: actorUserId });
     return updated;
+  }
+
+  async voidSourceTransaction(tenantId: string, sourceType: string, sourceId: string, actorUserId?: string) {
+    const existing = await db().bookkeepingTransaction.findFirst({ where: { tenantId, sourceType, sourceId } });
+    if (!existing) return null;
+    return this.voidTransaction(existing.id, tenantId, actorUserId);
+  }
+
+  private async reverseOrVoidSourceTransaction(tenantId: string, sourceType: string, sourceId: string, amount: number, reason: string, actorUserId?: string) {
+    const existing = await db().bookkeepingTransaction.findFirst({ where: { tenantId, sourceType, sourceId } });
+    if (!existing) return null;
+    if (existing.status === 'RECONCILED' || existing.isReconciled) {
+      return this.createPaymentReversalTransaction(tenantId, existing, amount, reason, actorUserId);
+    }
+    return this.voidTransaction(existing.id, tenantId, actorUserId);
+  }
+
+  private async createPaymentReversalTransaction(tenantId: string, original: Record<string, any>, amount: number, reason: string, actorUserId?: string) {
+    const reversalAmount = requirePositiveAmount(amount);
+    const sourceId = `${original.sourceId}:${reason}:${serializeMoney(reversalAmount)}`;
+    const existing = await db().bookkeepingTransaction.findFirst({ where: { tenantId, sourceType: 'INVOICE_PAYMENT_REVERSAL', sourceId } });
+    if (existing) return existing;
+    return this.createTransaction(tenantId, {
+      accountId: original.accountId || null,
+      categoryId: original.categoryId || null,
+      type: 'REFUND',
+      sourceType: 'INVOICE_PAYMENT_REVERSAL',
+      sourceId,
+      description: `Payment ${reason.toLowerCase().replace(/_/g, ' ')} for ${original.description || original.sourceId}`,
+      amount: reversalAmount,
+      currency: original.currency || 'CAD',
+      transactionDate: new Date(),
+      paymentMethod: original.paymentMethod || null,
+      reference: original.reference || null,
+      clientId: original.clientId || null,
+      projectId: original.projectId || null,
+      invoiceId: original.invoiceId || null,
+      status: 'POSTED',
+      metadata: { originalTransactionId: original.id, originalSourceType: original.sourceType, originalSourceId: original.sourceId, reason },
+    }, actorUserId);
   }
 
   async attachReceipt(id: string, tenantId: string, fileId: string, actorUserId?: string) {
@@ -451,12 +504,23 @@ export class BookkeepingService {
     if (selected.length !== selectedIds.length) throw new BadRequestError('Reconciliation includes invalid transactions', ErrorCodes.INVALID_INPUT);
     const systemEndingBalance = toNumber(account.currentBalance);
     const difference = serializeMoney(toNumber(data.statementEndingBalance) - systemEndingBalance);
-    return db().bookkeepingReconciliation.create({ data: { tenantId, accountId: data.accountId, statementDate: toDate(data.statementDate), statementStartingBalance: toNumber(data.statementStartingBalance), statementEndingBalance: toNumber(data.statementEndingBalance), systemEndingBalance, difference, status: 'DRAFT', notes: data.notes || null, metadata: { transactionIds: selectedIds } } });
+    const created = await db().bookkeepingReconciliation.create({ data: { tenantId, accountId: data.accountId, statementDate: toDate(data.statementDate), statementStartingBalance: toNumber(data.statementStartingBalance), statementEndingBalance: toNumber(data.statementEndingBalance), systemEndingBalance, difference, status: 'DRAFT', notes: data.notes || null, metadata: { transactionIds: selectedIds } } });
+    activityLogger.log({ tenantId, entityType: 'BookkeepingReconciliation', entityId: created.id, action: 'CREATE', module: 'bookkeeping', description: 'Created account reconciliation draft', userId: actorUserId, metadata: { accountId: data.accountId, difference } });
+    return created;
   }
 
-  async updateReconciliation(id: string, tenantId: string, data: Record<string, any>) {
+  async updateReconciliation(id: string, tenantId: string, data: Record<string, any>, actorUserId?: string) {
     await this.getReconciliation(id, tenantId);
-    return db().bookkeepingReconciliation.update({ where: { id }, data: { ...data, statementDate: data.statementDate ? toDate(data.statementDate) : undefined } });
+    const updated = await db().bookkeepingReconciliation.update({ where: { id }, data: { ...data, statementDate: data.statementDate ? toDate(data.statementDate) : undefined } });
+    activityLogger.log({ tenantId, entityType: 'BookkeepingReconciliation', entityId: id, action: 'UPDATE', module: 'bookkeeping', description: 'Updated account reconciliation', userId: actorUserId });
+    return updated;
+  }
+
+  async deleteReconciliation(id: string, tenantId: string, actorUserId?: string) {
+    await this.getReconciliation(id, tenantId);
+    const updated = await db().bookkeepingReconciliation.update({ where: { id }, data: { status: 'VOID' } });
+    activityLogger.log({ tenantId, entityType: 'BookkeepingReconciliation', entityId: id, action: 'DELETE', module: 'bookkeeping', description: 'Voided account reconciliation', userId: actorUserId });
+    return updated;
   }
 
   async completeReconciliation(id: string, tenantId: string, actorUserId?: string) {
@@ -475,19 +539,26 @@ export class BookkeepingService {
 
   async createRecurringRule(tenantId: string, data: Record<string, any>, actorUserId?: string) {
     await this.validateTransactionLinks(tenantId, data);
-    return db().bookkeepingRecurringRule.create({ data: { tenantId, ...data, amount: requirePositiveAmount(data.amount), nextRunAt: toDate(data.nextRunAt), endAt: data.endAt ? toDate(data.endAt) : null, createdById: actorUserId || null } });
+    const created = await db().bookkeepingRecurringRule.create({ data: { tenantId, ...data, amount: requirePositiveAmount(data.amount), nextRunAt: toDate(data.nextRunAt), endAt: data.endAt ? toDate(data.endAt) : null, createdById: actorUserId || null } });
+    activityLogger.log({ tenantId, entityType: 'BookkeepingRecurringRule', entityId: created.id, action: 'CREATE', module: 'bookkeeping', description: `Created recurring ${created.type.toLowerCase()} rule "${created.name}"`, userId: actorUserId });
+    return created;
   }
 
-  async updateRecurringRule(id: string, tenantId: string, data: Record<string, any>) {
+  async updateRecurringRule(id: string, tenantId: string, data: Record<string, any>, actorUserId?: string) {
     const existing = await bookkeepingRepository.findById('bookkeepingRecurringRule', id, tenantId);
     if (!existing) throw new NotFoundError('Recurring rule not found', ErrorCodes.RESOURCE_NOT_FOUND);
-    return db().bookkeepingRecurringRule.update({ where: { id }, data: { ...data, amount: data.amount ? requirePositiveAmount(data.amount) : undefined, nextRunAt: data.nextRunAt ? toDate(data.nextRunAt) : undefined, endAt: data.endAt ? toDate(data.endAt) : undefined } });
+    await this.validateTransactionLinks(tenantId, data);
+    const updated = await db().bookkeepingRecurringRule.update({ where: { id }, data: { ...data, amount: data.amount ? requirePositiveAmount(data.amount) : undefined, nextRunAt: data.nextRunAt ? toDate(data.nextRunAt) : undefined, endAt: data.endAt ? toDate(data.endAt) : undefined } });
+    activityLogger.log({ tenantId, entityType: 'BookkeepingRecurringRule', entityId: id, action: 'UPDATE', module: 'bookkeeping', description: 'Updated recurring rule', userId: actorUserId });
+    return updated;
   }
 
-  async deleteRecurringRule(id: string, tenantId: string) {
+  async deleteRecurringRule(id: string, tenantId: string, actorUserId?: string) {
     const existing = await bookkeepingRepository.findById('bookkeepingRecurringRule', id, tenantId);
     if (!existing) throw new NotFoundError('Recurring rule not found', ErrorCodes.RESOURCE_NOT_FOUND);
-    return db().bookkeepingRecurringRule.update({ where: { id }, data: { isActive: false } });
+    const updated = await db().bookkeepingRecurringRule.update({ where: { id }, data: { isActive: false } });
+    activityLogger.log({ tenantId, entityType: 'BookkeepingRecurringRule', entityId: id, action: 'DELETE', module: 'bookkeeping', description: 'Deactivated recurring rule', userId: actorUserId });
+    return updated;
   }
 
   async runDueRecurringRules(tenantId: string, actorUserId?: string) {
@@ -495,23 +566,28 @@ export class BookkeepingService {
     const rules = await db().bookkeepingRecurringRule.findMany({ where: { tenantId, isActive: true, nextRunAt: { lte: now }, OR: [{ endAt: null }, { endAt: { gte: now } }] } });
     const created = [];
     for (const rule of rules) {
-      created.push(await this.createTransaction(tenantId, {
-        accountId: rule.accountId,
-        categoryId: rule.categoryId,
-        vendorId: rule.vendorId,
-        clientId: rule.clientId,
-        projectId: rule.projectId,
-        type: rule.type,
-        description: rule.description || rule.name,
-        amount: rule.amount,
-        currency: rule.currency,
-        transactionDate: now.toISOString(),
-        sourceType: 'MANUAL',
-        sourceId: null,
-        metadata: { recurringRuleId: rule.id },
-      }, actorUserId));
+      const scheduledFor = new Date(rule.nextRunAt);
+      const sourceId = `${rule.id}:${scheduledFor.toISOString().slice(0, 10)}`;
+      const existing = await db().bookkeepingTransaction.findFirst({ where: { tenantId, sourceType: 'RECURRING_RULE', sourceId } });
+      if (!existing) {
+        created.push(await this.createTransaction(tenantId, {
+          accountId: rule.accountId,
+          categoryId: rule.categoryId,
+          vendorId: rule.vendorId,
+          clientId: rule.clientId,
+          projectId: rule.projectId,
+          type: rule.type,
+          description: rule.description || rule.name,
+          amount: rule.amount,
+          currency: rule.currency,
+          transactionDate: scheduledFor.toISOString(),
+          sourceType: 'RECURRING_RULE',
+          sourceId,
+          metadata: { recurringRuleId: rule.id, scheduledFor: scheduledFor.toISOString() },
+        }, actorUserId));
+      }
       const months = rule.frequency === 'WEEKLY' ? 0 : rule.frequency === 'QUARTERLY' ? 3 : rule.frequency === 'YEARLY' ? 12 : 1;
-      const nextRunAt = rule.frequency === 'WEEKLY' ? new Date(now.getTime() + 7 * 86400000) : addMonths(now, months);
+      const nextRunAt = rule.frequency === 'WEEKLY' ? new Date(scheduledFor.getTime() + 7 * 86400000) : addMonths(scheduledFor, months);
       await db().bookkeepingRecurringRule.update({ where: { id: rule.id }, data: { lastRunAt: now, nextRunAt } });
     }
     return { created: created.length };
@@ -617,11 +693,32 @@ export class BookkeepingService {
   async syncInvoicePayment(tenantId: string, paymentId: string) {
     await this.setupIfEmpty(tenantId);
     const payment = await db().invoicePayment.findFirst({ where: { id: paymentId, tenantId }, include: { invoice: true } });
-    if (!payment) return null;
+    if (!payment) return this.voidSourceTransaction(tenantId, 'INVOICE_PAYMENT', paymentId);
     const account = await this.defaultAccount(tenantId, 'Bank Account');
     const category = await this.defaultCategory(tenantId, 'Subscriptions', 'INCOME');
     const existing = await db().bookkeepingTransaction.findFirst({ where: { tenantId, sourceType: 'INVOICE_PAYMENT', sourceId: payment.id } });
-    const data = {
+    const paymentStatus = String(payment.status || '').toUpperCase();
+    const refundAmount = toNumber(payment.refundAmount);
+    const voidedPayment = ['FAILED', 'VOID', 'VOIDED', 'CANCELLED', 'CANCELED'].includes(paymentStatus);
+    if (voidedPayment) {
+      if (existing) return this.reverseOrVoidSourceTransaction(tenantId, 'INVOICE_PAYMENT', payment.id, toNumber(payment.amount), paymentStatus);
+      return null;
+    }
+    if (paymentStatus === 'REFUNDED') {
+      if (!existing) await this.createTransaction(tenantId, this.invoicePaymentTransactionData(payment, account, category));
+      return this.createInvoicePaymentReversal(tenantId, payment.id, toNumber(payment.amount), 'REFUNDED');
+    }
+    if (paymentStatus === 'PARTIALLY_REFUNDED') {
+      if (!existing) await this.createTransaction(tenantId, this.invoicePaymentTransactionData(payment, account, category));
+      return this.createInvoicePaymentReversal(tenantId, payment.id, refundAmount, 'PARTIALLY_REFUNDED');
+    }
+    const data = this.invoicePaymentTransactionData(payment, account, category);
+    if (existing) return this.updateTransaction(existing.id, tenantId, data);
+    return this.createTransaction(tenantId, data);
+  }
+
+  private invoicePaymentTransactionData(payment: Record<string, any>, account: Record<string, any> | null, category: Record<string, any> | null) {
+    return {
       accountId: account?.id || null,
       categoryId: category?.id || null,
       type: 'INCOME',
@@ -636,16 +733,28 @@ export class BookkeepingService {
       clientId: payment.clientId,
       projectId: payment.projectId,
       invoiceId: payment.invoiceId,
-      status: payment.status === 'FAILED' ? 'VOID' : 'POSTED',
+      status: 'POSTED',
     };
-    if (existing) return this.updateTransaction(existing.id, tenantId, data);
-    return this.createTransaction(tenantId, data);
+  }
+
+  async createInvoicePaymentReversal(tenantId: string, paymentId: string, amount: number, reason = 'REFUNDED', actorUserId?: string) {
+    await this.setupIfEmpty(tenantId);
+    const payment = await db().invoicePayment.findFirst({ where: { id: paymentId, tenantId }, include: { invoice: true } });
+    if (!payment) throw new NotFoundError('Invoice payment not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    const original = await db().bookkeepingTransaction.findFirst({ where: { tenantId, sourceType: 'INVOICE_PAYMENT', sourceId: payment.id } });
+    if (!original) {
+      const account = await this.defaultAccount(tenantId, 'Bank Account');
+      const category = await this.defaultCategory(tenantId, 'Subscriptions', 'INCOME');
+      const created = await this.createTransaction(tenantId, this.invoicePaymentTransactionData(payment, account, category), actorUserId);
+      return this.createPaymentReversalTransaction(tenantId, created, amount, reason, actorUserId);
+    }
+    return this.createPaymentReversalTransaction(tenantId, original, amount, reason, actorUserId);
   }
 
   async syncExpense(tenantId: string, expenseId: string) {
     await this.setupIfEmpty(tenantId);
     const expense = await prisma.expense.findFirst({ where: { id: expenseId, tenantId } });
-    if (!expense) return null;
+    if (!expense) return this.voidSourceTransaction(tenantId, 'EXPENSE', expenseId);
     const account = await this.defaultAccount(tenantId, 'Bank Account');
     const categoryName = this.expenseCategoryName(String(expense.category || 'Other Expense'));
     const category = await this.defaultCategory(tenantId, categoryName, 'EXPENSE') || await this.defaultCategory(tenantId, 'Other Expense', 'EXPENSE');

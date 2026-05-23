@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { PERMISSIONS } from '../../common/constants/permissions';
+import { authenticate, loadEmployee } from '../../common/middleware/auth.middleware';
 import { requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { bookkeepingController } from './bookkeeping.controller';
@@ -27,6 +28,9 @@ import {
 } from './bookkeeping.validators';
 
 const router = Router();
+
+router.use(authenticate);
+router.use(loadEmployee);
 
 router.post('/setup', requirePermission(PERMISSIONS.BOOKKEEPING_CREATE), bookkeepingController.setup);
 router.post('/sync', requirePermission(PERMISSIONS.BOOKKEEPING_CREATE), bookkeepingController.sync);
@@ -73,6 +77,7 @@ router.get('/reconciliations', requirePermission(PERMISSIONS.BOOKKEEPING_RECONCI
 router.post('/reconciliations', requirePermission(PERMISSIONS.BOOKKEEPING_RECONCILE), validate(createReconciliationSchema), bookkeepingController.createReconciliation);
 router.get('/reconciliations/:id', requirePermission(PERMISSIONS.BOOKKEEPING_RECONCILE), validate(idSchema), bookkeepingController.getReconciliation);
 router.put('/reconciliations/:id', requirePermission(PERMISSIONS.BOOKKEEPING_RECONCILE), validate(idSchema), validate(updateReconciliationSchema), bookkeepingController.updateReconciliation);
+router.delete('/reconciliations/:id', requirePermission(PERMISSIONS.BOOKKEEPING_RECONCILE), validate(idSchema), bookkeepingController.deleteReconciliation);
 router.post('/reconciliations/:id/complete', requirePermission(PERMISSIONS.BOOKKEEPING_RECONCILE), validate(idSchema), bookkeepingController.completeReconciliation);
 
 router.get('/recurring-rules', requirePermission(PERMISSIONS.BOOKKEEPING_VIEW), validate(listQuerySchema), bookkeepingController.listRecurringRules);

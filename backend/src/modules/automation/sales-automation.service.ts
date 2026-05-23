@@ -889,8 +889,11 @@ class SalesAutomationService {
           recipientName: (invoice as any).client?.clientName || null,
         };
         await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.due.soon', addDays(dueDate, -2), 'NOTIFICATION', payload);
+        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.due.soon', addDays(dueDate, -2), 'EMAIL', payload);
         await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.due.today', dueDate, 'NOTIFICATION', payload);
+        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.due.today', dueDate, 'EMAIL', payload);
         await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.overdue', addDays(dueDate, 1), 'TASK', payload);
+        await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.overdue', addDays(dueDate, 1), 'EMAIL', payload);
         await this.scheduleReminder(tenantId, 'Invoice', invoiceId, 'invoice.escalation', addDays(dueDate, 7), 'NOTIFICATION', payload);
       },
     );

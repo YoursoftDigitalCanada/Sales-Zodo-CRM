@@ -122,9 +122,12 @@ describe('SalesAutomationService', () => {
       where: { tenantId: 'tenant-1', entityType: 'Invoice', entityId: 'invoice-1', status: 'SCHEDULED' },
       data: { status: 'CANCELLED', cancelledAt: expect.any(Date) },
     });
-    expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledTimes(4);
+    expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledTimes(7);
     expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledWith(expect.objectContaining({
       create: expect.objectContaining({ tenantId: 'tenant-1', entityType: 'Invoice', entityId: 'invoice-1', reminderType: 'invoice.overdue' }),
+    }));
+    expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ tenantId: 'tenant-1', entityType: 'Invoice', entityId: 'invoice-1', reminderType: 'invoice.due.today', channel: 'EMAIL' }),
     }));
   });
 

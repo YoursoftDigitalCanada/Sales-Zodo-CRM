@@ -480,9 +480,9 @@ export class InvoicesService {
                 </tr>
               `).join('')
             : '';
-        const roofAttachmentNote = roofAttachmentCount > 0
+        const attachmentNote = roofAttachmentCount > 0
             ? `<p style="margin:0 0 20px;font-size:13px;color:#0F766E;background:#ECFEFF;border:1px solid #A5F3FC;padding:12px 14px;border-radius:10px;">
-                ${roofAttachmentCount} roof image${roofAttachmentCount === 1 ? '' : 's'} ${roofAttachmentCount === 1 ? 'is' : 'are'} attached with this invoice for reference.
+                ${roofAttachmentCount} supporting attachment${roofAttachmentCount === 1 ? '' : 's'} ${roofAttachmentCount === 1 ? 'is' : 'are'} included with this invoice for reference.
               </p>`
             : '';
 
@@ -499,7 +499,7 @@ export class InvoicesService {
   <div style="background:#fff;padding:32px;border-radius:0 0 16px 16px;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
     <p style="margin:0 0 8px;font-size:16px;color:#0F172A;">Hi ${this.escapeHtml(recipientName)},</p>
     <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
-      Your roofing invoice is attached as a PDF. Please review the summary below and contact us if you need anything clarified.
+      Your invoice is attached as a PDF. Please review the summary below and contact us if you need anything clarified.
     </p>
     <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:20px;margin-bottom:24px;">
       <table style="width:100%;border-collapse:collapse;">
@@ -532,7 +532,7 @@ export class InvoicesService {
       </thead>
       <tbody>${itemsHtml}</tbody>
     </table>
-    ${roofAttachmentNote}
+    ${attachmentNote}
     <div style="border-top:1px solid #E2E8F0;padding-top:18px;">
       <p style="margin:0 0 8px;font-size:13px;color:#64748B;">Total Invoice</p>
       <p style="margin:0;font-size:22px;color:#0F172A;font-weight:700;">${this.escapeHtml(total)}</p>
@@ -548,11 +548,11 @@ export class InvoicesService {
         const text = [
             `Hi ${recipientName},`,
             '',
-            `Your roofing invoice ${invoiceNumber} is attached as a PDF.`,
+            `Your invoice ${invoiceNumber} is attached as a PDF.`,
             `Invoice date: ${issueDate}`,
             `Due date: ${dueDate}`,
             `Amount due: ${amountDue}`,
-            roofAttachmentCount > 0 ? `${roofAttachmentCount} roof image${roofAttachmentCount === 1 ? '' : 's'} attached for reference.` : '',
+            roofAttachmentCount > 0 ? `${roofAttachmentCount} supporting attachment${roofAttachmentCount === 1 ? '' : 's'} included for reference.` : '',
             '',
             `Total invoice: ${total}`,
         ].filter(Boolean).join('\n');
@@ -1027,7 +1027,7 @@ export class InvoicesService {
         activityLogger.log({
             tenantId, entityType: 'Invoice', entityId: id,
             action: 'STATUS_CHANGE', module: 'invoices',
-            description: `Invoice "${(existing as any).invoiceNumber || id}" emailed to ${targetEmail}${roofAttachments.length > 0 ? ` with ${roofAttachments.length} roof image attachment${roofAttachments.length === 1 ? '' : 's'}` : ''}`,
+            description: `Invoice "${(existing as any).invoiceNumber || id}" emailed to ${targetEmail}${roofAttachments.length > 0 ? ` with ${roofAttachments.length} supporting attachment${roofAttachments.length === 1 ? '' : 's'}` : ''}`,
             userId: actorUserId,
             metadata: {
                 newStatus: 'SENT',

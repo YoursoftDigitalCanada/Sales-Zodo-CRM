@@ -18,6 +18,14 @@ const mockDb = {
     findFirst: jest.fn(),
     update: jest.fn(),
   },
+  invoice: { findFirst: jest.fn() },
+  proposal: { findFirst: jest.fn() },
+  quote: { findFirst: jest.fn() },
+  contract: { findFirst: jest.fn() },
+  expense: { findFirst: jest.fn() },
+  project: { findFirst: jest.fn() },
+  client: { findFirst: jest.fn() },
+  contact: { findFirst: jest.fn() },
 };
 
 jest.mock('../../src/config/database', () => ({
@@ -62,10 +70,14 @@ describe('DocumentsService', () => {
   });
 
   it('lists only files from the current tenant', async () => {
-    await documentsService.list('tenant-a', { search: 'proposal' });
+    await documentsService.list('tenant-a', { search: 'proposal', categoryId: 'cat-1', documentType: 'pdf' });
 
     expect(mockDb.file.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ tenantId: 'tenant-a', deletedAt: null }),
+      where: expect.objectContaining({
+        tenantId: 'tenant-a',
+        deletedAt: null,
+        documentMetadata: { is: { categoryId: 'cat-1', documentType: 'pdf' } },
+      }),
     }));
     expect(mockDb.file.count).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ tenantId: 'tenant-a', deletedAt: null }),
@@ -116,5 +128,84 @@ describe('DocumentsService', () => {
     await documentsService.share('file-1', 'tenant-a', { expiresInHours: 24 });
 
     expect(mockFilesService.createShareLink).toHaveBeenCalledWith('file-1', 'tenant-a', 24);
+  });
+
+  it('rejects unsupported linked entity types', async () => {
+    mockDb.file.findFirst.mockResolvedValue({ id: 'file-1', tenantId: 'tenant-a', name: 'Contract.pdf', originalName: 'Contract.pdf', mimeType: 'application/pdf', size: BigInt(100), tags: [] });
+    mockDb.documentMetadata.findUnique.mockResolvedValue(null);
+
+    await expect(documentsService.link('file-1', 'tenant-a', { linkedEntityType: 'SecretThing', linkedEntityId: 'x-1' })).rejects.toThrow('Unsupported linked entity type');
+  });
+
+  it('rejects linked entities that do not belong to the tenant', async () => {
+    mockDb.file.findFirst.mockResolvedValue({ id: 'file-1', tenantId: 'tenant-a', name: 'Invoice.pdf', originalName: 'Invoice.pdf', mimeType: 'application/pdf', size: BigInt(100), tags: [] });
+    mockDb.documentMetadata.findUnique.mockResolvedValue(null);
+    mockDb.invoice.findFirst.mockResolvedValue(null);
+
+    await expect(documentsService.link('file-1', 'tenant-a', { linkedEntityType: 'Invoice', linkedEntityId: 'invoice-other' })).rejects.toThrow('Invoice does not belong to this tenant');
+  });
+
+  it('links proposal documents using Proposal metadata and tenant validation', async () => {
+    mockDb.file.findFirst
+      .mockResolvedValueOnce({ id: 'file-1', tenantId: 'tenant-a', name: 'Proposal.pdf', originalName: 'Proposal.pdf', mimeType: 'application/pdf', size: BigInt(100), tags: [] })
+      .mockResolvedValueOnce({
+        id: 'file-1',
+        tenantId: 'tenant-a',
+        name: 'Proposal.pdf',
+        originalName: 'Proposal.pdf',
+        mimeType: 'application/pdf',
+        size: BigInt(100),
+        tags: [],
+        documentMetadata: { linkedEntityType: 'Proposal', linkedEntityId: 'proposal-1', documentType: 'pdf' },
+      });
+    mockDb.documentMetadata.findUnique.mockResolvedValue(null);
+    mockDb.proposal.findFirst.mockResolvedValue({ id: 'proposal-1', tenantId: 'tenant-a' });
+    mockDb.documentMetadata.upsert.mockResolvedValue({});
+
+    await documentsService.link('file-1', 'tenant-a', { linkedEntityType: 'Proposal', linkedEntityId: 'proposal-1' });
+
+    expect(mockDb.proposal.findFirst).toHaveBeenCalledWith({ where: { id: 'proposal-1', tenantId: 'tenant-a' } });
+    expect(mockDb.documentMetadata.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ linkedEntityType: 'Proposal', linkedEntityId: 'proposal-1' }),
+    }));
+  });
+
+  it('links quote documents against the Quote model separately from Proposal', async () => {
+    mockDb.file.findFirst
+      .mockResolvedValueOnce({ id: 'file-1', tenantId: 'tenant-a', name: 'Quote.pdf', originalName: 'Quote.pdf', mimeType: 'application/pdf', size: BigInt(100), tags: [] })
+      .mockResolvedValueOnce({ id: 'file-1', tenantId: 'tenant-a', name: 'Quote.pdf', originalName: 'Quote.pdf', mimeType: 'application/pdf', size: BigInt(100), tags: [], documentMetadata: { linkedEntityType: 'Quote', linkedEntityId: 'quote-1' } });
+    mockDb.documentMetadata.findUnique.mockResolvedValue(null);
+    mockDb.quote.findFirst.mockResolvedValue({ id: 'quote-1', tenantId: 'tenant-a' });
+    mockDb.documentMetadata.upsert.mockResolvedValue({});
+
+    await documentsService.link('file-1', 'tenant-a', { linkedEntityType: 'Quote', linkedEntityId: 'quote-1' });
+
+    expect(mockDb.quote.findFirst).toHaveBeenCalledWith({ where: { id: 'quote-1', tenantId: 'tenant-a' } });
+    expect(mockDb.proposal.findFirst).not.toHaveBeenCalledWith({ where: { id: 'quote-1', tenantId: 'tenant-a' } });
+    expect(mockDb.documentMetadata.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ linkedEntityType: 'Quote', linkedEntityId: 'quote-1' }),
+    }));
+  });
+
+  it.each([
+    ['Contract', 'contract', 'contract-1'],
+    ['Invoice', 'invoice', 'invoice-1'],
+    ['Expense', 'expense', 'expense-1'],
+    ['Deal', 'project', 'deal-1'],
+    ['Client', 'client', 'client-1'],
+    ['Company', 'client', 'company-1'],
+    ['Contact', 'contact', 'contact-1'],
+  ])('valid %s document links validate against the tenant-scoped %s model', async (entityType, modelName, entityId) => {
+    mockDb.file.findFirst
+      .mockResolvedValueOnce({ id: 'file-1', tenantId: 'tenant-a', name: `${entityType}.pdf`, originalName: `${entityType}.pdf`, mimeType: 'application/pdf', size: BigInt(100), tags: [] })
+      .mockResolvedValueOnce({ id: 'file-1', tenantId: 'tenant-a', name: `${entityType}.pdf`, originalName: `${entityType}.pdf`, mimeType: 'application/pdf', size: BigInt(100), tags: [], documentMetadata: { linkedEntityType: entityType, linkedEntityId: entityId } });
+    mockDb.documentMetadata.findUnique.mockResolvedValue(null);
+    const delegate = (mockDb as any)[modelName];
+    delegate.findFirst.mockResolvedValue({ id: entityId, tenantId: 'tenant-a' });
+    mockDb.documentMetadata.upsert.mockResolvedValue({});
+
+    await documentsService.link('file-1', 'tenant-a', { linkedEntityType: entityType, linkedEntityId: entityId });
+
+    expect(delegate.findFirst).toHaveBeenCalledWith({ where: { id: entityId, tenantId: 'tenant-a' } });
   });
 });

@@ -6,8 +6,12 @@ import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { eventBus } from '../../common/events/event-bus';
 import { generateProposalPdfBuffer } from './proposal-pdf';
+import { documentsService } from '../documents/documents.service';
+import { filesService } from '../files/files.service';
 import { PrismaClient } from '@prisma/client';
-import { randomUUID } from 'crypto';
+import crypto, { randomUUID } from 'crypto';
+import fs from 'fs/promises';
+import path from 'path';
 import { logger } from '../../common/utils/logger';
 import { config } from '../../config';
 import jwt from 'jsonwebtoken';
@@ -248,7 +252,7 @@ export class ProposalsService {
 
         // Update proposal with PDF metadata
         await proposalsRepository.update(id, tenantId, {
-            status: 'GENERATED',
+            ...(((proposal as any).status === 'DRAFT') ? { status: 'GENERATED' } : {}),
             pdfGeneratedAt: new Date(),
         });
 
@@ -263,6 +267,74 @@ export class ProposalsService {
         });
 
         return { buffer, fileName };
+    }
+
+    async saveProposalPdfToDocuments(
+        tenantId: string,
+        proposalId: string,
+        actorUserId?: string,
+        variant: 'sent' | 'accepted' = 'sent',
+    ) {
+        const proposal = await proposalsRepository.findById(proposalId, tenantId);
+        if (!proposal) throw new NotFoundError('Proposal not found', ErrorCodes.RESOURCE_NOT_FOUND);
+
+        const description = variant === 'accepted' ? 'Accepted proposal PDF' : 'Proposal PDF';
+        const existing = await (prisma as any).file.findFirst({
+            where: {
+                tenantId,
+                deletedAt: null,
+                documentMetadata: {
+                    is: {
+                        linkedEntityType: 'Proposal',
+                        linkedEntityId: proposalId,
+                        documentType: 'pdf',
+                        description,
+                    },
+                },
+            },
+        });
+        if (existing) return documentsService.get(existing.id, tenantId);
+
+        const { buffer, fileName } = await this.generatePdf(proposalId, tenantId);
+        const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const uploadDir = path.join(process.cwd(), 'uploads', tenantId);
+        await fs.mkdir(uploadDir, { recursive: true });
+        const storagePath = path.join(uploadDir, `${randomUUID()}-${safeFileName}`);
+        await fs.writeFile(storagePath, buffer);
+
+        const saved = await filesService.create(tenantId, {
+            name: fileName,
+            originalName: fileName,
+            mimeType: 'application/pdf',
+            size: buffer.length,
+            path: storagePath,
+            extension: '.pdf',
+            checksum: crypto.createHash('sha256').update(buffer).digest('hex'),
+            clientId: (proposal as any).clientId || null,
+            projectId: (proposal as any).projectId || null,
+            quoteId: proposal.quoteId || null,
+            leadId: proposal.leadId || null,
+        });
+        const categories = await documentsService.categories(tenantId);
+        const proposalsCategory = categories.find((category: any) => String(category.name).toLowerCase() === 'proposals');
+        const document = await documentsService.update(saved.id, tenantId, {
+            categoryId: proposalsCategory?.id,
+            documentType: 'pdf',
+            linkedEntityType: 'Proposal',
+            linkedEntityId: proposalId,
+            description,
+        });
+        activityLogger.log({
+            tenantId,
+            entityType: 'Proposal',
+            entityId: proposalId,
+            action: 'UPDATE',
+            module: 'documents',
+            description: `Saved ${variant === 'accepted' ? 'accepted ' : ''}proposal PDF to Documents`,
+            userId: actorUserId,
+            metadata: { fileId: saved.id, variant },
+        });
+        return document;
     }
 
     // ── Generate + Emit Event (used after create) ───────────────────────

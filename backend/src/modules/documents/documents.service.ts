@@ -82,6 +82,32 @@ function toDocument(file: any) {
   };
 }
 
+const LINKED_ENTITY_MODELS: Record<string, { model: string; label: string }> = {
+  client: { model: 'client', label: 'Client' },
+  account: { model: 'client', label: 'Client' },
+  company: { model: 'client', label: 'Client' },
+  organization: { model: 'client', label: 'Client' },
+  contact: { model: 'contact', label: 'Contact' },
+  lead: { model: 'lead', label: 'Lead' },
+  deal: { model: 'project', label: 'Deal' },
+  project: { model: 'project', label: 'Deal' },
+  invoice: { model: 'invoice', label: 'Invoice' },
+  expense: { model: 'expense', label: 'Expense' },
+  bookkeepingtransaction: { model: 'bookkeepingTransaction', label: 'BookkeepingTransaction' },
+  quote: { model: 'quote', label: 'Quote' },
+  contract: { model: 'contract', label: 'Contract' },
+  proposal: { model: 'proposal', label: 'Proposal' },
+};
+
+function linkedEntityKey(value: string | null) {
+  return value ? value.toLowerCase().replace(/[^a-z0-9]/g, '') : null;
+}
+
+function normalizeLinkedEntityType(value: string | null) {
+  const key = linkedEntityKey(value);
+  return key ? LINKED_ENTITY_MODELS[key]?.label || value : value;
+}
+
 export class DocumentsService {
   async ensureDefaultCategories(tenantId: string) {
     const existing = await db.documentCategory.findMany({ where: { tenantId } });
@@ -113,15 +139,17 @@ export class DocumentsService {
     if (folderId !== null) where.folderId = folderId === 'root' ? null : folderId;
     if (starred !== null) where.isStarred = starred;
     if (shared !== null) where.isShared = shared;
-    if (documentType && documentType !== 'all') where.documentMetadata = { ...(where.documentMetadata || {}), documentType };
-    if (categoryId && categoryId !== 'all') where.documentMetadata = { ...(where.documentMetadata || {}), categoryId };
-    if (linkedEntityType) where.documentMetadata = { ...(where.documentMetadata || {}), linkedEntityType };
-    if (linkedEntityId) where.documentMetadata = { ...(where.documentMetadata || {}), linkedEntityId };
+    const metadataWhere: Record<string, unknown> = {};
+    if (documentType && documentType !== 'all') metadataWhere.documentType = documentType;
+    if (categoryId && categoryId !== 'all') metadataWhere.categoryId = categoryId;
+    if (linkedEntityType) metadataWhere.linkedEntityType = normalizeLinkedEntityType(linkedEntityType);
+    if (linkedEntityId) metadataWhere.linkedEntityId = linkedEntityId;
+    if (Object.keys(metadataWhere).length) where.documentMetadata = { is: metadataWhere };
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { originalName: { contains: search, mode: 'insensitive' } },
-        { documentMetadata: { description: { contains: search, mode: 'insensitive' } } },
+        { documentMetadata: { is: { description: { contains: search, mode: 'insensitive' } } } },
       ];
     }
 
@@ -264,6 +292,9 @@ export class DocumentsService {
       const category = await db.documentCategory.findFirst({ where: { id: categoryId, tenantId } });
       if (!category) throw new BadRequestError('Category does not belong to this tenant', ErrorCodes.VALIDATION_FAILED);
     }
+    const linkedEntityType = body.linkedEntityType !== undefined ? cleanString(body.linkedEntityType, 80) : existing?.linkedEntityType || null;
+    const linkedEntityId = body.linkedEntityId !== undefined ? cleanString(body.linkedEntityId, 80) : existing?.linkedEntityId || null;
+    const linkedEntity = await this.validateLinkedEntity(tenantId, linkedEntityType, linkedEntityId);
     const data = {
       tenantId,
       fileId,
@@ -271,8 +302,8 @@ export class DocumentsService {
       documentType: body.documentType !== undefined || body.type !== undefined ? cleanString(body.documentType || body.type, 80) : existing?.documentType || null,
       description: body.description !== undefined ? cleanString(body.description, 1000) : existing?.description || null,
       version: body.version !== undefined ? Math.max(Number(body.version || 1), 1) : existing?.version || 1,
-      linkedEntityType: body.linkedEntityType !== undefined ? cleanString(body.linkedEntityType, 80) : existing?.linkedEntityType || null,
-      linkedEntityId: body.linkedEntityId !== undefined ? cleanString(body.linkedEntityId, 80) : existing?.linkedEntityId || null,
+      linkedEntityType: linkedEntity.type,
+      linkedEntityId: linkedEntity.id,
       visibleToClient: body.visibleToClient !== undefined ? cleanBool(body.visibleToClient) : Boolean(existing?.visibleToClient),
       requiresSignature: body.requiresSignature !== undefined ? cleanBool(body.requiresSignature) : Boolean(existing?.requiresSignature),
       expiresAt: body.expiresAt !== undefined ? cleanDate(body.expiresAt) : existing?.expiresAt || null,
@@ -283,6 +314,18 @@ export class DocumentsService {
       create: data,
       update: data,
     });
+  }
+
+  private async validateLinkedEntity(tenantId: string, linkedEntityType: string | null, linkedEntityId: string | null) {
+    if (!linkedEntityType && !linkedEntityId) return { type: null, id: null };
+    if (!linkedEntityType || !linkedEntityId) throw new BadRequestError('Both linkedEntityType and linkedEntityId are required when linking a document', ErrorCodes.VALIDATION_FAILED);
+    const config = LINKED_ENTITY_MODELS[linkedEntityKey(linkedEntityType) || ''];
+    if (!config) throw new BadRequestError('Unsupported linked entity type', ErrorCodes.VALIDATION_FAILED);
+    const delegate = db[config.model];
+    if (!delegate?.findFirst) throw new BadRequestError('Linked entity type is not available', ErrorCodes.VALIDATION_FAILED);
+    const record = await delegate.findFirst({ where: { id: linkedEntityId, tenantId } });
+    if (!record) throw new BadRequestError(`${config.label} does not belong to this tenant`, ErrorCodes.VALIDATION_FAILED);
+    return { type: config.label, id: linkedEntityId };
   }
 }
 

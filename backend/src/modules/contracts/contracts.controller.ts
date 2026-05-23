@@ -46,7 +46,7 @@ export class ContractsController {
     async updateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const tenantId = req.context.tenantId;
-            const contract = await contractsService.updateStatus(req.params.id, tenantId, req.body.status);
+            const contract = await contractsService.updateStatus(req.params.id, tenantId, req.body.status, req.user?.employeeId);
             res.json(contract);
         } catch (e) { next(e); }
     }

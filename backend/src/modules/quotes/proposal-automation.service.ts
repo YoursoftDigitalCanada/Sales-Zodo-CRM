@@ -9,6 +9,7 @@ import { logger } from '../../common/utils/logger';
 import { notificationsService } from '../notifications/notifications.service';
 import { tasksService } from '../tasks/tasks.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
+import { isLegacyRoofingAutomationEnabled } from '../automation/legacy-automation.guard';
 
 // ── Proposal Automation Service ─────────────────────────────────────────
 //
@@ -37,6 +38,10 @@ export class ProposalAutomationService {
 
     private async handleReportsReady(event: ReportsReadyEvent): Promise<void> {
         const ctx = { leadId: event.leadId, tenantId: event.tenantId };
+        if (!(await isLegacyRoofingAutomationEnabled(event.tenantId))) {
+            logger.debug('[ProposalAutomation] reports.ready skipped for Sales CRM tenant', ctx);
+            return;
+        }
         logger.info('[ProposalAutomation] reports.ready received', ctx);
 
         try {
@@ -279,6 +284,10 @@ export class ProposalAutomationService {
 
     private async handleProposalAccepted(event: ProposalAcceptedEvent): Promise<void> {
         const ctx = { leadId: event.leadId, tenantId: event.tenantId, quoteId: event.quoteId };
+        if (!(await isLegacyRoofingAutomationEnabled(event.tenantId))) {
+            logger.debug('[ProposalAutomation] proposal.accepted skipped for Sales CRM tenant', ctx);
+            return;
+        }
         logger.info('[ProposalAutomation] proposal.accepted received', ctx);
 
         try {
@@ -354,6 +363,10 @@ export class ProposalAutomationService {
 
     private async handleProposalDeclined(event: ProposalDeclinedEvent): Promise<void> {
         const ctx = { leadId: event.leadId, tenantId: event.tenantId, quoteId: event.quoteId };
+        if (!(await isLegacyRoofingAutomationEnabled(event.tenantId))) {
+            logger.debug('[ProposalAutomation] proposal.declined skipped for Sales CRM tenant', ctx);
+            return;
+        }
         logger.info('[ProposalAutomation] proposal.declined received', ctx);
 
         try {

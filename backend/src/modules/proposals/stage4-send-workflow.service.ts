@@ -14,6 +14,7 @@ import { notificationsService } from '../notifications/notifications.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { proposalsService } from './proposals.service';
 import { proposalReminderService } from './proposal-reminder.service';
+import { automationIdempotencyService } from '../automation/automation-idempotency.service';
 import { LeadStatus, CommunicationType } from '@prisma/client';
 const APP_BASE_URL = process.env.APP_BASE_URL || process.env.FRONTEND_URL || '';
 
@@ -241,20 +242,25 @@ export class Stage4SendWorkflowService {
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + 3);
 
-        await tasksService.create(event.tenantId, {
-            title: `Follow up on Proposal – ${event.leadName}`,
-            description: [
-                `Follow up on proposal ${event.quoteNumber} sent to ${event.leadName}.`,
-                '',
-                `Delivery method: ${event.deliveryMethod}`,
-                `Proposal link: ${event.proposalLink}`,
-                '',
-                'Action: Contact the lead to answer any questions and close the deal.',
-            ].join('\n'),
-            priority: 'HIGH',
-            assignedToId: event.salesRepId,
-            dueDate: dueDate.toISOString(),
-        });
+        await automationIdempotencyService.runOnce(
+            event.tenantId,
+            `${event.tenantId}:proposal.sent:Proposal:${event.proposalId}:stage4-followup-task`,
+            { eventName: 'proposal.sent', entityType: 'Proposal', entityId: event.proposalId, actionType: 'stage4-followup-task' },
+            async () => tasksService.create(event.tenantId, {
+                title: `Follow up on Proposal – ${event.leadName}`,
+                description: [
+                    `Follow up on proposal ${event.quoteNumber} sent to ${event.leadName}.`,
+                    '',
+                    `Delivery method: ${event.deliveryMethod}`,
+                    `Proposal link: ${event.proposalLink}`,
+                    '',
+                    'Action: Contact the lead to answer any questions and close the deal.',
+                ].join('\n'),
+                priority: 'HIGH',
+                assignedToId: event.salesRepId,
+                dueDate: dueDate.toISOString(),
+            }),
+        );
 
         logger.info('[Stage4] Follow-up task created', {
             proposalId: event.proposalId,
@@ -305,14 +311,20 @@ export class Stage4SendWorkflowService {
 
         // Notify the sales rep
         if (event.ownerUserId) {
-            await notificationsService.create({
-                tenantId: event.tenantId,
-                userId: event.ownerUserId,
-                title: 'Proposal Viewed',
-                message: `${event.leadName} viewed your proposal!`,
-                type: 'INFO',
-                metadata: { proposalId: event.proposalId, relatedType: 'proposal' },
-            });
+            const ownerUserId = event.ownerUserId;
+            await automationIdempotencyService.runOnce(
+                event.tenantId,
+                `${event.tenantId}:proposal.viewed:Proposal:${event.proposalId}:owner-notification:${event.viewCount || 1}`,
+                { eventName: 'proposal.viewed', entityType: 'Proposal', entityId: event.proposalId, actionType: 'owner-notification' },
+                async () => notificationsService.create({
+                    tenantId: event.tenantId,
+                    userId: ownerUserId,
+                    title: 'Proposal Viewed',
+                    message: `${event.leadName} viewed your proposal!`,
+                    type: 'INFO',
+                    metadata: { proposalId: event.proposalId, relatedType: 'proposal' },
+                }),
+            );
         }
 
         activityLogger.log({

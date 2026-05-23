@@ -15,6 +15,7 @@ import { calendarService } from '../calendar/calendar.service';
 import { notificationsService } from '../notifications/notifications.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { proposalReminderService } from './proposal-reminder.service';
+import { automationIdempotencyService } from '../automation/automation-idempotency.service';
 
 const APP_BASE_URL = process.env.APP_BASE_URL || process.env.FRONTEND_URL || '';
 
@@ -353,13 +354,18 @@ export class Stage5ConversionWorkflowService {
             const dueDate = new Date();
             dueDate.setDate(dueDate.getDate() + task.daysOffset);
 
-            await tasksService.create(event.tenantId, {
-                title: `${task.title} – ${event.leadName}`,
-                description: `Project task for ${event.leadName}. Proposal: ${event.quoteNumber}`,
-                priority: task.priority,
-                assignedToId: event.salesRepId || lead.assignedToId || undefined,
-                dueDate: dueDate.toISOString(),
-            });
+            await automationIdempotencyService.runOnce(
+                event.tenantId,
+                `${event.tenantId}:proposal.accepted:Proposal:${event.proposalId}:stage5-task:${task.title}`,
+                { eventName: 'proposal.accepted', entityType: 'Proposal', entityId: event.proposalId, actionType: `stage5-task:${task.title}` },
+                async () => tasksService.create(event.tenantId, {
+                    title: `${task.title} – ${event.leadName}`,
+                    description: `Project task for ${event.leadName}. Proposal: ${event.quoteNumber}`,
+                    priority: task.priority,
+                    assignedToId: event.salesRepId || lead.assignedToId || undefined,
+                    dueDate: dueDate.toISOString(),
+                }),
+            );
         }
 
         logger.info('[Stage5] 14 project tasks created', {
@@ -505,15 +511,21 @@ export class Stage5ConversionWorkflowService {
 
         // ── Internal notification: Sales Rep ────────────────────────────
         if (event.ownerUserId) {
-            await notificationsService.create({
-                tenantId: event.tenantId,
-                userId: event.ownerUserId,
-                title: '🎉 Proposal Signed!',
-                message: `${event.leadName} signed the proposal! Client conversion complete.`,
-                type: 'SUCCESS',
-                actionUrl: clientId ? `/clients/${clientId}` : `/leads/${event.leadId}`,
-                actionLabel: clientId ? 'View Client' : 'View Lead',
-            });
+            const ownerUserId = event.ownerUserId;
+            await automationIdempotencyService.runOnce(
+                event.tenantId,
+                `${event.tenantId}:proposal.accepted:Proposal:${event.proposalId}:owner-notification`,
+                { eventName: 'proposal.accepted', entityType: 'Proposal', entityId: event.proposalId, actionType: 'owner-notification' },
+                async () => notificationsService.create({
+                    tenantId: event.tenantId,
+                    userId: ownerUserId,
+                    title: '🎉 Proposal Signed!',
+                    message: `${event.leadName} signed the proposal! Client conversion complete.`,
+                    type: 'SUCCESS',
+                    actionUrl: clientId ? `/clients/${clientId}` : `/leads/${event.leadId}`,
+                    actionLabel: clientId ? 'View Client' : 'View Lead',
+                }),
+            );
         }
 
         // ── Internal notification: All admins (Project Manager + Accounts) ──
@@ -527,24 +539,34 @@ export class Stage5ConversionWorkflowService {
 
         for (const admin of admins) {
             // Project Manager notification
-            await notificationsService.create({
-                tenantId: event.tenantId,
-                userId: admin.userId,
-                title: '📋 New Project Created',
-                message: `New roofing project for ${event.leadName}. Contract value: $${event.total.toLocaleString()}.`,
-                type: 'INFO',
-                metadata: { clientId, proposalId: event.proposalId },
-            });
+            await automationIdempotencyService.runOnce(
+                event.tenantId,
+                `${event.tenantId}:proposal.accepted:Proposal:${event.proposalId}:admin-project-notification:${admin.userId}`,
+                { eventName: 'proposal.accepted', entityType: 'Proposal', entityId: event.proposalId, actionType: `admin-project-notification:${admin.userId}` },
+                async () => notificationsService.create({
+                    tenantId: event.tenantId,
+                    userId: admin.userId,
+                    title: '📋 New Project Created',
+                    message: `New roofing project for ${event.leadName}. Contract value: $${event.total.toLocaleString()}.`,
+                    type: 'INFO',
+                    metadata: { clientId, proposalId: event.proposalId },
+                }),
+            );
 
             // Accounts notification
-            await notificationsService.create({
-                tenantId: event.tenantId,
-                userId: admin.userId,
-                title: '💰 Deposit Invoice Ready',
-                message: `Deposit invoice for ${event.leadName} is ready for review. Amount: $${Math.round(event.total * 0.33).toLocaleString()}.`,
-                type: 'INFO',
-                metadata: { clientId, proposalId: event.proposalId },
-            });
+            await automationIdempotencyService.runOnce(
+                event.tenantId,
+                `${event.tenantId}:proposal.accepted:Proposal:${event.proposalId}:admin-invoice-notification:${admin.userId}`,
+                { eventName: 'proposal.accepted', entityType: 'Proposal', entityId: event.proposalId, actionType: `admin-invoice-notification:${admin.userId}` },
+                async () => notificationsService.create({
+                    tenantId: event.tenantId,
+                    userId: admin.userId,
+                    title: '💰 Deposit Invoice Ready',
+                    message: `Deposit invoice for ${event.leadName} is ready for review. Amount: $${Math.round(event.total * 0.33).toLocaleString()}.`,
+                    type: 'INFO',
+                    metadata: { clientId, proposalId: event.proposalId },
+                }),
+            );
         }
 
         logger.info('[Stage5] Notifications sent', {

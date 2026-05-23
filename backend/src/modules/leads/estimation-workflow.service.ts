@@ -10,6 +10,7 @@ import { notificationsService } from '../notifications/notifications.service';
 import { tasksService } from '../tasks/tasks.service';
 import { calendarService } from '../calendar/calendar.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
+import { isLegacyRoofingAutomationEnabled } from '../automation/legacy-automation.guard';
 
 // ── Estimation Workflow Service ─────────────────────────────────────────
 //
@@ -39,6 +40,10 @@ export class EstimationWorkflowService {
 
     private async handleLeadQualified(event: LeadQualifiedEvent): Promise<void> {
         const ctx = { leadId: event.leadId, tenantId: event.tenantId, method: event.estimationMethod };
+        if (!(await isLegacyRoofingAutomationEnabled(event.tenantId))) {
+            logger.debug('[EstimationWorkflow] lead.qualified skipped for Sales CRM tenant', ctx);
+            return;
+        }
         logger.info('[EstimationWorkflow] lead.qualified received', ctx);
 
         try {
@@ -273,6 +278,10 @@ export class EstimationWorkflowService {
 
     private async handleInspectionCompleted(event: InspectionCompletedEvent): Promise<void> {
         const ctx = { leadId: event.leadId, tenantId: event.tenantId, inspectionId: event.inspectionId };
+        if (!(await isLegacyRoofingAutomationEnabled(event.tenantId))) {
+            logger.debug('[EstimationWorkflow] inspection.completed skipped for Sales CRM tenant', ctx);
+            return;
+        }
         logger.info('[EstimationWorkflow] inspection.completed received', ctx);
 
         await this.checkAndEmitReportsReady(event.tenantId, event.leadId);
@@ -282,6 +291,10 @@ export class EstimationWorkflowService {
 
     private async handleAIEstimateCompleted(event: AIEstimateCompletedEvent): Promise<void> {
         const ctx = { leadId: event.leadId, tenantId: event.tenantId, estimateId: event.estimateId };
+        if (!(await isLegacyRoofingAutomationEnabled(event.tenantId))) {
+            logger.debug('[EstimationWorkflow] ai_estimate.completed skipped for Sales CRM tenant', ctx);
+            return;
+        }
         logger.info('[EstimationWorkflow] ai_estimate.completed received', ctx);
 
         await this.checkAndEmitReportsReady(event.tenantId, event.leadId);

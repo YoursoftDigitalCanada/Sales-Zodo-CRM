@@ -66,6 +66,19 @@ describe('BookkeepingService', () => {
     });
     mockDb.invoicePayment.update.mockImplementation(({ data }) => Promise.resolve({ id: 'payment-1', tenantId: 'tenant-1', invoiceId: 'invoice-1', amount: 250, ...data }));
     mockDb.invoicePayment.findMany.mockResolvedValue([]);
+    mockDb.expense.findFirst.mockResolvedValue({
+      id: 'expense-1',
+      tenantId: 'tenant-1',
+      title: 'Software subscription',
+      category: 'SOFTWARE',
+      amount: 75,
+      currency: 'CAD',
+      paymentDate: new Date('2026-05-22T00:00:00.000Z'),
+      paymentMethod: 'CARD',
+      vendor: 'Vendor One',
+      receiptNumber: 'R-1',
+      status: 'APPROVED',
+    });
     mockDb.client.findFirst.mockResolvedValue({ id: 'client-1', tenantId: 'tenant-1' });
     mockDb.project.findFirst.mockResolvedValue({ id: 'project-1', tenantId: 'tenant-1' });
   });
@@ -284,7 +297,7 @@ describe('BookkeepingService', () => {
 
     await bookkeepingService.syncInvoicePayment('tenant-1', 'payment-1');
 
-    expect(mockDb.bookkeepingTransaction.update).toHaveBeenCalledWith({ where: { id: 'tx-1' }, data: { status: 'VOID', isReconciled: false } });
+    expect(mockDb.bookkeepingTransaction.update).toHaveBeenCalledWith({ where: { id: 'tx-1' }, data: { status: 'VOID', isReconciled: false, metadata: { syncStatus: 'voided' } } });
   });
 
   it('refunded payment creates a refund reversal transaction', async () => {
@@ -335,7 +348,7 @@ describe('BookkeepingService', () => {
 
     await bookkeepingService.syncInvoicePayment('tenant-1', 'payment-1');
 
-    expect(mockDb.bookkeepingTransaction.update).toHaveBeenCalledWith({ where: { id: 'tx-1' }, data: { status: 'VOID', isReconciled: false } });
+    expect(mockDb.bookkeepingTransaction.update).toHaveBeenCalledWith({ where: { id: 'tx-1' }, data: { status: 'VOID', isReconciled: false, metadata: { syncStatus: 'voided' } } });
   });
 
   it('reconciled failed payment creates reversal instead of silently mutating the reconciled transaction', async () => {
@@ -353,6 +366,123 @@ describe('BookkeepingService', () => {
     expect(mockDb.bookkeepingTransaction.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ type: 'REFUND', sourceType: 'INVOICE_PAYMENT_REVERSAL', sourceId: 'payment-1:FAILED:250' }),
     }));
+  });
+
+  it('approved expense creates a synced expense transaction once', async () => {
+    mockDb.bookkeepingAccount.count.mockResolvedValue(1);
+    mockDb.bookkeepingAccount.findFirst.mockResolvedValue({ id: 'account-1', tenantId: 'tenant-1', name: 'Bank Account', type: 'ASSET' });
+    mockDb.bookkeepingCategory.findFirst.mockResolvedValue({ id: 'category-1', tenantId: 'tenant-1', name: 'Software', type: 'EXPENSE' });
+    mockDb.bookkeepingTransaction.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'tx-1', tenantId: 'tenant-1', sourceType: 'EXPENSE', sourceId: 'expense-1', status: 'POSTED', accountId: 'account-1' })
+      .mockResolvedValueOnce({ id: 'tx-1', tenantId: 'tenant-1', sourceType: 'EXPENSE', sourceId: 'expense-1', status: 'POSTED', accountId: 'account-1', amount: 75 });
+
+    await bookkeepingService.syncExpense('tenant-1', 'expense-1');
+    await bookkeepingService.syncExpense('tenant-1', 'expense-1');
+
+    expect(mockDb.bookkeepingTransaction.create).toHaveBeenCalledTimes(1);
+    expect(mockDb.bookkeepingTransaction.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        tenantId: 'tenant-1',
+        type: 'EXPENSE',
+        sourceType: 'EXPENSE',
+        sourceId: 'expense-1',
+        amount: 75,
+        status: 'POSTED',
+        metadata: expect.objectContaining({ syncStatus: 'synced' }),
+      }),
+    }));
+  });
+
+  it('draft expense creates a pending needs-review transaction', async () => {
+    mockDb.bookkeepingAccount.count.mockResolvedValue(1);
+    mockDb.expense.findFirst.mockResolvedValueOnce({
+      id: 'expense-1',
+      tenantId: 'tenant-1',
+      title: 'Draft expense',
+      category: 'SOFTWARE',
+      amount: 75,
+      currency: 'CAD',
+      paymentDate: new Date('2026-05-22T00:00:00.000Z'),
+      paymentMethod: 'CARD',
+      status: 'DRAFT',
+    });
+    mockDb.bookkeepingAccount.findFirst.mockResolvedValue({ id: 'account-1', tenantId: 'tenant-1', name: 'Bank Account', type: 'ASSET' });
+    mockDb.bookkeepingCategory.findFirst.mockResolvedValue({ id: 'category-1', tenantId: 'tenant-1', name: 'Software', type: 'EXPENSE' });
+    mockDb.bookkeepingTransaction.findFirst.mockResolvedValue(null);
+
+    await bookkeepingService.syncExpense('tenant-1', 'expense-1');
+
+    expect(mockDb.bookkeepingTransaction.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'PENDING', metadata: expect.objectContaining({ syncStatus: 'needs_review' }) }),
+    }));
+  });
+
+  it('updated expense updates unreconciled source transaction safely', async () => {
+    mockDb.bookkeepingAccount.count.mockResolvedValue(1);
+    mockDb.bookkeepingAccount.findFirst.mockResolvedValue({ id: 'account-1', tenantId: 'tenant-1', name: 'Bank Account', type: 'ASSET' });
+    mockDb.bookkeepingCategory.findFirst.mockResolvedValue({ id: 'category-1', tenantId: 'tenant-1', name: 'Software', type: 'EXPENSE' });
+    mockDb.bookkeepingTransaction.findFirst.mockResolvedValueOnce({
+      id: 'tx-1',
+      tenantId: 'tenant-1',
+      sourceType: 'EXPENSE',
+      sourceId: 'expense-1',
+      status: 'POSTED',
+      accountId: 'account-1',
+      amount: 50,
+    }).mockResolvedValueOnce({
+      id: 'tx-1',
+      tenantId: 'tenant-1',
+      sourceType: 'EXPENSE',
+      sourceId: 'expense-1',
+      status: 'POSTED',
+      accountId: 'account-1',
+      amount: 50,
+    });
+
+    await bookkeepingService.syncExpense('tenant-1', 'expense-1');
+
+    expect(mockDb.bookkeepingTransaction.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'tx-1' },
+      data: expect.objectContaining({ amount: 75, metadata: expect.objectContaining({ syncStatus: 'synced' }) }),
+    }));
+  });
+
+  it('deleted expense reverses safely when source transaction is reconciled', async () => {
+    mockDb.bookkeepingAccount.count.mockResolvedValue(1);
+    mockDb.bookkeepingAccount.findFirst.mockResolvedValue({ id: 'account-1', tenantId: 'tenant-1', name: 'Bank Account', type: 'ASSET' });
+    mockDb.expense.findFirst.mockResolvedValueOnce(null);
+    mockDb.bookkeepingTransaction.findFirst
+      .mockResolvedValueOnce({ id: 'tx-1', tenantId: 'tenant-1', sourceType: 'EXPENSE', sourceId: 'expense-1', status: 'RECONCILED', isReconciled: true, accountId: 'account-1', amount: 75, currency: 'CAD', description: 'Software subscription', expenseId: 'expense-1' })
+      .mockResolvedValueOnce(null);
+
+    await bookkeepingService.syncExpense('tenant-1', 'expense-1');
+
+    expect(mockDb.bookkeepingTransaction.update).not.toHaveBeenCalledWith({ where: { id: 'tx-1' }, data: expect.objectContaining({ status: 'VOID' }) });
+    expect(mockDb.bookkeepingTransaction.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        type: 'ADJUSTMENT',
+        sourceType: 'EXPENSE_REVERSAL',
+        sourceId: 'expense-1:VOIDED:75',
+        metadata: expect.objectContaining({ syncStatus: 'reversed' }),
+      }),
+    }));
+  });
+
+  it('source idempotency prevents duplicate active bookkeeping entries', async () => {
+    mockDb.bookkeepingTransaction.findFirst.mockResolvedValueOnce({ id: 'tx-existing', tenantId: 'tenant-1', sourceType: 'CUSTOM_SOURCE', sourceId: 'source-1', status: 'POSTED' });
+
+    const result = await bookkeepingService.createTransaction('tenant-1', {
+      type: 'INCOME',
+      sourceType: 'CUSTOM_SOURCE',
+      sourceId: 'source-1',
+      description: 'Idempotent source',
+      amount: 100,
+      transactionDate: '2026-05-22',
+    });
+
+    expect(result.id).toBe('tx-existing');
+    expect(mockDb.bookkeepingTransaction.create).not.toHaveBeenCalled();
   });
 
   it('payment reversal lookup is tenant-scoped', async () => {

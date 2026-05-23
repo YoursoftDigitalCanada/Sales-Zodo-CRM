@@ -73,6 +73,14 @@ function csvEscape(value: unknown) {
   return `"${str.replace(/"/g, '""')}"`;
 }
 
+function withSyncStatus(metadata: Record<string, any> | null | undefined, syncStatus: 'synced' | 'failed' | 'needs_review' | 'voided' | 'reversed') {
+  return { ...(metadata || {}), syncStatus };
+}
+
+function isReconciled(tx: Record<string, any> | null | undefined) {
+  return Boolean(tx && (tx.status === 'RECONCILED' || tx.isReconciled));
+}
+
 export class BookkeepingService {
   async setup(tenantId: string, actorUserId?: string) {
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
@@ -251,13 +259,32 @@ export class BookkeepingService {
       const invoice = await prisma.invoice.findFirst({ where: { id: data.invoiceId, tenantId } });
       if (!invoice) throw new BadRequestError('Invoice does not belong to this tenant', ErrorCodes.INVALID_INPUT);
     }
+    if (data.paymentId || data.sourceType === 'INVOICE_PAYMENT') {
+      const paymentId = data.paymentId || data.sourceId;
+      if (paymentId) {
+        const payment = await db().invoicePayment.findFirst({ where: { id: paymentId, tenantId } });
+        if (!payment) throw new BadRequestError('Invoice payment does not belong to this tenant', ErrorCodes.INVALID_INPUT);
+      }
+    }
     if (data.expenseId) {
       const expense = await prisma.expense.findFirst({ where: { id: data.expenseId, tenantId } });
+      if (!expense) throw new BadRequestError('Expense does not belong to this tenant', ErrorCodes.INVALID_INPUT);
+    }
+    if (data.sourceType === 'EXPENSE' && data.sourceId && data.sourceId !== data.expenseId) {
+      const expense = await prisma.expense.findFirst({ where: { id: data.sourceId, tenantId } });
       if (!expense) throw new BadRequestError('Expense does not belong to this tenant', ErrorCodes.INVALID_INPUT);
     }
     if (data.clientId) {
       const client = await prisma.client.findFirst({ where: { id: data.clientId, tenantId } });
       if (!client) throw new BadRequestError('Client does not belong to this tenant', ErrorCodes.INVALID_INPUT);
+    }
+    if (data.companyId) {
+      const company = await prisma.client.findFirst({ where: { id: data.companyId, tenantId } });
+      if (!company) throw new BadRequestError('Company/account does not belong to this tenant', ErrorCodes.INVALID_INPUT);
+    }
+    if (data.contactId) {
+      const contact = await (prisma as any).contact.findFirst({ where: { id: data.contactId, tenantId } });
+      if (!contact) throw new BadRequestError('Contact does not belong to this tenant', ErrorCodes.INVALID_INPUT);
     }
     if (data.projectId) {
       const project = await prisma.project.findFirst({ where: { id: data.projectId, tenantId } });
@@ -268,6 +295,10 @@ export class BookkeepingService {
   async createTransaction(tenantId: string, data: Record<string, any>, actorUserId?: string) {
     const amount = requirePositiveAmount(data.amount);
     await this.validateTransactionLinks(tenantId, data);
+    if (data.sourceType && data.sourceId && data.skipSourceIdempotency !== true) {
+      const existing = await db().bookkeepingTransaction.findFirst({ where: { tenantId, sourceType: data.sourceType, sourceId: data.sourceId } });
+      if (existing) return existing;
+    }
     const transactionNumber = data.transactionNumber || await this.nextNumber(tenantId, 'BT');
     const created = await db().bookkeepingTransaction.create({
       data: {
@@ -303,7 +334,7 @@ export class BookkeepingService {
   async updateTransaction(id: string, tenantId: string, data: Record<string, any>, actorUserId?: string) {
     const existing = await this.getTransaction(id, tenantId);
     if (existing.status === 'VOID') throw new BadRequestError('Void transactions cannot be edited', ErrorCodes.INVALID_INPUT);
-    if (existing.status === 'RECONCILED' || existing.isReconciled) throw new BadRequestError('Unreconcile this transaction before editing or voiding it.', ErrorCodes.INVALID_INPUT);
+    if (isReconciled(existing)) throw new BadRequestError('Unreconcile this transaction before editing or voiding it.', ErrorCodes.INVALID_INPUT);
     await this.validateTransactionLinks(tenantId, data);
     if (existing.status === 'POSTED' && existing.accountId) await this.applyTransactionBalance(existing, -1);
     const updated = await db().bookkeepingTransaction.update({ where: { id }, data: { ...data, amount: data.amount !== undefined ? requirePositiveAmount(data.amount) : undefined, transactionDate: data.transactionDate ? toDate(data.transactionDate) : undefined } });
@@ -314,10 +345,10 @@ export class BookkeepingService {
 
   async voidTransaction(id: string, tenantId: string, actorUserId?: string) {
     const existing = await this.getTransaction(id, tenantId);
-    if (existing.status === 'RECONCILED' || existing.isReconciled) throw new BadRequestError('Unreconcile this transaction before editing or voiding it.', ErrorCodes.INVALID_INPUT);
+    if (isReconciled(existing)) throw new BadRequestError('Unreconcile this transaction before editing or voiding it.', ErrorCodes.INVALID_INPUT);
     if (existing.status === 'VOID') return existing;
     if (existing.status !== 'VOID' && existing.status === 'POSTED' && existing.accountId) await this.applyTransactionBalance(existing, -1);
-    const updated = await db().bookkeepingTransaction.update({ where: { id }, data: { status: 'VOID', isReconciled: false } });
+    const updated = await db().bookkeepingTransaction.update({ where: { id }, data: { status: 'VOID', isReconciled: false, metadata: withSyncStatus(existing.metadata, 'voided') } });
     activityLogger.log({ tenantId, entityType: 'BookkeepingTransaction', entityId: id, action: 'STATUS_CHANGE', module: 'bookkeeping', description: 'Voided bookkeeping transaction', userId: actorUserId });
     return updated;
   }
@@ -325,13 +356,14 @@ export class BookkeepingService {
   async voidSourceTransaction(tenantId: string, sourceType: string, sourceId: string, actorUserId?: string) {
     const existing = await db().bookkeepingTransaction.findFirst({ where: { tenantId, sourceType, sourceId } });
     if (!existing) return null;
+    if (isReconciled(existing)) return this.createSourceReversalTransaction(tenantId, existing, toNumber(existing.amount), 'VOIDED', actorUserId);
     return this.voidTransaction(existing.id, tenantId, actorUserId);
   }
 
   private async reverseOrVoidSourceTransaction(tenantId: string, sourceType: string, sourceId: string, amount: number, reason: string, actorUserId?: string) {
     const existing = await db().bookkeepingTransaction.findFirst({ where: { tenantId, sourceType, sourceId } });
     if (!existing) return null;
-    if (existing.status === 'RECONCILED' || existing.isReconciled) {
+    if (isReconciled(existing)) {
       return this.createPaymentReversalTransaction(tenantId, existing, amount, reason, actorUserId);
     }
     return this.voidTransaction(existing.id, tenantId, actorUserId);
@@ -358,7 +390,39 @@ export class BookkeepingService {
       projectId: original.projectId || null,
       invoiceId: original.invoiceId || null,
       status: 'POSTED',
-      metadata: { originalTransactionId: original.id, originalSourceType: original.sourceType, originalSourceId: original.sourceId, reason },
+      metadata: withSyncStatus({ originalTransactionId: original.id, originalSourceType: original.sourceType, originalSourceId: original.sourceId, reason }, 'reversed'),
+      skipSourceIdempotency: true,
+    }, actorUserId);
+  }
+
+  private async createSourceReversalTransaction(tenantId: string, original: Record<string, any>, amount: number, reason: string, actorUserId?: string) {
+    const reversalAmount = requirePositiveAmount(amount);
+    const sourceType = `${original.sourceType || 'SOURCE'}_REVERSAL`;
+    const sourceId = `${original.sourceId || original.id}:${reason}:${serializeMoney(reversalAmount)}`;
+    const existing = await db().bookkeepingTransaction.findFirst({ where: { tenantId, sourceType, sourceId } });
+    if (existing) return existing;
+    const type = original.type === 'INCOME' ? 'REFUND' : 'ADJUSTMENT';
+    return this.createTransaction(tenantId, {
+      accountId: original.accountId || null,
+      categoryId: original.categoryId || null,
+      vendorId: original.vendorId || null,
+      type,
+      sourceType,
+      sourceId,
+      description: `${original.type === 'INCOME' ? 'Revenue' : 'Expense'} ${reason.toLowerCase().replace(/_/g, ' ')} reversal for ${original.description || original.sourceId || original.id}`,
+      amount: reversalAmount,
+      currency: original.currency || 'CAD',
+      transactionDate: new Date(),
+      paymentMethod: original.paymentMethod || null,
+      reference: original.reference || null,
+      clientId: original.clientId || null,
+      projectId: original.projectId || null,
+      invoiceId: original.invoiceId || null,
+      expenseId: original.expenseId || null,
+      fileId: original.fileId || null,
+      status: 'POSTED',
+      metadata: withSyncStatus({ originalTransactionId: original.id, originalSourceType: original.sourceType, originalSourceId: original.sourceId, reason }, 'reversed'),
+      skipSourceIdempotency: true,
     }, actorUserId);
   }
 
@@ -734,6 +798,8 @@ export class BookkeepingService {
       projectId: payment.projectId,
       invoiceId: payment.invoiceId,
       status: 'POSTED',
+      metadata: withSyncStatus({ paymentId: payment.id, paymentStatus: payment.status || 'SUCCESSFUL' }, 'synced'),
+      skipSourceIdempotency: true,
     };
   }
 
@@ -760,6 +826,9 @@ export class BookkeepingService {
     const category = await this.defaultCategory(tenantId, categoryName, 'EXPENSE') || await this.defaultCategory(tenantId, 'Other Expense', 'EXPENSE');
     const vendor = expense.vendor ? await this.findOrCreateVendor(tenantId, expense.vendor) : null;
     const existing = await db().bookkeepingTransaction.findFirst({ where: { tenantId, sourceType: 'EXPENSE', sourceId: expense.id } });
+    const expenseStatus = String(expense.status || '').toUpperCase();
+    const shouldVoid = ['REJECTED', 'VOID', 'VOIDED', 'DELETED', 'CANCELLED', 'CANCELED'].includes(expenseStatus);
+    const posted = ['APPROVED', 'PAID', 'REIMBURSED', 'POSTED'].includes(expenseStatus);
     const data = {
       accountId: account?.id || null,
       categoryId: category?.id || null,
@@ -774,9 +843,20 @@ export class BookkeepingService {
       paymentMethod: expense.paymentMethod,
       reference: expense.receiptNumber || null,
       expenseId: expense.id,
-      status: expense.status === 'REJECTED' ? 'VOID' : 'POSTED',
+      status: shouldVoid ? 'VOID' : posted ? 'POSTED' : 'PENDING',
+      metadata: withSyncStatus({ expenseId: expense.id, expenseStatus: expense.status || null }, shouldVoid ? 'voided' : posted ? 'synced' : 'needs_review'),
+      skipSourceIdempotency: true,
     };
-    if (existing) return this.updateTransaction(existing.id, tenantId, data);
+    if (existing) {
+      if (shouldVoid) return this.voidSourceTransaction(tenantId, 'EXPENSE', expense.id);
+      if (isReconciled(existing)) {
+        const changedAmount = serializeMoney(toNumber(existing.amount) - toNumber(expense.amount));
+        if (changedAmount !== 0) return this.createSourceReversalTransaction(tenantId, existing, Math.abs(changedAmount), changedAmount > 0 ? 'EXPENSE_REDUCED' : 'EXPENSE_INCREASED');
+        return existing;
+      }
+      return this.updateTransaction(existing.id, tenantId, data);
+    }
+    if (shouldVoid) return null;
     return this.createTransaction(tenantId, data);
   }
 

@@ -312,6 +312,13 @@ const navigationItems: NavigationItem[] = [
     permissionModule: "invoices",
   },
   {
+    title: "Expenses",
+    icon: Receipt,
+    path: "/expenses",
+    featureId: "finance",
+    permissionModule: "expenses",
+  },
+  {
     title: "Bookkeeping",
     icon: Landmark,
     path: "/bookkeeping",
@@ -442,6 +449,12 @@ const navigationItems: NavigationItem[] = [
     icon: Plug,
     path: "/integrations",
     permissionModule: "settings",
+  },
+  {
+    title: "Automation",
+    icon: Zap,
+    path: "/automation",
+    permissionModule: "automation",
   },
   {
     title: "Help Center",

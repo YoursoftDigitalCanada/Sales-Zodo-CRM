@@ -47,11 +47,13 @@ export const ROUTE_MODULE_MAP: Record<string, readonly string[]> = {
     'proposals': ['finance', 'quotes', 'proposals'],
     'services': ['finance'],
     'expenses': ['finance'],
+    'bookkeeping': ['finance'],
     'bookings': ['finance'],
 
     // File Management
     'files': ['files'],
     'folders': ['files'],        // sub-feature of files
+    'documents': ['files'],
 
     // Communication
     'emails': ['letterbox', 'communication'],
@@ -68,6 +70,7 @@ export const ROUTE_MODULE_MAP: Record<string, readonly string[]> = {
 
     // Analytics
     'analytics': ['analytics'],
+    'automation': ['automation'],
 
     // Applications
     'applications': ['projects'],
@@ -80,6 +83,7 @@ export const ROUTE_MODULE_MAP: Record<string, readonly string[]> = {
     'construction-estimator': ['roof-estimator'],
     'copilot': ['ai-assistant'],
     'eagleview': ['roof-estimator'],
+    'roofing-automation': ['roofing-automation'],
 };
 
 /**
@@ -105,6 +109,7 @@ export const DEFAULT_ENABLED_MODULES: string[] = [
     'chat',
     'support',
     'analytics',
+    'automation',
     'team',
     'roof-estimator',
     'ai-assistant',

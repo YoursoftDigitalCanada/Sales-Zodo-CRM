@@ -219,6 +219,13 @@ export const PERMISSIONS = {
   AUDIT_VIEW: 'audit.view',
   AUDIT_EXPORT: 'audit.export',
 
+  // Automation
+  AUTOMATION_VIEW: 'automation.view',
+  AUTOMATION_CREATE: 'automation.create',
+  AUTOMATION_UPDATE: 'automation.update',
+  AUTOMATION_DELETE: 'automation.delete',
+  AUTOMATION_RUN: 'automation.run',
+
   // Support
   SUPPORT_VIEW: 'support.view',
   SUPPORT_CREATE: 'support.create',
@@ -462,6 +469,13 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   // Audit
   { code: PERMISSIONS.AUDIT_VIEW, name: 'View Audit Logs', description: 'View audit logs', module: 'audit', action: 'view' },
   { code: PERMISSIONS.AUDIT_EXPORT, name: 'Export Audit Logs', description: 'Export audit data', module: 'audit', action: 'export' },
+
+  // Automation
+  { code: PERMISSIONS.AUTOMATION_VIEW, name: 'View Automation', description: 'View automation rules, runs, and reminders', module: 'automation', action: 'view' },
+  { code: PERMISSIONS.AUTOMATION_CREATE, name: 'Create Automation', description: 'Create automation rules and schedules', module: 'automation', action: 'create' },
+  { code: PERMISSIONS.AUTOMATION_UPDATE, name: 'Update Automation', description: 'Edit and enable automation rules', module: 'automation', action: 'update' },
+  { code: PERMISSIONS.AUTOMATION_DELETE, name: 'Delete Automation', description: 'Delete automation rules', module: 'automation', action: 'delete' },
+  { code: PERMISSIONS.AUTOMATION_RUN, name: 'Run Automation', description: 'Run automation triggers and process reminders', module: 'automation', action: 'run' },
 
   // Support
   { code: PERMISSIONS.SUPPORT_VIEW, name: 'View Support Tickets', description: 'View support tickets and updates', module: 'support', action: 'view' },

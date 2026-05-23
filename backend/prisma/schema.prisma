@@ -3593,9 +3593,12 @@ model InvoicePayment {
   
   // Payment details
   amount          Decimal       @db.Decimal(15, 2)
+  refundAmount    Decimal       @default(0) @db.Decimal(15, 2)
   paymentMethod   PaymentMethod
   paymentDate     DateTime      @default(now())
   status          String        @default("SUCCESSFUL")
+  refundedAt      DateTime?
+  voidedAt        DateTime?
   reference       String?       // Transaction ID, check number, e-transfer ref, etc.
   notes           String?
   
@@ -4055,6 +4058,7 @@ model BookkeepingReconciliation {
   reconciledAt             DateTime?
   reconciledById           String?
   notes                    String?
+  metadata                 Json     @default("{}")
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
@@ -6548,4 +6552,96 @@ model WebsiteAnalyticsWebhookDelivery {
   @@index([eventType])
   @@index([status])
   @@index([tenantId, integrationId])
+}
+
+// ============================================================================
+// SALES CRM AUTOMATION MODULE
+// ============================================================================
+
+model SalesAutomationRule {
+  id               String   @id @default(uuid())
+  tenantId         String
+  name             String
+  description      String?
+  triggerType      String
+  conditions       Json     @default("{}")
+  actions          Json     @default("[]")
+  isActive         Boolean  @default(true)
+  priority         Int      @default(100)
+  runOncePerEntity Boolean  @default(false)
+  createdById      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([triggerType])
+  @@index([tenantId, triggerType])
+}
+
+model SalesAutomationRun {
+  id          String    @id @default(uuid())
+  tenantId    String
+  ruleId      String?
+  triggerType String
+  entityType  String
+  entityId    String
+  status      String    @default("PENDING")
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  error       String?   @db.Text
+  input       Json      @default("{}")
+  output      Json      @default("{}")
+  createdAt   DateTime  @default(now())
+
+  @@index([tenantId])
+  @@index([ruleId])
+  @@index([triggerType])
+  @@index([entityType, entityId])
+  @@index([tenantId, entityType, entityId])
+}
+
+model SalesReminderSchedule {
+  id            String    @id @default(uuid())
+  tenantId      String
+  entityType    String
+  entityId      String
+  reminderType  String
+  scheduledFor  DateTime
+  status        String    @default("SCHEDULED")
+  channel       String    @default("NOTIFICATION")
+  payload       Json      @default("{}")
+  sentAt        DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([entityType, entityId])
+  @@index([scheduledFor])
+  @@index([status])
+  @@index([tenantId, scheduledFor, status])
+  @@index([tenantId, entityType, entityId])
+  @@unique([tenantId, entityType, entityId, reminderType, channel])
+}
+
+model AutomationIdempotencyKey {
+  id             String    @id @default(uuid())
+  tenantId       String
+  key            String
+  eventName      String?
+  entityType     String?
+  entityId       String?
+  actionType     String
+  status         String    @default("STARTED")
+  result         Json      @default("{}")
+  error          String?   @db.Text
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([eventName])
+  @@index([entityType, entityId])
+  @@index([tenantId, entityType, entityId])
+  @@unique([tenantId, key])
 }

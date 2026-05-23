@@ -42,6 +42,15 @@ export interface LeadConvertedEvent {
     ownerUserId?: string;
 }
 
+export interface LeadStaleEvent {
+    tenantId: string;
+    leadId: string;
+    leadName?: string;
+    ownerId?: string;
+    ownerUserId?: string;
+    daysInactive?: number;
+}
+
 export interface ClientCreatedEvent {
     tenantId: string;
     clientId: string;
@@ -93,10 +102,13 @@ export interface InvoiceUpdatedEvent {
 
 export interface PaymentReceivedEvent {
     tenantId: string;
+    paymentId?: string;
     invoiceId: string;
     invoiceNumber: string;
     clientId?: string;
     amount?: number | string;
+    refundAmount?: number | string;
+    status?: string;
     paidByUserId?: string;
 }
 
@@ -132,6 +144,12 @@ export interface ExpenseApprovedEvent {
     expenseId: string;
     amount?: number | string;
     approvedById: string;
+}
+
+export interface ExpenseDeletedEvent {
+    tenantId: string;
+    expenseId: string;
+    deletedById?: string;
 }
 
 export interface ClientUpdatedEvent {
@@ -434,6 +452,20 @@ export interface ProposalGeneratedEvent {
     ownerUserId?: string;
 }
 
+export interface ContractSentEvent {
+    tenantId: string;
+    contractId: string;
+    contractNumber?: string;
+    clientId?: string;
+    projectId?: string;
+    quoteId?: string;
+    ownerUserId?: string;
+}
+
+export interface ContractSignedEvent extends ContractSentEvent {
+    signedAt?: Date;
+}
+
 export interface DealWonEvent {
     tenantId: string;
     leadId: string;
@@ -467,6 +499,7 @@ export interface ProjectStageChangedEvent {
 export interface CRMEventMap {
     'lead.created': LeadCreatedEvent;
     'lead.statusChanged': LeadStatusChangedEvent;
+    'lead.stale': LeadStaleEvent;
     'lead.converted': LeadConvertedEvent;
     'client.created': ClientCreatedEvent;
     'client.updated': ClientUpdatedEvent;
@@ -476,11 +509,16 @@ export interface CRMEventMap {
     'invoice.updated': InvoiceUpdatedEvent;
     'invoice.statusChanged': InvoiceStatusChangedEvent;
     'payment.received': PaymentReceivedEvent;
+    'payment.failed': PaymentReceivedEvent;
+    'payment.refunded': PaymentReceivedEvent;
+    'payment.partially_refunded': PaymentReceivedEvent;
+    'payment.voided': PaymentReceivedEvent;
     'booking.created': BookingCreatedEvent;
     'booking.confirmed': BookingConfirmedEvent;
     'booking.cancelled': BookingCancelledEvent;
     'expense.created': ExpenseCreatedEvent;
     'expense.approved': ExpenseApprovedEvent;
+    'expense.deleted': ExpenseDeletedEvent;
     'task.completed': TaskCompletedEvent;
     // New events (MP4/MP6)
     'contact.created': ContactCreatedEvent;
@@ -514,6 +552,8 @@ export interface CRMEventMap {
     'proposal.viewed': ProposalViewedEvent;
     'proposal.accepted': ProposalAcceptedEvent;
     'proposal.declined': ProposalDeclinedEvent;
+    'contract.sent': ContractSentEvent;
+    'contract.signed': ContractSignedEvent;
     'deal.won': DealWonEvent;
     // Stage 6: Project Execution
     'project.stageChanged': ProjectStageChangedEvent;

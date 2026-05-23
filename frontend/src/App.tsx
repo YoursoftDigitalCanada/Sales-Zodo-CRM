@@ -102,7 +102,8 @@ import SubscriptionsPage from "./pages/Subscriptions";
 import PricingPlansPage from "./pages/PricingPlans";
 import PaymentsPage from "./pages/Payments";
 import BookkeepingPage from "./pages/Bookkeeping";
-// import ExpensesPage from "./pages/Expenses";
+import AutomationPage from "./pages/Automation";
+import ExpensesPage from "./pages/Expenses";
 
 // import EcommercePage from "./pages/Ecommerce";
 // import ServicesPage from "./pages/ServicesPage";
@@ -239,11 +240,11 @@ const resolveCreateRoute = (pathname: string): {
   permissionModule?: string;
   action?: "create";
 } | null => {
-  if (pathname.startsWith("/quotes")) return { path: "/quotes?action=create", permissionModule: "quotes", action: "create" };
+  if (pathname.startsWith("/quotes") || pathname.startsWith("/proposals")) return { path: "/proposals?action=create", permissionModule: "quotes", action: "create" };
   if (pathname.startsWith("/invoice")) return { path: "/invoice/create", permissionModule: "invoices", action: "create" };
   if (pathname.startsWith("/client-list")) return { path: "/client-list/add", permissionModule: "clients", action: "create" };
-  if (pathname.startsWith("/projects") || pathname.startsWith("/kanban")) return { path: "/projects/add", permissionModule: "projects", action: "create" };
-  if (pathname.startsWith("/inspections")) return { path: "/inspections/new", permissionModule: "leads", action: "create" };
+  if (pathname.startsWith("/projects") || pathname.startsWith("/kanban") || pathname.startsWith("/deals") || pathname.startsWith("/pipeline")) return { path: "/deals?create=1", permissionModule: "projects", action: "create" };
+  if (pathname.startsWith("/inspections")) return { path: "/leads", permissionModule: "leads", action: "create" };
   if (pathname.startsWith("/roof-estimator")) return { path: "/roof-estimator/new", permissionModule: "roof-estimator", action: "create" };
   return null;
 };
@@ -653,7 +654,9 @@ const AppRoutes = () => {
         <Route path="/subscriptions" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><SubscriptionsPage /></AccessGuard>} />
         <Route path="/pricing-plans" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><PricingPlansPage /></AccessGuard>} />
         <Route path="/payments" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><PaymentsPage /></AccessGuard>} />
+        <Route path="/expenses" element={<AccessGuard featureId="finance" permissionModule="expenses" action="view"><ExpensesPage /></AccessGuard>} />
         <Route path="/bookkeeping" element={<AccessGuard featureId="finance" permissionModule="bookkeeping" action="view"><BookkeepingPage /></AccessGuard>} />
+        <Route path="/automation" element={<AccessGuard permissionModule="automation" action="view"><AutomationPage /></AccessGuard>} />
         <Route path="/accounts" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><OrganizationsPage /></AccessGuard>} />
         <Route path="/organizations" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><OrganizationsPage /></AccessGuard>} />
         <Route path="/notes" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><NotesPage /></AccessGuard>} />
@@ -807,24 +810,10 @@ const AppRoutes = () => {
             </AccessGuard>
           }
         />
-        {/* DRAFT — re-enable next year */}
-        {/* <Route
-          path="/expenses"
-          element={
-            <FeatureGuard featureId="invoices">
-              <ExpensesPage />
-            </FeatureGuard>
-          }
-        /> */}
-
         {/* ========== QUOTES ROUTE ========== */}
         <Route
           path="/quotes"
-          element={
-            <AccessGuard featureId="finance" permissionModule="quotes" action="view">
-              <QuotesPage />
-            </AccessGuard>
-          }
+          element={<Navigate to={`/proposals${location.search}`} replace />}
         />
 
         {/* ========== NOTIFICATIONS ROUTE ========== */}

@@ -5,6 +5,25 @@ import { ErrorCodes } from '../../common/errors/errorCodes';
 import { eventBus } from '../../common/events/event-bus';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { bookkeepingService } from '../bookkeeping/bookkeeping.service';
+import { logger } from '../../common/utils/logger';
+
+function logBookkeepingSyncFailure(tenantId: string, sourceType: string, sourceId: string, error: unknown) {
+    logger.warn('[Expenses] Bookkeeping sync failed', {
+        tenantId,
+        sourceType,
+        sourceId,
+        error: (error as Error)?.message || String(error),
+    });
+    activityLogger.log({
+        tenantId,
+        entityType: sourceType,
+        entityId: sourceId,
+        action: 'UPDATE',
+        module: 'bookkeeping',
+        description: `Bookkeeping sync failed for ${sourceType.toLowerCase()}`,
+        metadata: { error: (error as Error)?.message || String(error) },
+    });
+}
 
 export class ExpensesService {
     async create(tenantId: string, data: CreateExpenseDto, submittedById?: string) {
@@ -27,7 +46,7 @@ export class ExpensesService {
             metadata: { amount: (expense as any).amount, category: (expense as any).category },
         });
 
-        bookkeepingService.syncExpense(tenantId, dto.id).catch(() => { });
+        bookkeepingService.syncExpense(tenantId, dto.id).catch((error) => logBookkeepingSyncFailure(tenantId, 'Expense', dto.id, error));
 
         return dto;
     }
@@ -60,6 +79,8 @@ export class ExpensesService {
             metadata: { updatedFields: Object.keys(data) },
         });
 
+        bookkeepingService.syncExpense(tenantId, dto.id).catch((error) => logBookkeepingSyncFailure(tenantId, 'Expense', dto.id, error));
+
         return dto;
     }
 
@@ -74,6 +95,11 @@ export class ExpensesService {
         });
 
         await expensesRepository.delete(id, tenantId);
+        bookkeepingService.voidSourceTransaction(tenantId, 'EXPENSE', id).catch((error) => logBookkeepingSyncFailure(tenantId, 'Expense', id, error));
+        eventBus.emit('expense.deleted', {
+            tenantId,
+            expenseId: id,
+        });
     }
 
     async approve(id: string, tenantId: string, approvedById: string) {
@@ -97,7 +123,7 @@ export class ExpensesService {
             metadata: { newStatus: 'APPROVED' },
         });
 
-        bookkeepingService.syncExpense(tenantId, dto.id).catch(() => { });
+        bookkeepingService.syncExpense(tenantId, dto.id).catch((error) => logBookkeepingSyncFailure(tenantId, 'Expense', dto.id, error));
 
         return dto;
     }

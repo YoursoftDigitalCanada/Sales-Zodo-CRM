@@ -19,13 +19,16 @@ const mockDb = {
     update: jest.fn(),
   },
   invoice: { findFirst: jest.fn() },
+  invoicePayment: { findFirst: jest.fn() },
   proposal: { findFirst: jest.fn() },
   quote: { findFirst: jest.fn() },
   contract: { findFirst: jest.fn() },
   expense: { findFirst: jest.fn() },
+  bookkeepingTransaction: { findFirst: jest.fn() },
   project: { findFirst: jest.fn() },
   client: { findFirst: jest.fn() },
   contact: { findFirst: jest.fn() },
+  lead: { findFirst: jest.fn() },
 };
 
 jest.mock('../../src/config/database', () => ({
@@ -110,6 +113,38 @@ describe('DocumentsService', () => {
     }));
   });
 
+  it('normalizes supported production document type aliases', async () => {
+    mockFilesService.upload.mockResolvedValue({ id: 'file-1' });
+    mockDb.documentMetadata.findUnique.mockResolvedValue(null);
+    mockDb.documentMetadata.upsert.mockResolvedValue({});
+    mockDb.file.findFirst.mockResolvedValue({
+      id: 'file-1',
+      tenantId: 'tenant-a',
+      name: 'Payment Receipt.pdf',
+      originalName: 'Payment Receipt.pdf',
+      mimeType: 'application/pdf',
+      size: BigInt(100),
+      documentMetadata: null,
+      tags: [],
+    });
+
+    await documentsService.upload('tenant-a', { path: '/tmp/file', originalname: 'Payment Receipt.pdf', mimetype: 'application/pdf', size: 100 } as any, {
+      documentType: 'Payment Receipt',
+      visibleToClient: true,
+      requiresSignature: false,
+      expiresAt: '2026-12-31T00:00:00.000Z',
+    });
+
+    expect(mockDb.documentMetadata.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({
+        documentType: 'payment_receipt',
+        visibleToClient: true,
+        requiresSignature: false,
+        expiresAt: new Date('2026-12-31T00:00:00.000Z'),
+      }),
+    }));
+  });
+
   it('does not read documents from another tenant', async () => {
     mockDb.file.findFirst.mockResolvedValue(null);
 
@@ -188,13 +223,17 @@ describe('DocumentsService', () => {
   });
 
   it.each([
+    ['Lead', 'lead', 'lead-1'],
     ['Contract', 'contract', 'contract-1'],
     ['Invoice', 'invoice', 'invoice-1'],
+    ['Payment', 'invoicePayment', 'payment-1'],
     ['Expense', 'expense', 'expense-1'],
     ['Deal', 'project', 'deal-1'],
+    ['Account', 'client', 'account-1'],
     ['Client', 'client', 'client-1'],
     ['Company', 'client', 'company-1'],
     ['Contact', 'contact', 'contact-1'],
+    ['BookkeepingTransaction', 'bookkeepingTransaction', 'txn-1'],
   ])('valid %s document links validate against the tenant-scoped %s model', async (entityType, modelName, entityId) => {
     mockDb.file.findFirst
       .mockResolvedValueOnce({ id: 'file-1', tenantId: 'tenant-a', name: `${entityType}.pdf`, originalName: `${entityType}.pdf`, mimeType: 'application/pdf', size: BigInt(100), tags: [] })
@@ -207,5 +246,14 @@ describe('DocumentsService', () => {
     await documentsService.link('file-1', 'tenant-a', { linkedEntityType: entityType, linkedEntityId: entityId });
 
     expect(delegate.findFirst).toHaveBeenCalledWith({ where: { id: entityId, tenantId: 'tenant-a' } });
+  });
+
+  it('rejects cross-tenant payment links', async () => {
+    mockDb.file.findFirst.mockResolvedValue({ id: 'file-1', tenantId: 'tenant-a', name: 'Receipt.pdf', originalName: 'Receipt.pdf', mimeType: 'application/pdf', size: BigInt(100), tags: [] });
+    mockDb.documentMetadata.findUnique.mockResolvedValue(null);
+    mockDb.invoicePayment.findFirst.mockResolvedValue(null);
+
+    await expect(documentsService.link('file-1', 'tenant-a', { linkedEntityType: 'Payment', linkedEntityId: 'payment-other' })).rejects.toThrow('Payment does not belong to this tenant');
+    expect(mockDb.invoicePayment.findFirst).toHaveBeenCalledWith({ where: { id: 'payment-other', tenantId: 'tenant-a' } });
   });
 });

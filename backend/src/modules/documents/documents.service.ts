@@ -19,6 +19,31 @@ const DEFAULT_CATEGORIES = [
   ['Other', '#64748B'],
 ] as const;
 
+const DOCUMENT_TYPE_ALIASES: Record<string, string> = {
+  pdf: 'pdf',
+  proposalpdf: 'proposal_pdf',
+  proposal: 'proposal_pdf',
+  acceptedproposalpdf: 'accepted_proposal_pdf',
+  acceptedproposal: 'accepted_proposal_pdf',
+  contractpdf: 'contract_pdf',
+  contract: 'contract_pdf',
+  signedcontractpdf: 'signed_contract_pdf',
+  signedcontract: 'signed_contract_pdf',
+  invoicepdf: 'invoice_pdf',
+  invoice: 'invoice_pdf',
+  paymentreceipt: 'payment_receipt',
+  expensereceipt: 'expense_receipt',
+  receipt: 'expense_receipt',
+  generalattachment: 'general_attachment',
+  attachment: 'general_attachment',
+  image: 'image',
+  document: 'document',
+  spreadsheet: 'spreadsheet',
+  video: 'video',
+  archive: 'archive',
+  other: 'other',
+};
+
 function cleanString(value: unknown, max = 500) {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
@@ -46,6 +71,16 @@ function fileType(file: any) {
   if (['doc', 'docx', 'txt'].includes(ext) || mime.includes('word') || mime.startsWith('text/')) return 'document';
   if (['zip', 'rar', '7z'].includes(ext)) return 'archive';
   return 'other';
+}
+
+function documentTypeKey(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function normalizeDocumentType(value: unknown, fallback?: string | null) {
+  const raw = cleanString(value, 80);
+  if (!raw) return fallback || null;
+  return DOCUMENT_TYPE_ALIASES[documentTypeKey(raw)] || raw;
 }
 
 function toDocument(file: any) {
@@ -84,14 +119,16 @@ function toDocument(file: any) {
 
 const LINKED_ENTITY_MODELS: Record<string, { model: string; label: string }> = {
   client: { model: 'client', label: 'Client' },
-  account: { model: 'client', label: 'Client' },
-  company: { model: 'client', label: 'Client' },
-  organization: { model: 'client', label: 'Client' },
+  account: { model: 'client', label: 'Company' },
+  company: { model: 'client', label: 'Company' },
+  organization: { model: 'client', label: 'Company' },
   contact: { model: 'contact', label: 'Contact' },
   lead: { model: 'lead', label: 'Lead' },
   deal: { model: 'project', label: 'Deal' },
   project: { model: 'project', label: 'Deal' },
   invoice: { model: 'invoice', label: 'Invoice' },
+  payment: { model: 'invoicePayment', label: 'Payment' },
+  invoicepayment: { model: 'invoicePayment', label: 'Payment' },
   expense: { model: 'expense', label: 'Expense' },
   bookkeepingtransaction: { model: 'bookkeepingTransaction', label: 'BookkeepingTransaction' },
   quote: { model: 'quote', label: 'Quote' },
@@ -140,7 +177,7 @@ export class DocumentsService {
     if (starred !== null) where.isStarred = starred;
     if (shared !== null) where.isShared = shared;
     const metadataWhere: Record<string, unknown> = {};
-    if (documentType && documentType !== 'all') metadataWhere.documentType = documentType;
+    if (documentType && documentType !== 'all') metadataWhere.documentType = normalizeDocumentType(documentType);
     if (categoryId && categoryId !== 'all') metadataWhere.categoryId = categoryId;
     if (linkedEntityType) metadataWhere.linkedEntityType = normalizeLinkedEntityType(linkedEntityType);
     if (linkedEntityId) metadataWhere.linkedEntityId = linkedEntityId;
@@ -299,7 +336,7 @@ export class DocumentsService {
       tenantId,
       fileId,
       categoryId,
-      documentType: body.documentType !== undefined || body.type !== undefined ? cleanString(body.documentType || body.type, 80) : existing?.documentType || null,
+      documentType: body.documentType !== undefined || body.type !== undefined ? normalizeDocumentType(body.documentType || body.type, existing?.documentType || null) : existing?.documentType || null,
       description: body.description !== undefined ? cleanString(body.description, 1000) : existing?.description || null,
       version: body.version !== undefined ? Math.max(Number(body.version || 1), 1) : existing?.version || 1,
       linkedEntityType: linkedEntity.type,

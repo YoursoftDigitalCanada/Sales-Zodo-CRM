@@ -112,6 +112,10 @@ export class FilesService {
         const file = await filesRepository.findByShareLink(shareLink);
         if (!file) throw new NotFoundError('Shared file not found or link expired', ErrorCodes.RESOURCE_NOT_FOUND);
 
+        if (!file.isShared) {
+            throw new ForbiddenError('Share link is disabled');
+        }
+
         // Check expiry
         if (file.shareExpiresAt && new Date() > file.shareExpiresAt) {
             throw new ForbiddenError('Share link has expired');

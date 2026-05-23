@@ -101,7 +101,7 @@ export class FilesRepository {
 
     async findByShareLink(shareLink: string) {
         return prisma.file.findFirst({
-            where: { shareLink, deletedAt: null },
+            where: { shareLink, isShared: true, deletedAt: null },
             include: fileInclude,
         });
     }

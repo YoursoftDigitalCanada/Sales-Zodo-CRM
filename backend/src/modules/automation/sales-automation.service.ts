@@ -668,7 +668,9 @@ class SalesAutomationService {
     if (triggerType === 'invoice.paid' || triggerType === 'payment.received') {
       const invoiceId = input.invoiceId || entityId;
       await this.cancelEntityReminders(input.tenantId, 'Invoice', invoiceId);
-      const payment = await db.invoicePayment.findFirst({ where: { tenantId: input.tenantId, invoiceId }, orderBy: { paymentDate: 'desc' } });
+      const payment = input.paymentId
+        ? await db.invoicePayment.findFirst({ where: { tenantId: input.tenantId, id: input.paymentId, invoiceId } })
+        : await db.invoicePayment.findFirst({ where: { tenantId: input.tenantId, invoiceId }, orderBy: { paymentDate: 'desc' } });
       if (payment) await automationIdempotencyService.runOnce(
         input.tenantId,
         `${input.tenantId}:${invoiceId}:${payment.id}:bookkeeping-sync`,

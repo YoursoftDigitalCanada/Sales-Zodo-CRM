@@ -12,8 +12,11 @@ import { prisma } from '../../config/database';
 import { config } from '../../config';
 import { communicationLogService } from '../communication-logs/communication-log.service';
 import { bookkeepingService } from '../bookkeeping/bookkeeping.service';
+import { filesService } from '../files/files.service';
+import { documentsService } from '../documents/documents.service';
 import fs from 'fs/promises';
 import path from 'path';
+import crypto from 'crypto';
 
 interface CompanyProfile {
     companyName: string;
@@ -59,6 +62,24 @@ export class InvoicesService {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    private logBookkeepingSyncFailure(tenantId: string, sourceType: string, sourceId: string, error: unknown) {
+        logger.warn('[Invoices] Bookkeeping sync failed', {
+            tenantId,
+            sourceType,
+            sourceId,
+            error: (error as Error)?.message || String(error),
+        });
+        activityLogger.log({
+            tenantId,
+            entityType: sourceType,
+            entityId: sourceId,
+            action: 'UPDATE',
+            module: 'bookkeeping',
+            description: `Bookkeeping sync failed for ${sourceType.toLowerCase()}`,
+            metadata: { error: (error as Error)?.message || String(error) },
+        });
     }
 
     private async getCompanyProfile(tenantId: string): Promise<CompanyProfile> {
@@ -767,6 +788,66 @@ export class InvoicesService {
         return { buffer, fileName };
     }
 
+    async saveInvoicePdfToDocuments(tenantId: string, invoiceId: string, actorUserId?: string) {
+        const invoice = await invoicesRepository.findById(invoiceId, tenantId);
+        if (!invoice) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
+
+        const existing = await (prisma as any).file.findFirst({
+            where: {
+                tenantId,
+                deletedAt: null,
+                documentMetadata: {
+                    is: {
+                        linkedEntityType: 'Invoice',
+                        linkedEntityId: invoiceId,
+                        documentType: 'pdf',
+                    },
+                },
+            },
+        });
+        if (existing) return documentsService.get(existing.id, tenantId);
+
+        const { buffer, fileName } = await this.generatePdf(invoiceId, tenantId);
+        const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const uploadDir = path.join(process.cwd(), 'uploads', tenantId);
+        await fs.mkdir(uploadDir, { recursive: true });
+        const storagePath = path.join(uploadDir, `${crypto.randomUUID()}-${safeFileName}`);
+        await fs.writeFile(storagePath, buffer);
+
+        const saved = await filesService.create(tenantId, {
+            name: fileName,
+            originalName: fileName,
+            mimeType: 'application/pdf',
+            size: buffer.length,
+            path: storagePath,
+            extension: '.pdf',
+            checksum: crypto.createHash('sha256').update(buffer).digest('hex'),
+            clientId: (invoice as any).clientId || (invoice as any).client?.id || null,
+            projectId: (invoice as any).projectId || null,
+            quoteId: (invoice as any).quoteId || null,
+        });
+        const categories = await documentsService.categories(tenantId);
+        const invoicesCategory = categories.find((category: any) => String(category.name).toLowerCase() === 'invoices');
+        const document = await documentsService.update(saved.id, tenantId, {
+            categoryId: invoicesCategory?.id,
+            documentType: 'pdf',
+            linkedEntityType: 'Invoice',
+            linkedEntityId: invoiceId,
+            description: 'Invoice PDF',
+        });
+        activityLogger.log({
+            tenantId,
+            entityType: 'Invoice',
+            entityId: invoiceId,
+            action: 'UPDATE',
+            module: 'documents',
+            description: 'Saved invoice PDF to Documents',
+            userId: actorUserId,
+            metadata: { fileId: saved.id },
+        });
+        return document;
+    }
+
     async getMany(tenantId: string, query: InvoiceQueryDto) {
         const { data, total } = await invoicesRepository.findMany(tenantId, query);
         const page = query.page || 1, limit = query.limit || 20;
@@ -979,7 +1060,7 @@ export class InvoicesService {
         const newStatus = amount >= amountDue ? 'PAID' : 'PARTIALLY_PAID';
 
         if (latestPayment?.id) {
-            bookkeepingService.syncInvoicePayment(tenantId, latestPayment.id).catch(() => { });
+            bookkeepingService.syncInvoicePayment(tenantId, latestPayment.id).catch((error) => this.logBookkeepingSyncFailure(tenantId, 'InvoicePayment', latestPayment.id, error));
         }
 
         if (clientId) {
@@ -1047,6 +1128,7 @@ export class InvoicesService {
 
         eventBus.emit('payment.received', {
             tenantId,
+            paymentId: latestPayment?.id,
             invoiceId: id,
             invoiceNumber: (existing as any).invoiceNumber || '',
             clientId,
@@ -1143,6 +1225,108 @@ export class InvoicesService {
         }
 
         return dto;
+    }
+
+    async updatePaymentStatus(invoiceId: string, paymentId: string, tenantId: string, data: Record<string, any>, actorUserId?: string) {
+        const payment = await prisma.invoicePayment.findFirst({
+            where: { id: paymentId, invoiceId, tenantId },
+            include: { invoice: true },
+        });
+        if (!payment) throw new NotFoundError('Invoice payment not found', ErrorCodes.RESOURCE_NOT_FOUND);
+
+        const status = String(data.status || '').toUpperCase();
+        const normalizedStatus = status === 'VOID' ? 'VOIDED' : status === 'CANCELLED' || status === 'CANCELED' ? 'VOIDED' : status;
+        const paymentAmount = Number(payment.amount || 0);
+        const refundAmount = normalizedStatus === 'PARTIALLY_REFUNDED'
+            ? Number(data.refundAmount || 0)
+            : normalizedStatus === 'REFUNDED'
+                ? paymentAmount
+                : 0;
+
+        if (normalizedStatus === 'PARTIALLY_REFUNDED' && (!Number.isFinite(refundAmount) || refundAmount <= 0 || refundAmount >= paymentAmount)) {
+            throw new BadRequestError('Partial refund amount must be greater than zero and less than the payment amount', ErrorCodes.INVALID_INPUT);
+        }
+
+        const updatedPayment = await prisma.invoicePayment.update({
+            where: { id: payment.id },
+            data: {
+                status: normalizedStatus,
+                refundAmount,
+                refundedAt: ['REFUNDED', 'PARTIALLY_REFUNDED'].includes(normalizedStatus) ? new Date() : null,
+                voidedAt: normalizedStatus === 'VOIDED' ? new Date() : null,
+                notes: data.notes ?? payment.notes,
+            } as any,
+            include: { invoice: true },
+        });
+
+        await this.recalculateInvoicePaymentTotals(invoiceId, tenantId);
+        await this.applyPaymentBookkeepingLifecycle(tenantId, updatedPayment as any, actorUserId);
+
+        const eventName = this.paymentEventName(normalizedStatus);
+        eventBus.emit(eventName as any, {
+            tenantId,
+            paymentId,
+            invoiceId,
+            invoiceNumber: (payment.invoice as any)?.invoiceNumber || '',
+            clientId: payment.clientId,
+            amount: payment.amount,
+            refundAmount,
+            status: normalizedStatus,
+            paidByUserId: actorUserId,
+        });
+
+        activityLogger.log({
+            tenantId,
+            entityType: 'InvoicePayment',
+            entityId: paymentId,
+            action: 'STATUS_CHANGE',
+            module: 'payments',
+            description: `Payment status changed to ${normalizedStatus}`,
+            userId: actorUserId,
+            metadata: { invoiceId, oldStatus: payment.status, newStatus: normalizedStatus, refundAmount },
+        });
+
+        return this.getById(invoiceId, tenantId);
+    }
+
+    private async recalculateInvoicePaymentTotals(invoiceId: string, tenantId: string) {
+        const invoice = await prisma.invoice.findFirst({ where: { id: invoiceId, tenantId } });
+        if (!invoice) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        const payments = await prisma.invoicePayment.findMany({ where: { invoiceId, tenantId } });
+        const amountPaid = payments.reduce((sum: number, payment: any) => {
+            const status = String(payment.status || '').toUpperCase();
+            if (status === 'SUCCESSFUL') return sum + Number(payment.amount || 0);
+            if (status === 'PARTIALLY_REFUNDED') return sum + Math.max(Number(payment.amount || 0) - Number(payment.refundAmount || 0), 0);
+            return sum;
+        }, 0);
+        const total = Number((invoice as any).total || 0);
+        const amountDue = Math.max(total - amountPaid, 0);
+        return prisma.invoice.update({
+            where: { id_tenantId: { id: invoiceId, tenantId } },
+            data: {
+                amountPaid,
+                amountDue,
+                paidAt: amountDue === 0 ? ((invoice as any).paidAt || new Date()) : null,
+                status: amountDue === 0 ? 'PAID' as any : amountPaid > 0 ? 'PARTIALLY_PAID' as any : 'SENT' as any,
+            },
+        });
+    }
+
+    private async applyPaymentBookkeepingLifecycle(tenantId: string, payment: Record<string, any>, actorUserId?: string) {
+        const status = String(payment.status || '').toUpperCase();
+        if (status === 'SUCCESSFUL') return bookkeepingService.syncInvoicePayment(tenantId, payment.id);
+        if (status === 'REFUNDED') return bookkeepingService.createInvoicePaymentReversal(tenantId, payment.id, Number(payment.amount || 0), 'REFUNDED', actorUserId);
+        if (status === 'PARTIALLY_REFUNDED') return bookkeepingService.createInvoicePaymentReversal(tenantId, payment.id, Number(payment.refundAmount || 0), 'PARTIALLY_REFUNDED', actorUserId);
+        if (['FAILED', 'VOIDED', 'VOID', 'CANCELLED', 'CANCELED'].includes(status)) return bookkeepingService.syncInvoicePayment(tenantId, payment.id);
+        return null;
+    }
+
+    private paymentEventName(status: string) {
+        if (status === 'FAILED') return 'payment.failed';
+        if (status === 'REFUNDED') return 'payment.refunded';
+        if (status === 'PARTIALLY_REFUNDED') return 'payment.partially_refunded';
+        if (['VOIDED', 'VOID', 'CANCELLED', 'CANCELED'].includes(status)) return 'payment.voided';
+        return 'payment.received';
     }
 
     async markAsPaid(id: string, tenantId: string, actorUserId?: string) {

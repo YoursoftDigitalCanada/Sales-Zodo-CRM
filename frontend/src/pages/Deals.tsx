@@ -586,6 +586,10 @@ function DealDetailDialog({
           <Button size="sm" onClick={() => window.location.assign(`/calls?dealId=${current.id}`)} variant="outline"><Phone size={14} className="mr-2" />Log Call</Button>
           <Button size="sm" onClick={() => onStageAction(current, "Demo Scheduled")} variant="outline"><CalendarDays size={14} className="mr-2" />Schedule Demo</Button>
           <Button size="sm" onClick={() => onStageAction(current, "Proposal Sent")} variant="outline"><FileText size={14} className="mr-2" />Send Proposal</Button>
+          <Button size="sm" onClick={() => window.location.assign(`/proposals?dealId=${current.id}&create=1`)} variant="outline"><FileText size={14} className="mr-2" />Create Proposal</Button>
+          <Button size="sm" onClick={() => window.location.assign(`/contracts?dealId=${current.id}&create=1`)} variant="outline"><FileText size={14} className="mr-2" />Create Contract</Button>
+          <Button size="sm" onClick={() => window.location.assign(`/invoice/create?dealId=${current.id}`)} variant="outline"><CircleDollarSign size={14} className="mr-2" />Create Invoice</Button>
+          <Button size="sm" onClick={() => window.location.assign(`/documents?linkedEntityType=Deal&linkedEntityId=${current.id}`)} variant="outline"><FileText size={14} className="mr-2" />Upload Document</Button>
           <Button size="sm" onClick={() => window.location.assign(`/notes?dealId=${current.id}`)} variant="outline"><StickyNote size={14} className="mr-2" />Add Note</Button>
           <Button size="sm" onClick={() => window.location.assign(`/sequences?targetType=Deal&targetId=${current.id}`)} variant="outline"><GitBranch size={14} className="mr-2" />Start Sequence</Button>
           <Button size="sm" onClick={() => onStageAction(current, "Won")} className="bg-[#0F766E] hover:bg-[#115E59]"><CheckCircle2 size={14} className="mr-2" />Mark Won</Button>
@@ -845,6 +849,9 @@ export default function DealsPage() {
         <DropdownMenuItem onClick={() => openEdit(deal)}><Pencil size={14} className="mr-2" />Edit</DropdownMenuItem>
         <DropdownMenuItem onClick={() => requestStageMove(deal, "Demo Scheduled")}><CalendarDays size={14} className="mr-2" />Schedule Demo</DropdownMenuItem>
         <DropdownMenuItem onClick={() => requestStageMove(deal, "Proposal Sent")}><FileText size={14} className="mr-2" />Send Proposal</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => window.location.assign(`/proposals?dealId=${deal.id}&create=1`)}><FileText size={14} className="mr-2" />Create Proposal</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => window.location.assign(`/invoice/create?dealId=${deal.id}`)}><CircleDollarSign size={14} className="mr-2" />Create Invoice</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => window.location.assign(`/documents?linkedEntityType=Deal&linkedEntityId=${deal.id}`)}><FileText size={14} className="mr-2" />Upload Document</DropdownMenuItem>
         <DropdownMenuItem onClick={() => requestStageMove(deal, "Won")}><CheckCircle2 size={14} className="mr-2" />Mark Won</DropdownMenuItem>
         <DropdownMenuItem onClick={() => requestStageMove(deal, "Lost")}>Mark Lost</DropdownMenuItem>
         <DropdownMenuItem onClick={() => taskMutation.mutate(deal)}><StickyNote size={14} className="mr-2" />Create Task</DropdownMenuItem>

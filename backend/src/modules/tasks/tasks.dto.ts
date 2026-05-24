@@ -57,6 +57,7 @@ export interface TaskQueryDto {
     assignedToId?: string;
     projectId?: string;
     clientId?: string;
+    leadId?: string;
     contactId?: string;
     sortBy?: 'title' | 'createdAt' | 'dueDate' | 'priority';
     sortOrder?: 'asc' | 'desc';

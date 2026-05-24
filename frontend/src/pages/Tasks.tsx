@@ -170,7 +170,7 @@ interface Task {
   completedDate?: Date;
   projectId?: string;
   project?: string;
-  referenceDoctype?: "CRM Lead" | "CRM Deal" | "CRM Organization" | "Contact" | "";
+  referenceDoctype?: "Lead" | "CRM Lead" | "Deal" | "CRM Deal" | "Organization" | "CRM Organization" | "Contact" | "Proposal" | "Contract" | "Invoice" | "";
   referenceDocname?: string;
   projectColor?: string;
   category: string;
@@ -616,7 +616,7 @@ const TaskListItem = ({
 
             {/* Meta Info */}
             <div className="flex items-center flex-wrap gap-3 mt-2">
-              {/* Project */}
+              {/* Deal */}
               {task.project && (
                 <span
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium"
@@ -872,7 +872,7 @@ const TaskCard = ({
       </div>
 
       <div className="p-4 pt-5">
-        {/* Project & Category */}
+        {/* Deal & Category */}
         <div className="flex items-center gap-2 mb-3">
           {task.project && (
             <span
@@ -1157,8 +1157,7 @@ const KanbanColumn = ({
                       {task.title}
                     </h4>
                   </div>
-
-                  {/* Project */}
+                  {/* Deal */}
                   {task.project && (
                     <span
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium mb-2"
@@ -1527,19 +1526,19 @@ const TaskFormDialog = ({
             </div>
           </div>
 
-          {/* Project & Category */}
+          {/* Deal & Category */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#475569]">Project</Label>
+              <Label className="text-sm font-medium text-[#475569]">Deal</Label>
               <Select
                 value={formData.project}
                 onValueChange={(val) => setFormData({ ...formData, project: val })}
               >
                 <SelectTrigger className="h-11 rounded-md">
-                  <SelectValue placeholder="Select project" />
+                  <SelectValue placeholder="Select deal" />
                 </SelectTrigger>
                 <SelectContent className="rounded-md">
-                  <SelectItem value="none" className="rounded-md">No Project</SelectItem>
+                  <SelectItem value="none" className="rounded-md">No Deal</SelectItem>
                   {projects.map((project) => (
                     <SelectItem key={project.id} value={project.id} className="rounded-md">
                       <div className="flex items-center gap-2">
@@ -1590,19 +1589,22 @@ const TaskFormDialog = ({
                 </SelectTrigger>
                 <SelectContent className="rounded-md">
                   <SelectItem value="none" className="rounded-md">No Reference</SelectItem>
-                  <SelectItem value="CRM Lead" className="rounded-md">Lead</SelectItem>
-                  <SelectItem value="CRM Deal" className="rounded-md">Deal</SelectItem>
-                  <SelectItem value="CRM Organization" className="rounded-md">Organization</SelectItem>
+                  <SelectItem value="Lead" className="rounded-md">Lead</SelectItem>
+                  <SelectItem value="Deal" className="rounded-md">Deal</SelectItem>
+                  <SelectItem value="Organization" className="rounded-md">Organization</SelectItem>
                   <SelectItem value="Contact" className="rounded-md">Contact</SelectItem>
+                  <SelectItem value="Proposal" className="rounded-md">Proposal</SelectItem>
+                  <SelectItem value="Contract" className="rounded-md">Contract</SelectItem>
+                  <SelectItem value="Invoice" className="rounded-md">Invoice</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-[#475569]">Reference ID / Name</Label>
+              <Label className="text-sm font-medium text-[#475569]">Reference ID</Label>
               <Input
                 value={formData.referenceDocname}
                 onChange={(e) => setFormData({ ...formData, referenceDocname: e.target.value })}
-                placeholder="Linked record id or name"
+                placeholder="Linked record ID"
                 className="h-11 rounded-md"
               />
             </div>
@@ -1885,6 +1887,7 @@ const TaskDetailsDialog = ({
   task,
   onEdit,
   onDelete,
+  onOpenRelated,
   onToggleComplete,
   onToggleStar,
   onToggleSubtask,
@@ -1896,6 +1899,7 @@ const TaskDetailsDialog = ({
   task: Task | null;
   onEdit: () => void;
   onDelete: () => void;
+  onOpenRelated: (task: Task) => void;
   onToggleComplete: () => void;
   onToggleStar: () => void;
   onToggleSubtask: (subtaskId: string) => void;
@@ -1911,6 +1915,7 @@ const TaskDetailsDialog = ({
   const StatusIcon = statusInfo.icon;
   const subtaskProgress = getSubtaskProgress(task.subtasks);
   const overdue = isOverdue(task);
+  const hasRelatedRecord = Boolean(task.projectId || (task.referenceDoctype && task.referenceDocname));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -1986,10 +1991,10 @@ const TaskDetailsDialog = ({
 
           {/* Details Grid */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Project */}
+            {/* Deal */}
             {task.project && (
               <div className="p-4 bg-[#F7F7FB] rounded-md">
-                <p className="text-xs text-[#475569] mb-1">Project</p>
+                <p className="text-xs text-[#475569] mb-1">Deal</p>
                 <div className="flex items-center gap-2">
                   <div
                     className="w-3 h-3 rounded-full"
@@ -2048,6 +2053,18 @@ const TaskDetailsDialog = ({
               </div>
             )}
           </div>
+
+          {hasRelatedRecord && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full rounded-md"
+              onClick={() => onOpenRelated(task)}
+            >
+              <ExternalLink size={16} className="mr-2" />
+              Open related record
+            </Button>
+          )}
 
           {/* Assignees */}
           {task.assignees && task.assignees.length > 0 && (
@@ -2310,10 +2327,10 @@ const TaskSidebar = ({
         </div>
       </div>
 
-      {/* Projects */}
+      {/* Deals */}
       <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-[#0F172A]">Projects</h3>
+          <h3 className="font-semibold text-[#0F172A]">Deals</h3>
           <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={onCreateProject}>
             <Plus size={14} />
           </Button>
@@ -2395,7 +2412,7 @@ const TasksPage = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch projects from API for sidebar
+  // Fetch deals from API for sidebar
   const [apiProjects, setApiProjects] = useState<Project[]>([]);
   useEffect(() => {
     const fetchProjects = async () => {
@@ -2510,7 +2527,7 @@ const TasksPage = () => {
       );
     }
 
-    // Filter by project
+    // Filter by deal
     if (selectedProject) {
       result = result.filter((t) => t.projectId === selectedProject);
     }
@@ -2749,6 +2766,48 @@ const TasksPage = () => {
     });
   };
 
+  const handleOpenRelatedRecord = (task: Task) => {
+    if (task.projectId) {
+      navigate(`/deals/${task.projectId}`);
+      return;
+    }
+
+    const referenceType = task.referenceDoctype;
+    const referenceId = task.referenceDocname;
+    if (!referenceType || !referenceId) {
+      toast({
+        title: "No related record",
+        description: "This task is not linked to a Sales CRM record.",
+      });
+      return;
+    }
+
+    const routeByType: Record<string, string> = {
+      Lead: `/leads/${referenceId}`,
+      "CRM Lead": `/leads/${referenceId}`,
+      Contact: `/contacts/${referenceId}`,
+      Organization: `/organizations/${referenceId}`,
+      "CRM Organization": `/organizations/${referenceId}`,
+      Deal: `/deals/${referenceId}`,
+      "CRM Deal": `/deals/${referenceId}`,
+      Proposal: `/proposals/${referenceId}`,
+      Contract: `/contracts/${referenceId}`,
+      Invoice: `/invoices/${referenceId}`,
+    };
+
+    const route = routeByType[referenceType];
+    if (route) {
+      navigate(route);
+      return;
+    }
+
+    toast({
+      title: "Unsupported related record",
+      description: "This task uses a system reference that cannot be opened from the task page.",
+      variant: "destructive",
+    });
+  };
+
   // Stats
   const todoCount = tasks.filter((t) => t.status === "todo").length;
   const inProgressCount = tasks.filter((t) => t.status === "in_progress").length;
@@ -2890,7 +2949,7 @@ const TasksPage = () => {
                 quickFilter={quickFilter}
                 onSelectQuickFilter={(f) => setQuickFilter(f === quickFilter ? "" : f)}
                 projects={projects}
-                onCreateProject={() => navigate("/projects/add")}
+                onCreateProject={() => navigate("/deals?create=1")}
               />
             </div>
 
@@ -3150,6 +3209,7 @@ const TasksPage = () => {
         onDelete={() => {
           setIsDeleteAlertOpen(true);
         }}
+        onOpenRelated={handleOpenRelatedRecord}
         onToggleComplete={() => {
           if (currentTask) {
             handleToggleComplete(currentTask);

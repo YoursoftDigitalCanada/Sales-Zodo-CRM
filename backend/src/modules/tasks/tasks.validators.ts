@@ -2,6 +2,25 @@ import { z } from 'zod';
 
 const taskStatusSchema = z.enum(['TODO', 'PENDING', 'IN_PROGRESS', 'REVIEW', 'COMPLETED', 'DONE', 'CANCELLED', 'BLOCKED']);
 const taskPrioritySchema = z.enum(['LOW', 'NORMAL', 'MEDIUM', 'HIGH', 'URGENT']);
+const taskReferenceDoctypeSchema = z.enum([
+    'Lead',
+    'CRM Lead',
+    'Contact',
+    'Client',
+    'Organization',
+    'CRM Organization',
+    'Deal',
+    'Project',
+    'CRM Deal',
+    'Proposal',
+    'Contract',
+    'Invoice',
+    'DealAutomation',
+    'SalesAutomation',
+    'SalesReminderSchedule',
+    'SubscriptionAutomation',
+    'SalesAI',
+]).optional().nullable();
 const taskSubtaskSchema = z.object({
     id: z.string().uuid().optional(),
     title: z.string().trim().min(1).max(255),
@@ -25,7 +44,8 @@ export const createTaskSchema = z.object({
         projectId: z.string().uuid().optional().nullable(),
         clientId: z.string().uuid().optional().nullable(),
         leadId: z.string().uuid().optional().nullable(),
-        referenceDoctype: z.string().max(100).optional().nullable(),
+        contactId: z.string().uuid().optional().nullable(),
+        referenceDoctype: taskReferenceDoctypeSchema,
         referenceDocname: z.string().max(255).optional().nullable(),
         estimatedHours: z.number().optional().nullable(),
         actualMinutes: z.number().int().min(0).optional().nullable(),
@@ -33,6 +53,9 @@ export const createTaskSchema = z.object({
         subtasks: z.array(taskSubtaskSchema).default([]),
         isStarred: z.boolean().optional(),
         isRecurring: z.boolean().optional(),
+    }).refine((data) => !data.referenceDoctype || Boolean(data.referenceDocname), {
+        message: 'Reference id is required when a reference type is selected',
+        path: ['referenceDocname'],
     }),
 });
 
@@ -49,7 +72,8 @@ export const updateTaskSchema = z.object({
         projectId: z.string().uuid().optional().nullable(),
         clientId: z.string().uuid().optional().nullable(),
         leadId: z.string().uuid().optional().nullable(),
-        referenceDoctype: z.string().max(100).optional().nullable(),
+        contactId: z.string().uuid().optional().nullable(),
+        referenceDoctype: taskReferenceDoctypeSchema,
         referenceDocname: z.string().max(255).optional().nullable(),
         estimatedHours: z.number().optional().nullable(),
         actualMinutes: z.number().int().min(0).optional().nullable(),
@@ -57,6 +81,9 @@ export const updateTaskSchema = z.object({
         subtasks: z.array(taskSubtaskSchema).optional(),
         isStarred: z.boolean().optional(),
         isRecurring: z.boolean().optional(),
+    }).refine((data) => !data.referenceDoctype || Boolean(data.referenceDocname), {
+        message: 'Reference id is required when a reference type is selected',
+        path: ['referenceDocname'],
     }),
 });
 
@@ -70,6 +97,8 @@ export const taskQuerySchema = z.object({
         assignedToId: z.string().uuid().optional(),
         projectId: z.string().uuid().optional(),
         clientId: z.string().uuid().optional(),
+        leadId: z.string().uuid().optional(),
+        contactId: z.string().uuid().optional(),
         sortBy: z.enum(['title', 'createdAt', 'dueDate', 'priority']).default('createdAt'),
         sortOrder: z.enum(['asc', 'desc']).default('desc'),
     }),

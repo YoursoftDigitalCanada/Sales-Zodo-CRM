@@ -207,7 +207,7 @@ export class TasksRepository {
     }
 
     async findMany(tenantId: string, query: TaskQueryDto, dataAccess?: DataAccessContext) {
-        const { page = 1, limit = 20, search, status, priority, assignedToId, projectId, clientId, contactId, sortBy = 'createdAt', sortOrder = 'desc' } = query;
+        const { page = 1, limit = 20, search, status, priority, assignedToId, projectId, clientId, leadId, contactId, sortBy = 'createdAt', sortOrder = 'desc' } = query;
         const baseWhere: Prisma.TaskWhereInput = {
             tenantId,
             parentTaskId: null,
@@ -216,6 +216,7 @@ export class TasksRepository {
             ...(assignedToId && { assignedToId }),
             ...(projectId && { projectId }),
             ...(clientId && { clientId }),
+            ...(leadId && { leadId }),
             ...(contactId && { referenceDoctype: 'Contact', referenceDocname: contactId }),
             ...(search && { title: { contains: search, mode: 'insensitive' as const } }),
         };
@@ -309,12 +310,42 @@ export class TasksRepository {
     }
 
     async employeeExists(employeeId: string, tenantId: string): Promise<boolean> {
-        const count = await prisma.employee.count({ where: { id: employeeId, tenantId } });
+        const count = await prisma.employee.count({ where: { id: employeeId, tenantId, isActive: true } });
         return count > 0;
     }
 
     async projectExists(projectId: string, tenantId: string): Promise<boolean> {
-        const count = await prisma.project.count({ where: { id: projectId, tenantId } });
+        const count = await prisma.project.count({ where: { id: projectId, tenantId, deletedAt: null } });
+        return count > 0;
+    }
+
+    async clientExists(clientId: string, tenantId: string): Promise<boolean> {
+        const count = await prisma.client.count({ where: { id: clientId, tenantId } });
+        return count > 0;
+    }
+
+    async leadExists(leadId: string, tenantId: string): Promise<boolean> {
+        const count = await prisma.lead.count({ where: { id: leadId, tenantId } });
+        return count > 0;
+    }
+
+    async contactExists(contactId: string, tenantId: string): Promise<boolean> {
+        const count = await prisma.contact.count({ where: { id: contactId, tenantId } });
+        return count > 0;
+    }
+
+    async proposalExists(proposalId: string, tenantId: string): Promise<boolean> {
+        const count = await prisma.proposal.count({ where: { id: proposalId, tenantId } });
+        return count > 0;
+    }
+
+    async contractExists(contractId: string, tenantId: string): Promise<boolean> {
+        const count = await prisma.contract.count({ where: { id: contractId, tenantId } });
+        return count > 0;
+    }
+
+    async invoiceExists(invoiceId: string, tenantId: string): Promise<boolean> {
+        const count = await prisma.invoice.count({ where: { id: invoiceId, tenantId } });
         return count > 0;
     }
 

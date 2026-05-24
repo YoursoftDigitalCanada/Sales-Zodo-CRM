@@ -62,7 +62,7 @@ function mapProjectError(error: unknown): never {
     throw new BadRequestError(error.message, ErrorCodes.INVALID_INPUT);
   }
 
-  throw new BadRequestError('Project operation failed', ErrorCodes.INVALID_INPUT);
+  throw new BadRequestError('Deal operation failed', ErrorCodes.INVALID_INPUT);
 }
 
 export class ProjectsService {
@@ -92,9 +92,63 @@ export class ProjectsService {
   private async getProjectDetailOrThrow(projectId: string, tenantId: string) {
     const project = await projectsRepository.findById(projectId, tenantId);
     if (!project) {
-      throw new NotFoundError('Project not found', ErrorCodes.RESOURCE_NOT_FOUND);
+      throw new NotFoundError('Deal not found', ErrorCodes.RESOURCE_NOT_FOUND);
     }
     return project;
+  }
+
+  private async validateDealReferences(tenantId: string, data: Record<string, any>, current?: Record<string, any>) {
+    const clientId = data.clientId !== undefined ? data.clientId : current?.clientId;
+    const contactId = data.contactId !== undefined ? data.contactId : current?.contactId;
+    const leadId = data.leadId !== undefined ? data.leadId : current?.leadId;
+    const ownerId = data.dealOwnerId || data.salesRepId || data.projectManagerId || current?.dealOwnerId || current?.salesRepId || current?.projectManagerId;
+    const sourceId = data.sourceId !== undefined ? data.sourceId : current?.sourceId;
+    const quoteId = data.quoteId !== undefined ? data.quoteId : current?.quoteId;
+
+    if (clientId) {
+      const client = await prisma.client.findFirst({ where: { id: clientId, tenantId }, select: { id: true } });
+      if (!client) {
+        throw new BadRequestError('Linked account does not belong to this tenant', ErrorCodes.RESOURCE_NOT_FOUND);
+      }
+    }
+
+    if (contactId) {
+      const contact = await prisma.contact.findFirst({ where: { id: contactId, tenantId }, select: { id: true, companyId: true } });
+      if (!contact) {
+        throw new BadRequestError('Linked contact does not belong to this tenant', ErrorCodes.RESOURCE_NOT_FOUND);
+      }
+      if (clientId && contact.companyId && contact.companyId !== clientId) {
+        throw new BadRequestError('Linked contact belongs to a different account', ErrorCodes.VALIDATION_FAILED);
+      }
+    }
+
+    if (leadId) {
+      const lead = await prisma.lead.findFirst({ where: { id: leadId, tenantId }, select: { id: true } });
+      if (!lead) {
+        throw new BadRequestError('Linked lead does not belong to this tenant', ErrorCodes.RESOURCE_NOT_FOUND);
+      }
+    }
+
+    if (ownerId) {
+      const owner = await prisma.employee.findFirst({ where: { id: ownerId, tenantId, isActive: true }, select: { id: true } });
+      if (!owner) {
+        throw new BadRequestError('Linked owner does not belong to this tenant', ErrorCodes.RESOURCE_NOT_FOUND);
+      }
+    }
+
+    if (sourceId) {
+      const source = await prisma.leadSource.findFirst({ where: { id: sourceId, tenantId }, select: { id: true } });
+      if (!source) {
+        throw new BadRequestError('Linked source does not belong to this tenant', ErrorCodes.RESOURCE_NOT_FOUND);
+      }
+    }
+
+    if (quoteId) {
+      const quote = await prisma.quote.findFirst({ where: { id: quoteId, tenantId }, select: { id: true } });
+      if (!quote) {
+        throw new BadRequestError('Linked proposal does not belong to this tenant', ErrorCodes.RESOURCE_NOT_FOUND);
+      }
+    }
   }
 
   async create(tenantId: string, data: Record<string, any>, createdById?: string) {
@@ -117,6 +171,7 @@ export class ProjectsService {
     });
 
     return this.guarded(async () => {
+      await this.validateDealReferences(tenantId, dto);
       await this.attachDealContactFromPayload(tenantId, dto);
       this.validateDealInput(dto);
       const deal = await projectsRepository.create(tenantId, dto, createdById);
@@ -133,7 +188,7 @@ export class ProjectsService {
       const project = await projectsRepository.createFromQuote(tenantId, quoteId, userId);
       const projectId = (project as any)?.id;
       if (!projectId) {
-        throw new NotFoundError('Project not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        throw new NotFoundError('Deal not found', ErrorCodes.RESOURCE_NOT_FOUND);
       }
       await this.syncProjectRevenueState(projectId, tenantId);
       const detail = await this.getProjectDetailOrThrow(projectId, tenantId);
@@ -226,6 +281,7 @@ export class ProjectsService {
       if (dto.dealStatus) {
         dto.dealStatus = this.canonicalDealStage(dto.dealStatus);
       }
+      await this.validateDealReferences(tenantId, dto, current as any);
       await this.attachDealContactFromPayload(tenantId, dto, current as any);
       this.validateDealInput(dto, current as any);
 
@@ -735,7 +791,7 @@ export class ProjectsService {
     await this.ensureTask(tenantId, project, {
       key: 'demo-preparation',
       title: `Prepare demo: ${project.organizationName || project.name}`,
-      description: `Prepare demo agenda, pain points, and Roofer CRM workflow for "${project.name}".`,
+      description: `Prepare demo agenda, pain points, and Sales CRM workflow for "${project.name}".`,
       dueDate: this.addDays(demoStart, -1),
       priority: 'HIGH',
       actorUserId,
@@ -789,7 +845,7 @@ export class ProjectsService {
         fromName: 'Zodo Sales',
         toAddresses: [{ email: recipient, name: project.leadName || project.organizationName || project.name }],
         subject: `Demo confirmation: ${project.organizationName || project.name}`,
-        bodyText: `Hi,\n\nYour Roofer CRM demo is scheduled for ${new Date(meeting.startTime).toLocaleString()}.\n\nWe look forward to showing how Roofer CRM can help your roofing company manage leads, accounts, proposals, and follow-ups.\n\nThanks,\nZodo Sales`,
+        bodyText: `Hi,\n\nYour Sales CRM demo is scheduled for ${new Date(meeting.startTime).toLocaleString()}.\n\nWe look forward to showing how Sales CRM can help your sales team manage leads, accounts, proposals, and follow-ups.\n\nThanks,\nZodo Sales`,
         status: 'DRAFT',
         folder: 'DRAFTS',
         isRead: true,
@@ -921,7 +977,7 @@ export class ProjectsService {
           items: {
             create: [{
               tenantId,
-              description: `Roofer CRM subscription and onboarding - ${project.organizationName || project.name}`,
+              description: `Sales CRM subscription and onboarding - ${project.organizationName || project.name}`,
               quantity: 1,
               unitPrice: total,
               total,
@@ -968,7 +1024,7 @@ export class ProjectsService {
           contactId: project.contactId || null,
           projectId: project.id,
           customMessageToClient: `Deal:${project.id}\nProposal for ${project.organizationName || project.client?.clientName || project.name}`,
-          scopeOfWork: 'Roofer CRM subscription, setup, team onboarding, and sales support.',
+          scopeOfWork: 'Sales CRM subscription, setup, team onboarding, and sales support.',
           termsAndConditions: 'Pricing and terms are valid for 30 days.',
           createdById: project.createdById || null,
           sentAt: new Date(),
@@ -1027,7 +1083,7 @@ export class ProjectsService {
         nextFollowUp: this.addDays(new Date(), 30),
         internalNotes: [
           project.client?.internalNotes,
-          `Deal "${project.name}" marked Won on ${new Date().toISOString().slice(0, 10)}. Subscription tracking started for Roofer CRM.`,
+          `Deal "${project.name}" marked Won on ${new Date().toISOString().slice(0, 10)}. Subscription tracking started for Sales CRM.`,
         ].filter(Boolean).join('\n\n'),
       },
     });
@@ -1072,7 +1128,7 @@ export class ProjectsService {
         items: {
           create: [{
             tenantId,
-            description: `Roofer CRM subscription/setup - ${project.organizationName || project.name}`,
+            description: `Sales CRM subscription/setup - ${project.organizationName || project.name}`,
             quantity: 1,
             unitPrice: total,
             amount: total,
@@ -1156,7 +1212,7 @@ export class ProjectsService {
     await this.ensureTask(tenantId, project, {
       key: 'onboarding',
       title: `Start onboarding: ${project.organizationName || project.name}`,
-      description: 'Welcome the customer, set up Roofer CRM workspace, invite users, and schedule kickoff.',
+      description: 'Welcome the customer, set up Sales CRM workspace, invite users, and schedule kickoff.',
       dueDate: this.nextBusinessDate(1, 14),
       priority: 'HIGH',
       actorUserId,

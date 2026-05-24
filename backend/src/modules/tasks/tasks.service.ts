@@ -20,7 +20,30 @@ import { activityLogger } from '../../common/services/activity-logger.service';
 import { DataAccessContext } from '../../common/access/data-access';
 
 export class TasksService {
-    async create(tenantId: string, data: CreateTaskDto, createdById?: string): Promise<TaskResponseDto> {
+    private normalizeReference(data: CreateTaskDto | UpdateTaskDto): CreateTaskDto | UpdateTaskDto {
+        if (data.contactId) {
+            return { ...data, referenceDoctype: 'Contact', referenceDocname: data.contactId };
+        }
+
+        const referenceDoctype = typeof data.referenceDoctype === 'string' ? data.referenceDoctype.trim() : data.referenceDoctype;
+        const referenceDocname = typeof data.referenceDocname === 'string' ? data.referenceDocname.trim() : data.referenceDocname;
+
+        const aliasMap: Record<string, string> = {
+            'CRM Lead': 'Lead',
+            'CRM Deal': 'Deal',
+            Project: 'Deal',
+            'CRM Organization': 'Organization',
+            Client: 'Organization',
+        };
+
+        return {
+            ...data,
+            referenceDoctype: referenceDoctype ? aliasMap[referenceDoctype] || referenceDoctype : referenceDoctype,
+            referenceDocname,
+        };
+    }
+
+    private async validateRelationships(tenantId: string, data: CreateTaskDto | UpdateTaskDto): Promise<void> {
         if (data.assignedToId) {
             const exists = await tasksRepository.employeeExists(data.assignedToId, tenantId);
             if (!exists) {
@@ -31,11 +54,67 @@ export class TasksService {
         if (data.projectId) {
             const exists = await tasksRepository.projectExists(data.projectId, tenantId);
             if (!exists) {
-                throw new BadRequestError('Project not found', ErrorCodes.RESOURCE_NOT_FOUND);
+                throw new BadRequestError('Linked deal does not belong to this tenant', ErrorCodes.RESOURCE_NOT_FOUND);
             }
         }
 
-        const task = await tasksRepository.create(tenantId, data, createdById);
+        if (data.clientId) {
+            const exists = await tasksRepository.clientExists(data.clientId, tenantId);
+            if (!exists) {
+                throw new BadRequestError('Linked organization does not belong to this tenant', ErrorCodes.RESOURCE_NOT_FOUND);
+            }
+        }
+
+        if (data.leadId) {
+            const exists = await tasksRepository.leadExists(data.leadId, tenantId);
+            if (!exists) {
+                throw new BadRequestError('Linked lead does not belong to this tenant', ErrorCodes.RESOURCE_NOT_FOUND);
+            }
+        }
+
+        if (data.contactId) {
+            const exists = await tasksRepository.contactExists(data.contactId, tenantId);
+            if (!exists) {
+                throw new BadRequestError('Linked contact does not belong to this tenant', ErrorCodes.RESOURCE_NOT_FOUND);
+            }
+        }
+
+        if (data.referenceDoctype && data.referenceDocname) {
+            await this.validateReference(tenantId, data.referenceDoctype, data.referenceDocname);
+        }
+    }
+
+    private async validateReference(tenantId: string, referenceDoctype: string, referenceDocname: string): Promise<void> {
+        if (['DealAutomation', 'SalesAutomation', 'SalesReminderSchedule', 'SubscriptionAutomation', 'SalesAI'].includes(referenceDoctype)) {
+            return;
+        }
+
+        const validators: Record<string, (id: string, tenantId: string) => Promise<boolean>> = {
+            Lead: tasksRepository.leadExists.bind(tasksRepository),
+            Contact: tasksRepository.contactExists.bind(tasksRepository),
+            Organization: tasksRepository.clientExists.bind(tasksRepository),
+            Deal: tasksRepository.projectExists.bind(tasksRepository),
+            Proposal: tasksRepository.proposalExists.bind(tasksRepository),
+            Contract: tasksRepository.contractExists.bind(tasksRepository),
+            Invoice: tasksRepository.invoiceExists.bind(tasksRepository),
+        };
+
+        const validator = validators[referenceDoctype];
+        if (!validator) {
+            throw new BadRequestError(`Unsupported task reference type: ${referenceDoctype}`, ErrorCodes.VALIDATION_FAILED);
+        }
+
+        const exists = await validator(referenceDocname, tenantId);
+        if (!exists) {
+            throw new BadRequestError(`Linked ${referenceDoctype.toLowerCase()} does not belong to this tenant`, ErrorCodes.RESOURCE_NOT_FOUND);
+        }
+    }
+
+    async create(tenantId: string, data: CreateTaskDto, createdById?: string): Promise<TaskResponseDto> {
+        const normalizedData = this.normalizeReference(data) as CreateTaskDto;
+        await this.validateRelationships(tenantId, normalizedData);
+
+        const task = await tasksRepository.create(tenantId, normalizedData, createdById);
         const dto = toTaskResponseDto(task);
 
         activityLogger.log({
@@ -43,7 +122,15 @@ export class TasksService {
             action: 'CREATE', module: 'tasks',
             description: `Created task "${(task as any).title || dto.id}"`,
             userId: createdById,
-            metadata: { title: (task as any).title, projectId: data.projectId, assignedToId: data.assignedToId },
+            metadata: {
+                title: (task as any).title,
+                projectId: normalizedData.projectId,
+                clientId: normalizedData.clientId,
+                leadId: normalizedData.leadId,
+                referenceDoctype: normalizedData.referenceDoctype,
+                referenceDocname: normalizedData.referenceDocname,
+                assignedToId: normalizedData.assignedToId,
+            },
         });
 
         return dto;
@@ -82,28 +169,17 @@ export class TasksService {
             throw new NotFoundError('Task not found', ErrorCodes.RESOURCE_NOT_FOUND);
         }
 
-        if (data.assignedToId) {
-            const exists = await tasksRepository.employeeExists(data.assignedToId, tenantId);
-            if (!exists) {
-                throw new BadRequestError('Assigned employee not found', ErrorCodes.EMPLOYEE_NOT_FOUND);
-            }
-        }
+        const normalizedData = this.normalizeReference(data) as UpdateTaskDto;
+        await this.validateRelationships(tenantId, normalizedData);
 
-        if (data.projectId) {
-            const exists = await tasksRepository.projectExists(data.projectId, tenantId);
-            if (!exists) {
-                throw new BadRequestError('Project not found', ErrorCodes.RESOURCE_NOT_FOUND);
-            }
-        }
-
-        const task = await tasksRepository.update(id, tenantId, data);
+        const task = await tasksRepository.update(id, tenantId, normalizedData);
         const dto = toTaskResponseDto(task);
 
         activityLogger.log({
             tenantId, entityType: 'Task', entityId: dto.id,
             action: 'UPDATE', module: 'tasks',
             description: `Updated task "${(task as any).title || dto.id}"`,
-            metadata: { updatedFields: Object.keys(data) },
+            metadata: { updatedFields: Object.keys(normalizedData) },
         });
 
         return dto;
@@ -134,7 +210,7 @@ export class TasksService {
         const dto = toTaskResponseDto(task);
 
         // Domain event: task completed
-        if (status === 'DONE') {
+        if (status === 'DONE' || status === 'COMPLETED') {
             eventBus.emit('task.completed', {
                 tenantId,
                 taskId: id,

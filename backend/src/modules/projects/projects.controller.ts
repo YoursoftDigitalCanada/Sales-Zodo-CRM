@@ -19,7 +19,7 @@ export class ProjectsController {
         sanitizeBody(req.body),
         this.getUserId(req),
       );
-      sendCreated(res, project, 'Project created');
+      sendCreated(res, project, 'Legacy project created');
     } catch (error) {
       next(error);
     }
@@ -45,7 +45,7 @@ export class ProjectsController {
         req.params.quoteId,
         this.getUserId(req),
       );
-      sendCreated(res, project, 'Project created from quote');
+      sendCreated(res, project, 'Legacy project created from proposal');
     } catch (error) {
       next(error);
     }
@@ -131,7 +131,7 @@ export class ProjectsController {
         sanitizeBody(req.body),
         this.getUserId(req),
       );
-      sendSuccess(res, project, 'Project updated');
+      sendSuccess(res, project, 'Legacy project updated');
     } catch (error) {
       next(error);
     }
@@ -203,7 +203,7 @@ export class ProjectsController {
         this.getUserId(req),
         req.body.notes,
       );
-      sendSuccess(res, project, 'Project stage updated');
+      sendSuccess(res, project, 'Legacy project stage updated');
     } catch (error) {
       next(error);
     }
@@ -212,7 +212,7 @@ export class ProjectsController {
   async updateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const project = await projectsService.updateStatus(req.params.id, this.getTenantId(req), req.body.status);
-      sendSuccess(res, project, 'Project status updated');
+      sendSuccess(res, project, 'Legacy project status updated');
     } catch (error) {
       next(error);
     }
@@ -225,7 +225,7 @@ export class ProjectsController {
         this.getTenantId(req),
         req.body.projectManagerId ?? null,
       );
-      sendSuccess(res, project, 'Project manager updated');
+      sendSuccess(res, project, 'Legacy project manager updated');
     } catch (error) {
       next(error);
     }

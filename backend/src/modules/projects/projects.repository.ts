@@ -257,8 +257,8 @@ export class ProjectsRepository {
     }
 
     const name = quote.client?.clientName
-      ? `${quote.client.clientName} - Roofer CRM Deal`
-      : `Proposal ${quote.quoteNumber} - Roofer CRM Deal`;
+      ? `${quote.client.clientName} - Sales CRM Deal`
+      : `Proposal ${quote.quoteNumber} - Sales CRM Deal`;
 
     const project = await this.create(
       tenantId,

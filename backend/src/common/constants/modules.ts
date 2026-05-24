@@ -129,9 +129,9 @@ export const SIDEBAR_MODULES: SidebarModule[] = [
   },
   {
     id: 'projects',
-    name: 'Projects',
+    name: 'Deals',
     icon: 'folder',
-    path: '/projects',
+    path: '/deals',
     requiredPermissions: [PERMISSIONS.PROJECTS_VIEW],
     order: 50,
   },

@@ -13,6 +13,9 @@ import {
   TrustedBySection,
   type TabItem,
 } from "@/components/public-v2/LandingSections";
+import { isRoofingPublicMarketingEnabled } from "@/lib/public-product-config";
+
+import SalesLandingPage from "./SalesLandingPage";
 
 const salesTabs: TabItem[] = [
   { label: "AI Estimation", variant: "estimation" },
@@ -27,6 +30,10 @@ const operationsTabs: TabItem[] = [
 ];
 
 export default function LandingPage() {
+  if (!isRoofingPublicMarketingEnabled) {
+    return <SalesLandingPage />;
+  }
+
   return (
     <PublicV2Shell>
       <MarketingNavbar />

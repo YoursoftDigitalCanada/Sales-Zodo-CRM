@@ -929,7 +929,7 @@ export default function WebsiteAnalyticsPage() {
                   <h2 className="text-sm font-semibold text-[#0F172A]">Add Website</h2>
                 </div>
                 <div className="space-y-3">
-                  <div className="space-y-2"><Label>Name</Label><Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="Roofer CRM website" /></div>
+                  <div className="space-y-2"><Label>Name</Label><Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="Company website" /></div>
                   <div className="space-y-2"><Label>Domain</Label><Input value={form.domain} onChange={(event) => setForm((current) => ({ ...current, domain: event.target.value }))} placeholder="example.com" /></div>
                   <Button disabled={createMutation.isPending} onClick={() => createMutation.mutate(form)} className="w-full bg-[#0891B2] hover:bg-[#0E7490]">Create Tracking Site</Button>
                 </div>

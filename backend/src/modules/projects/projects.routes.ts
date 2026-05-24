@@ -4,6 +4,7 @@ import { authenticate, loadEmployee } from '../../common/middleware/auth.middlew
 import { loadDataAccess } from '../../common/middleware/data-access.middleware';
 import { requireAccessibleProject } from '../../common/middleware/entity-access.middleware';
 import { requirePermission } from '../../common/middleware/permission.middleware';
+import { requireLegacyRoofingModule } from '../../common/middleware/legacy-roofing-module.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
 import {
@@ -107,10 +108,10 @@ router.delete('/:id/notes/:noteId', requirePermission(PERMISSIONS.PROJECTS_DELET
 router.get('/:id/communications', requirePermission(PERMISSIONS.PROJECTS_VIEW), validate(projectIdSchema), projectsController.getCommunications.bind(projectsController));
 router.post('/:id/communications', requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(projectIdSchema), validate(genericBodySchema), projectsController.logCommunication.bind(projectsController));
 
-router.get('/:id/inspections', requirePermission(PERMISSIONS.PROJECTS_VIEW), validate(projectIdSchema), projectsController.getInspections.bind(projectsController));
-router.post('/:id/inspections', requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(projectIdSchema), validate(genericBodySchema), projectsController.scheduleInspection.bind(projectsController));
-router.put('/:id/inspections/:inspId', requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(nestedInspectionIdSchema), validate(genericBodySchema), projectsController.updateInspection.bind(projectsController));
-router.patch('/:id/inspections/:inspId/result', requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(nestedInspectionIdSchema), validate(genericBodySchema), projectsController.recordInspectionResult.bind(projectsController));
+router.get('/:id/inspections', requireLegacyRoofingModule, requirePermission(PERMISSIONS.PROJECTS_VIEW), validate(projectIdSchema), projectsController.getInspections.bind(projectsController));
+router.post('/:id/inspections', requireLegacyRoofingModule, requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(projectIdSchema), validate(genericBodySchema), projectsController.scheduleInspection.bind(projectsController));
+router.put('/:id/inspections/:inspId', requireLegacyRoofingModule, requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(nestedInspectionIdSchema), validate(genericBodySchema), projectsController.updateInspection.bind(projectsController));
+router.patch('/:id/inspections/:inspId/result', requireLegacyRoofingModule, requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(nestedInspectionIdSchema), validate(genericBodySchema), projectsController.recordInspectionResult.bind(projectsController));
 
 router.get('/:id/change-orders', requirePermission(PERMISSIONS.PROJECTS_VIEW), validate(projectIdSchema), projectsController.getChangeOrders.bind(projectsController));
 router.post('/:id/change-orders', requirePermission(PERMISSIONS.PROJECTS_UPDATE), validate(projectIdSchema), validate(genericBodySchema), projectsController.createChangeOrder.bind(projectsController));

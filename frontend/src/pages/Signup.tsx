@@ -94,7 +94,7 @@ export default function SignupPage() {
 
   const stepDescriptions: Record<number, string> = {
     1: "Let's start with your personal details",
-    2: "Tell us about your roofing business",
+    2: "Tell us about your business",
     3: "How can we reach you?",
     4: "Select the plan that fits your business",
     5: "Confirm your email to create the workspace",
@@ -242,7 +242,7 @@ export default function SignupPage() {
                           value={wizard.form.companyName}
                           onBlur={() => wizard.markTouched(["companyName"])}
                           onChange={(event) => wizard.setField("companyName", event.target.value)}
-                          placeholder="Acme Roofing"
+                          placeholder="Acme Inc."
                         />
                         {wizard.fieldError("companyName") ? <p className="mt-1 text-xs text-destructive">{wizard.fieldError("companyName")}</p> : null}
                       </div>

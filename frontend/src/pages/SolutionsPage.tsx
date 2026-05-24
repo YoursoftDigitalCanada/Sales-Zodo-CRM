@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Building2, Headphones, Layers3, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,41 @@ import { MarketingNavbar } from "@/components/public-v2/MarketingNavbar";
 import { PublicV2Shell } from "@/components/public-v2/PublicV2Shell";
 import { LandingFooter } from "@/components/public-v2/LandingSections";
 import { solutionOverviewCards } from "@/data/solutionFeatureContent";
+import { isRoofingPublicMarketingEnabled } from "@/lib/public-product-config";
 
 function SectionShell({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${className}`}>{children}</div>;
 }
 
 export default function SolutionsPage() {
+  const salesSolutionCards = [
+    {
+      title: "Sales Teams",
+      description: "Manage leads, outreach, follow-ups, proposals, and deal stages without losing customer context.",
+      icon: Users,
+      to: "/product/customer-crm",
+    },
+    {
+      title: "Customer Success",
+      description: "Keep post-sale onboarding, renewal tasks, documents, and customer activity visible after the deal closes.",
+      icon: Headphones,
+      to: "/solutions",
+    },
+    {
+      title: "Operations",
+      description: "Coordinate tasks, documents, invoices, payments, and handoffs across customer-facing teams.",
+      icon: Layers3,
+      to: "/product/job-management",
+    },
+    {
+      title: "Multi-location Sales",
+      description: "Standardize pipelines, permissions, reporting, and customer records across teams and locations.",
+      icon: Building2,
+      to: "/solutions",
+    },
+  ];
+  const visibleSolutionCards = isRoofingPublicMarketingEnabled ? solutionOverviewCards : salesSolutionCards;
+
   return (
     <PublicV2Shell>
       <MarketingNavbar />
@@ -28,10 +57,10 @@ export default function SolutionsPage() {
               Solutions
             </div>
             <h1 className="mt-6 text-5xl font-bold leading-none tracking-[-0.05em] text-foreground md:text-6xl">
-              Separate solution pages for the roofing businesses ZODO is built to serve.
+              Sales CRM solutions for teams that need every customer handoff connected.
             </h1>
             <p className="mt-5 max-w-3xl text-base leading-8 text-muted-foreground md:text-lg">
-              Explore how the same ZODO platform adapts for residential roofers, commercial roofing, storm restoration teams, and multi-location operators without losing one connected workflow.
+              Explore how the same ZODO platform supports sales teams, customer success, operations, and multi-location organizations without splitting the customer record.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <Button asChild size="xl" variant="accent">
@@ -53,7 +82,7 @@ export default function SolutionsPage() {
             className="rounded-[2rem] bg-section-dark p-5 shadow-[0_24px_60px_rgba(15,23,42,0.18)] md:p-7"
           >
             <div className="grid gap-4 sm:grid-cols-2">
-              {solutionOverviewCards.map((item) => {
+              {visibleSolutionCards.map((item) => {
                 const Icon = item.icon;
                 return (
                   <Link
@@ -79,12 +108,12 @@ export default function SolutionsPage() {
           <div className="max-w-3xl">
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-cyan">Choose your operating model</p>
             <h2 className="mt-4 text-4xl font-bold tracking-tight text-foreground md:text-5xl">
-              Start with the solution story that matches how your roofing business actually runs.
+              Start with the solution story that matches how your sales organization actually runs.
             </h2>
           </div>
 
           <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {solutionOverviewCards.map((item, index) => {
+            {visibleSolutionCards.map((item, index) => {
               const Icon = item.icon;
               return (
                 <motion.div
@@ -118,10 +147,10 @@ export default function SolutionsPage() {
           <div className="rounded-[2rem] bg-section-dark p-8 text-section-dark-foreground shadow-[0_24px_60px_rgba(15,23,42,0.16)] md:p-10">
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-green">Why this matters</p>
             <h2 className="mt-4 text-4xl font-bold tracking-tight text-white">
-              Different roofing businesses share one problem: too many disconnected systems.
+              Different revenue teams share one problem: too many disconnected systems.
             </h2>
             <p className="mt-5 text-base leading-8 text-section-dark-foreground/72">
-              ZODO keeps the same CRM, estimating, jobs, communication, and revenue stack underneath each audience-specific solution, so teams do not have to rebuild process by business type.
+              ZODO keeps the same CRM, communication, document, invoice, payment, and automation stack underneath each solution, so teams do not have to rebuild process by department.
             </p>
           </div>
           <div className="rounded-[2rem] border border-border/60 bg-white p-8 shadow-[0_18px_50px_rgba(15,23,42,0.06)] md:p-10">

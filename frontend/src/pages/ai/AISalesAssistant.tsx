@@ -35,7 +35,7 @@ export default function AISalesAssistantPage() {
     <div className="min-h-screen bg-[#F8FAFC]">
       <header className="border-b border-[#E2E8F0] bg-white px-6 py-5">
         <div className="mx-auto max-w-5xl">
-          <div className="flex items-center gap-3"><div className="rounded-lg bg-[#0891B2]/10 p-2 text-[#0891B2]"><Sparkles size={22} /></div><div><h1 className="text-2xl font-semibold text-[#0F172A]">AI Sales Assistant</h1><p className="text-sm text-[#64748B]">Natural-language CRM search and sales guidance for selling Roofer CRM.</p></div></div>
+          <div className="flex items-center gap-3"><div className="rounded-lg bg-[#0891B2]/10 p-2 text-[#0891B2]"><Sparkles size={22} /></div><div><h1 className="text-2xl font-semibold text-[#0F172A]">AI Sales Assistant</h1><p className="text-sm text-[#64748B]">Natural-language CRM search and sales guidance for your pipeline.</p></div></div>
         </div>
       </header>
       <main className="mx-auto max-w-5xl space-y-5 px-4 py-6">

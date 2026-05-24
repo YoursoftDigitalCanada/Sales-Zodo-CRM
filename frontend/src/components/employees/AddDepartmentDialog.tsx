@@ -136,7 +136,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
                     <FormControl>
                       <div className="relative">
                         <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
-                        <Input {...field} className="pl-10" placeholder="Roofing Operations" />
+                        <Input {...field} className="pl-10" placeholder="Sales Operations" />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -153,7 +153,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
                     <FormControl>
                       <Input 
                         {...field} 
-                        placeholder="ROOF" 
+                        placeholder="SALES"
                         maxLength={5}
                         className="uppercase"
                         onChange={(e) => field.onChange(e.target.value.toUpperCase())}
@@ -174,7 +174,7 @@ export const AddDepartmentDialog: React.FC<AddDepartmentDialogProps> = ({
                   <FormControl>
                     <Textarea 
                       {...field} 
-                      placeholder="Manage field crews, site inspections, scheduling, safety, materials, and roofing production."
+                      placeholder="Manage sales workflows, lead routing, pipeline reviews, customer handoffs, and team performance."
                       className="resize-none"
                       rows={3}
                     />

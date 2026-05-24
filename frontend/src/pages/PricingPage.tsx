@@ -9,8 +9,8 @@ import { LandingFooter } from "@/components/public-v2/LandingSections";
 import { pricingFaqs, pricingTiers } from "@/data/siteContent";
 
 const comparisonRows = [
-  ["Roofing CRM", true, true, true],
-  ["Address-based AI estimator", false, true, true],
+  ["Sales CRM", true, true, true],
+  ["AI sales assistant", false, true, true],
   ["Action Center", true, true, true],
   ["Revenue alerts", false, true, true],
   ["Advanced team controls", false, false, true],
@@ -39,7 +39,7 @@ export default function PricingPage() {
               Premium pricing presentation that now matches the new ZODO public theme.
             </h1>
             <p className="mx-auto mt-5 max-w-3xl text-base leading-8 text-muted-foreground md:text-lg">
-              Clear plan separation, stronger CRM positioning, and a conversion path that feels consistent with the rest of the new `roofing.zodo.ca` marketing experience.
+              Clear plan separation, stronger CRM positioning, and a conversion path that feels consistent with the rest of the ZODO sales experience.
             </p>
           </motion.div>
         </SectionShell>
@@ -147,10 +147,10 @@ export default function PricingPage() {
                   Commercial clarity
                 </div>
                 <h2 className="mt-5 text-4xl font-bold tracking-tight text-white">
-                  Need the right plan mapped to your roofing workflow?
+                  Need the right plan mapped to your sales workflow?
                 </h2>
                 <p className="mt-4 text-base leading-8 text-section-dark-foreground/72">
-                  We can help position the estimator, CRM, invoicing, and operations modules against the way your team actually sells and delivers jobs.
+                  We can help position the CRM, automation, documents, invoicing, and operations modules against the way your team actually sells and supports customers.
                 </p>
               </div>
               <div className="flex flex-col gap-4 sm:flex-row lg:justify-end">

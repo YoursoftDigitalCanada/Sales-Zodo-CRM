@@ -2801,7 +2801,7 @@ const InvoicePage = () => {
                 <div className="space-y-2">
                   {[
                     canCreateInvoices ? { icon: FilePlus, label: "Create Invoice", color: "teal", action: () => navigate("/invoice/create") } : null,
-                    { icon: Receipt, label: "Create Quote", color: "gold", action: () => navigate("/quotes?action=create") },
+                    { icon: Receipt, label: "Create Proposal", color: "gold", action: () => navigate("/proposals?action=create") },
                     canMarkInvoicesPaid
                       ? {
                           icon: CreditCard,

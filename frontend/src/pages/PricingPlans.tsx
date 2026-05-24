@@ -46,7 +46,7 @@ export default function PricingPlansPage() {
     <div className="min-h-screen bg-[#F8FAFC]">
       <div className="border-b border-[#E2E8F0] bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
-          <div><h1 className="text-2xl font-semibold text-[#0F172A]">Pricing Plans</h1><p className="text-sm text-[#64748B]">Manage Roofer CRM subscription packages and setup fees.</p></div>
+          <div><h1 className="text-2xl font-semibold text-[#0F172A]">Pricing Plans</h1><p className="text-sm text-[#64748B]">Manage Sales CRM subscription packages and setup fees.</p></div>
           <Button onClick={() => edit()} className="gap-2 bg-[#0F766E] hover:bg-[#115E59]"><Plus size={16} />New Plan</Button>
         </div>
       </div>

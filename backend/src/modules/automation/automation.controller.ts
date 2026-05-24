@@ -36,6 +36,16 @@ export class AutomationController {
     try { sendSuccess(res, await salesAutomationService.listRuns(req.context.tenantId, req.query as any)); } catch (error) { next(error); }
   }
 
+  async retryRun(req: Request, res: Response, next: NextFunction) {
+    try {
+      sendSuccess(
+        res,
+        await salesAutomationService.retryRun(req.context.tenantId, req.params.id, req.user?.userId),
+        'Automation retry queued',
+      );
+    } catch (error) { next(error); }
+  }
+
   async listReminders(req: Request, res: Response, next: NextFunction) {
     try { sendSuccess(res, await salesAutomationService.listReminders(req.context.tenantId, req.query as any)); } catch (error) { next(error); }
   }

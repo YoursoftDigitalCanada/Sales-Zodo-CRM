@@ -156,7 +156,7 @@ export const PLAN_CARDS: PlanCard[] = [
     description: "Advanced intelligence, reporting, and AI-powered workflows.",
     features: [
       "All Standard Features",
-      "AI Roof Estimator",
+      "AI Sales Assistant",
       "Advanced Analytics",
       "Reports",
       "Ask Zodo AI",

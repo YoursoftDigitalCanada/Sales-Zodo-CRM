@@ -132,7 +132,7 @@ export const AI_BUSINESS_TYPE_OPTIONS = [
 export const ANALYTICS_METRIC_OPTIONS = [
   { value: "revenue", label: "Revenue" },
   { value: "leads", label: "Leads" },
-  { value: "projects", label: "Projects" },
+  { value: "projects", label: "Deals" },
   { value: "performance", label: "Performance" },
 ] as const;
 
@@ -229,7 +229,7 @@ export function getDefaultOnboardingPayload(plan: PlanKey): OnboardingPayload {
     companyProfile: {
       workspaceName: "",
       website: "",
-      industry: "roofing_software_sales",
+      industry: "sales_crm",
       businessType: "b2b_saas",
       companySize: "1-10",
       country: "Canada",
@@ -237,7 +237,7 @@ export function getDefaultOnboardingPayload(plan: PlanKey): OnboardingPayload {
     salesPreferences: {
       leadStages: ["New", "Contacted", "Qualified"],
       dealStages: ["Qualification", "Demo Scheduled", "Proposal Sent", "Negotiation", "Won", "Lost"],
-      defaultPipeline: "Roofer CRM Sales",
+      defaultPipeline: "Sales CRM Pipeline",
       taskCadence: "daily",
     },
     financePreferences: {
@@ -262,7 +262,7 @@ export function getDefaultOnboardingPayload(plan: PlanKey): OnboardingPayload {
     ...(plan === "premium"
       ? {
           aiSettings: {
-            businessType: "roofing",
+            businessType: "b2b_sales",
             materialType: "",
             costingMethod: "",
           },

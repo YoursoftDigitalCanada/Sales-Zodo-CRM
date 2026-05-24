@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, FileText, Landmark, Smartphone, Users, Workflow } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,53 @@ import { MarketingNavbar } from "@/components/public-v2/MarketingNavbar";
 import { PublicV2Shell } from "@/components/public-v2/PublicV2Shell";
 import { LandingFooter } from "@/components/public-v2/LandingSections";
 import { productOverviewCards } from "@/data/productFeatureContent";
+import { isRoofingPublicMarketingEnabled } from "@/lib/public-product-config";
 
 function SectionShell({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${className}`}>{children}</div>;
 }
 
 export default function ProductPage() {
+  const salesProductCards = [
+    {
+      title: "Lead Management",
+      description: "Capture leads, assign owners, track communication, and qualify buyers into contacts and companies.",
+      icon: Users,
+      to: "/product/customer-crm",
+    },
+    {
+      title: "Deals and Pipeline",
+      description: "Move opportunities through stages with value, close dates, follow-up tasks, and owner visibility.",
+      icon: BriefcaseBusiness,
+      to: "/product/job-management",
+    },
+    {
+      title: "Proposals and Contracts",
+      description: "Create sales documents, collect acceptance, and keep every signed file linked to the customer record.",
+      icon: FileText,
+      to: "/product/proposals",
+    },
+    {
+      title: "Invoicing and Payments",
+      description: "Send invoices, track payment status, trigger reminders, and sync successful payments to bookkeeping.",
+      icon: Landmark,
+      to: "/product/invoicing",
+    },
+    {
+      title: "Automation",
+      description: "Turn lead, proposal, invoice, and payment events into tasks, reminders, documents, and alerts.",
+      icon: Workflow,
+      to: "/product/customer-crm",
+    },
+    {
+      title: "Mobile Workspace",
+      description: "Keep sales activity, contacts, tasks, documents, and updates available wherever the team is working.",
+      icon: Smartphone,
+      to: "/product/mobile-app",
+    },
+  ];
+  const visibleProductCards = isRoofingPublicMarketingEnabled ? productOverviewCards.slice(0, 6) : salesProductCards;
+
   return (
     <PublicV2Shell>
       <MarketingNavbar />
@@ -28,10 +69,10 @@ export default function ProductPage() {
               Product
             </div>
             <h1 className="mt-6 text-5xl font-bold leading-none tracking-[-0.05em] text-foreground md:text-6xl">
-              Separate product pages for every core ZODO capability.
+              One connected Sales CRM for every revenue workflow.
             </h1>
             <p className="mt-5 max-w-3xl text-base leading-8 text-muted-foreground md:text-lg">
-              Explore the ZODO product by capability: AI Roof Estimator, Job Management, Customer CRM, Proposals, Invoicing, and Mobile App. Each page explains how that feature fits into the same roofing operating system.
+              Explore how ZODO connects leads, contacts, companies, deals, proposals, contracts, invoices, payments, documents, automations, and bookkeeping into one sales operating system.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <Button asChild size="xl" variant="accent">
@@ -53,7 +94,7 @@ export default function ProductPage() {
             className="rounded-[2rem] bg-section-dark p-5 shadow-[0_24px_60px_rgba(15,23,42,0.18)] md:p-7"
           >
             <div className="grid gap-4 sm:grid-cols-2">
-              {productOverviewCards.slice(0, 6).map((item) => {
+              {visibleProductCards.map((item) => {
                 const Icon = item.icon;
                 return (
                   <Link
@@ -84,7 +125,7 @@ export default function ProductPage() {
           </div>
 
           <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {productOverviewCards.slice(0, 6).map((item, index) => {
+            {visibleProductCards.map((item, index) => {
               const Icon = item.icon;
               return (
                 <motion.div
@@ -121,7 +162,7 @@ export default function ProductPage() {
               ZODO is strongest when these features work together.
             </h2>
             <p className="mt-5 text-base leading-8 text-section-dark-foreground/72">
-              The product story is not six disconnected pages. It is six doors into the same roofing-focused CRM, operations, communication, and revenue stack.
+              The product story is not a set of disconnected pages. It is one customer record moving from lead intake to closed revenue, documents, follow-up, and accounting.
             </p>
           </div>
           <div className="rounded-[2rem] border border-border/60 bg-white p-8 shadow-[0_18px_50px_rgba(15,23,42,0.06)] md:p-10">
@@ -130,7 +171,7 @@ export default function ProductPage() {
               Want the full walkthrough instead of one page at a time?
             </h2>
             <p className="mt-5 text-base leading-8 text-muted-foreground">
-              We can show how the estimator, CRM, jobs, proposals, invoicing, communications, and mobile access work together for your roofing workflow.
+              We can show how CRM, deals, proposals, contracts, invoicing, communications, automation, and mobile access work together for your sales workflow.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <Button asChild size="xl" variant="accent">

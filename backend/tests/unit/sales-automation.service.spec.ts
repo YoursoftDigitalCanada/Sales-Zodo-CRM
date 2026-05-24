@@ -22,6 +22,7 @@ const mockDb = {
   automationIdempotencyKey: {
     create: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
     findFirst: jest.fn(),
   },
   tenant: { findUnique: jest.fn() },
@@ -93,9 +94,10 @@ describe('SalesAutomationService', () => {
       return Promise.resolve({ id: `idem-${claimedKeys.size}`, ...data });
     });
     mockDb.automationIdempotencyKey.update.mockImplementation(({ data }) => Promise.resolve({ id: 'idem-1', ...data }));
+    mockDb.automationIdempotencyKey.updateMany.mockImplementation(({ data }) => Promise.resolve({ count: 1, ...data }));
     mockDb.automationIdempotencyKey.findFirst.mockImplementation(({ where }) => {
       const id = `${where.tenantId}:${where.key}`;
-      return Promise.resolve(claimedKeys.has(id) ? { id: 'idem-existing', ...where } : null);
+      return Promise.resolve(claimedKeys.has(id) ? { id: 'idem-existing', ...where, status: 'COMPLETED', retryCount: 0 } : null);
     });
     mockDb.tenant.findUnique.mockResolvedValue({ id: 'tenant-1', settings: {} });
     mockDb.task.findFirst.mockResolvedValue(null);
@@ -560,6 +562,9 @@ describe('SalesAutomationService', () => {
     expect(tenantMailerService.sendTenantEmail).toHaveBeenCalledWith(expect.objectContaining({
       tenantId: 'tenant-1',
       to: 'buyer@example.com',
+      subject: 'Proposal PR-1 from your sales team',
+      html: expect.not.stringMatching(/roof|roofing|shingles|underlayment|flashing|decking|inspection|insurance claim/i),
+      text: expect.not.stringMatching(/roof|roofing|shingles|underlayment|flashing|decking|inspection|insurance claim/i),
     }));
     expect(mockDb.salesReminderSchedule.upsert).toHaveBeenCalledTimes(2);
   });
@@ -1302,6 +1307,149 @@ describe('SalesAutomationService', () => {
       tenantId: 'tenant-1',
       module: 'automation',
       description: 'Executed automation test trigger "lead.created"',
+    }));
+  });
+
+  it('failed idempotency keys can be retried through a tenant-scoped repair run', async () => {
+    const key = 'tenant-1:lead.created:Lead:lead-1:first-followup-task';
+    claimedKeys.add(`tenant-1:${key}`);
+    let keyStatus = 'FAILED';
+    let retryCount = 0;
+
+    mockDb.salesAutomationRun.findFirst.mockResolvedValueOnce({
+      id: 'run-failed',
+      tenantId: 'tenant-1',
+      triggerType: 'lead.created',
+      entityType: 'Lead',
+      entityId: 'lead-1',
+      status: 'FAILED',
+      error: 'temporary failure',
+      input: {
+        tenantId: 'tenant-1',
+        leadId: 'lead-1',
+        leadName: 'Repair Lead',
+        ownerId: 'employee-1',
+        actionType: 'first-followup-task',
+        idempotencyKey: key,
+      },
+    });
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-lead', name: 'Lead follow-up', conditions: {}, actions: ['create_followup_task'], runOncePerEntity: false },
+    ]);
+    mockDb.automationIdempotencyKey.findFirst.mockImplementation(({ where }) => {
+      if (where.key === key) {
+        return Promise.resolve({ id: 'idem-failed', tenantId: where.tenantId, key, status: keyStatus, retryCount, error: 'temporary failure' });
+      }
+      return Promise.resolve(null);
+    });
+    mockDb.automationIdempotencyKey.updateMany.mockImplementation(({ data }) => {
+      keyStatus = data.status;
+      retryCount += 1;
+      return Promise.resolve({ count: 1 });
+    });
+    mockDb.automationIdempotencyKey.update.mockImplementation(({ data }) => {
+      keyStatus = data.status;
+      return Promise.resolve({ id: 'idem-failed', key, retryCount, ...data });
+    });
+
+    const result = await salesAutomationService.retryRun('tenant-1', 'run-failed', 'user-admin');
+
+    expect(result).toEqual(expect.objectContaining({
+      retried: true,
+      runId: 'run-failed',
+      idempotencyKey: key,
+      idempotencyStatus: 'COMPLETED',
+      retryCount: 1,
+    }));
+    expect(mockDb.automationIdempotencyKey.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ tenantId: 'tenant-1', key, status: 'FAILED', retryCount: { lt: expect.any(Number) } }),
+      data: expect.objectContaining({
+        status: 'STARTED',
+        retryCount: { increment: 1 },
+        lastRetriedAt: expect.any(Date),
+        error: null,
+      }),
+    }));
+    expect(mockDb.task.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ tenantId: 'tenant-1', leadId: 'lead-1', title: 'Follow up with Repair Lead' }),
+    }));
+  });
+
+  it('enforces max retry limit for failed automation idempotency keys', async () => {
+    const key = 'tenant-1:lead.created:Lead:lead-1:first-followup-task';
+    mockDb.salesAutomationRun.findFirst.mockResolvedValueOnce({
+      id: 'run-failed',
+      tenantId: 'tenant-1',
+      triggerType: 'lead.created',
+      entityType: 'Lead',
+      entityId: 'lead-1',
+      status: 'FAILED',
+      input: { idempotencyKey: key, leadId: 'lead-1' },
+    });
+    mockDb.automationIdempotencyKey.findFirst.mockResolvedValueOnce({
+      id: 'idem-failed',
+      tenantId: 'tenant-1',
+      key,
+      status: 'FAILED',
+      retryCount: 3,
+      error: 'still broken',
+    });
+
+    await expect(salesAutomationService.retryRun('tenant-1', 'run-failed', 'user-admin')).rejects.toThrow('Automation retry limit has been reached');
+    expect(mockDb.task.create).not.toHaveBeenCalled();
+  });
+
+  it('blocks cross-tenant automation repair attempts', async () => {
+    mockDb.salesAutomationRun.findFirst.mockResolvedValueOnce(null);
+
+    await expect(salesAutomationService.retryRun('tenant-1', 'run-other-tenant', 'user-admin')).rejects.toThrow('Automation run not found');
+    expect(mockDb.automationIdempotencyKey.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('does not duplicate a partially completed side effect during retry', async () => {
+    const key = 'tenant-1:lead.created:Lead:lead-1:first-followup-task';
+    claimedKeys.add(`tenant-1:${key}`);
+    let keyStatus = 'FAILED';
+    let retryCount = 0;
+
+    mockDb.salesAutomationRun.findFirst.mockResolvedValueOnce({
+      id: 'run-failed',
+      tenantId: 'tenant-1',
+      triggerType: 'lead.created',
+      entityType: 'Lead',
+      entityId: 'lead-1',
+      status: 'FAILED',
+      input: {
+        tenantId: 'tenant-1',
+        leadId: 'lead-1',
+        leadName: 'Existing Lead',
+        ownerId: 'employee-1',
+        idempotencyKey: key,
+      },
+    });
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-lead', name: 'Lead follow-up', conditions: {}, actions: ['create_followup_task'], runOncePerEntity: false },
+    ]);
+    mockDb.task.findFirst.mockResolvedValueOnce({ id: 'task-existing', tenantId: 'tenant-1', leadId: 'lead-1' });
+    mockDb.automationIdempotencyKey.findFirst.mockImplementation(({ where }) => {
+      if (where.key === key) return Promise.resolve({ id: 'idem-failed', tenantId: where.tenantId, key, status: keyStatus, retryCount, error: 'post-create failure' });
+      return Promise.resolve(null);
+    });
+    mockDb.automationIdempotencyKey.updateMany.mockImplementation(() => {
+      keyStatus = 'STARTED';
+      retryCount += 1;
+      return Promise.resolve({ count: 1 });
+    });
+    mockDb.automationIdempotencyKey.update.mockImplementation(({ data }) => {
+      keyStatus = data.status;
+      return Promise.resolve({ id: 'idem-failed', key, retryCount, ...data });
+    });
+
+    await salesAutomationService.retryRun('tenant-1', 'run-failed', 'user-admin');
+
+    expect(mockDb.task.create).not.toHaveBeenCalled();
+    expect(mockDb.automationIdempotencyKey.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'COMPLETED' }),
     }));
   });
 });

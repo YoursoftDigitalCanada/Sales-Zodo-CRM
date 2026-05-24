@@ -76,16 +76,19 @@ class AutomationOrchestratorService {
       return { executed: false, skippedReason: 'module_disabled' };
     }
 
-    if (await automationIdempotencyService.hasRun(input.tenantId, idempotencyKey)) {
+    const existingKey = await automationIdempotencyService.getByKey(input.tenantId, idempotencyKey);
+    const existingStatus = String(existingKey?.status || '').toUpperCase();
+    if (existingStatus === 'COMPLETED' || existingStatus === 'STARTED' || existingStatus === 'PROCESSING') {
+      const reason = existingStatus === 'COMPLETED' ? 'duplicate' : 'in_progress';
       await db.salesAutomationRun.create({
         data: {
           ...baseRun,
           status: 'SKIPPED',
           finishedAt: new Date(),
-          output: { idempotencyKey, actionType: input.actionType, module: input.module || null, reason: 'duplicate' },
+          output: { idempotencyKey, actionType: input.actionType, module: input.module || null, reason },
         },
       });
-      return { executed: false, skippedReason: 'duplicate' };
+      return { executed: false, skippedReason: reason };
     }
 
     const run = await db.salesAutomationRun.create({
@@ -112,15 +115,16 @@ class AutomationOrchestratorService {
       );
 
       if (!result.executed) {
+        const reason = result.skippedReason || 'duplicate';
         await db.salesAutomationRun.update({
           where: { id: run.id },
           data: {
             status: 'SKIPPED',
             finishedAt: new Date(),
-            output: { idempotencyKey, actionType: input.actionType, module: input.module || null, reason: 'duplicate' },
+            output: { idempotencyKey, actionType: input.actionType, module: input.module || null, reason },
           },
         });
-        return { executed: false, skippedReason: 'duplicate' };
+        return { executed: false, skippedReason: reason };
       }
 
       await db.salesAutomationRun.update({

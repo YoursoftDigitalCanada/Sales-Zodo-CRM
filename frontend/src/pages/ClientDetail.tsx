@@ -16,20 +16,18 @@ import { getEmails } from "@/features/emails/services/emails-service";
 import { getInvoices } from "@/features/invoices/services/invoice-service";
 import { getPayments, getSubscriptions } from "@/features/billing/services/billing-service";
 import { getLeads } from "@/features/leads";
-import { getAllInspections, deleteInspection, type InspectionEntity } from "@/features/leads/services/inspections-service";
-import InspectionEditor from "@/components/inspections/InspectionEditor";
 import { ComposeEmailSheet } from "@/features/emails/components/ComposeEmailSheet";
 import { WhatsAppActionButton } from "@/features/whatsapp/components/WhatsAppActionButton";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import {
-  Mail, Phone, MapPin, Tag, User, Calendar, Plus, MoreHorizontal,
+  Mail, Phone, MapPin, Tag, User, Plus, MoreHorizontal,
   Pencil, MessageSquare, FileText, CheckSquare, TrendingUp, FolderOpen,
   Send, ArrowLeft, Loader2, DollarSign, Clock, Download, X,
-  Home, Shield, AlertTriangle, ChevronDown, Globe, BanIcon,
-  Layers, Ruler, Wrench, Building2, CreditCard, CircleDollarSign,
-  Receipt, PhoneCall, StickyNote, ExternalLink, Upload, ClipboardList, Trash2
+  Shield, AlertTriangle, Globe, BanIcon,
+  Layers, Wrench, Building2, CircleDollarSign,
+  PhoneCall, StickyNote, ExternalLink, ClipboardList
 } from "lucide-react";
 
 // ── Interfaces ──────────────────────────────────────────────────────
@@ -265,10 +263,6 @@ const ClientDetailPage = () => {
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
-  const [inspections, setInspections] = useState<InspectionEntity[]>([]);
-  const [loadingInspections, setLoadingInspections] = useState(false);
-  const [showInspectionDialog, setShowInspectionDialog] = useState(false);
-  const [editingInspection, setEditingInspection] = useState<InspectionEntity | null>(null);
 
   // Task Modal
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -309,30 +303,6 @@ const ClientDetailPage = () => {
       setRelatedLeadSummary(null);
     }
   }, [id]);
-
-  const fetchInspections = useCallback(async () => {
-    try {
-      setLoadingInspections(true);
-      const [clientInspections, leadInspections] = await Promise.all([
-        getAllInspections({ clientId: id! }),
-        relatedLeadId ? getAllInspections({ leadId: relatedLeadId }) : Promise.resolve([]),
-      ]);
-      const merged = sortByNewest(
-        dedupeById([
-          ...(Array.isArray(clientInspections) ? clientInspections : []),
-          ...(Array.isArray(leadInspections) ? leadInspections : []),
-        ]),
-        "inspectionDate",
-        "updatedAt",
-        "createdAt",
-      );
-      setInspections(merged);
-    } catch {
-      setInspections([]);
-    } finally {
-      setLoadingInspections(false);
-    }
-  }, [id, relatedLeadId]);
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -430,10 +400,6 @@ const ClientDetailPage = () => {
     fetchTasks();
   }, [fetchTasks]);
 
-  useEffect(() => {
-    fetchInspections();
-  }, [fetchInspections]);
-
   // ── Actions ─────────────────────────────────────────────────────
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
@@ -469,17 +435,6 @@ const ClientDetailPage = () => {
     } catch {
       toast({ title: "Error", description: "Failed to create task.", variant: "destructive" });
     } finally { setSavingTask(false); }
-  };
-
-  const handleDeleteInspection = async (inspectionId: string) => {
-    if (!confirm("Delete this inspection?")) return;
-    try {
-      await deleteInspection(inspectionId);
-      toast({ title: "Inspection deleted" });
-      fetchInspections();
-    } catch {
-      toast({ title: "Error", description: "Failed to delete inspection.", variant: "destructive" });
-    }
   };
 
   // ── Render ──────────────────────────────────────────────────────
@@ -815,80 +770,63 @@ const ClientDetailPage = () => {
             )}
           </DashCard>
 
-          {/* ── CARD 6: Meetings ── */}
+          {/* ── CARD 6: Account Engagement ── */}
           <DashCard delay={600}>
             <CardHeader
               icon={<div className="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center"><ClipboardList size={14} className="text-[#F97316]" /></div>}
-              title="Meetings"
-              count={inspections.length}
-              actionLabel="+ New"
-              action={() => {
-                setEditingInspection(null);
-                setShowInspectionDialog(true);
-              }}
+              title="Account Engagement"
+              actionLabel="Open Calendar →"
+              action={() => navigate('/calendar')}
             />
-            {loadingInspections ? (
-              <div className="flex items-center justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div>
-            ) : inspections.length === 0 ? (
-              <EmptyState
-                icon={<ClipboardList size={20} className="text-[#9CA3AF]" />}
-                title="No meetings yet"
-                subtitle="Add a demo or follow-up meeting and keep the history in one place."
-                cta="Add Meeting"
-                onCta={() => {
-                  setEditingInspection(null);
-                  setShowInspectionDialog(true);
-                }}
-              />
-            ) : (
-              <div className="space-y-2">
-                {inspections.slice(0, 4).map((inspection) => (
-                  <div key={inspection.id} className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-[#F9FAFB] transition-colors">
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/inspections/${inspection.id}`)}
-                      className="min-w-0 flex-1 text-left"
-                    >
-                      <p className="truncate text-sm font-medium text-[#111827]">
-                        {inspection.inspectionType || "Meeting"}
-                      </p>
-                      <p className="mt-0.5 text-[10px] text-[#9CA3AF]">
-                        {fmtDate(inspection.inspectionDate || inspection.createdAt)} · {inspection.inspectorName || "Unassigned"}
-                      </p>
-                    </button>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/inspections/${inspection.id}`)}
-                        className="rounded-md p-1 text-[#6B7280] hover:bg-[#E0F2FE] hover:text-[#0369A1]"
-                        aria-label="Open meeting"
-                      >
-                        <FileText size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingInspection(inspection);
-                          setShowInspectionDialog(true);
-                        }}
-                        className="rounded-md p-1 text-[#6B7280] hover:bg-[#E5E7EB]"
-                        aria-label="Edit meeting"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleDeleteInspection(inspection.id)}
-                        className="rounded-md p-1 text-[#EF4444] hover:bg-[#FEE2E2]"
-                        aria-label="Delete meeting"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+            <div className="space-y-2">
+              {[
+                {
+                  label: "Open tasks",
+                  value: openTasks.toString(),
+                  helper: openTasks > 0 ? "Follow-ups waiting" : "No pending follow-ups",
+                  action: () => navigate('/tasks'),
+                },
+                {
+                  label: "Active deals",
+                  value: deals.length.toString(),
+                  helper: deals.length > 0 ? "Opportunities in progress" : "No linked deals yet",
+                  action: () => navigate('/deals'),
+                },
+                {
+                  label: "Documents",
+                  value: documents.length.toString(),
+                  helper: documents.length > 0 ? "Files linked to this account" : "No linked documents",
+                  action: () => navigate(`/documents?linkedEntityType=Client&linkedEntityId=${id}`),
+                },
+                {
+                  label: "Open invoices",
+                  value: openInvoices.length.toString(),
+                  helper: outstandingAmount > 0 ? `${fmtCurrency(outstandingAmount, client.currency)} outstanding` : "No outstanding balance",
+                  action: () => navigate('/invoice'),
+                },
+              ].map((row) => (
+                <button
+                  key={row.label}
+                  type="button"
+                  onClick={row.action}
+                  className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-[#F9FAFB]"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[#111827]">{row.label}</p>
+                    <p className="mt-0.5 truncate text-[10px] text-[#9CA3AF]">{row.helper}</p>
                   </div>
-                ))}
+                  <span className="rounded-full bg-[#FFF7ED] px-2.5 py-1 text-xs font-semibold text-[#C2410C]">{row.value}</span>
+                </button>
+              ))}
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-[#F1F5F9] pt-3">
+                <button onClick={() => setIsTaskModalOpen(true)} className="text-xs font-medium text-[#14B8A6] flex items-center gap-1 hover:text-[#0D9488] transition-colors">
+                  <Plus size={12} />Add Task
+                </button>
+                <button onClick={() => setShowComposeEmail(true)} className="text-xs font-medium text-[#14B8A6] flex items-center gap-1 hover:text-[#0D9488] transition-colors">
+                  <Mail size={12} />Email Contact
+                </button>
               </div>
-            )}
+            </div>
           </DashCard>
 
           {/* ── CARD 7: Recent Activity / Timeline ── */}
@@ -1063,48 +1001,6 @@ const ClientDetailPage = () => {
               <Button className="bg-[#14B8A6] hover:bg-[#0D9488] text-white" onClick={handleAddTask} disabled={savingTask}>
                 {savingTask ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}Add Task
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showInspectionDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-xl bg-white shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-start justify-between gap-4 border-b p-5">
-              <div>
-                <h3 className="text-lg font-semibold text-[#111827]">
-                  {editingInspection ? "Edit Meeting" : "New Meeting"}
-                </h3>
-                <p className="mt-1 text-sm text-[#6B7280]">
-                  Capture demo notes, attendees, outcomes, and follow-up context for this account.
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setShowInspectionDialog(false);
-                  setEditingInspection(null);
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="p-5">
-              <InspectionEditor
-                initialInspection={editingInspection}
-                lockedClientId={editingInspection ? undefined : id}
-                onCancel={() => {
-                  setShowInspectionDialog(false);
-                  setEditingInspection(null);
-                }}
-                onSuccess={() => {
-                  setShowInspectionDialog(false);
-                  setEditingInspection(null);
-                  fetchInspections();
-                }}
-              />
             </div>
           </div>
         </div>

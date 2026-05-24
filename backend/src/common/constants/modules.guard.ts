@@ -35,6 +35,7 @@ export const ROUTE_MODULE_MAP: Record<string, readonly string[]> = {
 
     // Operations
     'projects': ['projects'],
+    'inspections': ['roofing-automation'],
     'tasks': ['tasks'],
     'calendar': ['calendar'],
     'timeline': ['tasks'],

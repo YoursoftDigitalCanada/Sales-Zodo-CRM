@@ -464,7 +464,7 @@ export class TenantsService {
                 ...(plan === 'premium'
                     ? {
                         aiSettings: aiSettings || {
-                            businessType: 'roofing',
+                            businessType: 'b2b_sales',
                         },
                         analyticsSettings: analyticsSettings || {
                             metrics: [...DEFAULT_ANALYTICS_SELECTION],

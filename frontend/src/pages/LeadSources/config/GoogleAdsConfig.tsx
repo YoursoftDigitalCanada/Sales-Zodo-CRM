@@ -166,7 +166,7 @@ const GoogleAdsConfig = ({ formData, setFormData }: SourceConfigProps) => {
           <Input
             value={cfg.lead_form_name || ""}
             onChange={(event) => update("lead_form_name", event.target.value)}
-            placeholder="Roof Inspection Form"
+            placeholder="Demo Request Form"
             className="h-10 rounded-xl"
           />
         </div>

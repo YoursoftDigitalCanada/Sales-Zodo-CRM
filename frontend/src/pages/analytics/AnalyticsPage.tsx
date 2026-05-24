@@ -43,7 +43,7 @@ import {
 
 const COLORS = ["#0891B2", "#0F766E", "#7C3AED", "#D97706", "#2563EB", "#DB2777", "#16A34A", "#DC2626"];
 const STAGES = ["Qualification", "Demo Scheduled", "Proposal Sent", "Negotiation", "Won", "Lost"];
-const PLANS = ["Starter", "Professional", "Enterprise", "Roofer CRM"];
+const PLANS = ["Starter", "Professional", "Enterprise", "Sales CRM"];
 const ACCOUNT_STATUSES = ["ACTIVE", "PROSPECT", "INACTIVE", "CHURNED"];
 
 function dateRangeToFilters(range: string) {

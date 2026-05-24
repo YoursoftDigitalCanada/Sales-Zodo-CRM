@@ -86,8 +86,8 @@ const MODULE_PROMPTS: Record<string, QuickPrompt[]> = {
         { label: "Growth Opportunities", icon: TrendingUp, prompt: "Where are my growth opportunities?" },
     ],
     projects: [
-        { label: "Project Status", icon: FolderKanban, prompt: "What's the status of this project?" },
-        { label: "At-Risk Projects", icon: AlertCircle, prompt: "Are any projects at risk?" },
+        { label: "Deal Status", icon: FolderKanban, prompt: "What's the status of this deal?" },
+        { label: "At-Risk Deals", icon: AlertCircle, prompt: "Are any deals at risk?" },
         { label: "Task Overdue", icon: Clock, prompt: "What tasks are overdue?" },
         { label: "Resource Check", icon: Users, prompt: "How is the team workload?" },
     ],
@@ -302,7 +302,7 @@ export function AiCopilotPanel({ isOpen, onClose }: AiCopilotPanelProps) {
                                             {copilotCtx.entityId
                                                 ? `I can see the ${copilotCtx.module} you're viewing. Ask me anything about it.`
                                                 : copilotCtx.module === "general"
-                                                    ? "Ask me about your pipeline, revenue, projects, or get help with your CRM."
+                                                    ? "Ask me about your pipeline, revenue, deals, or get help with your CRM."
                                                     : `I'm aware you're in the ${copilotCtx.label} section. Ask me anything.`}
                                         </p>
                                     </div>

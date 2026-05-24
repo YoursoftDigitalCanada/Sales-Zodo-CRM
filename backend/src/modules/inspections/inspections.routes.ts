@@ -5,6 +5,7 @@ import {
 } from '../../common/middleware/auth.middleware';
 import { loadDataAccess } from '../../common/middleware/data-access.middleware';
 import { requirePermission } from '../../common/middleware/permission.middleware';
+import { requireLegacyRoofingModule } from '../../common/middleware/legacy-roofing-module.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
 import { inspectionsController } from '../leads/inspections.controller';
@@ -20,6 +21,7 @@ const router = Router();
 router.use(authenticate);
 router.use(loadEmployee);
 router.use(loadDataAccess);
+router.use(requireLegacyRoofingModule);
 
 router.get(
     '/',

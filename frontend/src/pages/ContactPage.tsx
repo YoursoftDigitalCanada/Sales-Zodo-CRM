@@ -19,11 +19,11 @@ export default function ContactPage() {
   const initialAddress = searchParams.get("address") || "";
 
   const isEstimate = intent === "estimate" || Boolean(initialAddress);
-  const title = isEstimate ? "Request your address-based estimate workflow" : "Start your ZODO free-trial conversation";
+  const title = isEstimate ? "Request your proposal workflow walkthrough" : "Start your ZODO free-trial conversation";
   const description = isEstimate
-    ? "Share the property and your team context so ZODO can continue the AI estimator story into a real sales conversation."
-    : "Use this page to capture serious roofing interest, start a trial conversation, or move toward a tailored walkthrough.";
-  const submitLabel = isEstimate ? "Request Estimate" : "Start Free Trial";
+    ? "Share your sales process and team context so ZODO can continue the proposal workflow story into a real sales conversation."
+    : "Use this page to capture serious sales interest, start a trial conversation, or move toward a tailored walkthrough.";
+  const submitLabel = isEstimate ? "Request Walkthrough" : "Start Free Trial";
 
   return (
     <PublicV2Shell>
@@ -43,10 +43,10 @@ export default function ContactPage() {
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-cyan">Contact</p>
               <h1 className="mt-4 text-5xl font-bold leading-none tracking-[-0.05em] text-foreground md:text-6xl">
-                Turn site interest into real roofing pipeline movement.
+                Turn site interest into real sales pipeline movement.
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-8 text-muted-foreground md:text-lg">
-                The page is now styled to match the new ZODO marketing system while still converting both trial requests and estimator-driven contact flows.
+                The page is styled to match the ZODO marketing system while converting trial requests, product questions, and sales workflow conversations.
               </p>
             </div>
 
@@ -78,13 +78,13 @@ export default function ContactPage() {
                   icon: MessageSquareText,
                 },
                 {
-                  title: "Estimator fit",
-                  description: "Position address-based quoting in your sales motion.",
+                  title: "Automation fit",
+                  description: "Position follow-up and document workflows in your sales motion.",
                   icon: Radar,
                 },
                 {
                   title: "Team rollout",
-                  description: "Align office and field workflows from day one.",
+                  description: "Align sales, success, and finance workflows from day one.",
                   icon: PhoneCall,
                 },
               ].map((item, index) => (
@@ -110,8 +110,8 @@ export default function ContactPage() {
                 <Link to="/pricing">View Pricing</Link>
               </Button>
               <Button asChild size="xl" variant="accent">
-                <Link to="/ai-estimator">
-                  Explore AI Estimator
+                <Link to="/product">
+                  Explore Product
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -131,11 +131,11 @@ export default function ContactPage() {
               initialAddress={initialAddress}
               showAddress={isEstimate}
               showRevenue
-              messageLabel={isEstimate ? "Project details" : "What are you trying to improve?"}
+              messageLabel={isEstimate ? "Workflow details" : "What are you trying to improve?"}
               messagePlaceholder={
                 isEstimate
-                  ? "Share the address context, roof type, or how quickly you need the estimate workflow to move."
-                  : "Tell us about your estimating, follow-up, invoicing, or overall roofing workflow goals."
+                  ? "Share your sales process, proposal needs, or how quickly you need the workflow to move."
+                  : "Tell us about your lead follow-up, proposals, invoicing, or overall sales workflow goals."
               }
               testIdPrefix="contact-lead"
             />

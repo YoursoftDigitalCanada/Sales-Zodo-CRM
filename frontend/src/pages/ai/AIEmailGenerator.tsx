@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { generateEmail } from "@/features/sales-ai";
 
 export default function AIEmailGeneratorPage() {
-  const [form, setForm] = useState({ templateType: "cold outreach", tone: "Professional", goal: "Book a Roofer CRM demo", leadId: "", dealId: "", contactId: "", clientId: "" });
+  const [form, setForm] = useState({ templateType: "cold outreach", tone: "Professional", goal: "Book a Sales CRM demo", leadId: "", dealId: "", contactId: "", clientId: "" });
   const [result, setResult] = useState<any>(null);
   const mutation = useMutation({ mutationFn: () => generateEmail({ ...form, storeDraft: true }), onSuccess: setResult });
   const set = (key: string, value: string) => setForm((current) => ({ ...current, [key]: value }));

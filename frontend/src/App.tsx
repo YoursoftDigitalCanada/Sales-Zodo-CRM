@@ -1,6 +1,6 @@
 // src/App.tsx
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactElement, useCallback, useEffect, useMemo, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,6 +19,7 @@ import { WorkspaceBrandingProvider, useWorkspaceBranding } from "@/features/sett
 import { getGeneralSettings } from "@/features/settings/services/settings-service";
 import { canPerformAction } from "@/lib/access-control";
 import { isOnboardingRequired } from "@/lib/enabled-features";
+import { isRoofingPublicMarketingEnabled } from "@/lib/public-product-config";
 import { toast } from "@/hooks/use-toast";
 import useIsMobile from "@/hooks/useIsMobile";
 import {
@@ -242,6 +243,9 @@ const ContractDocumentRedirect = () => {
     : "/documents?linkedEntityType=Contract";
   return <Navigate to={target} replace />;
 };
+
+const publicRoofingRoute = (element: ReactElement) =>
+  isRoofingPublicMarketingEnabled ? element : <Navigate to="/product" replace />;
 
 const resolveCreateRoute = (pathname: string): {
   path: string;
@@ -604,29 +608,29 @@ const AppRoutes = () => {
         {/* ========== PUBLIC ROUTES ========== */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/product" element={<ProductPage />} />
-        <Route path="/product/ai-roof-estimator" element={<ProductAiRoofEstimatorPage />} />
+        <Route path="/product/ai-roof-estimator" element={publicRoofingRoute(<ProductAiRoofEstimatorPage />)} />
         <Route path="/product/job-management" element={<ProductJobManagementPage />} />
         <Route path="/product/customer-crm" element={<ProductCustomerCrmPage />} />
         <Route path="/product/proposals" element={<ProductProposalsPage />} />
         <Route path="/product/invoicing" element={<ProductInvoicingPage />} />
         <Route path="/product/mobile-app" element={<ProductMobileAppPage />} />
         <Route path="/solutions" element={<SolutionsPage />} />
-        <Route path="/solutions/residential-roofers" element={<SolutionResidentialRoofersPage />} />
-        <Route path="/solutions/commercial-roofing" element={<SolutionCommercialRoofingPage />} />
-        <Route path="/solutions/storm-restoration" element={<SolutionStormRestorationPage />} />
-        <Route path="/solutions/multi-location" element={<SolutionMultiLocationPage />} />
-        <Route path="/ai-estimator" element={<AIEstimatorPage />} />
+        <Route path="/solutions/residential-roofers" element={publicRoofingRoute(<SolutionResidentialRoofersPage />)} />
+        <Route path="/solutions/commercial-roofing" element={publicRoofingRoute(<SolutionCommercialRoofingPage />)} />
+        <Route path="/solutions/storm-restoration" element={publicRoofingRoute(<SolutionStormRestorationPage />)} />
+        <Route path="/solutions/multi-location" element={publicRoofingRoute(<SolutionMultiLocationPage />)} />
+        <Route path="/ai-estimator" element={publicRoofingRoute(<AIEstimatorPage />)} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
         <Route path="/terms-of-service" element={<TermsOfServicePage />} />
         <Route path="/security" element={<SecurityInfoPage />} />
-        <Route path="/compare" element={<Navigate to="/compare/jobnimbus" replace />} />
-        <Route path="/compare/jobnimbus" element={<CompareJobNimbusPage />} />
-        <Route path="/compare/acculynx" element={<CompareAccuLynxPage />} />
-        <Route path="/compare/roofr" element={<CompareRoofrPage />} />
-        <Route path="/compare/jobprogress" element={<CompareJobProgressPage />} />
-        <Route path="/compare/leap" element={<CompareLeapPage />} />
+        <Route path="/compare" element={isRoofingPublicMarketingEnabled ? <Navigate to="/compare/jobnimbus" replace /> : <Navigate to="/product" replace />} />
+        <Route path="/compare/jobnimbus" element={publicRoofingRoute(<CompareJobNimbusPage />)} />
+        <Route path="/compare/acculynx" element={publicRoofingRoute(<CompareAccuLynxPage />)} />
+        <Route path="/compare/roofr" element={publicRoofingRoute(<CompareRoofrPage />)} />
+        <Route path="/compare/jobprogress" element={publicRoofingRoute(<CompareJobProgressPage />)} />
+        <Route path="/compare/leap" element={publicRoofingRoute(<CompareLeapPage />)} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signin" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />

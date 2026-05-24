@@ -2241,7 +2241,7 @@ export const LeadFormDialog = ({
                     <SelectValue placeholder="Select product/module" />
                   </SelectTrigger>
                   <SelectContent className="rounded-md">
-                    {["Roofer CRM", "Lead Management", "Deals Pipeline", "Sales Inbox", "Sequences", "Reporting & Forecasting", "Customer Success", "Billing & Subscriptions", "Full Suite", "Other"].map((s) => (
+                    {["Sales CRM", "Lead Management", "Deals Pipeline", "Sales Inbox", "Sequences", "Reporting & Forecasting", "Customer Success", "Billing & Subscriptions", "Full Suite", "Other"].map((s) => (
                         <SelectItem key={s} value={s} className="rounded-md">{s}</SelectItem>
                       ))}
                   </SelectContent>

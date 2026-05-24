@@ -16,7 +16,7 @@ const samplePayload = `{
   "city": "Houston",
   "state": "TX",
   "zip": "77001",
-  "service_needed": "Roof Repair",
+  "service_needed": "CRM Implementation",
   "message": "I need a quote..."
 }`;
 
@@ -40,7 +40,7 @@ const WebsiteConfig = ({ formData, setFormData }: SourceConfigProps) => {
             {/* Website URL */}
             <div className="space-y-1">
                 <Label className="text-sm text-[#475569]">Your Website URL</Label>
-                <Input value={cfg.website_url || ""} onChange={(e) => update("website_url", e.target.value)} placeholder="https://yourroofingcompany.com" className="h-10 rounded-xl" />
+                <Input value={cfg.website_url || ""} onChange={(e) => update("website_url", e.target.value)} placeholder="https://yourcompany.com" className="h-10 rounded-xl" />
                 <p className="text-[10px] text-[#94A3B8]">For reference only</p>
             </div>
 

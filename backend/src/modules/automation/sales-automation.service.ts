@@ -486,6 +486,57 @@ class SalesAutomationService {
     });
   }
 
+  async retryRun(tenantId: string, runId: string, actorUserId?: string) {
+    const run = await db.salesAutomationRun.findFirst({ where: { id: runId, tenantId } });
+    if (!run) throw new NotFoundError('Automation run not found for this tenant', ErrorCodes.RESOURCE_NOT_FOUND);
+    if (String(run.status).toUpperCase() !== 'FAILED') {
+      throw new BadRequestError('Only failed automation runs can be retried', ErrorCodes.VALIDATION_FAILED);
+    }
+
+    const originalInput = run.input && typeof run.input === 'object' && !Array.isArray(run.input) ? run.input : {};
+    const idempotencyKey = String((originalInput as any).idempotencyKey || '').trim();
+    if (!idempotencyKey) {
+      throw new BadRequestError('Automation run does not include a retryable idempotency key', ErrorCodes.VALIDATION_FAILED);
+    }
+
+    const key = await automationIdempotencyService.assertRetryAllowedByKey(tenantId, idempotencyKey);
+    activityLogger.log({
+      tenantId,
+      entityType: run.entityType,
+      entityId: run.entityId,
+      action: 'UPDATE',
+      module: 'automation',
+      description: `Retry requested for failed automation run "${run.triggerType}"`,
+      userId: actorUserId,
+      metadata: {
+        runId,
+        idempotencyKey,
+        retryCount: Number(key.retryCount || 0),
+        lastError: key.error || run.error || null,
+      },
+    });
+
+    const { tenantId: _ignoredTenantId, ...safeInput } = originalInput as Record<string, any>;
+    await this.executeTrigger(run.triggerType, run.entityType, run.entityId, {
+      ...safeInput,
+      tenantId,
+      retryOfRunId: run.id,
+      retryIdempotencyKey: idempotencyKey,
+    });
+
+    const refreshedKey = await automationIdempotencyService.getByKey(tenantId, idempotencyKey);
+    return {
+      retried: true,
+      runId,
+      triggerType: run.triggerType,
+      entityType: run.entityType,
+      entityId: run.entityId,
+      idempotencyKey,
+      idempotencyStatus: refreshedKey?.status || null,
+      retryCount: Number(refreshedKey?.retryCount || 0),
+    };
+  }
+
   async listReminders(tenantId: string, query: Record<string, any> = {}) {
     return db.salesReminderSchedule.findMany({
       where: {

@@ -18,7 +18,7 @@ const emptyTemplate = { templateName: "", subject: "", body: "", category: "Cold
 function preview(text: string) {
   return variables.reduce((value, variable) => value.replaceAll(`{{${variable}}}`, {
     contactName: "Alex",
-    companyName: "North Star Roofing",
+    companyName: "North Star Software",
     repName: "Zodo Sales",
     proposalLink: "https://sales.zodo.ca/proposals/demo",
     planName: "Professional",

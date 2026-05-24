@@ -8,8 +8,11 @@ import { MarketingNavbar } from "@/components/public-v2/MarketingNavbar";
 import { PublicV2Shell } from "@/components/public-v2/PublicV2Shell";
 import { LandingFooter } from "@/components/public-v2/LandingSections";
 import { cn } from "@/lib/utils";
+import { isRoofingPublicMarketingEnabled } from "@/lib/public-product-config";
 import type { ProductFeatureContent } from "@/data/productFeatureContent";
 import { productFeatureNav } from "@/data/productFeatureContent";
+import type { SalesProductFeatureContent } from "@/data/salesProductFeatureContent";
+import { salesProductFeatureNav } from "@/data/salesProductFeatureContent";
 
 function SectionShell({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${className}`}>{children}</div>;
@@ -40,9 +43,12 @@ function toneClasses(color: ProductFeatureContent["color"]) {
   };
 }
 
-export function ProductFeatureTemplate({ content }: { content: ProductFeatureContent }) {
+type VisibleProductFeatureContent = ProductFeatureContent | SalesProductFeatureContent;
+
+export function ProductFeatureTemplate({ content }: { content: VisibleProductFeatureContent }) {
   const tone = toneClasses(content.color);
   const Icon = content.icon;
+  const visibleFeatureNav = isRoofingPublicMarketingEnabled ? productFeatureNav : salesProductFeatureNav;
 
   return (
     <PublicV2Shell>
@@ -60,7 +66,7 @@ export function ProductFeatureTemplate({ content }: { content: ProductFeatureCon
             </div>
 
             <div className="mt-6 flex flex-wrap gap-2">
-              {productFeatureNav.map((item) => (
+              {visibleFeatureNav.map((item) => (
                 <Link
                   key={item.slug}
                   to={item.to}
@@ -137,7 +143,7 @@ export function ProductFeatureTemplate({ content }: { content: ProductFeatureCon
           <div className="max-w-3xl">
             <p className={cn("text-xs font-bold uppercase tracking-[0.24em]", tone.accent)}>How it works inside ZODO</p>
             <h2 className="mt-4 text-4xl font-bold tracking-tight text-foreground md:text-5xl">
-              This feature is designed to work as part of the same roofing operating system.
+              This feature is designed to work as part of the same connected sales operating system.
             </h2>
           </div>
 
@@ -207,7 +213,7 @@ export function ProductFeatureTemplate({ content }: { content: ProductFeatureCon
               ZODO is strongest when these features work together, not in isolation.
             </h2>
             <p className="mt-5 text-base leading-8 text-muted-foreground">
-              The product story is not just about one feature page. It is about keeping sales, operations, communication, and finance inside one roofing-focused workspace.
+              The product story is not just about one feature page. It is about keeping sales, operations, communication, documents, and finance inside one connected workspace.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <Button asChild size="xl" variant="accent">

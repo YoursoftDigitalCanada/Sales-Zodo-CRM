@@ -69,7 +69,7 @@ export default function SubscriptionsPage() {
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div>
             <h1 className="text-2xl font-semibold text-[#0F172A]">Subscriptions</h1>
-            <p className="text-sm text-[#64748B]">Track Roofer CRM recurring revenue, renewals, billing status, invoices, and payments.</p>
+            <p className="text-sm text-[#64748B]">Track recurring revenue, renewals, billing status, invoices, and payments.</p>
           </div>
           <Button onClick={() => renewalMutation.mutate()} className="gap-2 bg-[#0F766E] hover:bg-[#115E59]"><RefreshCw size={16} />Prepare Renewals</Button>
         </div>

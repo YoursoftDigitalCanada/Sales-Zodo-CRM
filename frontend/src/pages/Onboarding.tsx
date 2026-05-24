@@ -82,7 +82,7 @@ const STEP_META: Record<Exclude<StepId, "complete">, WizardStep> = {
   modules: {
     id: "modules",
     title: "Sales Modules",
-    subtitle: "Choose the modules your Roofer CRM sales workspace should launch with.",
+    subtitle: "Choose the modules your Sales CRM workspace should launch with.",
     icon: Layers3,
   },
   pipeline: {
@@ -144,7 +144,7 @@ const MODULE_CARD_TONES = [
 
 const COMPANY_SIZE_OPTIONS = ["1-10", "11-50", "51-200", "201-500", "500+"];
 const INDUSTRY_OPTIONS = [
-  { value: "roofing_software_sales", label: "Roofing Software Sales" },
+  { value: "sales_crm", label: "Sales CRM" },
   { value: "b2b_saas", label: "B2B SaaS" },
   { value: "crm_sales", label: "CRM Sales" },
   { value: "professional_services", label: "Professional Services" },
@@ -237,7 +237,7 @@ function sanitizePayload(plan: PlanKey, payload: OnboardingPayload): OnboardingP
     companyProfile: {
       workspaceName: payload.companyProfile?.workspaceName?.trim() || "",
       website: payload.companyProfile?.website?.trim() || "",
-      industry: payload.companyProfile?.industry || "roofing_software_sales",
+      industry: payload.companyProfile?.industry || "sales_crm",
       businessType: payload.companyProfile?.businessType || "b2b_saas",
       companySize: payload.companyProfile?.companySize || "1-10",
       country: payload.companyProfile?.country?.trim() || "Canada",
@@ -245,7 +245,7 @@ function sanitizePayload(plan: PlanKey, payload: OnboardingPayload): OnboardingP
     salesPreferences: {
       leadStages: payload.salesPreferences?.leadStages?.length ? payload.salesPreferences.leadStages : DEFAULT_LEAD_STAGE_OPTIONS,
       dealStages: payload.salesPreferences?.dealStages?.length ? payload.salesPreferences.dealStages : DEFAULT_DEAL_STAGE_OPTIONS,
-      defaultPipeline: payload.salesPreferences?.defaultPipeline?.trim() || "Roofer CRM Sales",
+      defaultPipeline: payload.salesPreferences?.defaultPipeline?.trim() || "Sales CRM Pipeline",
       taskCadence: payload.salesPreferences?.taskCadence || "daily",
     },
     financePreferences: {
@@ -261,7 +261,7 @@ function sanitizePayload(plan: PlanKey, payload: OnboardingPayload): OnboardingP
     },
     teamInvites,
     ...(plan !== "basic" ? { projectSettings: { defaultProjectStatus: payload.projectSettings?.defaultProjectStatus || "not_started", taskStatuses: payload.projectSettings?.taskStatuses || ["pending", "in_progress", "done"] } } : {}),
-    ...(plan === "premium" ? { aiSettings: { businessType: "saas", materialType: "Roofer CRM", costingMethod: "subscription" }, analyticsSettings: { metrics: payload.analyticsSettings?.metrics || ["revenue", "leads", "projects", "performance"] } } : {}),
+    ...(plan === "premium" ? { aiSettings: { businessType: "saas", materialType: "Sales CRM", costingMethod: "subscription" }, analyticsSettings: { metrics: payload.analyticsSettings?.metrics || ["revenue", "leads", "projects", "performance"] } } : {}),
   };
 }
 
@@ -479,7 +479,7 @@ export default function OnboardingPage() {
                   <div className="grid gap-3 md:grid-cols-2">
                     <TextInput label="Workspace Name *" value={payload.companyProfile?.workspaceName || ""} placeholder="Zodo Sales" onChange={(value) => updatePayload((current) => ({ ...current, companyProfile: { ...current.companyProfile, workspaceName: value } }))} />
                     <TextInput label="Website / Domain" value={payload.companyProfile?.website || ""} placeholder="zodo.ca" onChange={(value) => updatePayload((current) => ({ ...current, companyProfile: { ...current.companyProfile, website: value } }))} />
-                    <SelectInput label="Industry" value={payload.companyProfile?.industry || "roofing_software_sales"} options={INDUSTRY_OPTIONS} onChange={(value) => updatePayload((current) => ({ ...current, companyProfile: { ...current.companyProfile, industry: value } }))} />
+                    <SelectInput label="Industry" value={payload.companyProfile?.industry || "sales_crm"} options={INDUSTRY_OPTIONS} onChange={(value) => updatePayload((current) => ({ ...current, companyProfile: { ...current.companyProfile, industry: value } }))} />
                     <SelectInput label="Business Type" value={payload.companyProfile?.businessType || "b2b_saas"} options={BUSINESS_TYPE_OPTIONS} onChange={(value) => updatePayload((current) => ({ ...current, companyProfile: { ...current.companyProfile, businessType: value } }))} />
                     <SelectInput label="Company Size" value={payload.companyProfile?.companySize || "1-10"} options={COMPANY_SIZE_OPTIONS.map((value) => ({ value, label: value }))} onChange={(value) => updatePayload((current) => ({ ...current, companyProfile: { ...current.companyProfile, companySize: value } }))} />
                     <TextInput label="Country" value={payload.companyProfile?.country || ""} placeholder="Canada" onChange={(value) => updatePayload((current) => ({ ...current, companyProfile: { ...current.companyProfile, country: value } }))} />
@@ -512,7 +512,7 @@ export default function OnboardingPage() {
 
                 {currentStep.id === "pipeline" ? (
                   <div className="space-y-4">
-                    <TextInput label="Default Pipeline" value={payload.salesPreferences?.defaultPipeline || ""} placeholder="Roofer CRM Sales" onChange={(value) => updatePayload((current) => ({ ...current, salesPreferences: { ...current.salesPreferences, defaultPipeline: value } }))} />
+                    <TextInput label="Default Pipeline" value={payload.salesPreferences?.defaultPipeline || ""} placeholder="Sales CRM Pipeline" onChange={(value) => updatePayload((current) => ({ ...current, salesPreferences: { ...current.salesPreferences, defaultPipeline: value } }))} />
                     <OptionCards title="Lead Stages" values={DEFAULT_LEAD_STAGE_OPTIONS} selected={payload.salesPreferences?.leadStages || []} onToggle={(value) => updatePayload((current) => ({ ...current, salesPreferences: { ...current.salesPreferences, leadStages: toggleValue(current.salesPreferences?.leadStages || [], value) } }))} />
                     <OptionCards title="Deal Stages" values={DEFAULT_DEAL_STAGE_OPTIONS} selected={payload.salesPreferences?.dealStages || []} onToggle={(value) => updatePayload((current) => ({ ...current, salesPreferences: { ...current.salesPreferences, dealStages: toggleValue(current.salesPreferences?.dealStages || [], value) } }))} />
                     <SelectInput label="Task Follow-up Cadence" value={payload.salesPreferences?.taskCadence || "daily"} options={[{ value: "daily", label: "Daily" }, { value: "every_2_days", label: "Every 2 days" }, { value: "weekly", label: "Weekly" }]} onChange={(value) => updatePayload((current) => ({ ...current, salesPreferences: { ...current.salesPreferences, taskCadence: value } }))} />
@@ -648,11 +648,11 @@ function TogglePanel({ label, checked, onChange }: { label: string; checked: boo
 function ReviewPanel({ payload, selectedFeatures }: { payload: OnboardingPayload; selectedFeatures: number }) {
   const rows = [
     ["Workspace", payload.companyProfile?.workspaceName || "Sales CRM"],
-    ["Industry", payload.companyProfile?.industry || "Roofing software sales"],
+    ["Industry", payload.companyProfile?.industry || "Sales CRM"],
     ["Company Size", payload.companyProfile?.companySize || "1-10"],
     ["Modules", `${payload.modules.length} selected`],
     ["Enabled Features", `${selectedFeatures} features`],
-    ["Pipeline", payload.salesPreferences?.defaultPipeline || "Roofer CRM Sales"],
+    ["Pipeline", payload.salesPreferences?.defaultPipeline || "Sales CRM Pipeline"],
     ["Deal Stages", `${payload.salesPreferences?.dealStages?.length || 0} stages`],
     ["Team Invites", `${payload.teamInvites.filter((invite) => invite.email.trim()).length} pending`],
     ["Billing", `${payload.financePreferences?.defaultBillingCycle || "monthly"} / ${payload.financePreferences?.paymentTermsDays || 14} day terms`],

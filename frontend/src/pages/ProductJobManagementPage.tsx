@@ -1,6 +1,8 @@
 import { ProductFeatureTemplate } from "@/components/public-v2/ProductFeatureTemplate";
 import { productFeatureMap } from "@/data/productFeatureContent";
+import { salesProductFeatureMap } from "@/data/salesProductFeatureContent";
+import { isRoofingPublicMarketingEnabled } from "@/lib/public-product-config";
 
 export default function ProductJobManagementPage() {
-  return <ProductFeatureTemplate content={productFeatureMap["job-management"]} />;
+  return <ProductFeatureTemplate content={isRoofingPublicMarketingEnabled ? productFeatureMap["job-management"] : salesProductFeatureMap["job-management"]} />;
 }

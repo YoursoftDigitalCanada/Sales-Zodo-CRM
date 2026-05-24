@@ -6642,13 +6642,17 @@ model AutomationIdempotencyKey {
   status         String    @default("STARTED")
   result         Json      @default("{}")
   error          String?   @db.Text
+  retryCount     Int       @default(0)
+  lastRetriedAt  DateTime?
   completedAt    DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   @@index([tenantId])
+  @@index([status])
   @@index([eventName])
   @@index([entityType, entityId])
   @@index([tenantId, entityType, entityId])
+  @@index([tenantId, status])
   @@unique([tenantId, key])
 }

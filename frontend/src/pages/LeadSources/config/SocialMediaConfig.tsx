@@ -190,7 +190,7 @@ const SocialMediaConfig = ({ formData, setFormData }: SourceConfigProps) => {
           <Input
             value={cfg.page_label || ""}
             onChange={(event) => update("page_label", event.target.value)}
-            placeholder="Roofing Leads - Vancouver"
+            placeholder="Sales Leads - Vancouver"
             className="h-10 rounded-xl"
           />
         </div>

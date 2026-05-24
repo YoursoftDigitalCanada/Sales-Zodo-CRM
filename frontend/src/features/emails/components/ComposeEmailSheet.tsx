@@ -291,9 +291,9 @@ export function ComposeEmailSheet({
             <div className="flex items-start gap-3">
               <Loader2 size={18} className="mt-0.5 animate-spin text-[#1D4ED8]" />
               <div>
-                <p className="text-sm font-medium text-[#1E3A8A]">Preparing inspection email</p>
+                <p className="text-sm font-medium text-[#1E3A8A]">Preparing email</p>
                 <p className="mt-1 text-sm text-[#1D4ED8]">
-                  {prefillStatusText || "Generating and attaching the latest inspection PDF report."}
+                  {prefillStatusText || "Generating and attaching the latest document."}
                 </p>
               </div>
             </div>

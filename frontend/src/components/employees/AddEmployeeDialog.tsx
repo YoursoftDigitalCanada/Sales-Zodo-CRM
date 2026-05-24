@@ -477,7 +477,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                       <FormControl>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
-                          <Input {...field} className="pl-10" placeholder="mike.foreman@roofingteam.ca" />
+                          <Input {...field} className="pl-10" placeholder="alex.manager@company.com" />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -511,7 +511,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                       <FormControl>
                         <Textarea
                           {...field}
-                          placeholder="Roof inspections, shingle installation, flashing repair, ladder safety..."
+                          placeholder="Lead qualification, demo follow-up, proposal writing, customer onboarding..."
                           className="resize-none"
                           rows={2}
                         />
@@ -532,7 +532,7 @@ export const AddEmployeeDialog: React.FC<AddEmployeeDialogProps> = ({
                       <FormControl>
                         <div className="relative">
                           <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
-                          <Input {...field} className="pl-10" placeholder="Roofing Crew Lead" />
+                          <Input {...field} className="pl-10" placeholder="Sales Team Lead" />
                         </div>
                       </FormControl>
                       <FormMessage />

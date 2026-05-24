@@ -521,11 +521,11 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div><Label className="text-xs text-[#475569]">Proposal Title *</Label>
                 <Input value={formData.title} onChange={e => setFormData(p => ({ ...p, title: e.target.value }))}
-                  placeholder="e.g. Roofer CRM Professional Plan" className="mt-1 rounded-md" required />
+                  placeholder="e.g. Professional Services Plan" className="mt-1 rounded-md" required />
               </div>
               <div><Label className="text-xs text-[#475569]">Deal Name</Label>
                 <Input value={formData.projectName} onChange={e => setFormData(p => ({ ...p, projectName: e.target.value }))}
-                  placeholder="e.g. ABC Roofing CRM rollout" className="mt-1 rounded-md" />
+                  placeholder="e.g. Acme CRM rollout" className="mt-1 rounded-md" />
               </div>
             </div>
 
@@ -1005,8 +1005,8 @@ const QuotesPage = () => {
       const result = await getQuotes({ limit: 200 });
       setQuotes(result.data.map(mapApiQuote));
     } catch (err) {
-      console.error("Failed to load quotes:", err);
-      toast({ title: "Error", description: "Failed to load quotes", variant: "destructive" });
+      console.error("Failed to load proposals:", err);
+      toast({ title: "Error", description: "Failed to load proposals", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -1150,8 +1150,8 @@ const QuotesPage = () => {
       toast({ title: "Proposal Created", description: "New proposal has been created successfully." });
       fetchQuotes();
     } catch (err) {
-      console.error("Failed to create quote:", err);
-      toast({ title: "Error", description: "Failed to create quote", variant: "destructive" });
+      console.error("Failed to create proposal:", err);
+      toast({ title: "Error", description: "Failed to create proposal", variant: "destructive" });
     }
   };
 
@@ -1179,8 +1179,8 @@ const QuotesPage = () => {
       toast({ title: "Proposal Updated", description: `${currentQuote.quoteNumber} has been updated.` });
       fetchQuotes();
     } catch (err) {
-      console.error("Failed to update quote:", err);
-      toast({ title: "Error", description: "Failed to update quote", variant: "destructive" });
+      console.error("Failed to update proposal:", err);
+      toast({ title: "Error", description: "Failed to update proposal", variant: "destructive" });
     }
   };
 
@@ -1192,10 +1192,10 @@ const QuotesPage = () => {
       setQuotes(prev => prev.filter(q => q.id !== deleteQuoteId));
       setDeleteQuoteId(null);
       setIsDetailOpen(false);
-      toast({ title: "Proposal Deleted", description: `${qt?.quoteNumber || "Quote"} has been deleted.` });
+      toast({ title: "Proposal Deleted", description: `${qt?.quoteNumber || "Proposal"} has been deleted.` });
     } catch (err) {
-      console.error("Failed to delete quote:", err);
-      toast({ title: "Error", description: "Failed to delete quote", variant: "destructive" });
+      console.error("Failed to delete proposal:", err);
+      toast({ title: "Error", description: "Failed to delete proposal", variant: "destructive" });
     }
   };
 
@@ -1205,7 +1205,7 @@ const QuotesPage = () => {
       await fetchQuotes();
       toast({ title: "Signature Request Sent", description: "Proposal link has been emailed to the recipient." });
     } catch (err: any) {
-      console.error("Failed to send quote:", err);
+      console.error("Failed to send proposal:", err);
       const msg = err?.response?.data?.message || "Failed to send signature request";
       toast({ title: "Error", description: msg, variant: "destructive" });
     }
@@ -1246,8 +1246,8 @@ const QuotesPage = () => {
       toast({ title: "Proposal Duplicated", description: `New proposal created from ${original.quoteNumber}.` });
       fetchQuotes();
     } catch (err) {
-      console.error("Failed to duplicate quote:", err);
-      toast({ title: "Error", description: "Failed to duplicate quote", variant: "destructive" });
+      console.error("Failed to duplicate proposal:", err);
+      toast({ title: "Error", description: "Failed to duplicate proposal", variant: "destructive" });
     }
   };
 
@@ -1259,7 +1259,7 @@ const QuotesPage = () => {
       setSelectedQuotes(new Set());
     } catch (err) {
       console.error("Failed to bulk delete:", err);
-      toast({ title: "Error", description: "Failed to delete some quotes", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to delete some proposals", variant: "destructive" });
     }
   };
 
@@ -1294,7 +1294,7 @@ const QuotesPage = () => {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "quotes.csv";
+    anchor.download = "proposals.csv";
     anchor.click();
 
     toast({ title: "Exported", description: "Proposals exported to CSV successfully." });
@@ -1426,11 +1426,11 @@ const QuotesPage = () => {
                 : "grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6"
             )}
           >
-            <div className={cn(isMobile && "w-[calc(100vw-2rem)] max-w-[220px] shrink-0")}><StatCard title="Total Pipeline" value={formatCurrency(stats.totalValue)} subtitle={`${stats.totalCount} quotes`} icon={DollarSign} color="teal" trend={{ value: 12, positive: true }} delay={0} /></div>
+            <div className={cn(isMobile && "w-[calc(100vw-2rem)] max-w-[220px] shrink-0")}><StatCard title="Total Pipeline" value={formatCurrency(stats.totalValue)} subtitle={`${stats.totalCount} proposals`} icon={DollarSign} color="teal" trend={{ value: 12, positive: true }} delay={0} /></div>
             <div className={cn(isMobile && "w-[calc(100vw-2rem)] max-w-[220px] shrink-0")}><StatCard title="Signed Value" value={formatCurrency(stats.acceptedValue)} subtitle="Contracts ready to convert" icon={CheckCircle2} color="green" trend={{ value: 8, positive: true }} delay={0.05} /></div>
             <div className={cn(isMobile && "w-[calc(100vw-2rem)] max-w-[220px] shrink-0")}><StatCard title="Pending" value={formatCurrency(stats.pendingValue)} subtitle="Awaiting response" icon={Clock3} color="gold" delay={0.1} /></div>
             <div className={cn(isMobile && "w-[calc(100vw-2rem)] max-w-[220px] shrink-0")}><StatCard title="Win Rate" value={`${stats.conversionRate}%`} subtitle="Conversion rate" icon={Target} color="purple" trend={{ value: 3, positive: true }} delay={0.15} /></div>
-            <div className={cn(isMobile && "w-[calc(100vw-2rem)] max-w-[220px] shrink-0")}><StatCard title="Avg. Value" value={formatCurrency(stats.avgValue)} subtitle="Per quote" icon={TrendingUp} color="blue" delay={0.2} /></div>
+            <div className={cn(isMobile && "w-[calc(100vw-2rem)] max-w-[220px] shrink-0")}><StatCard title="Avg. Value" value={formatCurrency(stats.avgValue)} subtitle="Per proposal" icon={TrendingUp} color="blue" delay={0.2} /></div>
             <div className={cn(isMobile && "w-[calc(100vw-2rem)] max-w-[220px] shrink-0")}><StatCard title="Expiring Soon" value={stats.expiringSoonCount} subtitle="Within 7 days" icon={AlertTriangle} color="red" delay={0.25} /></div>
           </div>
 

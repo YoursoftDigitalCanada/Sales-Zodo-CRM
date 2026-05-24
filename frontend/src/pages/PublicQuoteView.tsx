@@ -464,8 +464,8 @@ export default function PublicQuoteView() {
                   {quote.client.address && <p className="text-sm text-[#475569]">{quote.client.address}</p>}
                 </div>
                 <div className="p-4 bg-[#F8FAFC] rounded-md">
-                  <p className="text-xs text-[#94A3B8] mb-2">Project Details</p>
-                  <p className="text-sm font-semibold text-[#0F172A]">{quote.project.jobType || "Roofing Service"}</p>
+                  <p className="text-xs text-[#94A3B8] mb-2">Deal Details</p>
+                  <p className="text-sm font-semibold text-[#0F172A]">{quote.project.jobType || "Professional Service"}</p>
                   {quote.project.address && <p className="text-sm text-[#475569]">{quote.project.address}</p>}
                   <p className="text-sm text-[#475569]">Issued {formatDate(quote.issueDate)}</p>
                   <p className={cn("text-sm", isExpired ? "text-amber-600 font-medium" : "text-[#475569]")}>Valid until {formatDate(quote.validUntil)}</p>
@@ -481,11 +481,11 @@ export default function PublicQuoteView() {
 
               {quote.roofEstimate && (
                 <div className="mb-6 space-y-4">
-                  <p className="text-sm font-semibold text-[#0F172A]">Roof Assessment</p>
+                  <p className="text-sm font-semibold text-[#0F172A]">Service Assessment</p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                     <div className="p-4 bg-[#F8FAFC] rounded-md">
-                      <p className="text-xs text-[#94A3B8] mb-1">Roof Area</p>
+                      <p className="text-xs text-[#94A3B8] mb-1">Measured Area</p>
                       <p className="text-sm font-semibold text-[#0F172A]">
                         {quote.roofEstimate.roofAreaSqft !== null && quote.roofEstimate.roofAreaSqft !== undefined
                           ? `${formatNumber(quote.roofEstimate.roofAreaSqft)} sq ft`
@@ -493,9 +493,9 @@ export default function PublicQuoteView() {
                       </p>
                     </div>
                     <div className="p-4 bg-[#F8FAFC] rounded-md">
-                      <p className="text-xs text-[#94A3B8] mb-1">Pitch / Roof Type</p>
+                      <p className="text-xs text-[#94A3B8] mb-1">Assessment Type</p>
                       <p className="text-sm font-semibold text-[#0F172A]">
-                        {[quote.roofEstimate.pitch, quote.roofEstimate.roofType].filter(Boolean).join(" · ") || "Roofing Estimate"}
+                        {[quote.roofEstimate.pitch, quote.roofEstimate.roofType].filter(Boolean).join(" · ") || "Service Estimate"}
                       </p>
                     </div>
                     <div className="p-4 bg-[#F8FAFC] rounded-md">

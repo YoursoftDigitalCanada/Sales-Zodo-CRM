@@ -205,13 +205,13 @@ const currencyOptions = [
 
 // Clients are fetched from the API in the component below
 
-// Mock Products
+// Starter line items
 const mockProducts: Product[] = [
-  { id: 1, name: "Roof Installation", description: "Complete new roof installation including materials and labour", rate: 85, unit: "sq ft", taxable: true },
-  { id: 2, name: "Roof Repair", description: "Repair of damaged or leaking roof sections", rate: 350, unit: "job", taxable: true },
-  { id: 3, name: "Roof Inspection", description: "Full roof condition assessment and written report", rate: 250, unit: "visit", taxable: true },
-  { id: 4, name: "Gutter Installation", description: "Seamless aluminium gutter supply and install", rate: 12, unit: "lin ft", taxable: true },
-  { id: 5, name: "Emergency Tarp", description: "Emergency tarp-up service for storm damage", rate: 500, unit: "job", taxable: true },
+  { id: 1, name: "Implementation Package", description: "Initial setup, configuration, and onboarding support", rate: 1200, unit: "package", taxable: true },
+  { id: 2, name: "Professional Services", description: "Consulting, delivery, and account support", rate: 150, unit: "hour", taxable: true },
+  { id: 3, name: "Monthly Subscription", description: "Recurring platform or service subscription", rate: 500, unit: "month", taxable: true },
+  { id: 4, name: "Training Session", description: "Team enablement and product training", rate: 300, unit: "session", taxable: true },
+  { id: 5, name: "Support Retainer", description: "Priority support and success management", rate: 750, unit: "month", taxable: true },
 ];
 
 // ============================================
@@ -1295,7 +1295,7 @@ const CreateInvoicePage = () => {
         },
       ],
       notes: "",
-      terms: "Payment is due within the specified terms. A deposit of 50% is required before work begins. All materials and workmanship are guaranteed as specified in the roofing warranty. Late payments may be subject to interest charges of 1.5% per month. Any additional work beyond the original scope will be quoted separately.",
+      terms: "Payment is due within the specified terms. A deposit may be required before work begins. Late payments may be subject to interest charges of 1.5% per month. Any additional work beyond the original scope will be quoted separately.",
       discount: 0,
       discountType: "fixed",
       sendReminder: true,
@@ -1449,7 +1449,7 @@ const CreateInvoicePage = () => {
         );
 
         selectedClientIdRef.current = readText(project.client?.id) || null;
-        setLinkedProjectName(readText(project.name) || "Roofing Job");
+        setLinkedProjectName(readText(project.name) || "Linked Deal");
         setLinkedInvoiceId(readText(invoice?.id) || requestedInvoiceId || null);
 
         const currentValues = getValues();
@@ -1495,7 +1495,7 @@ const CreateInvoicePage = () => {
         if (!cancelled) {
           toast({
             title: "Invoice review unavailable",
-            description: "The linked job invoice could not be loaded right now.",
+            description: "The linked deal invoice could not be loaded right now.",
             variant: "destructive",
           });
         }
@@ -1737,7 +1737,7 @@ const CreateInvoicePage = () => {
             : `Invoice ${data.invoiceNumber} has been saved successfully.`,
       });
 
-      navigate(linkedProjectId ? `/projects/${linkedProjectId}` : "/invoice");
+      navigate(linkedProjectId ? `/deals` : "/invoice");
     } catch (error) {
       console.error("Save Error:", error);
       toast({
@@ -1872,7 +1872,7 @@ const CreateInvoicePage = () => {
                 <span className="text-[#475569]">Invoices</span>
                 <ChevronRight size={16} className="text-[#475569]" />
                 <span className="font-medium text-[#0F172A]">
-                  {isProjectReviewMode ? "Review Job Invoice" : isEditMode ? "Edit Invoice" : "Create Invoice"}
+                  {isProjectReviewMode ? "Review Deal Invoice" : isEditMode ? "Edit Invoice" : "Create Invoice"}
                 </span>
               </div>
             </div>
@@ -1948,10 +1948,10 @@ const CreateInvoicePage = () => {
                 <div className="space-y-6">
                   {isProjectReviewMode ? (
                     <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 shadow-sm">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Live Job Invoice</p>
-                      <p className="mt-2 text-sm font-semibold text-[#0F172A]">{linkedProjectName || "Linked roofing job"}</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">Linked Deal Invoice</p>
+                      <p className="mt-2 text-sm font-semibold text-[#0F172A]">{linkedProjectName || "Linked deal"}</p>
                       <p className="mt-1 text-sm text-[#64748B]">
-                        Core job values are locked here. You can review line items, adjust tax, add a discount, and update notes before sending.
+                        Core deal values are locked here. You can review line items, adjust tax, add a discount, and update notes before sending.
                       </p>
                     </div>
                   ) : null}
@@ -1967,14 +1967,14 @@ const CreateInvoicePage = () => {
                     </div>
                     <div>
                       <h1 className="text-lg sm:text-2xl font-bold text-[#0F172A]">
-                        {isProjectReviewMode ? "Review Job Invoice" : isEditMode ? "Edit Invoice" : "Create Invoice"}
+                        {isProjectReviewMode ? "Review Deal Invoice" : isEditMode ? "Edit Invoice" : "Create Invoice"}
                       </h1>
                       <p className="text-[#94A3B8]">
                         {isProjectReviewMode
-                          ? "The job already built this invoice draft. Review it here and send when ready."
+                          ? "The deal already built this invoice draft. Review it here and send when ready."
                           : isEditMode
                             ? "Update the existing invoice details and keep the same billing pattern."
-                            : "Fill in the details to generate a new roofing invoice"}
+                            : "Fill in the details to generate a new invoice"}
                       </p>
                     </div>
                   </motion.div>

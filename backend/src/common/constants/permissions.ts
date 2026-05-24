@@ -317,12 +317,12 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { code: PERMISSIONS.TASKS_DELETE, name: 'Delete Tasks', description: 'Remove tasks', module: 'tasks', action: 'delete' },
   { code: PERMISSIONS.TASKS_ASSIGN, name: 'Assign Tasks', description: 'Assign tasks to employees', module: 'tasks', action: 'assign' },
 
-  // Projects
-  { code: PERMISSIONS.PROJECTS_VIEW, name: 'View Projects', description: 'View project listings', module: 'projects', action: 'view' },
-  { code: PERMISSIONS.PROJECTS_CREATE, name: 'Create Projects', description: 'Create new projects', module: 'projects', action: 'create' },
-  { code: PERMISSIONS.PROJECTS_UPDATE, name: 'Update Projects', description: 'Edit project information', module: 'projects', action: 'update' },
-  { code: PERMISSIONS.PROJECTS_DELETE, name: 'Delete Projects', description: 'Remove projects', module: 'projects', action: 'delete' },
-  { code: PERMISSIONS.PROJECTS_MANAGE_MEMBERS, name: 'Manage Project Members', description: 'Add/remove project members', module: 'projects', action: 'manage-members' },
+  // Deals
+  { code: PERMISSIONS.PROJECTS_VIEW, name: 'View Deals', description: 'View deal listings', module: 'projects', action: 'view' },
+  { code: PERMISSIONS.PROJECTS_CREATE, name: 'Create Deals', description: 'Create new deals', module: 'projects', action: 'create' },
+  { code: PERMISSIONS.PROJECTS_UPDATE, name: 'Update Deals', description: 'Edit deal information', module: 'projects', action: 'update' },
+  { code: PERMISSIONS.PROJECTS_DELETE, name: 'Delete Deals', description: 'Remove deals', module: 'projects', action: 'delete' },
+  { code: PERMISSIONS.PROJECTS_MANAGE_MEMBERS, name: 'Manage Deal Members', description: 'Add/remove deal members', module: 'projects', action: 'manage-members' },
 
   // Calendar
   { code: PERMISSIONS.CALENDAR_VIEW, name: 'View Calendar', description: 'View calendar events', module: 'calendar', action: 'view' },
@@ -351,11 +351,11 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { code: PERMISSIONS.INVOICES_SEND, name: 'Send Invoices', description: 'Send invoices to clients', module: 'invoices', action: 'send' },
   { code: PERMISSIONS.INVOICES_MARK_PAID, name: 'Mark Invoices Paid', description: 'Mark invoices as paid', module: 'invoices', action: 'mark-paid' },
 
-  // Quotes
-  { code: PERMISSIONS.QUOTES_VIEW, name: 'View Quotes', description: 'View quotes and proposals', module: 'quotes', action: 'view' },
-  { code: PERMISSIONS.QUOTES_CREATE, name: 'Create Quotes', description: 'Create new quotes', module: 'quotes', action: 'create' },
-  { code: PERMISSIONS.QUOTES_UPDATE, name: 'Update Quotes', description: 'Edit quotes', module: 'quotes', action: 'update' },
-  { code: PERMISSIONS.QUOTES_DELETE, name: 'Delete Quotes', description: 'Remove quotes', module: 'quotes', action: 'delete' },
+  // Proposals
+  { code: PERMISSIONS.QUOTES_VIEW, name: 'View Proposals', description: 'View proposals', module: 'quotes', action: 'view' },
+  { code: PERMISSIONS.QUOTES_CREATE, name: 'Create Proposals', description: 'Create new proposals', module: 'quotes', action: 'create' },
+  { code: PERMISSIONS.QUOTES_UPDATE, name: 'Update Proposals', description: 'Edit proposals', module: 'quotes', action: 'update' },
+  { code: PERMISSIONS.QUOTES_DELETE, name: 'Delete Proposals', description: 'Remove proposals', module: 'quotes', action: 'delete' },
 
   // Contracts
   { code: PERMISSIONS.CONTRACTS_VIEW, name: 'View Contracts', description: 'View contracts', module: 'contracts', action: 'view' },

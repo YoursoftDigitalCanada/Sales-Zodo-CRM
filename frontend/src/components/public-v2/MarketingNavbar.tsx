@@ -4,6 +4,7 @@ import { ChevronDown, Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { isRoofingPublicMarketingEnabled } from "@/lib/public-product-config";
 
 import { BrandLogo } from "./BrandLogo";
 
@@ -11,7 +12,16 @@ type NavItem =
   | { label: string; href: string; hasDropdown?: boolean }
   | { label: string; to: string; hasDropdown?: boolean };
 
-const navItems: NavItem[] = [
+const salesNavItems: NavItem[] = [
+  { label: "Features", href: "#features", hasDropdown: true },
+  { label: "Product", to: "/product" },
+  { label: "Solutions", to: "/solutions" },
+  { label: "Pricing", to: "/pricing" },
+  { label: "Integrations", to: "/product", hasDropdown: true },
+  { label: "Resources", href: "#resources", hasDropdown: true },
+];
+
+const roofingNavItems: NavItem[] = [
   { label: "Features", href: "#features", hasDropdown: true },
   { label: "AI Estimator", to: "/ai-estimator" },
   { label: "Pricing", to: "/pricing" },
@@ -48,6 +58,7 @@ function NavLinkItem({
 
 export function MarketingNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navItems = isRoofingPublicMarketingEnabled ? roofingNavItems : salesNavItems;
 
   const closeMobile = () => setMobileOpen(false);
 

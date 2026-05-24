@@ -29,14 +29,14 @@ const EMAIL_TEMPLATE_VARIABLES = ['contactName', 'companyName', 'repName', 'prop
 
 const DEFAULT_SALES_EMAIL_TEMPLATES = [
   {
-    templateName: 'Cold Outreach - Roofer CRM Demo',
+    templateName: 'Cold Outreach - Sales CRM Demo',
     category: 'Cold Outreach',
     subject: 'Quick idea for {{companyName}}',
     body: `Hi {{contactName}},
 
-I noticed {{companyName}} may be managing roofing leads, follow-ups, proposals, and customer communication across multiple tools.
+I noticed {{companyName}} may be managing sales leads, follow-ups, proposals, and customer communication across multiple tools.
 
-Roofer CRM helps roofing companies keep sales activity in one place: leads, deals, proposals, tasks, subscriptions, and team follow-up.
+Sales CRM helps sales organizations keep sales activity in one place: leads, deals, proposals, tasks, subscriptions, and team follow-up.
 
 Would you be open to a 15-minute demo this week to see if it fits your process?
 
@@ -46,14 +46,14 @@ Best,
   {
     templateName: 'Cold Outreach - Lead Tracking Pain',
     category: 'Cold Outreach',
-    subject: 'Are roofing leads slipping through the cracks?',
+    subject: 'Are sales leads slipping through the cracks?',
     body: `Hi {{contactName}},
 
-Many roofing teams lose revenue because leads are not followed up fast enough or deal status is not visible to the owner.
+Many sales teams lose revenue because leads are not followed up fast enough or deal status is not visible to the owner.
 
-Roofer CRM gives {{companyName}} a simple sales pipeline, lead tracking, reminders, proposals, and reporting built around roofing sales.
+Sales CRM gives {{companyName}} a simple sales pipeline, lead tracking, reminders, proposals, and reporting built around sales operations.
 
-Would it make sense to compare your current process with Roofer CRM?
+Would it make sense to compare your current process with Sales CRM?
 
 Thanks,
 {{repName}}`,
@@ -61,10 +61,10 @@ Thanks,
   {
     templateName: 'Referral Introduction',
     category: 'Cold Outreach',
-    subject: 'Intro to Roofer CRM for {{companyName}}',
+    subject: 'Intro to Sales CRM for {{companyName}}',
     body: `Hi {{contactName}},
 
-I am reaching out because Roofer CRM is built for roofing companies that want a cleaner way to track leads, follow-ups, proposals, and revenue.
+I am reaching out because Sales CRM is built for sales organizations that want a cleaner way to track leads, follow-ups, proposals, and revenue.
 
 If {{companyName}} is looking to improve sales visibility or reduce missed follow-ups, I can show you the system in a short walkthrough.
 
@@ -76,10 +76,10 @@ Best,
   {
     templateName: 'Demo Confirmation',
     category: 'Demo Follow-up',
-    subject: 'Confirmed: Roofer CRM demo for {{companyName}}',
+    subject: 'Confirmed: Sales CRM demo for {{companyName}}',
     body: `Hi {{contactName}},
 
-Thanks for booking a Roofer CRM demo.
+Thanks for booking a Sales CRM demo.
 
 On the call, I will show how {{companyName}} can manage leads, contacts, deals, proposals, tasks, and sales reporting in one place.
 
@@ -91,10 +91,10 @@ Talk soon,
   {
     templateName: 'Demo Follow-up - Next Steps',
     category: 'Demo Follow-up',
-    subject: 'Next steps after the Roofer CRM demo',
+    subject: 'Next steps after the Sales CRM demo',
     body: `Hi {{contactName}},
 
-Thanks for taking time to review Roofer CRM for {{companyName}}.
+Thanks for taking time to review Sales CRM for {{companyName}}.
 
 Based on our conversation, the main fit areas are lead follow-up, pipeline visibility, proposal tracking, and keeping the sales team accountable.
 
@@ -106,10 +106,10 @@ Best,
   {
     templateName: 'No-show Demo Recovery',
     category: 'Demo Follow-up',
-    subject: 'Should we reschedule the Roofer CRM demo?',
+    subject: 'Should we reschedule the Sales CRM demo?',
     body: `Hi {{contactName}},
 
-Looks like we missed each other for the Roofer CRM demo.
+Looks like we missed each other for the Sales CRM demo.
 
 No problem. If improving lead tracking and sales follow-up is still a priority for {{companyName}}, I can reschedule for another time this week.
 
@@ -124,7 +124,7 @@ Thanks,
     subject: 'Proposal for {{companyName}}',
     body: `Hi {{contactName}},
 
-I sent the Roofer CRM proposal for {{companyName}} here:
+I sent the Sales CRM proposal for {{companyName}} here:
 
 {{proposalLink}}
 
@@ -138,10 +138,10 @@ Best,
   {
     templateName: 'Proposal Follow-up - 2 Days',
     category: 'Proposal Follow-up',
-    subject: 'Any questions on the Roofer CRM proposal?',
+    subject: 'Any questions on the Sales CRM proposal?',
     body: `Hi {{contactName}},
 
-Just checking in on the Roofer CRM proposal for {{companyName}}.
+Just checking in on the Sales CRM proposal for {{companyName}}.
 
 Do you have any questions about pricing, setup, users, or rollout timing?
 
@@ -153,10 +153,10 @@ Best,
   {
     templateName: 'Negotiation Follow-up',
     category: 'Proposal Follow-up',
-    subject: 'Finalizing Roofer CRM for {{companyName}}',
+    subject: 'Finalizing Sales CRM for {{companyName}}',
     body: `Hi {{contactName}},
 
-I wanted to follow up on the remaining items for Roofer CRM.
+I wanted to follow up on the remaining items for Sales CRM.
 
 From my side, the key next steps are confirming the {{planName}} plan, user count, billing cycle, and onboarding date.
 
@@ -168,10 +168,10 @@ Best,
   {
     templateName: 'Renewal Reminder - 30 Days',
     category: 'Renewal',
-    subject: 'Upcoming Roofer CRM renewal for {{companyName}}',
+    subject: 'Upcoming Sales CRM renewal for {{companyName}}',
     body: `Hi {{contactName}},
 
-Your Roofer CRM renewal for {{companyName}} is coming up soon.
+Your Sales CRM renewal for {{companyName}} is coming up soon.
 
 I wanted to check in early to confirm your team is set for the next billing period and see if you need any changes to users, plan, or support.
 
@@ -183,10 +183,10 @@ Best,
   {
     templateName: 'Renewal Value Check-in',
     category: 'Renewal',
-    subject: 'How is Roofer CRM working for {{companyName}}?',
+    subject: 'How is Sales CRM working for {{companyName}}?',
     body: `Hi {{contactName}},
 
-Before the upcoming renewal, I wanted to check how Roofer CRM is working for {{companyName}}.
+Before the upcoming renewal, I wanted to check how Sales CRM is working for {{companyName}}.
 
 Are leads, tasks, proposals, and reporting giving your team the visibility you expected?
 
@@ -198,10 +198,10 @@ Best,
   {
     templateName: 'Re-engagement - Still Interested',
     category: 'Re-engagement',
-    subject: 'Still considering Roofer CRM?',
+    subject: 'Still considering Sales CRM?',
     body: `Hi {{contactName}},
 
-We spoke earlier about Roofer CRM for {{companyName}}, and I wanted to see if improving your sales process is still on the table.
+We spoke earlier about Sales CRM for {{companyName}}, and I wanted to see if improving your sales process is still on the table.
 
 If timing was not right before, we can restart with a short demo or updated proposal.
 

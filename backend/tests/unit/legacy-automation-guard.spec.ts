@@ -110,6 +110,8 @@ jest.mock('../../src/modules/automation/sales-automation.service', () => ({
 
 import { AutomationService } from '../../src/modules/automation/automation.service';
 import { isLegacyRoofingAutomationEnabled } from '../../src/modules/automation/legacy-automation.guard';
+import { stage4SendWorkflowService } from '../../src/modules/proposals/stage4-send-workflow.service';
+import { proposalReminderService } from '../../src/modules/proposals/proposal-reminder.service';
 
 describe('legacy roofing automation guard', () => {
   let setIntervalSpy: jest.SpyInstance;
@@ -136,6 +138,14 @@ describe('legacy roofing automation guard', () => {
     mockDb.tenant.findUnique.mockResolvedValue({ settings: { enabledModules: ['roofing-automation'] } });
 
     await expect(isLegacyRoofingAutomationEnabled('tenant-roof')).resolves.toBe(true);
+  });
+
+  it('does not initialize legacy roofing proposal listeners by default in Sales CRM deployment', () => {
+    const service = new AutomationService();
+    service.initialize();
+
+    expect(stage4SendWorkflowService.initialize).not.toHaveBeenCalled();
+    expect(proposalReminderService.initialize).not.toHaveBeenCalled();
   });
 
   it('Sales CRM lead.created does not create inspection/property/roofing tasks or folders', async () => {

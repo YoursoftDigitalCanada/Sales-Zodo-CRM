@@ -73,6 +73,8 @@ import { salesAutomationService } from './sales-automation.service';
 import { isLegacyRoofingAutomationEnabled } from './legacy-automation.guard';
 import { automationIdempotencyService } from './automation-idempotency.service';
 
+const ENABLE_LEGACY_ROOFING_WORKFLOWS = process.env.ENABLE_LEGACY_ROOFING_WORKFLOWS === 'true';
+
 // ── Extensible Hook Types ────────────────────────────────────────────────
 
 /**
@@ -133,8 +135,12 @@ export class AutomationService {
         proposalAutomationService.initialize();
         dealConversionService.initialize();
         stage3WorkflowService.initialize();
-        stage4SendWorkflowService.initialize();
-        proposalReminderService.initialize();
+        if (ENABLE_LEGACY_ROOFING_WORKFLOWS) {
+            stage4SendWorkflowService.initialize();
+            proposalReminderService.initialize();
+        } else {
+            logger.info('[Automation] Legacy roofing proposal workflows disabled for this deployment');
+        }
         quoteSignatureReminderService.initialize();
         salesAutomationService.initialize();
         // Sales CRM uses deal/subscription billing automation instead of legacy roofing project execution workflows.
@@ -146,7 +152,14 @@ export class AutomationService {
         logger.info('[Automation] Initialized', {
             builtInRules: this.getBuiltInRuleNames(),
             externalHooks: this.hooks.map(h => `${h.event} → ${h.name}`),
-            workflowServices: ['EstimationWorkflow', 'ProposalAutomation', 'DealConversion', 'Stage3Workflow', 'Stage4SendWorkflow', 'ProposalReminder', 'SalesAutomation'],
+            workflowServices: [
+                'EstimationWorkflow',
+                'ProposalAutomation',
+                'DealConversion',
+                'Stage3Workflow',
+                ...(ENABLE_LEGACY_ROOFING_WORKFLOWS ? ['Stage4SendWorkflow', 'ProposalReminder'] : []),
+                'SalesAutomation',
+            ],
         });
     }
 

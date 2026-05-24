@@ -30,7 +30,7 @@ import {
   normalizeWhitespace,
 } from "@contracts/contact";
 
-const DRAFT_STORAGE_KEY = "roofing-project-wizard-draft-v2";
+const DRAFT_STORAGE_KEY = "sales-deal-wizard-draft-v2";
 
 export type ProjectWizardStepId = "basic" | "clientSite" | "jobDetails" | "insurance" | "financial" | "review";
 
@@ -43,8 +43,8 @@ export interface WizardStepMeta {
 export const ALL_WIZARD_STEPS: WizardStepMeta[] = [
   { id: "clientSite", title: "Client & Site", description: "Client and location" },
   { id: "basic", title: "Basic", description: "Project identity" },
-  { id: "jobDetails", title: "Job Details", description: "Roof scope" },
-  { id: "insurance", title: "Insurance", description: "Claim details" },
+  { id: "jobDetails", title: "Deal Details", description: "Scope and requirements" },
+  { id: "insurance", title: "Supporting Details", description: "Additional context" },
   { id: "financial", title: "Financial", description: "Budget and schedule" },
   { id: "review", title: "Assignment", description: "Review and launch" },
 ];
@@ -656,7 +656,7 @@ export function useProjectForm(editId?: string) {
 
     try {
       const created = await submitMutation.mutateAsync(form.getValues());
-      toast({ title: isEditMode ? "Project updated" : "Project created", description: isEditMode ? "Roofing project updated successfully." : "Roofing project created successfully." });
+      toast({ title: isEditMode ? "Deal updated" : "Deal created", description: isEditMode ? "Deal updated successfully." : "Deal created successfully." });
       return created;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Please check the form values and try again.";

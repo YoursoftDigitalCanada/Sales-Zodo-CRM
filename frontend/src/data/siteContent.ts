@@ -73,16 +73,16 @@ export const navLinks: SiteNavLink[] = [
   { label: "Home", href: "/" },
   { label: "Product", href: "/product" },
   { label: "Solutions", href: "/solutions" },
-  { label: "AI Estimator", href: "/ai-estimator" },
+  { label: "Automation", href: "/product/customer-crm" },
   { label: "Pricing", href: "/pricing" },
   { label: "Contact", href: "/contact" },
 ];
 
 export const homeStats: StatItem[] = [
-  { value: "Address-first", label: "AI estimator starts with property location, not photo upload." },
-  { value: "Lead -> Payment", label: "The full roofing money pipeline is kept in one system." },
-  { value: "Action Center", label: "Daily priorities surface follow-ups, visits, estimates, and invoices." },
-  { value: "Built for roofers", label: "Field teams, sales teams, and operations stay aligned." },
+  { value: "Lead -> Payment", label: "The full sales revenue pipeline is kept in one system." },
+  { value: "One record", label: "Contacts, companies, deals, documents, invoices, and payments stay connected." },
+  { value: "Action Center", label: "Daily priorities surface follow-ups, proposals, tasks, and invoices." },
+  { value: "Built for sales", label: "Sales, success, finance, and operations stay aligned." },
 ];
 
 export const workflowSteps: WorkflowStep[] = [
@@ -91,16 +91,16 @@ export const workflowSteps: WorkflowStep[] = [
     description: "Every opportunity starts with clean intake, clear ownership, and immediate action.",
   },
   {
-    title: "Estimate gets generated",
-    description: "Use address-based AI estimation or manual workflow to move quoting faster.",
+    title: "Proposal gets prepared",
+    description: "Use customer and deal context to move pricing, documents, and approvals faster.",
   },
   {
     title: "Client approves",
     description: "The estimate becomes active work with less back-and-forth and less delay.",
   },
   {
-    title: "Job progresses",
-    description: "Crews, deadlines, documents, and updates stay connected inside the same workflow.",
+    title: "Deal progresses",
+    description: "Tasks, deadlines, documents, and updates stay connected inside the same workflow.",
   },
   {
     title: "Invoice and payment",
@@ -110,8 +110,8 @@ export const workflowSteps: WorkflowStep[] = [
 
 export const homeFeatures: FeatureItem[] = [
   {
-    title: "Address-to-estimate AI",
-    description: "Enter the property address, let ZODO analyze roof data, and move toward an estimate faster.",
+    title: "Lead-to-deal automation",
+    description: "Capture the inquiry, assign an owner, and move toward a proposal faster.",
   },
   {
     title: "Action-driven dashboard",
@@ -119,7 +119,7 @@ export const homeFeatures: FeatureItem[] = [
   },
   {
     title: "Auto invoice builder",
-    description: "Finance stays tied to job progress so teams stop rebuilding invoices from scratch.",
+    description: "Finance stays tied to deal progress so teams stop rebuilding invoices from scratch.",
   },
   {
     title: "Missed revenue alerts",
@@ -130,29 +130,29 @@ export const homeFeatures: FeatureItem[] = [
 export const productSections: ProductSection[] = [
   {
     title: "Action Center",
-    description: "A clear command layer for follow-ups, pending estimates, scheduled visits, and overdue invoices.",
+    description: "A clear command layer for follow-ups, pending proposals, scheduled meetings, and overdue invoices.",
     points: ["Today's priorities", "No missed next steps", "Sales + operations visibility"],
   },
   {
-    title: "Jobs and crew control",
-    description: "Track progress, crew assignments, documents, and deadlines around the real job instead of isolated records.",
+    title: "Deals and team control",
+    description: "Track progress, assignments, documents, and deadlines around the real customer opportunity instead of isolated records.",
     points: ["Kanban pipeline", "File manager", "Field coordination"],
   },
   {
     title: "Finance tied to execution",
-    description: "Estimates, invoices, and payments stay close to job movement so cash flow remains visible.",
-    points: ["Estimate approvals", "Auto-built invoicing", "Payment tracking"],
+    description: "Proposals, invoices, and payments stay close to deal movement so cash flow remains visible.",
+    points: ["Proposal approvals", "Auto-built invoicing", "Payment tracking"],
   },
   {
     title: "Revenue alerting",
     description: "Spot pipeline risk, delayed payments, and deals stuck in negotiation before revenue slips away.",
-    points: ["Estimate aging", "Invoice risk", "Missed follow-up detection"],
+    points: ["Proposal aging", "Invoice risk", "Missed follow-up detection"],
   },
 ];
 
 export const solutionsAudiences: SolutionsAudience[] = [
   {
-    title: "Roofing owners",
+    title: "Sales leaders",
     description: "Get one operating system to understand what is moving, what is stuck, and where revenue is leaking.",
   },
   {
@@ -161,31 +161,31 @@ export const solutionsAudiences: SolutionsAudience[] = [
   },
   {
     title: "Operations leaders",
-    description: "Coordinate crews, site visits, paperwork, and finance with less context loss between stages.",
+    description: "Coordinate tasks, meetings, paperwork, and finance with less context loss between stages.",
   },
 ];
 
 export const solutionOutcomes = [
-  "Faster estimating for residential and commercial jobs",
+  "Faster proposal creation for new opportunities",
   "Better follow-up control for leads and negotiations",
-  "Cleaner handoff from signed estimate to live job",
+  "Cleaner handoff from signed proposal to customer onboarding",
   "Fewer missed invoices and easier payment visibility",
-  "More confidence for teams running field + office together",
-  "Stronger positioning for roofing companies scaling revenue",
+  "More confidence for teams running sales and operations together",
+  "Stronger positioning for companies scaling revenue",
 ];
 
 export const estimatorSteps: EstimatorStep[] = [
   {
     title: "Enter the address",
-    description: "Start with a property location instead of asking the customer to upload images or wait on manual steps.",
+    description: "Start with a clean customer and company record instead of asking the team to rebuild context.",
   },
   {
-    title: "ZODO analyzes roof data",
-    description: "The system interprets the property context, roof characteristics, and estimating inputs needed for speed.",
+    title: "ZODO organizes the sales context",
+    description: "The system keeps lead source, owner, contact, deal, and proposal inputs available for speed.",
   },
   {
-    title: "Estimate workflow begins",
-    description: "The address becomes the launch point for faster quoting, approval, and job conversion.",
+    title: "Proposal workflow begins",
+    description: "The deal becomes the launch point for faster proposal, approval, and customer conversion.",
   },
 ];
 
@@ -193,23 +193,23 @@ export const pricingTiers: PricingTier[] = [
   {
     name: "Starter",
     price: "$99/mo",
-    description: "For smaller crews getting off spreadsheets and disconnected follow-up systems.",
-    features: ["Lead + client CRM", "Tasks and calendar", "Basic estimating workflow"],
+    description: "For smaller teams getting off spreadsheets and disconnected follow-up systems.",
+    features: ["Lead + customer CRM", "Tasks and calendar", "Basic proposal workflow"],
     cta: "Start Free Trial",
     highlight: false,
   },
   {
     name: "Pro",
     price: "$249/mo",
-    description: "For growing roofing teams that want AI estimation, job control, and stronger revenue visibility.",
-    features: ["Address-based AI estimator", "Jobs + invoicing", "Action Center + revenue alerts"],
+    description: "For growing sales teams that want automation, deal control, and stronger revenue visibility.",
+    features: ["Sales automation", "Deals + invoicing", "Action Center + revenue alerts"],
     cta: "Start Free Trial",
     highlight: true,
   },
   {
     name: "Enterprise",
     price: "Custom",
-    description: "For multi-team roofing businesses that need advanced workflows, permissions, and process control.",
+    description: "For multi-team businesses that need advanced workflows, permissions, and process control.",
     features: ["Advanced team management", "Custom workflow support", "Priority onboarding"],
     cta: "Talk to Sales",
     highlight: false,
@@ -222,24 +222,24 @@ export const pricingFaqs: PricingFaq[] = [
     answer: "These are placeholder pricing options for the current marketing build and can be replaced with your final commercial model anytime.",
   },
   {
-    question: "Can teams start with AI estimation first?",
-    answer: "Yes. The pricing story is designed so the AI estimator can act as the hook while the rest of the CRM expands the value over time.",
+    question: "Can teams start with CRM and automation first?",
+    answer: "Yes. Teams can start with lead and deal workflows, then expand into documents, invoicing, reporting, and bookkeeping over time.",
   },
   {
-    question: "Do all plans support roofing workflows?",
-    answer: "Yes. Every tier is framed around roofing-specific estimating, operational workflow, and revenue control rather than generic CRM admin.",
+    question: "Do all plans support sales workflows?",
+    answer: "Yes. Every tier is framed around lead management, deal movement, follow-up, document workflows, and revenue control.",
   },
 ];
 
 export const contactBullets = [
   "Start a free-trial conversation",
-  "Request an AI estimate walkthrough",
-  "Show how ZODO fits your roofing sales process",
+  "Request an automation walkthrough",
+  "Show how ZODO fits your sales process",
   "Plan the move from scattered tools to one system",
 ];
 
 export const whyZodoItems = [
-  "Address-based AI estimator positioning",
-  "Action-driven workflow for roofing teams",
-  "Lead, estimate, job, invoice, payment in one system",
+  "Lead-to-deal automation positioning",
+  "Action-driven workflow for sales teams",
+  "Lead, proposal, contract, invoice, payment in one system",
 ];

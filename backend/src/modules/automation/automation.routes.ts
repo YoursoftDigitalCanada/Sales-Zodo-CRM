@@ -20,6 +20,7 @@ router.post('/rules/:id/enable', requirePermission(PERMISSIONS.AUTOMATION_UPDATE
 router.post('/rules/:id/disable', requirePermission(PERMISSIONS.AUTOMATION_UPDATE), validate(automationIdSchema), automationController.disableRule.bind(automationController));
 
 router.get('/runs', requirePermission(PERMISSIONS.AUTOMATION_VIEW), automationController.listRuns.bind(automationController));
+router.post('/runs/:id/retry', requirePermission(PERMISSIONS.AUTOMATION_RUN), validate(automationIdSchema), automationController.retryRun.bind(automationController));
 router.get('/reminders', requirePermission(PERMISSIONS.AUTOMATION_VIEW), automationController.listReminders.bind(automationController));
 router.post('/reminders/:id/cancel', requirePermission(PERMISSIONS.AUTOMATION_UPDATE), validate(automationIdSchema), automationController.cancelReminder.bind(automationController));
 router.post('/seed-defaults', requirePermission(PERMISSIONS.AUTOMATION_RUN), automationController.seedDefaults.bind(automationController));

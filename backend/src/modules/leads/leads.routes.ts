@@ -10,6 +10,7 @@ import {
   requirePermission,
   requireAnyPermission,
 } from '../../common/middleware/permission.middleware';
+import { requireLegacyRoofingModule } from '../../common/middleware/legacy-roofing-module.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
 import {
@@ -420,6 +421,7 @@ router.post(
  */
 router.get(
   '/inspections/all',
+  requireLegacyRoofingModule,
   requirePermission(PERMISSIONS.LEADS_VIEW),
   inspectionsController.getAll.bind(inspectionsController)
 );
@@ -430,6 +432,7 @@ router.get(
  */
 router.get(
   '/:leadId/inspections',
+  requireLegacyRoofingModule,
   requirePermission(PERMISSIONS.LEADS_VIEW),
   validate(inspectionListForLeadSchema),
   requireAccessibleLead('leadId'),
@@ -442,6 +445,7 @@ router.get(
  */
 router.post(
   '/:leadId/inspections',
+  requireLegacyRoofingModule,
   requirePermission(PERMISSIONS.LEADS_UPDATE),
   validate(createInspectionForLeadSchema),
   requireAccessibleLead('leadId'),
@@ -454,6 +458,7 @@ router.post(
  */
 router.get(
   '/:leadId/inspections/:inspectionId',
+  requireLegacyRoofingModule,
   requirePermission(PERMISSIONS.LEADS_VIEW),
   validate(inspectionIdForLeadSchema),
   requireAccessibleLead('leadId'),
@@ -466,6 +471,7 @@ router.get(
  */
 router.put(
   '/:leadId/inspections/:inspectionId',
+  requireLegacyRoofingModule,
   requirePermission(PERMISSIONS.LEADS_UPDATE),
   validate(updateInspectionForLeadSchema),
   requireAccessibleLead('leadId'),
@@ -478,6 +484,7 @@ router.put(
  */
 router.delete(
   '/:leadId/inspections/:inspectionId',
+  requireLegacyRoofingModule,
   requirePermission(PERMISSIONS.LEADS_DELETE),
   validate(inspectionIdForLeadSchema),
   requireAccessibleLead('leadId'),
@@ -490,6 +497,7 @@ router.delete(
 
 router.get(
   '/:leadId/insurance-claims',
+  requireLegacyRoofingModule,
   requirePermission(PERMISSIONS.LEADS_VIEW),
   validate(insuranceClaimListSchema),
   requireAccessibleLead('leadId'),
@@ -498,6 +506,7 @@ router.get(
 
 router.post(
   '/:leadId/insurance-claims',
+  requireLegacyRoofingModule,
   requirePermission(PERMISSIONS.LEADS_UPDATE),
   validate(createInsuranceClaimSchema),
   requireAccessibleLead('leadId'),
@@ -506,6 +515,7 @@ router.post(
 
 router.get(
   '/:leadId/insurance-claims/:claimId',
+  requireLegacyRoofingModule,
   requirePermission(PERMISSIONS.LEADS_VIEW),
   validate(insuranceClaimIdSchema),
   requireAccessibleLead('leadId'),
@@ -514,6 +524,7 @@ router.get(
 
 router.put(
   '/:leadId/insurance-claims/:claimId',
+  requireLegacyRoofingModule,
   requirePermission(PERMISSIONS.LEADS_UPDATE),
   validate(updateInsuranceClaimSchema),
   requireAccessibleLead('leadId'),
@@ -522,6 +533,7 @@ router.put(
 
 router.delete(
   '/:leadId/insurance-claims/:claimId',
+  requireLegacyRoofingModule,
   requirePermission(PERMISSIONS.LEADS_DELETE),
   validate(insuranceClaimIdSchema),
   requireAccessibleLead('leadId'),

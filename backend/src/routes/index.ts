@@ -272,7 +272,6 @@ export function registerRoutes(app: Application): void {
         // Core
         auth: `${apiPrefix}/auth`,
         leads: `${apiPrefix}/leads`,
-        inspections: `${apiPrefix}/inspections`,
         leadSources: `${apiPrefix}/lead-sources`,
         // CRM
         clients: `${apiPrefix}/clients`,
@@ -284,7 +283,7 @@ export function registerRoutes(app: Application): void {
         roles: `${apiPrefix}/roles`,
         tenants: `${apiPrefix}/tenants`,
         // Operations
-        projects: `${apiPrefix}/projects`,
+        deals: `${apiPrefix}/projects`,
         pipeline: `${apiPrefix}/pipeline`,
         tasks: `${apiPrefix}/tasks`,
         calendar: `${apiPrefix}/calendar`,
@@ -315,9 +314,7 @@ export function registerRoutes(app: Application): void {
         // DRAFT — re-enable next year
         // ecommerce: `${apiPrefix}/ecommerce`,
         // AI Modules
-        roofEstimator: `${apiPrefix}/roof-estimator`,
         copilot: `${apiPrefix}/copilot`,
-        eagleview: `${apiPrefix}/eagleview`,
         contracts: `${apiPrefix}/contracts`,
         proposals: `${apiPrefix}/proposals`,
         supportTickets: `${apiPrefix}/support-tickets`,

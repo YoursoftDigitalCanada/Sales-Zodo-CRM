@@ -15,6 +15,7 @@ import { activityLogger } from '../../common/services/activity-logger.service';
 import { proposalsService } from './proposals.service';
 import { proposalReminderService } from './proposal-reminder.service';
 import { automationIdempotencyService } from '../automation/automation-idempotency.service';
+import { isLegacyRoofingAutomationEnabled } from '../automation/legacy-automation.guard';
 import { LeadStatus, CommunicationType } from '@prisma/client';
 const APP_BASE_URL = process.env.APP_BASE_URL || process.env.FRONTEND_URL || '';
 
@@ -56,6 +57,14 @@ export class Stage4SendWorkflowService {
     // ── Main handler for proposal.sent ──────────────────────────────────
 
     private async handleProposalSent(event: ProposalSentEvent): Promise<void> {
+        if (!(await isLegacyRoofingAutomationEnabled(event.tenantId))) {
+            logger.info('[Stage4] Legacy roofing proposal workflow skipped for Sales CRM tenant', {
+                tenantId: event.tenantId,
+                proposalId: event.proposalId,
+            });
+            return;
+        }
+
         logger.info('[Stage4] Processing proposal.sent', {
             proposalId: event.proposalId,
             deliveryMethod: event.deliveryMethod,
@@ -303,6 +312,14 @@ export class Stage4SendWorkflowService {
     // ── Automation 6: Proposal View Notification ────────────────────────
 
     private async handleProposalViewed(event: ProposalViewedEvent): Promise<void> {
+        if (!(await isLegacyRoofingAutomationEnabled(event.tenantId))) {
+            logger.info('[Stage4] Legacy roofing proposal viewed workflow skipped for Sales CRM tenant', {
+                tenantId: event.tenantId,
+                proposalId: event.proposalId,
+            });
+            return;
+        }
+
         logger.info('[Stage4] Proposal viewed', {
             proposalId: event.proposalId,
             leadName: event.leadName,
@@ -341,7 +358,7 @@ export class Stage4SendWorkflowService {
     // ── Automation 7: Schedule Reminder Sequence ────────────────────────
 
     private async scheduleReminders(event: ProposalSentEvent): Promise<void> {
-        proposalReminderService.scheduleReminders({
+        await proposalReminderService.scheduleReminders({
             tenantId: event.tenantId,
             proposalId: event.proposalId,
             leadId: event.leadId,

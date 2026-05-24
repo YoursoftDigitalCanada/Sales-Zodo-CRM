@@ -97,14 +97,13 @@ export async function triggerCreateUiAction(): Promise<boolean> {
   return clickElement(
     findClickableByPatterns([
       "add lead",
-      "new quote",
-      "create quote",
+      "new proposal",
+      "create proposal",
       "create invoice",
       "new invoice",
       "add client",
-      "new project",
-      "add project",
-      "new inspection",
+      "new deal",
+      "add deal",
       "add employee",
       "add user",
       "invite users",

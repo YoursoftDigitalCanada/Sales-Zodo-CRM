@@ -3,6 +3,7 @@ import { logger } from '../../common/utils/logger';
 import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 import { smsService } from '../../common/services/sms.service';
 import { communicationLogService } from '../communication-logs/communication-log.service';
+import { isLegacyRoofingAutomationEnabled } from '../automation/legacy-automation.guard';
 import { CommunicationType } from '@prisma/client';
 
 const APP_BASE_URL = process.env.APP_BASE_URL || process.env.FRONTEND_URL || '';
@@ -64,7 +65,15 @@ class ProposalReminderService {
     /**
      * Schedule reminders for a newly sent proposal
      */
-    scheduleReminders(data: ScheduledReminder): void {
+    async scheduleReminders(data: ScheduledReminder): Promise<void> {
+        if (!(await isLegacyRoofingAutomationEnabled(data.tenantId))) {
+            logger.info('[ProposalReminder] Legacy roofing proposal reminders skipped for Sales CRM tenant', {
+                tenantId: data.tenantId,
+                proposalId: data.proposalId,
+            });
+            return;
+        }
+
         this.scheduledProposals.set(data.proposalId, data);
 
         logger.info('[ProposalReminder] Reminders scheduled', {
@@ -107,6 +116,11 @@ class ProposalReminderService {
         reminder: ScheduledReminder,
         now: Date,
     ): Promise<void> {
+        if (!(await isLegacyRoofingAutomationEnabled(reminder.tenantId))) {
+            this.cancelReminders(proposalId);
+            return;
+        }
+
         // Check if proposal is still in a state that needs reminders
         const proposal = await (prisma as any).proposal.findFirst({
             where: { id: proposalId, tenantId: reminder.tenantId },

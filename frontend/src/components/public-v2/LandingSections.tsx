@@ -32,6 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { isRoofingPublicMarketingEnabled } from "@/lib/public-product-config";
 import { cn } from "@/lib/utils";
 
 import { BrandLogo } from "./BrandLogo";
@@ -192,6 +193,49 @@ const footerSections = [
   { title: "RESOURCES", links: [{ label: "Roofing Blog", to: "/contact" }, { label: "Estimating Guides", to: "/contact" }, { label: "Webinars", to: "/contact" }, { label: "Case Studies", to: "/contact" }, { label: "ROI Calculator", to: "/pricing" }] },
   { title: "COMPANY", links: [{ label: "About Us", to: "/contact" }, { label: "Careers", to: "/contact" }, { label: "Contact", to: "/contact" }, { label: "Press", to: "/contact" }, { label: "Affiliates", to: "/contact" }] },
   { title: "COMPARE", links: [{ label: "vs JobNimbus", to: "/compare/jobnimbus" }, { label: "vs AccuLynx", to: "/compare/acculynx" }, { label: "vs Roofr", to: "/compare/roofr" }, { label: "vs JobProgress", to: "/compare/jobprogress" }, { label: "vs Leap", to: "/compare/leap" }] },
+];
+
+const salesFooterSections = [
+  {
+    title: "PRODUCT",
+    links: [
+      { label: "Lead Management", to: "/product/customer-crm" },
+      { label: "Deals", to: "/product/job-management" },
+      { label: "Proposals", to: "/product/proposals" },
+      { label: "Invoicing", to: "/product/invoicing" },
+      { label: "Mobile App", to: "/product/mobile-app" },
+    ],
+  },
+  {
+    title: "SOLUTIONS",
+    links: [
+      { label: "Sales Teams", to: "/solutions" },
+      { label: "Customer Success", to: "/solutions" },
+      { label: "Operations", to: "/solutions" },
+      { label: "Multi-location", to: "/solutions" },
+    ],
+  },
+  {
+    title: "RESOURCES",
+    links: [
+      { label: "CRM Guides", to: "/contact" },
+      { label: "Automation Playbooks", to: "/contact" },
+      { label: "Webinars", to: "/contact" },
+      { label: "Case Studies", to: "/contact" },
+      { label: "ROI Calculator", to: "/pricing" },
+    ],
+  },
+  { title: "COMPANY", links: [{ label: "About Us", to: "/contact" }, { label: "Careers", to: "/contact" }, { label: "Contact", to: "/contact" }, { label: "Press", to: "/contact" }, { label: "Affiliates", to: "/contact" }] },
+  {
+    title: "PLATFORM",
+    links: [
+      { label: "Security", to: "/security" },
+      { label: "Privacy", to: "/privacy-policy" },
+      { label: "Terms", to: "/terms-of-service" },
+      { label: "Pricing", to: "/pricing" },
+      { label: "Book a demo", to: "/contact" },
+    ],
+  },
 ];
 
 const canadaDemoAddresses = [
@@ -1538,11 +1582,14 @@ export function CtaSection() {
 }
 
 export function LandingFooter() {
+  const visibleFooterSections = isRoofingPublicMarketingEnabled ? footerSections : salesFooterSections;
+  const footerTagline = isRoofingPublicMarketingEnabled ? "The #1 CRM for Roofers" : "Sales CRM by Yoursoft Digital";
+
   return (
     <footer id="resources" className="bg-section-dark text-section-dark-foreground">
       <SectionShell className="py-16">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-3 lg:grid-cols-5 lg:gap-6">
-          {footerSections.map((section) => (
+          {visibleFooterSections.map((section) => (
             <div key={section.title}>
               <h4 className="mb-4 text-[11px] font-semibold uppercase tracking-wider text-section-dark-foreground/50">{section.title}</h4>
               <ul className="space-y-2.5">
@@ -1562,7 +1609,7 @@ export function LandingFooter() {
           <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
             <div className="flex items-center gap-3">
               <BrandLogo />
-              <span className="ml-2 text-xs text-section-dark-foreground/40">The #1 CRM for Roofers</span>
+              <span className="ml-2 text-xs text-section-dark-foreground/40">{footerTagline}</span>
             </div>
 
             <div className="flex flex-wrap items-center gap-4">

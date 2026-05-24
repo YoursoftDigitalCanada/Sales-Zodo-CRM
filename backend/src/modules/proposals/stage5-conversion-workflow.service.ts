@@ -16,6 +16,7 @@ import { notificationsService } from '../notifications/notifications.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { proposalReminderService } from './proposal-reminder.service';
 import { automationIdempotencyService } from '../automation/automation-idempotency.service';
+import { isLegacyRoofingAutomationEnabled } from '../automation/legacy-automation.guard';
 
 const APP_BASE_URL = process.env.APP_BASE_URL || process.env.FRONTEND_URL || '';
 
@@ -55,6 +56,14 @@ export class Stage5ConversionWorkflowService {
     // ── Main handler ────────────────────────────────────────────────────
 
     private async handleProposalAccepted(event: ProposalAcceptedEvent): Promise<void> {
+        if (!(await isLegacyRoofingAutomationEnabled(event.tenantId))) {
+            logger.info('[Stage5] Legacy roofing conversion workflow skipped for Sales CRM tenant', {
+                tenantId: event.tenantId,
+                proposalId: event.proposalId,
+            });
+            return;
+        }
+
         logger.info('[Stage5] Processing proposal.accepted', {
             proposalId: event.proposalId,
             leadId: event.leadId,

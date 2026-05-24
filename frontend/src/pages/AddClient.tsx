@@ -18,7 +18,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { NotificationBell } from "@/components/NotificationBell";
 import FieldErrorMessage from "@/components/forms/FieldErrorMessage";
 import {
-  Bell,
   Loader2,
   Save,
   X,
@@ -37,14 +36,10 @@ import {
   Globe,
   Hash,
   DollarSign,
-  Calendar,
   ChevronRight,
   Sparkles,
   CheckCircle2,
   AlertCircle,
-  Home,
-  Wrench,
-  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
@@ -136,21 +131,10 @@ interface FormData {
   clientCategory: string;
   tags: string;
   notes: string;
-  // Sales account profile
-  propertyType: string;
-  numberOfStories: string;
-  serviceType: string;
+  // Sales account preferences
   preferredContactMethod: string;
   bestTimeToContact: string;
-  currentRoofMaterial: string;
-  roofAge: string;
-  insuranceCompanyName: string;
-  isInsuranceClaim: string;
-  isHomeowner: string;
-  isHOA: string;
-  hoaRestrictions: string;
   secondaryPhone: string;
-  spouseCoOwnerName: string;
 }
 
 type FormErrors = Partial<Record<keyof FormData, string>>;
@@ -189,21 +173,10 @@ const initialFormState: FormData = {
   clientCategory: "Regular",
   tags: "",
   notes: "",
-  // Sales account profile
-  propertyType: "",
-  numberOfStories: "",
-  serviceType: "",
+  // Sales account preferences
   preferredContactMethod: "",
   bestTimeToContact: "",
-  currentRoofMaterial: "",
-  roofAge: "",
-  insuranceCompanyName: "",
-  isInsuranceClaim: "",
-  isHomeowner: "",
-  isHOA: "",
-  hoaRestrictions: "",
   secondaryPhone: "",
-  spouseCoOwnerName: "",
 };
 
 const UUID_REGEX =
@@ -216,10 +189,15 @@ const toApiClientType = (clientType: string): "BUSINESS" | "INDIVIDUAL" =>
   clientType.toLowerCase() === "individual" ? "INDIVIDUAL" : "BUSINESS";
 
 const toUiStatus = (status?: string | null): string =>
-  status?.toUpperCase() === "INACTIVE" ? "Inactive" : "Active";
+  status?.toUpperCase() === "INACTIVE" ? "Inactive" : status?.toUpperCase() === "CHURNED" ? "Churned" : status?.toUpperCase() === "PROSPECT" ? "Prospect" : "Active";
 
-const toApiStatus = (status: string): "ACTIVE" | "INACTIVE" =>
-  status.toLowerCase() === "inactive" ? "INACTIVE" : "ACTIVE";
+const toApiStatus = (status: string): "ACTIVE" | "INACTIVE" | "CHURNED" | "PROSPECT" => {
+  const normalized = status.toLowerCase();
+  if (normalized === "inactive") return "INACTIVE";
+  if (normalized === "churned") return "CHURNED";
+  if (normalized === "prospect") return "PROSPECT";
+  return "ACTIVE";
+};
 
 const normalizeTags = (tags: unknown): string => {
   if (Array.isArray(tags)) {
@@ -279,21 +257,10 @@ const mapApiClientToFormData = (data: any): FormData => {
     clientCategory: data.clientCategory || "Regular",
     tags: normalizeTags(data.tags),
     notes: data.internalNotes || data.notes || "",
-    // Sales account profile
-    propertyType: data.propertyType || "",
-    numberOfStories: data.numberOfStories || "",
-    serviceType: data.serviceType || "",
+    // Sales account preferences
     preferredContactMethod: data.preferredContactMethod || "",
     bestTimeToContact: data.bestTimeToContact || "",
-    currentRoofMaterial: data.currentRoofMaterial || "",
-    roofAge: data.roofAge || "",
-    insuranceCompanyName: data.insuranceCompanyName || "",
-    isInsuranceClaim: data.isInsuranceClaim || "",
-    isHomeowner: data.isHomeowner || "",
-    isHOA: data.isHOA || "",
-    hoaRestrictions: data.hoaRestrictions || "",
     secondaryPhone: data.secondaryPhone || "",
-    spouseCoOwnerName: data.spouseCoOwnerName || "",
   };
 };
 
@@ -346,21 +313,10 @@ const mapFormDataToApiPayload = (data: FormData) => {
     leadSource: data.leadSource || null,
     clientCategory: data.clientCategory || null,
     tags: splitTags(data.tags),
-    // Sales account profile
-    propertyType: data.propertyType || null,
-    numberOfStories: data.numberOfStories || null,
-    serviceType: data.serviceType || null,
+    // Sales account preferences
     preferredContactMethod: data.preferredContactMethod || null,
     bestTimeToContact: data.bestTimeToContact || null,
-    currentRoofMaterial: data.currentRoofMaterial || null,
-    roofAge: data.roofAge || null,
-    insuranceCompanyName: data.insuranceCompanyName || null,
-    isInsuranceClaim: data.isInsuranceClaim || null,
-    isHomeowner: data.isHomeowner || null,
-    isHOA: data.isHOA || null,
-    hoaRestrictions: data.hoaRestrictions.trim() || null,
     secondaryPhone: data.secondaryPhone.trim() || null,
-    spouseCoOwnerName: normalizeWhitespace(data.spouseCoOwnerName) || null,
   };
 };
 
@@ -369,10 +325,10 @@ const validateClientForm = (data: FormData): FormErrors => {
   const clientName = normalizeWhitespace(data.clientName);
 
   if (!clientName) {
-    errors.clientName = "Client / Company name is required.";
+    errors.clientName = "Organization / company name is required.";
   } else if (data.clientType === "Individual" && !isValidPersonName(clientName)) {
     errors.clientName =
-      "Client name can only contain letters, spaces, apostrophes, periods, and hyphens.";
+      "Contact name can only contain letters, spaces, apostrophes, periods, and hyphens.";
   }
 
   const primaryEmailError = getEmailAddressError(data.primaryEmail, "Primary email", {
@@ -416,14 +372,6 @@ const validateClientForm = (data: FormData): FormErrors => {
   );
   if (secondaryPhoneError) {
     errors.secondaryPhone = secondaryPhoneError;
-  }
-
-  const spouseNameError = getPersonNameError(
-    data.spouseCoOwnerName,
-    "Secondary contact name",
-  );
-  if (spouseNameError) {
-    errors.spouseCoOwnerName = spouseNameError;
   }
 
   return errors;
@@ -717,7 +665,7 @@ const AddClientPage = () => {
       if (file.size > 10 * 1024) {
         toast({
           title: "File too large",
-          description: "Please select a client photo under 10KB.",
+          description: "Please select an organization logo under 10KB.",
           variant: "destructive",
         });
         return;
@@ -745,7 +693,7 @@ const AddClientPage = () => {
     if (Object.keys(validationErrors).length > 0) {
       toast({
         title: "Validation error",
-        description: "Please fix the highlighted client details and try again.",
+        description: "Please fix the highlighted organization details and try again.",
         variant: "destructive",
       });
       return;
@@ -766,8 +714,8 @@ const AddClientPage = () => {
       toast({
         title: "Success!",
         description: isEditMode
-          ? "Client updated successfully."
-          : "Client created successfully.",
+          ? "Organization updated successfully."
+          : "Organization created successfully.",
       });
       navigate("/client-list");
     } catch (error: any) {
@@ -797,7 +745,7 @@ const AddClientPage = () => {
             <div className="w-16 h-16 rounded-md bg-[#0891B2]/10 flex items-center justify-center mx-auto mb-4">
               <Loader2 className="w-8 h-8 text-[#0891B2] animate-spin" />
             </div>
-            <p className="text-[#94A3B8] font-medium">Loading client data...</p>
+            <p className="text-[#94A3B8] font-medium">Loading organization data...</p>
           </motion.div>
         </main>
       </div>
@@ -839,11 +787,11 @@ const AddClientPage = () => {
                   onClick={() => navigate("/client-list")}
                   className="text-[#475569] hover:text-[#0891B2] transition-colors"
                 >
-                  Clients
+                  Organizations
                 </button>
                 <ChevronRight size={14} className="text-[#475569]" />
                 <span className="font-semibold text-[#0891B2]">
-                  {isEditMode ? "Edit Client" : "New Client"}
+                  {isEditMode ? "Edit Organization" : "New Organization"}
                 </span>
               </div>
             </div>
@@ -878,7 +826,7 @@ const AddClientPage = () => {
                   <Save size={16} />
                 )}
                 <span>
-                  {isEditMode ? "Update" : "Save"} Client
+                  {isEditMode ? "Update" : "Save"} Organization
                 </span>
               </motion.button>
             </div>
@@ -1093,9 +1041,10 @@ const AddClientPage = () => {
                           handleSelectChange("status", val)
                         }
                         options={[
+                          { value: "Prospect", label: "Prospect" },
                           { value: "Active", label: "Active" },
                           { value: "Inactive", label: "Inactive" },
-                          { value: "Pending", label: "Pending" },
+                          { value: "Churned", label: "Inactive / Churned" },
                         ]}
                       />
 
@@ -1284,7 +1233,7 @@ const AddClientPage = () => {
                       </Label>
                       <Textarea
                         id="notes"
-                        placeholder="Internal notes about this client..."
+                        placeholder="Internal notes about this organization..."
                         value={formData.notes}
                         onChange={handleInputChange}
                         className="min-h-[120px] rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 resize-none"
@@ -1335,6 +1284,17 @@ const AddClientPage = () => {
                       icon={Phone}
                       error={formErrors.primaryContactPhone}
                       onClearError={() => clearFormError("primaryContactPhone")}
+                    />
+
+                    <StyledInput
+                      label="Secondary Phone"
+                      id="secondaryPhone"
+                      placeholder="+1 (555) 123-4567"
+                      value={formData.secondaryPhone}
+                      onChange={handleInputChange}
+                      icon={Phone}
+                      error={formErrors.secondaryPhone}
+                      onClearError={() => clearFormError("secondaryPhone")}
                     />
                   </div>
                 </StyledCard>
@@ -1392,56 +1352,15 @@ const AddClientPage = () => {
                   </div>
                 </StyledCard>
 
-                {/* Account & Subscription Details */}
+                {/* Communication Preferences */}
                 <StyledCard delay={0.35}>
                   <StyledCardHeader
-                    icon={Building2}
-                    title="Account & Subscription"
-                    subtitle="Plan, seats, and sales use case"
+                    icon={Mail}
+                    title="Communication Preferences"
+                    subtitle="How and when this account prefers follow-up"
                     color="teal"
                   />
                   <div className="p-6 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <StyledSelect
-                        label="Subscription Plan"
-                        value={formData.propertyType}
-                        onValueChange={(val) => handleSelectChange("propertyType", val)}
-                        placeholder="Select Plan"
-                        options={[
-                          { value: "Free Trial", label: "Free Trial" },
-                          { value: "Starter", label: "Starter" },
-                          { value: "Growth", label: "Growth" },
-                          { value: "Professional", label: "Professional" },
-                          { value: "Enterprise", label: "Enterprise" },
-                        ]}
-                      />
-                      <StyledSelect
-                        label="Seats / Users"
-                        value={formData.numberOfStories}
-                        onValueChange={(val) => handleSelectChange("numberOfStories", val)}
-                        placeholder="Select"
-                        options={[
-                          { value: "1", label: "1 user" },
-                          { value: "2", label: "2-10 users" },
-                          { value: "3+", label: "11+ users" },
-                        ]}
-                      />
-                    </div>
-                    <StyledSelect
-                      label="Sales Use Case"
-                      value={formData.serviceType}
-                      onValueChange={(val) => handleSelectChange("serviceType", val)}
-                      placeholder="Select Use Case"
-                      options={[
-                        { value: "Lead Management", label: "Lead Management" },
-                        { value: "Deals Pipeline", label: "Deals Pipeline" },
-                        { value: "Sales Engagement", label: "Sales Engagement" },
-                        { value: "Reporting & Forecasting", label: "Reporting & Forecasting" },
-                        { value: "Customer Success", label: "Customer Success" },
-                        { value: "Billing & Subscriptions", label: "Billing & Subscriptions" },
-                        { value: "Other", label: "Other" },
-                      ]}
-                    />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <StyledSelect
                         label="Preferred Contact Method"
@@ -1470,143 +1389,12 @@ const AddClientPage = () => {
                   </div>
                 </StyledCard>
 
-                {/* Revenue & Customer Success */}
-                <StyledCard delay={0.4}>
-                  <StyledCardHeader
-                    icon={CreditCard}
-                    title="Revenue & Customer Success"
-                    subtitle="Revenue, renewal, and account health"
-                    color="navy"
-                  />
-                  <div className="p-6 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <StyledSelect
-                        label="Current CRM / Tool"
-                        value={formData.currentRoofMaterial}
-                        onValueChange={(val) => handleSelectChange("currentRoofMaterial", val)}
-                        placeholder="Select Tool"
-                        options={[
-                          { value: "Spreadsheets", label: "Spreadsheets" },
-                          { value: "HubSpot", label: "HubSpot" },
-                          { value: "Salesforce", label: "Salesforce" },
-                          { value: "Zoho", label: "Zoho" },
-                          { value: "Pipedrive", label: "Pipedrive" },
-                          { value: "Custom System", label: "Custom System" },
-                          { value: "Unknown", label: "Unknown" },
-                        ]}
-                      />
-                      <StyledSelect
-                        label="Renewal Cycle"
-                        value={formData.roofAge}
-                        onValueChange={(val) => handleSelectChange("roofAge", val)}
-                        placeholder="Select Cycle"
-                        options={[
-                          { value: "Monthly", label: "Monthly" },
-                          { value: "Quarterly", label: "Quarterly" },
-                          { value: "Annual", label: "Annual" },
-                          { value: "Multi-Year", label: "Multi-Year" },
-                          { value: "Unknown", label: "Unknown" },
-                        ]}
-                      />
-                    </div>
-                    <StyledInput
-                      label="MRR / ARR"
-                      id="insuranceCompanyName"
-                      placeholder="e.g. $1,500 MRR or $18,000 ARR"
-                      value={formData.insuranceCompanyName}
-                      onChange={handleInputChange}
-                      icon={DollarSign}
-                    />
-                    <StyledSelect
-                      label="Customer Status"
-                      value={formData.isInsuranceClaim}
-                      onValueChange={(val) => handleSelectChange("isInsuranceClaim", val)}
-                      placeholder="Select"
-                      options={[
-                        { value: "Prospect", label: "Prospect" },
-                        { value: "Trial", label: "Trial" },
-                        { value: "Onboarding", label: "Onboarding" },
-                        { value: "Active Customer", label: "Active Customer" },
-                        { value: "At Risk", label: "At Risk" },
-                      ]}
-                    />
-                  </div>
-                </StyledCard>
-
-                {/* Buying Committee & Renewal */}
-                <StyledCard delay={0.45}>
-                  <StyledCardHeader
-                    icon={User}
-                    title="Buying Committee & Renewal"
-                    subtitle="Decision authority and renewal notes"
-                    color="gold"
-                  />
-                  <div className="p-6 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <StyledSelect
-                        label="Decision Maker?"
-                        value={formData.isHomeowner}
-                        onValueChange={(val) => handleSelectChange("isHomeowner", val)}
-                        placeholder="Select"
-                        options={[
-                          { value: "Yes", label: "Yes" },
-                          { value: "No", label: "No" },
-                          { value: "Tenant", label: "Evaluator" },
-                        ]}
-                      />
-                      <StyledSelect
-                        label="Renewal Review?"
-                        value={formData.isHOA}
-                        onValueChange={(val) => handleSelectChange("isHOA", val)}
-                        placeholder="Select"
-                        options={[
-                          { value: "Yes", label: "Yes" },
-                          { value: "No", label: "No" },
-                          { value: "Not Sure", label: "Not Sure" },
-                        ]}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-[#475569]">Renewal / Success Notes</Label>
-                      <Textarea
-                        id="hoaRestrictions"
-                        placeholder="Renewal date, success risks, procurement notes..."
-                        value={formData.hoaRestrictions}
-                        onChange={handleInputChange}
-                        className="min-h-[60px] rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <StyledInput
-                        label="Secondary Stakeholder"
-                        id="spouseCoOwnerName"
-                        placeholder="e.g. Finance approver or champion"
-                        value={formData.spouseCoOwnerName}
-                        onChange={handleInputChange}
-                        icon={User}
-                        error={formErrors.spouseCoOwnerName}
-                        onClearError={() => clearFormError("spouseCoOwnerName")}
-                      />
-                      <StyledInput
-                        label="Secondary Phone"
-                        id="secondaryPhone"
-                        placeholder="+1 (555) 123-4567"
-                        value={formData.secondaryPhone}
-                        onChange={handleInputChange}
-                        icon={Phone}
-                        error={formErrors.secondaryPhone}
-                        onClearError={() => clearFormError("secondaryPhone")}
-                      />
-                    </div>
-                  </div>
-                </StyledCard>
-
                 {/* Categorization */}
                 <StyledCard delay={0.4}>
                   <StyledCardHeader
                     icon={Tag}
                     title="Categorization"
-                    subtitle="Client classification"
+                    subtitle="Organization classification"
                     color="purple"
                   />
                   <div className="p-6 space-y-4">
@@ -1624,7 +1412,7 @@ const AddClientPage = () => {
                     />
 
                     <StyledSelect
-                      label="Client Category"
+                      label="Organization Category"
                       value={formData.clientCategory}
                       onValueChange={(val) =>
                         handleSelectChange("clientCategory", val)
@@ -1664,8 +1452,8 @@ const AddClientPage = () => {
                           Editing Mode
                         </h4>
                         <p className="text-sm text-[#94A3B8] mt-1">
-                          You are editing an existing client record. Click
-                          "Update Client" to save your changes.
+                          You are editing an existing organization record. Click
+                          "Update Organization" to save your changes.
                         </p>
                       </div>
                     </div>

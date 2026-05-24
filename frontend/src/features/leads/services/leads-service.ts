@@ -71,7 +71,7 @@ export async function pipelineTransition(payload: PipelineTransitionDto): Promis
 }
 
 export async function checkDuplicates(
-    data: { phone?: string; email?: string; propertyAddress?: string; excludeLeadId?: string }
+    data: { phone?: string; email?: string; excludeLeadId?: string }
 ): Promise<{ hasDuplicates: boolean; duplicates: any[] }> {
     const response = await api.post("/leads/check-duplicates", data);
     return response.data?.data || response.data;

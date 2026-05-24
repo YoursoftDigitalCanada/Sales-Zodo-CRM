@@ -14,7 +14,7 @@ import {
 
 export const createContactSchema = z.object({
     body: z.object({
-        contactName: z.string().trim().min(1).max(255).refine(isValidPersonName, `Contact name ${PERSON_NAME_VALIDATION_MESSAGE}`),
+        contactName: z.string().trim().min(1).max(255).refine(isValidPersonName, `Contact name ${PERSON_NAME_VALIDATION_MESSAGE}`).optional(),
         companyId: z.string().uuid().optional().nullable(),
         dealId: z.string().uuid().optional().nullable(),
         type: z.enum(['CLIENT', 'LEAD']).default('CLIENT'),
@@ -25,8 +25,8 @@ export const createContactSchema = z.object({
         mobilePhone: z.string().trim().max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
         linkedInUrl: z.string().url().optional().nullable(),
         isPrimaryContact: z.boolean().default(false),
-        firstName: z.string().max(100).optional().nullable(),
-        lastName: z.string().max(100).optional().nullable(),
+        firstName: z.string().trim().min(1).max(100),
+        lastName: z.string().trim().min(1).max(100),
         relationshipStatus: z.enum(['Active', 'Inactive']).optional().nullable(),
         roleInBuyingProcess: z.enum(['Decision Maker', 'Influencer', 'User', 'Gatekeeper']).optional().nullable(),
         seniorityLevel: z.enum(['Manager', 'Director', 'VP', 'CXO', 'Owner', 'Individual Contributor']).optional().nullable(),
@@ -44,6 +44,9 @@ export const createContactSchema = z.object({
     }).refine((data) => Boolean(data.companyId || data.dealId), {
         message: 'Contact must be linked to an Account or Deal',
         path: ['companyId'],
+    }).refine((data) => Boolean(data.officePhone || data.mobilePhone), {
+        message: 'Contact must include a phone number',
+        path: ['officePhone'],
     }),
 });
 

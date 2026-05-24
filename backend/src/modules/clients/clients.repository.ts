@@ -21,6 +21,7 @@ export class ClientsRepository {
                 primaryEmail: data.primaryEmail,
                 primaryPhone: data.primaryPhone,
                 status: data.status || 'ACTIVE',
+                lifecycleStage: data.lifecycleStage || 'PROSPECT',
                 assignedOwnerId: data.assignedOwner,
                 website: data.website,
                 noOfEmployees: data.noOfEmployees || '1-10',
@@ -62,33 +63,12 @@ export class ClientsRepository {
                 clientCategory: data.clientCategory,
                 tags: data.tags || [],
 
-                // Property Information
-                propertyType: data.propertyType,
-                numberOfStories: data.numberOfStories,
-
-                // Service Details
-                serviceType: data.serviceType,
+                // Sales account preferences
                 preferredContactMethod: data.preferredContactMethod,
                 bestTimeToContact: data.bestTimeToContact,
 
-                // Roof Details
-                currentRoofMaterial: data.currentRoofMaterial,
-                roofAge: data.roofAge,
-                roofSize: data.roofSize,
-                roofPitch: data.roofPitch,
-
-                // Insurance Info
-                insuranceCompanyName: data.insuranceCompanyName,
-                isInsuranceClaim: data.isInsuranceClaim,
-
-                // Ownership & HOA
-                isHomeowner: data.isHomeowner,
-                isHOA: data.isHOA,
-                hoaRestrictions: data.hoaRestrictions,
-
                 // Secondary Contact
                 secondaryPhone: data.secondaryPhone,
-                spouseCoOwnerName: data.spouseCoOwnerName,
 
                 // Extended
                 budgetRange: data.budgetRange,
@@ -133,7 +113,7 @@ export class ClientsRepository {
     async update(id: string, tenantId: string, data: UpdateClientDto) {
         // Verify tenant ownership
         const existing = await prisma.client.findFirst({ where: { id, tenantId } });
-        if (!existing) throw new Error('Client not found or access denied');
+        if (!existing) throw new Error('Organization not found or access denied');
 
         return prisma.client.update({
             where: { id_tenantId: { id, tenantId } },
@@ -146,6 +126,7 @@ export class ClientsRepository {
                 ...(data.primaryEmail !== undefined && { primaryEmail: data.primaryEmail }),
                 ...(data.primaryPhone !== undefined && { primaryPhone: data.primaryPhone }),
                 ...(data.status !== undefined && { status: data.status }),
+                ...(data.lifecycleStage !== undefined && { lifecycleStage: data.lifecycleStage }),
                 ...(data.assignedOwner !== undefined && { assignedOwnerId: data.assignedOwner }),
                 ...(data.website !== undefined && { website: data.website }),
                 ...(data.noOfEmployees !== undefined && { noOfEmployees: data.noOfEmployees }),
@@ -187,38 +168,16 @@ export class ClientsRepository {
                 ...(data.clientCategory !== undefined && { clientCategory: data.clientCategory }),
                 ...(data.tags !== undefined && { tags: data.tags }),
 
-                // Property Information
-                ...(data.propertyType !== undefined && { propertyType: data.propertyType }),
-                ...(data.numberOfStories !== undefined && { numberOfStories: data.numberOfStories }),
-
-                // Service Details
-                ...(data.serviceType !== undefined && { serviceType: data.serviceType }),
+                // Sales account preferences
                 ...(data.preferredContactMethod !== undefined && { preferredContactMethod: data.preferredContactMethod }),
                 ...(data.bestTimeToContact !== undefined && { bestTimeToContact: data.bestTimeToContact }),
 
-                // Roof Details
-                ...(data.currentRoofMaterial !== undefined && { currentRoofMaterial: data.currentRoofMaterial }),
-                ...(data.roofAge !== undefined && { roofAge: data.roofAge }),
-                ...(data.roofSize !== undefined && { roofSize: data.roofSize }),
-                ...(data.roofPitch !== undefined && { roofPitch: data.roofPitch }),
-
-                // Insurance Info
-                ...(data.insuranceCompanyName !== undefined && { insuranceCompanyName: data.insuranceCompanyName }),
-                ...(data.isInsuranceClaim !== undefined && { isInsuranceClaim: data.isInsuranceClaim }),
-
-                // Ownership & HOA
-                ...(data.isHomeowner !== undefined && { isHomeowner: data.isHomeowner }),
-                ...(data.isHOA !== undefined && { isHOA: data.isHOA }),
-                ...(data.hoaRestrictions !== undefined && { hoaRestrictions: data.hoaRestrictions }),
-
                 // Secondary Contact
                 ...(data.secondaryPhone !== undefined && { secondaryPhone: data.secondaryPhone }),
-                ...(data.spouseCoOwnerName !== undefined && { spouseCoOwnerName: data.spouseCoOwnerName }),
 
                 // Extended
                 ...(data.budgetRange !== undefined && { budgetRange: data.budgetRange }),
                 ...(data.urgencyLevel !== undefined && { urgencyLevel: data.urgencyLevel }),
-                ...(data.warrantyExpiration !== undefined && { warrantyExpiration: data.warrantyExpiration }),
                 ...(data.doNotContact !== undefined && { doNotContact: data.doNotContact }),
                 ...(data.nextFollowUp !== undefined && { nextFollowUp: data.nextFollowUp }),
                 ...(data.language !== undefined && { language: data.language }),
@@ -230,7 +189,7 @@ export class ClientsRepository {
     async delete(id: string, tenantId: string) {
         // Tenant-scoped delete
         const existing = await prisma.client.findFirst({ where: { id, tenantId } });
-        if (!existing) throw new Error('Client not found or access denied');
+        if (!existing) throw new Error('Organization not found or access denied');
         return prisma.client.delete({ where: { id_tenantId: { id, tenantId } } });
     }
 }

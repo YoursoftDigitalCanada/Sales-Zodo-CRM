@@ -26,7 +26,7 @@ export interface MergeResult {
   mergedLead: LeadResponseDto;
   sourceLeadId: string;
   fieldsMerged: string[];
-  relationsRelinked: { activities: number; inspections: number; insuranceClaims: number };
+  relationsRelinked: { activities: number; legacyRecords: number };
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -43,12 +43,6 @@ function normalizePhone(phone: string | null | undefined): string | null {
 function normalizeEmail(email: string | null | undefined): string | null {
   if (!email) return null;
   return email.trim().toLowerCase() || null;
-}
-
-/** Lowercase + collapse whitespace for address comparison */
-function normalizeAddress(addr: string | null | undefined): string | null {
-  if (!addr) return null;
-  return addr.trim().toLowerCase().replace(/\s+/g, ' ') || null;
 }
 
 // Default include for returning full lead data
@@ -76,20 +70,19 @@ const duplicateInclude = {
 
 export class DuplicateDetectionService {
   /**
-   * Find potential duplicate leads based on phone, email, and property address.
+ * Find potential duplicate leads based on phone and email.
    * Runs within the same tenant scope.
    */
   async findDuplicates(
     tenantId: string,
-    data: { phone?: string | null; email?: string | null; propertyAddress?: string | null },
+    data: { phone?: string | null; email?: string | null },
     excludeLeadId?: string,
   ): Promise<DuplicateCheckResult> {
     const normalizedPhone = normalizePhone(data.phone);
     const normalizedEmail = normalizeEmail(data.email);
-    const normalizedAddress = normalizeAddress(data.propertyAddress);
 
     // Nothing to match against
-    if (!normalizedPhone && !normalizedEmail && !normalizedAddress) {
+    if (!normalizedPhone && !normalizedEmail) {
       return { hasDuplicates: false, duplicates: [] };
     }
 
@@ -104,12 +97,6 @@ export class DuplicateDetectionService {
         email: { equals: normalizedEmail, mode: 'insensitive' },
       });
     }
-    if (normalizedAddress) {
-      orConditions.push({
-        propertyAddress: { contains: normalizedAddress, mode: 'insensitive' },
-      });
-    }
-
     if (orConditions.length === 0) {
       return { hasDuplicates: false, duplicates: [] };
     }
@@ -145,12 +132,6 @@ export class DuplicateDetectionService {
         score += 35;
       }
 
-      // Address match (fuzzy — contains)
-      if (normalizedAddress && normalizeAddress(candidate.propertyAddress)?.includes(normalizedAddress)) {
-        matchedFields.push('propertyAddress');
-        score += 25;
-      }
-
       if (matchedFields.length > 0) {
         duplicates.push({
           leadId: candidate.id,
@@ -176,7 +157,7 @@ export class DuplicateDetectionService {
   /**
    * Merge source lead into target lead.
    * - Copies non-empty fields from source → target (target wins on conflicts)
-   * - Re-links child records (activities, inspections, insurance claims)
+   * - Re-links child records
    * - Marks source as DUPLICATE with duplicateOfLeadId = targetLeadId
    * - Audit-logs the merge
    */
@@ -196,13 +177,9 @@ export class DuplicateDetectionService {
     // ── Field merge: copy non-empty source fields into target where target is empty ──
     const mergeableFields = [
       'email', 'phone', 'location', 'companyName', 'jobTitle', 'website',
-      'propertyAddress', 'city', 'state', 'zipCode', 'propertyType',
-      'serviceType', 'isInsuranceClaim', 'urgencyLevel',
+      'city', 'state', 'zipCode', 'urgencyLevel',
       'preferredContactMethod', 'bestTimeToContact', 'issueDescription',
-      'secondaryPhone', 'spouseCoOwnerName', 'isHomeowner', 'isDecisionMaker',
-      'ownershipType', 'roofAge', 'currentRoofMaterial', 'numberOfStories',
-      'insuranceCompanyName', 'hasClaimBeenFiled', 'claimNumber',
-      'adjusterAssigned', 'adjusterName', 'adjusterPhone', 'adjusterEmail',
+      'secondaryPhone', 'spouseCoOwnerName', 'isDecisionMaker',
       'budgetRange', 'workTimeline', 'financingNeeded',
       'topPriority', 'isHOA', 'hoaRestrictions', 'notes',
     ] as const;
@@ -274,8 +251,7 @@ export class DuplicateDetectionService {
 
       return {
         activities: activities.count,
-        inspections: inspections.count,
-        insuranceClaims: claims.count,
+        legacyRecords: inspections.count + claims.count,
       };
     });
 
@@ -314,7 +290,7 @@ export class DuplicateDetectionService {
         leadId: targetLeadId,
         type: 'MERGED',
         title: 'Lead merged',
-        description: `Merged with ${sourceLead.firstName} ${sourceLead.lastName}. Fields merged: ${mergedFields.join(', ') || 'none'}. Re-linked: ${result.activities} activities, ${result.inspections} inspections, ${result.insuranceClaims} claims.`,
+        description: `Merged with ${sourceLead.firstName} ${sourceLead.lastName}. Fields merged: ${mergedFields.join(', ') || 'none'}. Re-linked: ${result.activities} activities.`,
         metadata: { sourceLeadId, fieldsMerged: mergedFields, relationsRelinked: result } as any,
       },
     });

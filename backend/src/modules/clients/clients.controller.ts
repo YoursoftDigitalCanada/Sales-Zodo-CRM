@@ -20,7 +20,7 @@ export class ClientsController {
 
             const client = await clientsService.create(tenantId, data as CreateClientDto, req.user?.userId);
 
-            sendCreated(res, client, 'Client created successfully');
+            sendCreated(res, client, 'Organization created successfully');
         } catch (error) {
             next(error);
         }
@@ -72,7 +72,7 @@ export class ClientsController {
 
             const client = await clientsService.update(id, tenantId, data as UpdateClientDto);
 
-            sendSuccess(res, client, 'Client updated successfully');
+            sendSuccess(res, client, 'Organization updated successfully');
         } catch (error) {
             next(error);
         }

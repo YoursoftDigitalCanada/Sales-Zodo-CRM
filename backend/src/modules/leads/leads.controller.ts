@@ -343,11 +343,11 @@ export class LeadsController {
   async checkDuplicates(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const tenantId = req.context.tenantId;
-      const { phone, email, propertyAddress, excludeLeadId } = req.body;
+      const { phone, email, excludeLeadId } = req.body;
 
       const result = await duplicateDetectionService.findDuplicates(
         tenantId,
-        { phone, email, propertyAddress },
+        { phone, email },
         excludeLeadId,
       );
 

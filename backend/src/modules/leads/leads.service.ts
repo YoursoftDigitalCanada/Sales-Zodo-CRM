@@ -5,6 +5,7 @@ import {
   LeadPipelineDto,
   LeadStatisticsDto,
   toLeadResponseDto,
+  stripLegacyLeadFields,
 } from './leads.dto';
 import type {
   CreateLeadDto,
@@ -80,6 +81,8 @@ export class LeadsService {
     requestMetadata?: LeadSourceRequestMetadata,
     options?: { skipDuplicateCheck?: boolean }
   ): Promise<LeadResponseDto> {
+    data = stripLegacyLeadFields(data);
+
     // Validate assigned employee
     if (data.assignedToId) {
       const exists = await leadsRepository.employeeExists(data.assignedToId, tenantId);
@@ -93,7 +96,6 @@ export class LeadsService {
       const dupResult = await duplicateDetectionService.findDuplicates(tenantId, {
         phone: data.phone,
         email: data.email,
-        propertyAddress: data.propertyAddress,
       });
       if (dupResult.hasDuplicates) {
         throw new DuplicateLeadError(
@@ -201,8 +203,6 @@ export class LeadsService {
       email: dto.email,
       phone: dto.phone,
       companyName: dto.companyName,
-      serviceType: (lead as any).serviceType || undefined,
-      propertyAddress: dto.propertyAddress || undefined,
       leadNumber: (lead as any).leadNumber || undefined,
     });
 
@@ -269,8 +269,8 @@ export class LeadsService {
           annualRevenue: lead.annualRevenue || null,
           industry: lead.industry || null,
           territory: lead.territory || lead.teamRegion || null,
-          organizationAddress: lead.propertyAddress || null,
-          streetAddress: lead.propertyAddress || null,
+          organizationAddress: lead.location || null,
+          streetAddress: lead.location || null,
           city: lead.city || null,
           province: lead.state || null,
           postalCode: lead.zipCode || null,
@@ -524,7 +524,7 @@ export class LeadsService {
           probability: 25,
           expectedDealValue: dealValue,
           dealValue,
-          expectedClosureDate: lead.followUpDateTime || lead.inspectionAppointmentDate || null,
+          expectedClosureDate: lead.followUpDateTime || null,
           sourceId: lead.leadSourceId || null,
           leadName: fullName || organizationName,
           website: lead.website || null,
@@ -543,10 +543,10 @@ export class LeadsService {
           total: dealValue,
           netTotal: dealValue,
           currency: 'CAD',
-          jobSiteAddress: lead.propertyAddress || null,
-          jobSiteCity: lead.city || null,
-          jobSiteState: lead.state || null,
-          jobSiteZip: lead.zipCode || null,
+          jobSiteAddress: null,
+          jobSiteCity: null,
+          jobSiteState: null,
+          jobSiteZip: null,
           createdById: lead.createdById || null,
         },
       });
@@ -583,7 +583,7 @@ export class LeadsService {
           data: {
             tenantId,
             title: `Schedule demo: ${organizationName}`,
-            description: `Lead is qualified. Book the Roofer CRM demo and confirm attendees.`,
+            description: `Lead is qualified. Book the sales discovery call or product demo and confirm attendees.`,
             status: 'TODO',
             priority: 'HIGH',
             dueDate: lead.followUpDateTime || new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -705,6 +705,8 @@ export class LeadsService {
     tenantId: string,
     data: UpdateLeadDto
   ): Promise<LeadResponseDto> {
+    data = stripLegacyLeadFields(data);
+
     // Check if lead exists
     const existing = await leadsRepository.findById(id, tenantId);
     if (!existing) {
@@ -1378,24 +1380,14 @@ export class LeadsService {
           status: 'ACTIVE',
           assignedOwnerId: lead.assignedToId,
           internalNotes: lead.notes,
-          // Address mapping from lead property info
-          streetAddress: lead.propertyAddress || null,
+          streetAddress: lead.location || null,
           city: lead.city || null,
           province: lead.state || null,
           postalCode: lead.zipCode || null,
           // Lead source
           leadSource: lead.leadSource?.name || lead.leadSourceUTM || null,
-          // Roofing-specific fields from lead
-          propertyType: lead.propertyType || null,
-          numberOfStories: lead.numberOfStories || null,
-          serviceType: lead.serviceType || null,
           preferredContactMethod: lead.preferredContactMethod || null,
           bestTimeToContact: lead.bestTimeToContact || null,
-          currentRoofMaterial: lead.currentRoofMaterial || null,
-          roofAge: lead.roofAge || null,
-          insuranceCompanyName: lead.insuranceCompanyName || null,
-          isInsuranceClaim: lead.isInsuranceClaim || null,
-          isHomeowner: lead.isHomeowner || null,
           isHOA: lead.isHOA || null,
           hoaRestrictions: lead.hoaRestrictions || null,
           secondaryPhone: lead.secondaryPhone || null,
@@ -1474,7 +1466,7 @@ export class LeadsService {
           probability: 25,
           expectedDealValue: dealValue,
           dealValue,
-          expectedClosureDate: lead.followUpDateTime || lead.inspectionAppointmentDate || null,
+          expectedClosureDate: lead.followUpDateTime || null,
           sourceId: lead.leadSourceId || null,
           leadName: leadFullName || organizationName,
           website: lead.website || null,
@@ -1493,10 +1485,10 @@ export class LeadsService {
           total: dealValue,
           netTotal: dealValue,
           currency: 'CAD',
-          jobSiteAddress: lead.propertyAddress || null,
-          jobSiteCity: lead.city || null,
-          jobSiteState: lead.state || null,
-          jobSiteZip: lead.zipCode || null,
+          jobSiteAddress: null,
+          jobSiteCity: null,
+          jobSiteState: null,
+          jobSiteZip: null,
           createdById: lead.createdById || null,
         },
       });
@@ -1781,12 +1773,12 @@ export class LeadsService {
     const ruleState = this.getRuleValue(rule, ['province', 'state']);
     const ruleCity = this.getRuleValue(rule, ['city']);
     const ruleZip = this.getRuleValue(rule, ['zipCode', 'zip', 'postalCode']);
-    const ruleAddressContains = this.getRuleValue(rule, ['addressContains', 'area', 'propertyAddress']);
+    const ruleAddressContains = this.getRuleValue(rule, ['addressContains', 'area', 'location']);
 
     const leadState = this.normalizeLocationToken(data.state);
     const leadCity = this.normalizeLocationToken(data.city);
     const leadZip = this.normalizeLocationToken(data.zipCode);
-    const leadAddress = this.normalizeLocationToken(data.propertyAddress);
+    const leadAddress = this.normalizeLocationToken(data.location);
 
     const hasRuleConstraint = Boolean(ruleState || ruleCity || ruleZip || ruleAddressContains);
     if (!hasRuleConstraint) return false;
@@ -1890,16 +1882,11 @@ export class LeadsService {
       'firstName', 'lastName', 'email', 'phone', 'companyName',
       'jobTitle', 'website', 'location', 'status', 'temperature',
       'potentialValue', 'notes', 'assignedToId', 'leadSourceId',
-      // Stage 1
-      'propertyAddress', 'city', 'state', 'zipCode', 'propertyType',
-      'serviceType', 'isInsuranceClaim', 'urgencyLevel', 'preferredContactMethod',
+      'city', 'state', 'zipCode', 'urgencyLevel', 'preferredContactMethod',
       'bestTimeToContact', 'issueDescription',
-      // Stage 2
       'confirmedName', 'confirmedPhone', 'confirmedEmail', 'confirmedAddress',
-      'secondaryPhone', 'spouseCoOwnerName', 'isHomeowner', 'isDecisionMaker',
-      'ownershipType', 'roofAge', 'currentRoofMaterial', 'numberOfStories',
-      'previousRoofWork', 'insuranceCompanyName', 'hasClaimBeenFiled',
-      'claimNumber', 'adjusterName', 'budgetRange', 'workTimeline',
+      'secondaryPhone', 'spouseCoOwnerName', 'isDecisionMaker',
+      'budgetRange', 'workTimeline',
       'financingNeeded', 'gettingOtherQuotes', 'topPriority', 'isHOA',
       'leadScore', 'disqualifiedReason', 'nextStep', 'qualificationCallNotes',
     ];

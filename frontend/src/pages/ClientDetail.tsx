@@ -25,8 +25,8 @@ import {
   Mail, Phone, MapPin, Tag, User, Plus, MoreHorizontal,
   Pencil, MessageSquare, FileText, CheckSquare, TrendingUp, FolderOpen,
   Send, ArrowLeft, Loader2, DollarSign, Clock, Download, X,
-  Shield, AlertTriangle, Globe, BanIcon,
-  Layers, Wrench, Building2, CircleDollarSign,
+  Globe, BanIcon,
+  Building2, CircleDollarSign,
   PhoneCall, StickyNote, ExternalLink, ClipboardList
 } from "lucide-react";
 
@@ -34,14 +34,12 @@ import {
 interface ClientData {
   id: string; clientName: string; companyName?: string; clientType: string;
   clientLogo?: string; primaryEmail: string; primaryPhone: string;
-  secondaryPhone?: string; spouseCoOwnerName?: string; status: string;
+  secondaryPhone?: string; status: string;
   lifecycleStage?: string; assignedOwner?: any;
   streetAddress?: string; suite?: string; city?: string; province?: string;
   postalCode?: string; country?: string;
-  propertyType?: string; numberOfStories?: string; currentRoofMaterial?: string;
-  roofAge?: string; roofSize?: string; roofPitch?: string; serviceType?: string;
-  isHomeowner?: string; isHOA?: string; hoaRestrictions?: string;
-  insuranceCompanyName?: string; isInsuranceClaim?: string;
+  website?: string; industry?: string; territory?: string; organizationAddress?: string;
+  noOfEmployees?: string; annualRevenue?: number; exchangeRate?: number;
   leadSource?: string; clientCategory?: string; budgetRange?: string;
   urgencyLevel?: string;
   creditLimit?: number; paymentTerms?: string; currency?: string; totalRevenue?: number;
@@ -49,7 +47,6 @@ interface ClientData {
   doNotContact?: boolean; nextFollowUp?: string;
   internalNotes?: string; tags?: any;
   contactName?: string; position?: string; directPhone?: string;
-  warrantyExpiration?: string;
   _count?: { contacts?: number; projects?: number; invoices?: number; quotes?: number; files?: number };
   createdAt?: string; updatedAt?: string;
 }
@@ -461,16 +458,16 @@ const ClientDetailPage = () => {
   const activityHighlights = [
     relatedLeadSummary ? {
       id: "lead-conversion",
-      title: "Lead converted into client",
-      description: `${relatedLeadSummary.name} was converted into this client record.`,
+      title: "Lead converted into organization",
+      description: `${relatedLeadSummary.name} was converted into this organization record.`,
       date: fmtDate(relatedLeadSummary.convertedAt || client.createdAt),
       actionLabel: "Open Lead",
       action: () => navigate(`/leads/${relatedLeadSummary.id}`),
     } : null,
     (client.leadSource || relatedLeadSummary?.leadSource) ? {
       id: "lead-source",
-      title: "Client source recorded",
-      description: `This client came from ${client.leadSource || relatedLeadSummary?.leadSource}.`,
+      title: "Organization source recorded",
+      description: `This organization came from ${client.leadSource || relatedLeadSummary?.leadSource}.`,
       date: fmtDate(client.createdAt),
     } : null,
   ].filter(Boolean) as Array<{
@@ -498,7 +495,7 @@ const ClientDetailPage = () => {
           <Breadcrumb><BreadcrumbList>
             <BreadcrumbItem><BreadcrumbLink href="/dashboard" className="text-xs">Dashboard</BreadcrumbLink></BreadcrumbItem>
             <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink href="/client-list" className="text-xs">Clients</BreadcrumbLink></BreadcrumbItem>
+            <BreadcrumbItem><BreadcrumbLink href="/client-list" className="text-xs">Organizations</BreadcrumbLink></BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem><BreadcrumbPage className="text-xs font-semibold text-[#14B8A6]">{client.clientName}</BreadcrumbPage></BreadcrumbItem>
           </BreadcrumbList></Breadcrumb>
@@ -521,7 +518,7 @@ const ClientDetailPage = () => {
                 {client.doNotContact && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#FEE2E2] text-[#DC2626] flex items-center gap-0.5"><BanIcon size={10} />DNC</span>}
               </div>
               <p className="text-[11px] text-[#9CA3AF] mt-0.5">
-                Client since {fmtDate(client.createdAt)}
+                Organization since {fmtDate(client.createdAt)}
                 {ownerName && <> · Assigned to <span className="font-medium text-[#6B7280]">{ownerName}</span></>}
               </p>
             </div>
@@ -559,7 +556,7 @@ const ClientDetailPage = () => {
                   <div className="fixed inset-0 z-40" onClick={() => setShowMoreMenu(false)} />
                   <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl border border-[#E5E7EB] shadow-lg z-50 py-1 animate-in fade-in zoom-in-95 duration-150">
                     {[
-                      { label: "Edit Client", icon: Pencil, action: () => navigate(`/client-list/${id}/edit`) },
+                      { label: "Edit Organization", icon: Pencil, action: () => navigate(`/client-list/${id}/edit`) },
                       { label: "View on Map", icon: MapPin, action: () => window.open(`https://maps.google.com/?q=${encodeURIComponent(address)}`, '_blank') },
                     ].map((item, i) => (
                       <button key={i} onClick={() => { item.action(); setShowMoreMenu(false); }}
@@ -748,24 +745,22 @@ const ClientDetailPage = () => {
           <DashCard delay={520}>
             <CardHeader
               icon={<div className="w-7 h-7 rounded-lg bg-[#FEF3C7] flex items-center justify-center"><Building2 size={14} className="text-[#D97706]" /></div>}
-              title="Account Details"
+              title="Company Profile"
               actionLabel="✏️ Edit"
               action={() => navigate(`/client-list/${id}/edit`)}
             />
-            {!client.propertyType && !client.currentRoofMaterial && !client.roofSize ? (
-              <EmptyState icon={<Building2 size={20} className="text-[#9CA3AF]" />} title="No account details" subtitle="Add subscription and customer success details to this account" cta="Add Account Details" onCta={() => navigate(`/client-list/${id}/edit`)} />
+            {!client.industry && !client.website && !client.noOfEmployees && !client.lifecycleStage ? (
+              <EmptyState icon={<Building2 size={20} className="text-[#9CA3AF]" />} title="No company profile" subtitle="Add industry, website, lifecycle, and account ownership details" cta="Add Company Profile" onCta={() => navigate(`/client-list/${id}/edit`)} />
             ) : (
               <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
-                <InfoField label="Subscription Plan" value={client.propertyType} icon={Building2} />
-                <InfoField label="Seats / Users" value={client.numberOfStories} icon={Layers} />
-                <InfoField label="Current CRM / Tool" value={client.currentRoofMaterial} icon={Globe} />
-                <InfoField label="Renewal Cycle" value={client.roofAge} icon={Clock} />
-                <InfoField label="MRR / ARR" value={client.insuranceCompanyName} icon={DollarSign} />
-                <InfoField label="Customer Status" value={client.isInsuranceClaim} icon={Shield} />
-                <InfoField label="Sales Use Case" value={client.serviceType} icon={Wrench} />
-                <InfoField label="Decision Maker" value={client.isHomeowner} icon={User} />
-                <InfoField label="Renewal Review" value={client.isHOA} icon={Shield} />
-                {client.hoaRestrictions && <InfoField label="Renewal / Success Notes" value={client.hoaRestrictions} icon={AlertTriangle} />}
+                <InfoField label="Website" value={client.website} icon={Globe} href={client.website ? (/^https?:\/\//i.test(client.website) ? client.website : `https://${client.website}`) : undefined} />
+                <InfoField label="Industry" value={client.industry} icon={Building2} />
+                <InfoField label="Company Size" value={client.noOfEmployees} icon={User} />
+                <InfoField label="Territory" value={client.territory} icon={MapPin} />
+                <InfoField label="Lifecycle Stage" value={client.lifecycleStage?.replace(/_/g, " ")} icon={Clock} />
+                <InfoField label="Account Manager" value={ownerName || undefined} icon={User} />
+                <InfoField label="Lead Source" value={client.leadSource} icon={TrendingUp} />
+                <InfoField label="Category" value={client.clientCategory} icon={Tag} />
               </div>
             )}
           </DashCard>

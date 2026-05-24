@@ -5,7 +5,7 @@ import { Contact, ContactType } from '@prisma/client';
 // ============================================================================
 
 export interface CreateContactDto {
-    contactName: string;
+    contactName?: string;
     companyId?: string | null;
     dealId?: string | null;
     type?: ContactType;

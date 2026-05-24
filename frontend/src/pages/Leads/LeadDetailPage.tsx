@@ -13,13 +13,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
-import InspectionEditor from "@/components/inspections/InspectionEditor";
 import {
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { getLeadById, updateLead, convertLead, getInspectionsByLeadId, deleteInspection, getInsuranceClaimsByLeadId, createInsuranceClaim, updateInsuranceClaim, deleteInsuranceClaim } from "@/features/leads";
+import { getLeadById, updateLead, convertLead } from "@/features/leads";
 import { getFiles, getDownloadUrl } from "@/features/files/services/files-service";
 import { getProjects } from "@/features/projects/services/projects-service";
 import { getTasks } from "@/features/tasks/services/tasks-service";
@@ -88,15 +86,9 @@ interface LeadData {
         createdAt: string;
         createdBy?: { user: { firstName: string; lastName: string } };
     }>;
-    // Stage 1: Property
-    propertyAddress?: string | null;
     city?: string | null;
     state?: string | null;
     zipCode?: string | null;
-    propertyType?: string | null;
-    // Stage 1: Service
-    serviceType?: string | null;
-    isInsuranceClaim?: string | null;
     urgencyLevel?: string | null;
     preferredContactMethod?: string | null;
     bestTimeToContact?: string | null;
@@ -108,27 +100,7 @@ interface LeadData {
     confirmedAddress?: boolean | null;
     secondaryPhone?: string | null;
     spouseCoOwnerName?: string | null;
-    // Stage 2: Ownership
-    isHomeowner?: string | null;
     isDecisionMaker?: string | null;
-    ownershipType?: string | null;
-    // Stage 2: Roof
-    roofAge?: string | null;
-    currentRoofMaterial?: string | null;
-    numberOfStories?: string | null;
-    knownDamageType?: string[] | null;
-    damageOccurrenceDate?: string | null;
-    previousRoofWork?: string | null;
-    previousRoofWorkDetails?: string | null;
-    // Stage 2: Insurance
-    insuranceCompanyName?: string | null;
-    hasClaimBeenFiled?: string | null;
-    claimNumber?: string | null;
-    adjusterAssigned?: string | null;
-    adjusterName?: string | null;
-    adjusterPhone?: string | null;
-    adjusterEmail?: string | null;
-    adjusterMeetingDate?: string | null;
     // Stage 2: Budget
     budgetRange?: string | null;
     workTimeline?: string | null;
@@ -144,7 +116,6 @@ interface LeadData {
     disqualifiedReason?: string | null;
     nextStep?: string | null;
     followUpDateTime?: string | null;
-    inspectionAppointmentDate?: string | null;
     qualificationCallNotes?: string | null;
 }
 
@@ -486,17 +457,6 @@ const LeadDetailPage = () => {
     const [newNote, setNewNote] = useState("");
     const [isSavingNote, setIsSavingNote] = useState(false);
 
-    // Inspections state
-    const [inspections, setInspections] = useState<any[]>([]);
-    const [inspectionsLoading, setInspectionsLoading] = useState(false);
-    const [showInspectionDialog, setShowInspectionDialog] = useState(false);
-    const [editingInspection, setEditingInspection] = useState<any | null>(null);
-
-    // Insurance Claims state
-    const [insuranceClaims, setInsuranceClaims] = useState<any[]>([]);
-    const [claimsLoading, setClaimsLoading] = useState(false);
-    const [showClaimDialog, setShowClaimDialog] = useState(false);
-    const [editingClaim, setEditingClaim] = useState<any | null>(null);
     const [documents, setDocuments] = useState<any[]>([]);
     const [loadingDocs, setLoadingDocs] = useState(false);
     const [relatedProjects, setRelatedProjects] = useState<any[]>([]);
@@ -562,49 +522,6 @@ const LeadDetailPage = () => {
     }, [applyLeadState, id, toast]);
 
     useEffect(() => { fetchLead(); }, [fetchLead]);
-
-    // ── Inspections CRUD ─────────────────────────────────────────────────
-    const fetchInspections = useCallback(async () => {
-        if (!id) return;
-        try {
-            setInspectionsLoading(true);
-            const data = await getInspectionsByLeadId(id);
-            setInspections(data);
-        } catch {
-            console.error("Failed to fetch inspections");
-        } finally {
-            setInspectionsLoading(false);
-        }
-    }, [id]);
-
-    useEffect(() => { fetchInspections(); }, [fetchInspections]);
-
-    const handleDeleteInspection = async (inspectionId: string) => {
-        if (!confirm("Delete this inspection?")) return;
-        try {
-            await deleteInspection(id!, inspectionId);
-            toast({ title: "Inspection deleted" });
-            fetchInspections();
-        } catch {
-            toast({ title: "Error", description: "Failed to delete inspection.", variant: "destructive" });
-        }
-    };
-
-    // ── Insurance Claims CRUD ────────────────────────────────────────────
-    const fetchClaims = useCallback(async () => {
-        if (!id) return;
-        try {
-            setClaimsLoading(true);
-            const data = await getInsuranceClaimsByLeadId(id);
-            setInsuranceClaims(data);
-        } catch {
-            console.error("Failed to fetch insurance claims");
-        } finally {
-            setClaimsLoading(false);
-        }
-    }, [id]);
-
-    useEffect(() => { fetchClaims(); }, [fetchClaims]);
 
     const fetchDocuments = useCallback(async () => {
         if (!id) return;
@@ -708,34 +625,6 @@ const LeadDetailPage = () => {
         targetMap[section].current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, []);
 
-    const handleSaveClaim = async (data: Record<string, unknown>) => {
-        try {
-            if (editingClaim) {
-                await updateInsuranceClaim(id!, editingClaim.id, data);
-                toast({ title: "Insurance claim updated" });
-            } else {
-                await createInsuranceClaim(id!, data);
-                toast({ title: "Insurance claim created" });
-            }
-            setShowClaimDialog(false);
-            setEditingClaim(null);
-            fetchClaims();
-        } catch {
-            toast({ title: "Error", description: "Failed to save insurance claim.", variant: "destructive" });
-        }
-    };
-
-    const handleDeleteClaim = async (claimId: string) => {
-        if (!confirm("Delete this insurance claim?")) return;
-        try {
-            await deleteInsuranceClaim(id!, claimId);
-            toast({ title: "Insurance claim deleted" });
-            fetchClaims();
-        } catch {
-            toast({ title: "Error", description: "Failed to delete insurance claim.", variant: "destructive" });
-        }
-    };
-
     const handleAddNote = async () => {
         if (!id || !lead || !newNote.trim() || isSavingNote) return;
 
@@ -813,7 +702,7 @@ const LeadDetailPage = () => {
         ? `${lead.createdBy.user.firstName} ${lead.createdBy.user.lastName}`.trim() || "ZODO Team"
         : "ZODO Team";
     const leadAge = Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / 86400000);
-    const propertyAddr = [lead.propertyAddress, lead.city, lead.state, lead.zipCode].filter(Boolean).join(", ");
+    const companyAddress = [lead.location, lead.city, lead.state, lead.zipCode].filter(Boolean).join(", ");
     const openRelatedTasks = relatedTasks.filter((task) => !["DONE", "COMPLETED"].includes(String(task.status || "").toUpperCase())).length;
 
     // ── Render ────────────────────────────────────────────────────────────
@@ -1008,18 +897,17 @@ const LeadDetailPage = () => {
                         </div>
                         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                             {[
-                                { l: "Company Address", v: propertyAddr }, { l: "Industry", v: lead.industry },
-                                { l: "Company Size", v: lead.companySize }, { l: "Sales Need", v: lead.serviceType },
-                                { l: "Buying Urgency", v: lead.urgencyLevel }, { l: "Current Tool", v: lead.currentRoofMaterial },
-                                { l: "CRM Maturity", v: lead.roofAge }, { l: "Sales Team", v: lead.numberOfStories },
-                                { l: "Used CRM Before?", v: lead.previousRoofWork }, { l: "Preferred Contact", v: lead.preferredContactMethod },
+                                { l: "Company Address", v: companyAddress }, { l: "Industry", v: lead.industry },
+                                { l: "Company Size", v: lead.companySize }, { l: "Sales Need", v: lead.productInterest },
+                                { l: "Buying Urgency", v: lead.urgencyLevel }, { l: "Current Solution", v: lead.currentSolution },
+                                { l: "Users / Seats", v: lead.numberOfUsers != null ? String(lead.numberOfUsers) : undefined },
+                                { l: "Preferred Contact", v: lead.preferredContactMethod },
                             ].filter(r => r.v).map((r, i) => (
                                 <div key={i} className="py-1"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium">{r.l}</p><p className="font-medium text-[#111827]">{r.v}</p></div>
                             ))}
                         </div>
                         {lead.useCase && <div className="mt-3 pt-3 border-t border-[#F1F5F9]"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium mb-1">Use Case</p><p className="text-sm text-[#111827] bg-[#F9FAFB] p-3 rounded-lg">{lead.useCase}</p></div>}
                         {lead.issueDescription && <div className="mt-3 pt-3 border-t border-[#F1F5F9]"><p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider font-medium mb-1">Pain Points</p><p className="text-sm text-[#111827] bg-[#F9FAFB] p-3 rounded-lg">{lead.issueDescription}</p></div>}
-                        {lead.knownDamageType && lead.knownDamageType.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{lead.knownDamageType.map(d => <span key={d} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#DBEAFE] text-[#2563EB] flex items-center gap-0.5"><AlertTriangle size={10} />{d}</span>)}</div>}
                     </div>
 
                     {/* CARD 3: Qualification & Budget */}
@@ -1059,7 +947,6 @@ const LeadDetailPage = () => {
                             {[
                                 { l: "Lead Score", v: lead.leadScore != null ? `${lead.leadScore}/10` : undefined },
                                 { l: "Next Step", v: lead.nextStep }, { l: "Follow-Up", v: lead.followUpDateTime ? formatDate(lead.followUpDateTime) : undefined },
-                                { l: "Demo Date", v: lead.inspectionAppointmentDate ? formatDate(lead.inspectionAppointmentDate) : undefined },
                             ].filter(r => r.v).map((r, i, arr) => (
                                 <div key={i} className={`flex items-center justify-between py-2.5 ${i < arr.length - 1 ? 'border-b border-dashed border-[#F1F5F9]' : ''}`}>
                                     <span className="text-xs text-[#6B7280]">{r.l}</span><span className="text-sm font-medium text-[#374151]">{r.v}</span>
@@ -1164,43 +1051,6 @@ const LeadDetailPage = () => {
                                 ))}</div>}
                     </div>
 
-                    {/* CARD 9: Sales Meetings */}
-                    <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 840ms both' }}>
-                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
-                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#FFF7ED] flex items-center justify-center"><ClipboardList size={14} className="text-[#FF7B36]" /></div><h3 className="text-sm font-semibold text-[#111827]">Sales Meetings</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{inspections.length}</span></div>
-                        </div>
-                        {inspectionsLoading ? <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div> :
-                            inspections.length === 0 ? <div className="text-center py-8"><ClipboardList size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No meetings yet</p></div> :
-                                <div className="space-y-2">{inspections.slice(0, 4).map((insp: any) => (
-                                    <div key={insp.id} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors">
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-center gap-2"><Badge variant="outline" className="text-[10px]">{insp.inspectionType || "General"}</Badge>{insp.overallCondition && <Badge variant="outline" className="text-[10px]">{insp.overallCondition}</Badge>}</div>
-                                            <div className="flex items-center gap-3 mt-1 text-xs text-[#6B7280]"><span>{insp.inspectionDate ? formatDate(insp.inspectionDate) : '—'}</span>{insp.inspectorName && <span>with {insp.inspectorName}</span>}{insp.totalEstimate && <span className="font-medium text-[#111827]">${Number(insp.totalEstimate).toLocaleString()}</span>}</div>
-                                        </div>
-                                        <button onClick={() => navigate('/meetings')} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">Open</button>
-                                    </div>
-                                ))}</div>}
-                    </div>
-
-                    {/* CARD 10: Legacy claims hidden for sales CRM */}
-                    <div className="hidden bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 920ms both' }}>
-                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
-                            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-[#EDE9FE] flex items-center justify-center"><Shield size={14} className="text-[#7C3AED]" /></div><h3 className="text-sm font-semibold text-[#111827]">Insurance Claims</h3><span className="text-xs bg-[#F1F5F9] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{insuranceClaims.length}</span></div>
-                            <button onClick={() => { setEditingClaim(null); setShowClaimDialog(true); }} className="text-xs font-medium text-[#14B8A6] hover:text-[#0D9488]">+ New</button>
-                        </div>
-                        {claimsLoading ? <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#14B8A6]" size={20} /></div> :
-                            insuranceClaims.length === 0 ? <div className="text-center py-8"><Shield size={24} className="text-[#D1D5DB] mx-auto mb-2" /><p className="text-xs text-[#9CA3AF]">No insurance claims yet</p></div> :
-                                <div className="space-y-2">{insuranceClaims.map((claim: any) => (
-                                    <div key={claim.id} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-[#F9FAFB] transition-colors">
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-center gap-2">{claim.claimStatus && <Badge className={`text-[10px] ${claim.claimStatus === 'Approved' ? 'bg-green-100 text-green-700' : claim.claimStatus === 'Denied' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{claim.claimStatus}</Badge>}{claim.supplementNeeded && <Badge variant="outline" className="text-[10px] text-orange-600">Supplement</Badge>}</div>
-                                            <div className="flex items-center gap-3 mt-1 text-xs text-[#6B7280]"><span>#{claim.claimNumber || '—'}</span>{claim.insuranceEstimateACV && <span>ACV: ${Number(claim.insuranceEstimateACV).toLocaleString()}</span>}{claim.deductibleAmount && <span>Ded: ${Number(claim.deductibleAmount).toLocaleString()}</span>}</div>
-                                        </div>
-                                        <div className="flex gap-1"><button onClick={() => { setEditingClaim(claim); setShowClaimDialog(true); }} className="p-1 rounded hover:bg-[#E5E7EB]"><Pencil size={12} className="text-[#6B7280]" /></button><button onClick={() => handleDeleteClaim(claim.id)} className="p-1 rounded hover:bg-[#FEE2E2]"><Trash2 size={12} className="text-[#EF4444]" /></button></div>
-                                    </div>
-                                ))}</div>}
-                    </div>
-
                     {/* CARD 11: Documents */}
                     <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all" style={{ animation: 'fadeSlideUp 0.4s ease 1000ms both' }}>
                         <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#F1F5F9]">
@@ -1297,46 +1147,6 @@ const LeadDetailPage = () => {
                 <ConvertLeadDialog open={showConvertDialog} onClose={() => setShowConvertDialog(false)} lead={lead} onSuccess={handleConvertSuccess} />
             )}
 
-            {/* Inspection Form Dialog */}
-            {showInspectionDialog && (
-                <Dialog
-                    open={showInspectionDialog}
-                    onOpenChange={(open) => {
-                        if (!open) {
-                            setShowInspectionDialog(false);
-                            setEditingInspection(null);
-                        }
-                    }}
-                >
-                    <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
-                        <DialogHeader>
-                            <DialogTitle>{editingInspection ? "Edit Inspection" : "New Inspection"}</DialogTitle>
-                            <DialogDescription>
-                                Use the same inspection workflow as the standalone inspections module.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <InspectionEditor
-                            initialInspection={editingInspection}
-                            lockedLeadId={editingInspection ? undefined : id}
-                            onCancel={() => {
-                                setShowInspectionDialog(false);
-                                setEditingInspection(null);
-                            }}
-                            onSuccess={() => {
-                                setShowInspectionDialog(false);
-                                setEditingInspection(null);
-                                fetchInspections();
-                            }}
-                        />
-                    </DialogContent>
-                </Dialog>
-            )}
-
-            {/* Insurance Claim Form Dialog */}
-            {showClaimDialog && (
-                <InsuranceClaimFormDialog open={showClaimDialog} onClose={() => { setShowClaimDialog(false); setEditingClaim(null); }} onSave={handleSaveClaim} claim={editingClaim} />
-            )}
-
             <ComposeEmailSheet
                 isOpen={showComposeEmail}
                 onClose={() => setShowComposeEmail(false)}
@@ -1363,347 +1173,3 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
 );
 
 export default LeadDetailPage;
-
-// ── Inspection Form Dialog ──────────────────────────────────────────────
-
-interface InspectionFormDialogProps {
-    open: boolean;
-    onClose: () => void;
-    onSave: (data: Record<string, unknown>) => void;
-    inspection?: any;
-}
-
-const INSP_TABS = [
-    { id: 'general', label: 'General' },
-    { id: 'roof', label: 'Roof Assessment' },
-    { id: 'damage', label: 'Damage' },
-    { id: 'materials', label: 'Materials' },
-    { id: 'estimate', label: 'Estimate' },
-    { id: 'scheduling', label: 'Scheduling' },
-];
-
-const InspectionFormDialog = ({ open, onClose, onSave, inspection }: InspectionFormDialogProps) => {
-    const [activeTab, setActiveTab] = useState('general');
-    const [saving, setSaving] = useState(false);
-    const [form, setForm] = useState<Record<string, any>>(() => inspection || {});
-
-    const set = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }));
-
-    const handleSubmit = async () => {
-        setSaving(true);
-        // Clean empty strings to undefined
-        const payload: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(form)) {
-            if (v === '' || v === undefined || v === null) continue;
-            if (k === 'id' || k === 'leadId' || k === 'tenantId' || k === 'createdAt' || k === 'updatedAt' || k === 'createdById') continue;
-            payload[k] = v;
-        }
-        await onSave(payload);
-        setSaving(false);
-    };
-
-    const F = ({ label, field, type = 'text' }: { label: string; field: string; type?: string }) => (
-        <div className="space-y-1">
-            <Label className="text-xs text-[#475569]">{label}</Label>
-            {type === 'textarea' ? (
-                <Textarea
-                    value={form[field] || ''}
-                    onChange={e => set(field, e.target.value)}
-                    className="resize-none min-h-[60px] text-sm"
-                />
-            ) : type === 'select' ? null : (
-                <Input
-                    type={type}
-                    value={form[field] ?? ''}
-                    onChange={e => set(field, type === 'number' ? (e.target.value ? Number(e.target.value) : undefined) : e.target.value)}
-                    className="text-sm"
-                />
-            )}
-        </div>
-    );
-
-    const Sel = ({ label, field, options }: { label: string; field: string; options: string[] }) => (
-        <div className="space-y-1">
-            <Label className="text-xs text-[#475569]">{label}</Label>
-            <select
-                value={form[field] || ''}
-                onChange={e => set(field, e.target.value || undefined)}
-                className="flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm shadow-sm"
-            >
-                <option value="">Select...</option>
-                {options.map(o => <option key={o} value={o}>{o}</option>)}
-            </select>
-        </div>
-    );
-
-    const Bool = ({ label, field }: { label: string; field: string }) => (
-        <div className="flex items-center justify-between py-1">
-            <Label className="text-xs text-[#475569]">{label}</Label>
-            <Switch checked={!!form[field]} onCheckedChange={v => set(field, v)} />
-        </div>
-    );
-
-    return (
-        <Dialog open={open} onOpenChange={v => !v && onClose()}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>{inspection ? 'Edit Inspection' : 'New Inspection'}</DialogTitle>
-                    <DialogDescription>Fill in the inspection details across the tabs below.</DialogDescription>
-                </DialogHeader>
-
-                <div className="flex gap-2 flex-wrap border-b pb-2 mb-4">
-                    {INSP_TABS.map(tab => (
-                        <Button
-                            key={tab.id}
-                            variant={activeTab === tab.id ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setActiveTab(tab.id)}
-                            className={activeTab === tab.id ? 'bg-[#6637F4] text-white' : ''}
-                        >
-                            {tab.label}
-                        </Button>
-                    ))}
-                </div>
-
-                {activeTab === 'general' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <F label="Inspection Date" field="inspectionDate" type="date" />
-                        <F label="Inspector Name" field="inspectorName" />
-                        <Sel label="Inspection Type" field="inspectionType" options={['Initial', 'Re-inspect', 'Insurance', 'Final']} />
-                        <F label="Weather Conditions" field="weatherConditions" />
-                        <Sel label="Access Method" field="accessMethod" options={['Ladder', 'Drone', 'Walk-on', 'Binoculars']} />
-                        <Sel label="Overall Condition" field="overallCondition" options={['Poor', 'Fair', 'Good', 'Excellent']} />
-                        <div className="col-span-full">
-                            <F label="Inspector Notes" field="inspectorNotes" type="textarea" />
-                        </div>
-                        <div className="col-span-full">
-                            <F label="Customer Feedback" field="customerFeedback" type="textarea" />
-                        </div>
-                        <div className="col-span-full">
-                            <F label="Internal Notes" field="internalNotes" type="textarea" />
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'roof' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <Sel label="Roof Style" field="roofStyle" options={['Gable', 'Hip', 'Flat', 'Mansard', 'Gambrel', 'Shed']} />
-                        <Sel label="Roof Pitch" field="roofPitch" options={['Low (2-4)', 'Medium (5-7)', 'Steep (8-12)']} />
-                        <F label="Total Squares" field="totalSquares" type="number" />
-                        <F label="Ridge Length (ft)" field="ridgeLength" type="number" />
-                        <F label="Valley Length (ft)" field="valleyLength" type="number" />
-                        <F label="Eave Length (ft)" field="eaveLength" type="number" />
-                        <F label="Rake Length (ft)" field="rakeLength" type="number" />
-                        <F label="Number of Layers" field="numberOfLayers" type="number" />
-                        <Sel label="Decking Type" field="deckingType" options={['Plywood', 'OSB', '1x6', 'Skip']} />
-                        <Sel label="Decking Condition" field="deckingCondition" options={['Good', 'Needs Repair', 'Needs Replace']} />
-                        <Sel label="Underlayment Type" field="underlaymentType" options={['Felt', 'Synthetic', 'Ice & Water']} />
-                        <Sel label="Ventilation Type" field="ventilationType" options={['Ridge', 'Box', 'Turbine', 'Power', 'Soffit']} />
-                        <F label="Ventilation Count" field="ventilationCount" type="number" />
-                        <Sel label="Flashing Condition" field="flashingCondition" options={['Good', 'Repair', 'Replace']} />
-                        <Sel label="Gutter Condition" field="gutterCondition" options={['Good', 'Repair', 'Replace', 'None']} />
-                        <F label="Skylight Count" field="skylightCount" type="number" />
-                        <F label="Skylight Condition" field="skylightCondition" />
-                        <Bool label="Chimney Present" field="chimneyPresent" />
-                        <F label="Chimney Condition" field="chimneyCondition" />
-                        <Sel label="Soffit/Fascia Condition" field="soffitFasciaCondition" options={['Good', 'Repair', 'Replace']} />
-                        <Bool label="Drip Edge Present" field="dripEdgePresent" />
-                        <F label="Drip Edge Condition" field="dripEdgeCondition" />
-                        <Bool label="Ice/Water Shield Present" field="iceWaterShieldPresent" />
-                    </div>
-                )}
-
-                {activeTab === 'damage' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Bool label="Storm Damage Found" field="stormDamageFound" />
-                        <Sel label="Hail Size Found" field="hailSizeFound" options={['Pea', 'Marble', 'Quarter', 'Golf Ball', 'Baseball']} />
-                        <div className="col-span-full"><F label="Wind Damage Details" field="windDamageDetails" type="textarea" /></div>
-                        <div className="col-span-full"><F label="Hail Damage Details" field="hailDamageDetails" type="textarea" /></div>
-                        <div className="col-span-full"><F label="Test Square Results" field="testSquareResults" type="textarea" /></div>
-                        <Bool label="Interior Damage Found" field="interiorDamageFound" />
-                        <F label="Photos Taken Count" field="photosTakenCount" type="number" />
-                        <div className="col-span-full"><F label="Interior Damage Details" field="interiorDamageDetails" type="textarea" /></div>
-                        <Sel label="Overall Damage Rating" field="overallDamageRating" options={['None', 'Minor', 'Moderate', 'Severe', 'Total Loss']} />
-                    </div>
-                )}
-
-                {activeTab === 'materials' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Sel label="Proposed Material" field="proposedMaterial" options={['Asphalt', 'Metal', 'Tile', 'Flat', 'Wood', 'Slate']} />
-                        <F label="Shingle Brand" field="shingleBrand" />
-                        <F label="Shingle Line" field="shingleLine" />
-                        <F label="Shingle Color" field="shingleColor" />
-                        <F label="Underlayment Choice" field="underlaymentChoice" />
-                        <F label="Ridge Cap Type" field="ridgeCapType" />
-                        <F label="Ventilation Plan" field="ventilationPlan" />
-                        <F label="Drip Edge Color" field="dripEdgeColor" />
-                        <Sel label="Warranty Type" field="warrantyType" options={['Manufacturer', 'Workmanship', 'Extended']} />
-                        <F label="Warranty Years" field="warrantyYears" type="number" />
-                    </div>
-                )}
-
-                {activeTab === 'estimate' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <F label="Material Cost ($)" field="materialCost" type="number" />
-                        <F label="Labor Cost ($)" field="laborCost" type="number" />
-                        <F label="Tear-Off Cost ($)" field="tearOffCost" type="number" />
-                        <F label="Permit Cost ($)" field="permitCost" type="number" />
-                        <F label="Dumpster Cost ($)" field="dumpsterCost" type="number" />
-                        <F label="Misc Cost ($)" field="miscCost" type="number" />
-                        <F label="Subtotal ($)" field="subtotal" type="number" />
-                        <F label="Overhead %" field="overheadPercent" type="number" />
-                        <F label="Profit %" field="profitPercent" type="number" />
-                        <F label="Total Estimate ($)" field="totalEstimate" type="number" />
-                        <F label="Customer Price ($)" field="customerPrice" type="number" />
-                        <F label="Deposit Required ($)" field="depositRequired" type="number" />
-                        <Bool label="Deposit Collected" field="depositCollected" />
-                        <Sel label="Payment Method" field="paymentMethod" options={['Cash', 'Check', 'Card', 'Financing', 'Insurance']} />
-                        <Sel label="Estimate Status" field="estimateStatus" options={['Draft', 'Sent', 'Accepted', 'Rejected', 'Revised']} />
-                    </div>
-                )}
-
-                {activeTab === 'scheduling' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <F label="Tentative Start Date" field="tentativeStartDate" type="date" />
-                        <Sel label="Estimated Duration" field="estimatedDuration" options={['1 Day', '2-3 Days', '1 Week', '2 Weeks', '3+ Weeks']} />
-                        <F label="Crew Size" field="crewSize" type="number" />
-                        <F label="Crew Lead Name" field="crewLeadName" />
-                        <Bool label="Materials Ordered" field="materialsOrdered" />
-                        <F label="Materials Delivery Date" field="materialsDeliveryDate" type="date" />
-                        <Bool label="Permit Pulled" field="permitPulled" />
-                        <F label="Permit Number" field="permitNumber" />
-                        <Bool label="Dumpster Ordered" field="dumpsterOrdered" />
-                        <F label="Dumpster Delivery Date" field="dumpsterDeliveryDate" type="date" />
-                    </div>
-                )}
-
-                <DialogFooter className="mt-4 gap-2">
-                    <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={saving}
-                        className="bg-[#6637F4] hover:bg-[#6637F4]/80 text-white gap-2"
-                    >
-                        {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                        {inspection ? 'Update' : 'Create'} Inspection
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-};
-
-// ── Insurance Claim Form Dialog ──────────────────────────────────────────
-
-interface InsuranceClaimFormDialogProps {
-    open: boolean;
-    onClose: () => void;
-    onSave: (data: Record<string, unknown>) => void;
-    claim?: any;
-}
-
-const InsuranceClaimFormDialog = ({ open, onClose, onSave, claim }: InsuranceClaimFormDialogProps) => {
-    const [saving, setSaving] = useState(false);
-    const [form, setForm] = useState<Record<string, any>>(() => claim || {});
-
-    const set = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }));
-
-    const handleSubmit = async () => {
-        setSaving(true);
-        const payload: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(form)) {
-            if (v === '' || v === undefined || v === null) continue;
-            if (k === 'id' || k === 'leadId' || k === 'tenantId' || k === 'createdAt' || k === 'updatedAt' || k === 'createdById') continue;
-            payload[k] = v;
-        }
-        await onSave(payload);
-        setSaving(false);
-    };
-
-    return (
-        <Dialog open={open} onOpenChange={v => !v && onClose()}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>{claim ? 'Edit Insurance Claim' : 'New Insurance Claim'}</DialogTitle>
-                    <DialogDescription>Enter the insurance claim details.</DialogDescription>
-                </DialogHeader>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <Label className="text-xs text-[#475569]">Claim Number</Label>
-                        <Input value={form.claimNumber || ''} onChange={e => set('claimNumber', e.target.value)} className="text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs text-[#475569]">Claim Status</Label>
-                        <select value={form.claimStatus || ''} onChange={e => set('claimStatus', e.target.value || undefined)}
-                            className="flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm shadow-sm">
-                            <option value="">Select...</option>
-                            {['Open', 'In Review', 'Approved', 'Denied', 'Supplement'].map(o => <option key={o} value={o}>{o}</option>)}
-                        </select>
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs text-[#475569]">Insurance Estimate (ACV) $</Label>
-                        <Input type="number" value={form.insuranceEstimateACV ?? ''} onChange={e => set('insuranceEstimateACV', e.target.value ? Number(e.target.value) : undefined)} className="text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs text-[#475569]">Recoverable Depreciation $</Label>
-                        <Input type="number" value={form.recoverableDepreciation ?? ''} onChange={e => set('recoverableDepreciation', e.target.value ? Number(e.target.value) : undefined)} className="text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs text-[#475569]">Full RCV Amount $</Label>
-                        <Input type="number" value={form.fullRCVAmount ?? ''} onChange={e => set('fullRCVAmount', e.target.value ? Number(e.target.value) : undefined)} className="text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs text-[#475569]">Deductible Amount $</Label>
-                        <Input type="number" value={form.deductibleAmount ?? ''} onChange={e => set('deductibleAmount', e.target.value ? Number(e.target.value) : undefined)} className="text-sm" />
-                    </div>
-                    <div className="flex items-center justify-between py-1">
-                        <Label className="text-xs text-[#475569]">Supplement Needed</Label>
-                        <Switch checked={!!form.supplementNeeded} onCheckedChange={v => set('supplementNeeded', v)} />
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs text-[#475569]">Supplement Amount $</Label>
-                        <Input type="number" value={form.supplementAmount ?? ''} onChange={e => set('supplementAmount', e.target.value ? Number(e.target.value) : undefined)} className="text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs text-[#475569]">Supplement Status</Label>
-                        <select value={form.supplementStatus || ''} onChange={e => set('supplementStatus', e.target.value || undefined)}
-                            className="flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm shadow-sm">
-                            <option value="">Select...</option>
-                            {['Pending', 'Submitted', 'Approved', 'Denied'].map(o => <option key={o} value={o}>{o}</option>)}
-                        </select>
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs text-[#475569]">Mortgage Company</Label>
-                        <Input value={form.mortgageCompanyName || ''} onChange={e => set('mortgageCompanyName', e.target.value)} className="text-sm" />
-                    </div>
-                    <div className="space-y-1 col-span-full">
-                        <Label className="text-xs text-[#475569]">Mortgage Company Address</Label>
-                        <AddressAutocompleteInput
-                            value={form.mortgageCompanyAddress || ''}
-                            onValueChange={(value) => set('mortgageCompanyAddress', value)}
-                            onSelectAddress={(details) => set('mortgageCompanyAddress', details.formattedAddress || details.addressLine1 || '')}
-                            className="h-9 text-sm"
-                        />
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs text-[#475569]">Mortgage Loan Number</Label>
-                        <Input value={form.mortgageLoanNumber || ''} onChange={e => set('mortgageLoanNumber', e.target.value)} className="text-sm" />
-                    </div>
-                    <div className="space-y-1 col-span-full">
-                        <Label className="text-xs text-[#475569]">Claim Notes</Label>
-                        <Textarea value={form.claimNotes || ''} onChange={e => set('claimNotes', e.target.value)} className="resize-none min-h-[60px] text-sm" />
-                    </div>
-                </div>
-
-                <DialogFooter className="mt-4 gap-2">
-                    <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-                    <Button onClick={handleSubmit} disabled={saving} className="bg-[#6637F4] hover:bg-[#6637F4]/80 text-white gap-2">
-                        {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                        {claim ? 'Update' : 'Create'} Claim
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-};

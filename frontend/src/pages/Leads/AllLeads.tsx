@@ -3,7 +3,7 @@ import { getLeads, createLead, updateLead, deleteLead, updateLeadStatus, checkDu
 import { getLeadSources } from "@/features/leads/services/lead-sources-service";
 import { LeadStatus, LeadTemperature } from "@/types/lead-contracts";
 import { createCalendarEvent } from "@/features/calendar";
-import { autocompleteAddress } from "@/features/roof-estimator/services/roof-estimator-service";
+import { autocompleteAddress } from "@/services/address/address-service";
 import { getEmployees } from "@/features/users";
 import api from "@/lib/axios";
 // import { Sidebar } from "@/components/Sidebar"; // Removed: global sidebar in App.tsx
@@ -1410,7 +1410,7 @@ export const LeadFormDialog = ({
       case "basic":
         return ["firstName", "lastName", "phone", "email", "companyName"];
       case "property":
-        return ["propertyAddress", "zipCode", "website"];
+        return ["location", "zipCode", "website"];
       case "service":
         return ["productInterest", "useCase", "numberOfUsers", "currentSolution"];
       case "qualification":
@@ -1429,16 +1429,8 @@ export const LeadFormDialog = ({
     setErrors((prev) => {
       const fieldsToClear = [field];
 
-      if (field === "isInsuranceClaim" && value !== "Yes") {
-        fieldsToClear.push("insuranceCompanyName", "adjusterEmail");
-      }
-
       if (field === "gettingOtherQuotes" && value !== "Yes") {
         fieldsToClear.push("numberOfOtherQuotes");
-      }
-
-      if (field === "adjusterAssigned" && value !== "Yes") {
-        fieldsToClear.push("adjusterEmail", "adjusterName", "adjusterPhone");
       }
 
       if (!fieldsToClear.some((item) => prev[item])) {
@@ -1454,7 +1446,7 @@ export const LeadFormDialog = ({
   }, []);
 
   const updateDateTimeField = useCallback(
-    (field: "followUpDateTime" | "inspectionAppointmentDate", patch: Partial<DateTimeFieldParts>) => {
+    (field: "followUpDateTime", patch: Partial<DateTimeFieldParts>) => {
       setFormData((prev) => {
         const currentParts = getDateTimeFieldParts(prev[field]);
         const nextParts = { ...currentParts, ...patch };
@@ -1472,11 +1464,6 @@ export const LeadFormDialog = ({
     () => getDateTimeFieldParts(formData.followUpDateTime),
     [formData.followUpDateTime]
   );
-  const inspectionDateTimeParts = useMemo(
-    () => getDateTimeFieldParts(formData.inspectionAppointmentDate),
-    [formData.inspectionAppointmentDate]
-  );
-
   const getFieldErrorClass = useCallback(
     (field: string) => (errors[field] ? "border-red-500 focus-visible:ring-red-500 focus:ring-red-500" : ""),
     [errors]
@@ -1716,12 +1703,12 @@ export const LeadFormDialog = ({
         leadType: lead.leadType || "",
         buyingIntent: lead.buyingIntent || "",
         purchaseTimeline: lead.purchaseTimeline || lead.workTimeline || "",
-        productInterest: lead.productInterest || lead.serviceType || "",
+        productInterest: lead.productInterest || "",
         numberOfUsers: lead.numberOfUsers?.toString() || "",
         currentSolution: lead.currentSolution || "",
         teamRegion: lead.teamRegion || lead.territory || "",
         country: lead.country || "",
-        location: lead.location,
+        location: lead.location || lead.propertyAddress || "",
         source: lead.leadSourceName,
         leadSourceId: lead.leadSourceId || "",
         status: lead.status,
@@ -1736,13 +1723,13 @@ export const LeadFormDialog = ({
         lostReason: lead.lostReason || "",
         lostNotes: lead.lostNotes || "",
         // Stage 1
-        propertyAddress: lead.propertyAddress || "",
+        propertyAddress: "",
         city: lead.city || "",
         state: lead.state || "",
         zipCode: lead.zipCode || "",
-        propertyType: lead.propertyType || "",
-        serviceType: lead.serviceType || "",
-        isInsuranceClaim: lead.isInsuranceClaim || "",
+        propertyType: "",
+        serviceType: "",
+        isInsuranceClaim: "",
         urgencyLevel: lead.urgencyLevel || "",
         preferredContactMethod: lead.preferredContactMethod || "",
         bestTimeToContact: lead.bestTimeToContact || "",
@@ -1757,21 +1744,21 @@ export const LeadFormDialog = ({
         isHomeowner: lead.isHomeowner || "",
         isDecisionMaker: lead.isDecisionMaker || "",
         ownershipType: lead.ownershipType || "",
-        roofAge: lead.roofAge || "",
-        currentRoofMaterial: lead.currentRoofMaterial || "",
-        numberOfStories: lead.numberOfStories || "",
-        knownDamageType: lead.knownDamageType || [],
-        damageOccurrenceDate: lead.damageOccurrenceDate || "",
-        previousRoofWork: lead.previousRoofWork || "",
-        previousRoofWorkDetails: lead.previousRoofWorkDetails || "",
-        insuranceCompanyName: lead.insuranceCompanyName || "",
-        hasClaimBeenFiled: lead.hasClaimBeenFiled || "",
-        claimNumber: lead.claimNumber || "",
-        adjusterAssigned: lead.adjusterAssigned || "",
-        adjusterName: lead.adjusterName || "",
-        adjusterPhone: lead.adjusterPhone || "",
-        adjusterEmail: lead.adjusterEmail || "",
-        adjusterMeetingDate: lead.adjusterMeetingDate || "",
+        roofAge: "",
+        currentRoofMaterial: "",
+        numberOfStories: "",
+        knownDamageType: [],
+        damageOccurrenceDate: "",
+        previousRoofWork: "",
+        previousRoofWorkDetails: "",
+        insuranceCompanyName: "",
+        hasClaimBeenFiled: "",
+        claimNumber: "",
+        adjusterAssigned: "",
+        adjusterName: "",
+        adjusterPhone: "",
+        adjusterEmail: "",
+        adjusterMeetingDate: "",
         budgetRange: lead.budgetRange || "",
         workTimeline: lead.workTimeline || "",
         financingNeeded: lead.financingNeeded || "",
@@ -1784,7 +1771,7 @@ export const LeadFormDialog = ({
         disqualifiedReason: lead.disqualifiedReason || "",
         nextStep: lead.nextStep || "",
         followUpDateTime: lead.followUpDateTime || "",
-        inspectionAppointmentDate: lead.inspectionAppointmentDate || "",
+        inspectionAppointmentDate: "",
         qualificationCallNotes: lead.qualificationCallNotes || "",
       });
     } else {
@@ -2058,27 +2045,27 @@ export const LeadFormDialog = ({
                   Company Address
                 </Label>
                 <AddressAutocompleteInput
-                  value={formData.propertyAddress}
-                  onValueChange={(value) => setFieldValue("propertyAddress", value)}
+                  value={formData.location}
+                  onValueChange={(value) => setFieldValue("location", value)}
                   onSelectAddress={(details) => {
                     setFormData((current) => ({
                       ...current,
-                      propertyAddress: details.addressLine1 || details.formattedAddress || current.propertyAddress,
+                      location: details.addressLine1 || details.formattedAddress || current.location,
                       city: details.city || current.city,
                       state: details.state || current.state,
                       zipCode: details.postalCode || current.zipCode,
                     }));
                     setErrors((prev) => {
                       const next = { ...prev };
-                      delete next.propertyAddress;
+                      delete next.location;
                       delete next.zipCode;
                       return next;
                     });
                   }}
                   placeholder="123 Business Avenue"
-                  className={cn("h-11 rounded-md", getFieldErrorClass("propertyAddress"))}
+                  className={cn("h-11 rounded-md", getFieldErrorClass("location"))}
                 />
-                {renderFieldError("propertyAddress")}
+                {renderFieldError("location")}
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -2234,7 +2221,6 @@ export const LeadFormDialog = ({
                   value={formData.productInterest}
                   onValueChange={(val) => {
                     setFieldValue("productInterest", val);
-                    setFieldValue("serviceType", val);
                   }}
                 >
                   <SelectTrigger className={cn("h-11 rounded-md", getFieldErrorClass("productInterest"))}>
@@ -2280,7 +2266,6 @@ export const LeadFormDialog = ({
                     value={formData.currentSolution}
                     onChange={(e) => {
                       setFieldValue("currentSolution", e.target.value);
-                      setFieldValue("currentRoofMaterial", e.target.value);
                     }}
                     placeholder="HubSpot, Salesforce, spreadsheet..."
                     className="h-11 rounded-md"
@@ -2517,101 +2502,6 @@ export const LeadFormDialog = ({
                 </div>
               </div>
 
-              {/* Buying Context */}
-              <div>
-                <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Buying Context</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Current CRM Maturity</Label>
-                    <Select value={formData.roofAge} onValueChange={(val) => setFormData({ ...formData, roofAge: val })}>
-                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent className="rounded-md">
-                        {["No CRM yet", "Spreadsheet-based", "Basic CRM", "Advanced CRM", "Replacing existing CRM", "Unknown"].map((a) => (
-                          <SelectItem key={a} value={a} className="rounded-md">{a}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Current Sales Tool</Label>
-                    <Select value={formData.currentRoofMaterial} onValueChange={(val) => setFormData({ ...formData, currentRoofMaterial: val })}>
-                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent className="rounded-md">
-                        {["Spreadsheets", "HubSpot", "Salesforce", "Zoho", "Pipedrive", "Custom System", "Unknown"].map((m) => (
-                          <SelectItem key={m} value={m} className="rounded-md">{m}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Sales Team Size</Label>
-                    <Select value={formData.numberOfStories} onValueChange={(val) => setFormData({ ...formData, numberOfStories: val })}>
-                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent className="rounded-md">
-                        <SelectItem value="1" className="rounded-md">1 rep</SelectItem>
-                        <SelectItem value="2" className="rounded-md">2-5 reps</SelectItem>
-                        <SelectItem value="3+" className="rounded-md">6+ reps</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Used CRM Before?</Label>
-                    <Select value={formData.previousRoofWork} onValueChange={(val) => setFormData({ ...formData, previousRoofWork: val })}>
-                      <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent className="rounded-md">
-                        <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
-                        <SelectItem value="No" className="rounded-md">No</SelectItem>
-                        <SelectItem value="Unknown" className="rounded-md">Unknown</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {formData.previousRoofWork === "Yes" && (
-                  <div className="space-y-2 mt-4">
-                    <Label className="text-sm font-medium text-[#475569]">Previous CRM Details</Label>
-                    <Input
-                      value={formData.previousRoofWorkDetails}
-                      onChange={(e) => setFormData({ ...formData, previousRoofWorkDetails: e.target.value })}
-                      placeholder="Current or previous CRM, pain points, implementation history..."
-                      className="h-11 rounded-md"
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-2 mt-4">
-                  <Label className="text-sm font-medium text-[#475569]">Pain Areas</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {["Lead Follow-up", "Pipeline Visibility", "Manual Reporting", "Low Conversion", "No Automation", "Data Cleanup", "Team Adoption", "Unknown"].map((dtype) => (
-                      <label key={dtype} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs cursor-pointer border transition-colors ${formData.knownDamageType.includes(dtype)
-                        ? "bg-[#6637F4]/10 border-[#6637F4] text-[#6637F4]"
-                        : "bg-[#F7F7FB] border-[#E2E8F0] text-[#475569] hover:border-[#94A3B8]"
-                        }`}>
-                        <Checkbox
-                          checked={formData.knownDamageType.includes(dtype)}
-                          onCheckedChange={() => toggleDamageType(dtype)}
-                          className="h-3.5 w-3.5 data-[state=checked]:bg-[#6637F4] data-[state=checked]:border-[#6637F4]"
-                        />
-                        {dtype}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2 mt-4">
-                  <Label className="text-sm font-medium text-[#475569]">When Did This Need Start?</Label>
-                  <Input
-                    value={formData.damageOccurrenceDate}
-                    onChange={(e) => setFormData({ ...formData, damageOccurrenceDate: e.target.value })}
-                    placeholder="e.g., This quarter, after a team expansion, before renewal..."
-                    className="h-11 rounded-md"
-                  />
-                </div>
-              </div>
-
               {/* Budget & Timeline */}
               <div>
                 <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Budget & Timeline</h4>
@@ -2721,106 +2611,6 @@ export const LeadFormDialog = ({
               </div>
             </TabsContent>
 
-            {/* ── TAB: Insurance (conditional) ────────────────────────────── */}
-            {formData.isInsuranceClaim === "Yes" && (
-              <TabsContent value="insurance" className="space-y-4 mt-0">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">
-                    Insurance Company Name <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    value={formData.insuranceCompanyName}
-                    onChange={(e) => setFieldValue("insuranceCompanyName", e.target.value)}
-                    placeholder="e.g., State Farm, Allstate, USAA..."
-                    className={cn("h-11 rounded-md", getFieldErrorClass("insuranceCompanyName"))}
-                  />
-                  {renderFieldError("insuranceCompanyName")}
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Has Claim Been Filed?</Label>
-                  <Select value={formData.hasClaimBeenFiled} onValueChange={(val) => setFormData({ ...formData, hasClaimBeenFiled: val })}>
-                    <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent className="rounded-md">
-                      <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
-                      <SelectItem value="No" className="rounded-md">No</SelectItem>
-                      <SelectItem value="Planning To" className="rounded-md">Planning To</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Claim Number</Label>
-                  <Input
-                    value={formData.claimNumber}
-                    onChange={(e) => setFormData({ ...formData, claimNumber: e.target.value })}
-                    placeholder="Claim #"
-                    className="h-11 rounded-md"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Adjuster Assigned?</Label>
-                  <Select value={formData.adjusterAssigned} onValueChange={(val) => setFieldValue("adjusterAssigned", val)}>
-                    <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent className="rounded-md">
-                      <SelectItem value="Yes" className="rounded-md">Yes</SelectItem>
-                      <SelectItem value="No" className="rounded-md">No</SelectItem>
-                      <SelectItem value="Not Yet" className="rounded-md">Not Yet</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {formData.adjusterAssigned === "Yes" && (
-                  <>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-[#475569]">Adjuster Name</Label>
-                        <Input
-                          value={formData.adjusterName}
-                          onChange={(e) => setFieldValue("adjusterName", e.target.value)}
-                          placeholder="Adjuster name"
-                          className={cn("h-11 rounded-md", getFieldErrorClass("adjusterName"))}
-                        />
-                        {renderFieldError("adjusterName")}
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-[#475569]">Adjuster Phone</Label>
-                        <Input
-                          value={formData.adjusterPhone}
-                          onChange={(e) => setFieldValue("adjusterPhone", e.target.value)}
-                          placeholder="Phone number"
-                          className={cn("h-11 rounded-md", getFieldErrorClass("adjusterPhone"))}
-                        />
-                        {renderFieldError("adjusterPhone")}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-[#475569]">Adjuster Email</Label>
-                      <Input
-                        type="email"
-                        value={formData.adjusterEmail}
-                        onChange={(e) => setFieldValue("adjusterEmail", e.target.value)}
-                        placeholder="adjuster@insurance.com"
-                        className={cn("h-11 rounded-md", getFieldErrorClass("adjusterEmail"))}
-                      />
-                      {renderFieldError("adjusterEmail")}
-                    </div>
-                  </>
-                )}
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Adjuster Meeting Date</Label>
-                  <Input
-                    type="date"
-                    value={formData.adjusterMeetingDate ? formData.adjusterMeetingDate.split("T")[0] : ""}
-                    onChange={(e) => setFormData({ ...formData, adjusterMeetingDate: e.target.value ? new Date(e.target.value).toISOString() : "" })}
-                    className="h-11 rounded-md"
-                  />
-                </div>
-              </TabsContent>
-            )}
-
             {/* ── TAB: Sales Assessment ───────────────────────────────────── */}
             <TabsContent value="assessment" className="space-y-4 mt-0">
               <div className="grid grid-cols-2 gap-4">
@@ -2896,62 +2686,6 @@ export const LeadFormDialog = ({
                       value={followUpDateTimeParts.period}
                       onValueChange={(value) => updateDateTimeField("followUpDateTime", { period: value as "AM" | "PM" })}
                       disabled={!followUpDateTimeParts.date}
-                    >
-                      <SelectTrigger className="h-11 w-[96px] rounded-md">
-                        <SelectValue placeholder="AM/PM" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-md">
-                        <SelectItem value="AM" className="rounded-md">AM</SelectItem>
-                        <SelectItem value="PM" className="rounded-md">PM</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Demo Date</Label>
-                  <div className="flex flex-wrap gap-3">
-                    <Input
-                      type="date"
-                      value={inspectionDateTimeParts.date}
-                      onChange={(e) => updateDateTimeField("inspectionAppointmentDate", { date: e.target.value })}
-                      className="h-11 min-w-[220px] flex-[1.35_1_220px] rounded-md"
-                    />
-                    <Select
-                      value={inspectionDateTimeParts.hour}
-                      onValueChange={(value) => updateDateTimeField("inspectionAppointmentDate", { hour: value })}
-                      disabled={!inspectionDateTimeParts.date}
-                    >
-                      <SelectTrigger className="h-11 w-[92px] rounded-md">
-                        <SelectValue placeholder="Hour" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-md">
-                        {Array.from({ length: 12 }, (_, index) => padTwoDigits(index + 1)).map((hour) => (
-                          <SelectItem key={hour} value={hour} className="rounded-md">
-                            {hour}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={inspectionDateTimeParts.minute}
-                      onValueChange={(value) => updateDateTimeField("inspectionAppointmentDate", { minute: value })}
-                      disabled={!inspectionDateTimeParts.date}
-                    >
-                      <SelectTrigger className="h-11 w-[92px] rounded-md">
-                        <SelectValue placeholder="Min" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-md">
-                        {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map((minute) => (
-                          <SelectItem key={minute} value={minute} className="rounded-md">
-                            {minute}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={inspectionDateTimeParts.period}
-                      onValueChange={(value) => updateDateTimeField("inspectionAppointmentDate", { period: value as "AM" | "PM" })}
-                      disabled={!inspectionDateTimeParts.date}
                     >
                       <SelectTrigger className="h-11 w-[96px] rounded-md">
                         <SelectValue placeholder="AM/PM" />
@@ -3990,9 +3724,9 @@ const mapApiLead = (apiLead: any): Lead => ({
   leadType: apiLead.leadType || "",
   buyingIntent: apiLead.buyingIntent || "",
   purchaseTimeline: apiLead.purchaseTimeline || apiLead.workTimeline || "",
-  productInterest: apiLead.productInterest || apiLead.serviceType || "",
+  productInterest: apiLead.productInterest || "",
   numberOfUsers: apiLead.numberOfUsers || 0,
-  currentSolution: apiLead.currentSolution || apiLead.currentRoofMaterial || "",
+  currentSolution: apiLead.currentSolution || "",
   teamRegion: apiLead.teamRegion || apiLead.territory || "",
   country: apiLead.country || "",
   location: apiLead.location || "",
@@ -4004,8 +3738,8 @@ const mapApiLead = (apiLead: any): Lead => ({
     if (apiLead.email) s += 10;
     if (apiLead.phone) s += 10;
     if (apiLead.companyName) s += 5;
-    if (apiLead.propertyAddress) s += 10;
-    if (apiLead.serviceType) s += 10;
+    if (apiLead.location) s += 10;
+    if (apiLead.productInterest) s += 10;
     if (apiLead.potentialValue && Number(apiLead.potentialValue) > 0) s += 10;
     if (apiLead.temperature === "HOT") s += 15;
     else if (apiLead.temperature === "WARM") s += 5;
@@ -4036,15 +3770,15 @@ const mapApiLead = (apiLead: any): Lead => ({
   updatedAt: apiLead.updatedAt,
 
   // ── Stage 1: Property Info ─────────────────────────────────────────
-  propertyAddress: apiLead.propertyAddress || "",
+  propertyAddress: "",
   city: apiLead.city || "",
   state: apiLead.state || "",
   zipCode: apiLead.zipCode || "",
   propertyType: apiLead.propertyType || "",
 
   // ── Stage 1: Service Request ───────────────────────────────────────
-  serviceType: apiLead.serviceType || "",
-  isInsuranceClaim: apiLead.isInsuranceClaim || "",
+  serviceType: "",
+  isInsuranceClaim: "",
   urgencyLevel: apiLead.urgencyLevel || "",
   preferredContactMethod: apiLead.preferredContactMethod || "",
   bestTimeToContact: apiLead.bestTimeToContact || "",
@@ -4064,23 +3798,23 @@ const mapApiLead = (apiLead: any): Lead => ({
   ownershipType: apiLead.ownershipType || "",
 
   // ── Stage 2: Roof Details ─────────────────────────────────────────
-  roofAge: apiLead.roofAge || "",
-  currentRoofMaterial: apiLead.currentRoofMaterial || "",
-  numberOfStories: apiLead.numberOfStories || "",
-  knownDamageType: apiLead.knownDamageType || [],
-  damageOccurrenceDate: apiLead.damageOccurrenceDate || "",
-  previousRoofWork: apiLead.previousRoofWork || "",
-  previousRoofWorkDetails: apiLead.previousRoofWorkDetails || "",
+  roofAge: "",
+  currentRoofMaterial: "",
+  numberOfStories: "",
+  knownDamageType: [],
+  damageOccurrenceDate: "",
+  previousRoofWork: "",
+  previousRoofWorkDetails: "",
 
   // ── Stage 2: Insurance ────────────────────────────────────────────
-  insuranceCompanyName: apiLead.insuranceCompanyName || "",
-  hasClaimBeenFiled: apiLead.hasClaimBeenFiled || "",
-  claimNumber: apiLead.claimNumber || "",
-  adjusterAssigned: apiLead.adjusterAssigned || "",
-  adjusterName: apiLead.adjusterName || "",
-  adjusterPhone: apiLead.adjusterPhone || "",
-  adjusterEmail: apiLead.adjusterEmail || "",
-  adjusterMeetingDate: apiLead.adjusterMeetingDate || "",
+  insuranceCompanyName: "",
+  hasClaimBeenFiled: "",
+  claimNumber: "",
+  adjusterAssigned: "",
+  adjusterName: "",
+  adjusterPhone: "",
+  adjusterEmail: "",
+  adjusterMeetingDate: "",
 
   // ── Stage 2: Budget & Timeline ────────────────────────────────────
   budgetRange: apiLead.budgetRange || "",
@@ -4099,7 +3833,7 @@ const mapApiLead = (apiLead: any): Lead => ({
   disqualifiedReason: apiLead.disqualifiedReason || "",
   nextStep: apiLead.nextStep || "",
   followUpDateTime: apiLead.followUpDateTime || "",
-  inspectionAppointmentDate: apiLead.inspectionAppointmentDate || "",
+  inspectionAppointmentDate: "",
   qualificationCallNotes: apiLead.qualificationCallNotes || "",
 });
 
@@ -4412,9 +4146,9 @@ const AllLeads = () => {
       leadType: data.leadType?.trim() || undefined,
       buyingIntent: data.buyingIntent?.trim() || undefined,
       purchaseTimeline: data.purchaseTimeline?.trim() || data.workTimeline?.trim() || undefined,
-      productInterest: data.productInterest?.trim() || data.serviceType?.trim() || undefined,
+      productInterest: data.productInterest?.trim() || undefined,
       numberOfUsers: data.numberOfUsers ? Number(data.numberOfUsers) : undefined,
-      currentSolution: data.currentSolution?.trim() || data.currentRoofMaterial?.trim() || undefined,
+      currentSolution: data.currentSolution?.trim() || undefined,
       teamRegion: data.teamRegion?.trim() || data.territory?.trim() || undefined,
       country: data.country?.trim() || undefined,
       location: data.location?.trim() || undefined,
@@ -4532,11 +4266,11 @@ const AllLeads = () => {
         lead.potentialValue,
         lead.assignedToName,
         getSourceInfo(lead.leadSourceName).name,
-        lead.propertyAddress,
+        lead.location,
         lead.city,
         lead.state,
         lead.zipCode,
-        lead.serviceType,
+        lead.productInterest,
         lead.urgencyLevel,
         lead.notes,
         (lead.tags || []).join(", "),
@@ -4564,20 +4298,14 @@ const AllLeads = () => {
       leadType: opt(data.leadType),
       buyingIntent: opt(data.buyingIntent),
       purchaseTimeline: opt(data.purchaseTimeline) || opt(data.workTimeline),
-      productInterest: opt(data.productInterest) || opt(data.serviceType),
+      productInterest: opt(data.productInterest),
       numberOfUsers: data.numberOfUsers || undefined,
-      currentSolution: opt(data.currentSolution) || opt(data.currentRoofMaterial),
+      currentSolution: opt(data.currentSolution),
       teamRegion: opt(data.teamRegion) || opt(data.territory),
       country: opt(data.country),
-      // Stage 1: Company address
-      propertyAddress: opt(data.propertyAddress),
       city: opt(data.city),
       state: opt(data.state),
       zipCode: data.zipCode ? normalizeCanadianPostalCode(data.zipCode) : undefined,
-      propertyType: opt(data.propertyType),
-      // Stage 1: Sales need
-      serviceType: opt(data.serviceType),
-      isInsuranceClaim: opt(data.isInsuranceClaim),
       urgencyLevel: opt(data.urgencyLevel),
       preferredContactMethod: opt(data.preferredContactMethod),
       bestTimeToContact: opt(data.bestTimeToContact),
@@ -4589,27 +4317,7 @@ const AllLeads = () => {
       confirmedAddress: data.confirmedAddress || false,
       secondaryPhone: opt(data.secondaryPhone),
       spouseCoOwnerName: data.spouseCoOwnerName ? normalizeWhitespace(data.spouseCoOwnerName) : undefined,
-      // Stage 2: Ownership
-      isHomeowner: opt(data.isHomeowner),
       isDecisionMaker: opt(data.isDecisionMaker),
-      ownershipType: opt(data.ownershipType),
-      // Stage 2: Buying context
-      roofAge: opt(data.roofAge),
-      currentRoofMaterial: opt(data.currentRoofMaterial),
-      numberOfStories: opt(data.numberOfStories),
-      knownDamageType: data.knownDamageType?.length ? data.knownDamageType : undefined,
-      damageOccurrenceDate: opt(data.damageOccurrenceDate),
-      previousRoofWork: opt(data.previousRoofWork),
-      previousRoofWorkDetails: opt(data.previousRoofWorkDetails),
-      // Stage 2: Legacy insurance data
-      insuranceCompanyName: opt(data.insuranceCompanyName),
-      hasClaimBeenFiled: opt(data.hasClaimBeenFiled),
-      claimNumber: opt(data.claimNumber),
-      adjusterAssigned: opt(data.adjusterAssigned),
-      adjusterName: data.adjusterName ? normalizeWhitespace(data.adjusterName) : undefined,
-      adjusterPhone: opt(data.adjusterPhone),
-      adjusterEmail: data.adjusterEmail ? normalizeEmailAddress(data.adjusterEmail) : undefined,
-      adjusterMeetingDate: opt(data.adjusterMeetingDate),
       // Stage 2: Budget
       budgetRange: opt(data.budgetRange),
       workTimeline: opt(data.workTimeline),
@@ -4625,7 +4333,6 @@ const AllLeads = () => {
       disqualifiedReason: opt(data.disqualifiedReason),
       nextStep: opt(data.nextStep),
       followUpDateTime: opt(data.followUpDateTime),
-      inspectionAppointmentDate: opt(data.inspectionAppointmentDate),
       qualificationCallNotes: opt(data.qualificationCallNotes),
     };
   };
@@ -5358,12 +5065,10 @@ const AllLeads = () => {
           potentialValue: Number((row["potential value"] || row["value"] || row["potentialValue"] || "0").replace(/[^0-9.-]/g, "")) || 0,
           assignedToId: employeeMap.get(normalizeLookupKey(row["assigned to"] || row["assignedto"] || row["assignedToId"] || "")) || undefined,
           leadSourceId: leadSourceMap.get(normalizeLookupKey(row["lead source"] || row["source"] || row["leadSourceId"] || "")) || undefined,
-          propertyAddress: (row["property address"] || row["propertyaddress"] || row["propertyAddress"] || "").trim() || undefined,
           city: (row["city"] || "").trim() || undefined,
           state: (row["state"] || "").trim() || undefined,
           zipCode: (row["zip code"] || row["zipcode"] || row["postal code"] || row["zipCode"] || "").trim() || undefined,
-          serviceType: (row["service type"] || row["servicetype"] || row["serviceType"] || "").trim() || undefined,
-          isInsuranceClaim: (row["insurance claim"] || row["isinsuranceclaim"] || row["isInsuranceClaim"] || "").trim() || undefined,
+          productInterest: (row["product interest"] || row["productinterest"] || row["productInterest"] || "").trim() || undefined,
           notes: (row["notes"] || "").trim() || undefined,
           tagNames: parsedTagNames,
         };
@@ -5391,12 +5096,10 @@ const AllLeads = () => {
         potentialValue: lead.potentialValue,
         assignedToId: lead.assignedToId,
         leadSourceId: lead.leadSourceId,
-        propertyAddress: lead.propertyAddress,
         city: lead.city,
         state: lead.state,
         zipCode: lead.zipCode,
-        serviceType: lead.serviceType,
-        isInsuranceClaim: lead.isInsuranceClaim,
+        productInterest: lead.productInterest,
         notes: lead.notes,
         tagIds: lead.tagNames
           .map((tagName) => tagMap.get(normalizeLookupKey(tagName)))
@@ -6575,19 +6278,19 @@ const AllLeads = () => {
                   </div>
 
                   {/* Company & Sales Need */}
-                  {(lead.propertyAddress || lead.serviceType) && (
+                  {(lead.location || lead.productInterest || lead.industry || lead.companySize) && (
                     <div className="space-y-3">
                       <h4 className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Company & Sales Need</h4>
-                      {lead.propertyAddress && (
+                      {lead.location && (
                         <p className="text-sm text-[#475569]">
                           <MapPin size={14} className="inline mr-1 text-[#94A3B8]" />
-                          {lead.propertyAddress}{lead.city ? `, ${lead.city}` : ""}{lead.state ? ` ${lead.state}` : ""} {lead.zipCode || ""}
+                          {lead.location}{lead.city ? `, ${lead.city}` : ""}{lead.state ? ` ${lead.state}` : ""} {lead.zipCode || ""}
                         </p>
                       )}
-                      {lead.serviceType && (
+                      {lead.productInterest && (
                         <p className="text-sm text-[#475569]">
                           <Briefcase size={14} className="inline mr-1 text-[#94A3B8]" />
-                          {lead.serviceType}
+                          {lead.productInterest}
                         </p>
                       )}
                       {lead.industry && (

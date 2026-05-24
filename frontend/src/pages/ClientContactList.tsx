@@ -91,7 +91,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Download,
-  Upload,
   RefreshCw,
   X,
   Sparkles,
@@ -112,7 +111,6 @@ import {
   Twitter,
   CheckCircle2,
   Clock,
-  FileSpreadsheet,
   FileText,
   Columns,
 } from "lucide-react";
@@ -220,7 +218,6 @@ const typeOptions = [
   { value: "all", label: "All Types" },
   { value: "Client", label: "Client" },
   { value: "Prospect", label: "Prospect" },
-  { value: "Partner", label: "Partner" },
 ];
 
 const relationshipStatusOptions = ["Active", "Inactive"];
@@ -263,14 +260,12 @@ const getTypeColor = (type: string) => {
   const colors: Record<string, { bg: string; text: string; dot: string }> = {
     Client: { bg: "bg-[#0891B2]/10", text: "text-[#0891B2]", dot: "bg-[#0891B2]" },
     Prospect: { bg: "bg-[#D97706]/10", text: "text-[#D97706]", dot: "bg-[#D97706]" },
-    Partner: { bg: "bg-purple-500/10", text: "text-purple-500", dot: "bg-purple-500" },
   };
   return colors[type] || colors.Client;
 };
 
 const toContactTypeLabel = (type?: string | null) => {
   if (type === "LEAD" || type === "Prospect") return "Prospect";
-  if (type === "Partner") return "Partner";
   return "Client";
 };
 
@@ -1608,7 +1603,7 @@ const ClientContactListPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
-  const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
+  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [columns, setColumns] = useState<ColumnConfig[]>(defaultColumns);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const [filterType, setFilterType] = useState("all");
@@ -1957,7 +1952,7 @@ const ClientContactListPage = () => {
   const stats = useMemo(() => ({
     total: contacts.length,
     clients: contacts.filter((c) => c.type === "Client").length,
-    leads: contacts.filter((c) => c.type === "Lead").length,
+    prospects: contacts.filter((c) => c.type === "Prospect").length,
     primary: contacts.filter((c) => c.isPrimary).length,
   }), [contacts]);
 
@@ -1982,7 +1977,7 @@ const ClientContactListPage = () => {
     }
   };
 
-  const handleSelectContact = (id: number, checked: boolean) => {
+  const handleSelectContact = (id: string, checked: boolean) => {
     if (checked) {
       setSelectedContacts((prev) => [...prev, id]);
     } else {
@@ -1990,7 +1985,7 @@ const ClientContactListPage = () => {
     }
   };
 
-  const handleToggleFavorite = (id: number) => {
+  const handleToggleFavorite = (id: string) => {
     setContacts((prev) =>
       prev.map((c) => (c.id === id ? { ...c, isFavorite: !c.isFavorite } : c))
     );
@@ -2002,6 +1997,29 @@ const ClientContactListPage = () => {
 
   const handleCall = (contact: Contact) => {
     window.location.href = `tel:${contact.contactNo}`;
+  };
+
+  const handleExportCsv = () => {
+    const headers = ["Name", "Company", "Job Title", "Email", "Phone", "Type", "Owner", "Last Contacted"];
+    const escapeCsv = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const rows = filteredContacts.map((contact) => [
+      contact.contactPerson,
+      contact.clientName,
+      contact.designation,
+      contact.contactEmail,
+      contact.contactNo || contact.mobile,
+      contact.type,
+      contact.assignedToName,
+      contact.lastContacted ? new Date(contact.lastContacted).toISOString() : "",
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `contacts-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const openContactClientDetail = (contact: Contact) => {
@@ -2148,25 +2166,12 @@ const ClientContactListPage = () => {
                     </motion.button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="rounded-md">
-                    <DropdownMenuItem className="rounded-md">
+                    <DropdownMenuItem className="rounded-md" onSelect={handleExportCsv}>
                       <FileText size={14} className="mr-2" />
                       Export as CSV
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="rounded-md">
-                      <FileSpreadsheet size={14} className="mr-2" />
-                      Export as Excel
-                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-[rgba(15,23,42,0.06)] text-[#0F172A] rounded-md hover:bg-white/20 transition-colors"
-                >
-                  <Upload size={16} />
-                  Import
-                </motion.button>
               </div>
             </div>
           </motion.div>
@@ -2190,9 +2195,9 @@ const ClientContactListPage = () => {
               delay={0.1}
             />
             <StatCard
-              title="Lead Contacts"
-              value={stats.leads}
-              subtitle="Potential clients"
+              title="Prospect Contacts"
+              value={stats.prospects}
+              subtitle="Potential customers"
               icon={UserPlus}
               color="gold"
               delay={0.2}
@@ -2812,10 +2817,19 @@ const ClientContactListPage = () => {
                     <h3 className="text-sm font-semibold text-[#0F172A]">Linked Records</h3>
                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
                       <LinkedContactBox label="Organization" value={viewingContact.clientName || "Not linked"} action={viewingContact.clientId ? () => navigate(`/client-list/${viewingContact.clientId}`) : undefined} />
-                      <LinkedContactBox label="Primary Deal" value={viewingContact.dealName || "Not linked"} action={viewingContact.dealId ? () => navigate(`/deals?dealId=${viewingContact.dealId}`) : undefined} />
-                      <LinkedContactBox label="Tasks" value="Open Tasks" action={() => navigate(`/tasks?contactId=${viewingContact.id}`)} />
+                      <LinkedContactBox
+                        label="Primary Deal"
+                        value={viewingContact.dealName || "Create Deal"}
+                        action={() => navigate(viewingContact.dealId
+                          ? `/deals?dealId=${viewingContact.dealId}`
+                          : `/deals?create=1&contactId=${viewingContact.id}${viewingContact.clientId ? `&clientId=${viewingContact.clientId}` : ""}`)}
+                      />
+                      <LinkedContactBox label="Tasks" value="Create / View Tasks" action={() => navigate(`/tasks?contactId=${viewingContact.id}`)} />
                       <LinkedContactBox label="Meetings" value="Calendar" action={() => navigate("/calendar")} />
                       <LinkedContactBox label="Emails" value={viewingContact.contactEmail || "Mailbox"} action={() => navigate("/letterbox")} />
+                      <LinkedContactBox label="Documents" value="Contact Documents" action={() => navigate(`/documents?linkedEntityType=Contact&linkedEntityId=${viewingContact.id}`)} />
+                      <LinkedContactBox label="Proposals" value="Related Proposals" action={() => navigate(`/proposals?contactId=${viewingContact.id}`)} />
+                      <LinkedContactBox label="Invoices & Payments" value="Billing History" action={() => navigate(`/invoice/list?contactId=${viewingContact.id}`)} />
                       <LinkedContactBox label="Notes" value={viewingContact.notes || "No notes yet"} />
                     </div>
                   </div>

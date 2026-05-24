@@ -11,14 +11,13 @@ import { logger } from '../../common/utils/logger';
 interface LeadScoreInput {
     email?: string | null;
     phone?: string | null;
-    propertyAddress?: string | null;
+    location?: string | null;
     city?: string | null;
     zipCode?: string | null;
     budgetRange?: string | null;
     urgencyLevel?: string | null;
-    isHomeowner?: string | null;
     isDecisionMaker?: string | null;
-    serviceType?: string | null;
+    productInterest?: string | null;
     companyName?: string | null;
     potentialValue?: any;
 }
@@ -29,10 +28,10 @@ export class LeadAutomationService {
      *
      * Scoring breakdown:
      *   Contact info:   email (+1), phone (+1)
-     *   Property data:  address (+1), city+zip (+1)
+     *   Company data:   company/location (+1), city+zip (+1)
      *   Budget signal:  mapped by range (0-2)
      *   Urgency signal: mapped by level (0-2)
-     *   Ownership:      homeowner (+1), decision maker (+1)
+     *   Authority:      product interest (+1), decision maker (+1)
      *
      * Max theoretical score = 10
      */
@@ -43,17 +42,17 @@ export class LeadAutomationService {
         if (lead.email) score += 1;
         if (lead.phone) score += 1;
 
-        // Property data completeness
-        if (lead.propertyAddress) score += 1;
+        // Company data completeness
+        if (lead.companyName || lead.location) score += 1;
         if (lead.city && lead.zipCode) score += 1;
 
         // Budget signal
         const budgetMap: Record<string, number> = {
-            'Under $5k': 0,
-            '$5-10k': 1,
-            '$10-20k': 1,
-            '$20k+': 2,
-            'Insurance': 2,
+            'Under $500/mo': 0,
+            '$500 - $1,500/mo': 1,
+            '$1,500 - $5,000/mo': 1,
+            '$5,000+/mo': 2,
+            'Annual budget approved': 2,
         };
         if (lead.budgetRange && budgetMap[lead.budgetRange] !== undefined) {
             score += budgetMap[lead.budgetRange];
@@ -61,17 +60,17 @@ export class LeadAutomationService {
 
         // Urgency signal
         const urgencyMap: Record<string, number> = {
-            'Planning': 0,
-            'Within weeks': 1,
-            'ASAP': 2,
-            'Emergency': 2,
+            'Just researching': 0,
+            'Next quarter': 1,
+            'This quarter': 1,
+            'Urgent - this month': 2,
         };
         if (lead.urgencyLevel && urgencyMap[lead.urgencyLevel] !== undefined) {
             score += urgencyMap[lead.urgencyLevel];
         }
 
-        // Ownership qualification
-        if (lead.isHomeowner === 'Yes') score += 1;
+        // Buying authority and fit
+        if (lead.productInterest) score += 1;
         if (lead.isDecisionMaker === 'Yes') score += 1;
 
         // Clamp to 1-10 range
@@ -89,14 +88,13 @@ export class LeadAutomationService {
                 select: {
                     email: true,
                     phone: true,
-                    propertyAddress: true,
+                    location: true,
                     city: true,
                     zipCode: true,
                     budgetRange: true,
                     urgencyLevel: true,
-                    isHomeowner: true,
                     isDecisionMaker: true,
-                    serviceType: true,
+                    productInterest: true,
                     companyName: true,
                     potentialValue: true,
                     tenantId: true,

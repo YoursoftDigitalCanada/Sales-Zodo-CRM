@@ -20,7 +20,7 @@ export class ContactsRepository {
         return prisma.contact.create({
             data: {
                 tenantId,
-                contactName: contactData.contactName,
+                contactName: contactData.contactName || [contactData.firstName, contactData.lastName].filter(Boolean).join(' '),
                 companyId: contactData.companyId,
                 type: contactData.type || 'CLIENT',
                 jobTitle: contactData.jobTitle,

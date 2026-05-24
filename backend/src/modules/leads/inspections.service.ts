@@ -128,7 +128,6 @@ export class InspectionsService {
                 country: 'Canada',
                 contactName: data.manualClient.clientName,
                 directPhone: data.manualClient.primaryPhone,
-                serviceType: data.manualClient.inspectionPurpose || data.inspectionType || null,
                 internalNotes: data.manualClient.internalNotes || data.internalNotes || null,
             }, createdByUserId);
 

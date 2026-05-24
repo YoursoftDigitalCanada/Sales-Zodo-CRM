@@ -55,7 +55,6 @@ export const checkDuplicatesSchema = z.object({
   body: z.object({
     phone: z.string().optional().nullable(),
     email: z.string().email().optional().nullable(),
-    propertyAddress: z.string().optional().nullable(),
     excludeLeadId: z.string().uuid().optional(),
   }),
 });

@@ -22,7 +22,8 @@ const createClientBodySchema = z.object({
         clientType: z.enum(['BUSINESS', 'INDIVIDUAL']).default('BUSINESS'),
         primaryEmail: z.string().trim().refine(isValidEmailAddress, EMAIL_VALIDATION_MESSAGE),
         primaryPhone: z.string().trim().min(1).max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE),
-        status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
+        status: z.enum(['ACTIVE', 'INACTIVE', 'CHURNED', 'PROSPECT']).default('ACTIVE'),
+        lifecycleStage: z.enum(['PROSPECT', 'NEW_CUSTOMER', 'ONBOARDING', 'ACTIVE', 'AT_RISK', 'CHURNED', 'RE_ENGAGED', 'VIP']).default('PROSPECT'),
         assignedOwner: z.string().uuid().optional().nullable(),
         website: z.string().trim().max(255).optional().nullable(),
         noOfEmployees: z.enum(['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+']).default('1-10'),
@@ -64,31 +65,12 @@ const createClientBodySchema = z.object({
         clientCategory: z.string().max(100).optional().nullable(),
         tags: z.array(z.string()).default([]),
 
-        // 8️⃣ Property Information
-        propertyType: z.string().max(100).optional().nullable(),
-        numberOfStories: z.string().max(10).optional().nullable(),
-
-        // 9️⃣ Service Details
-        serviceType: z.string().max(200).optional().nullable(),
+        // 8️⃣ Sales account preferences
         preferredContactMethod: z.string().max(50).optional().nullable(),
         bestTimeToContact: z.string().max(50).optional().nullable(),
 
-        // 🔟 Roof Details
-        currentRoofMaterial: z.string().max(100).optional().nullable(),
-        roofAge: z.string().max(50).optional().nullable(),
-
-        // 1️⃣1️⃣ Insurance Info
-        insuranceCompanyName: z.string().max(200).optional().nullable(),
-        isInsuranceClaim: z.string().max(20).optional().nullable(),
-
-        // 1️⃣2️⃣ Ownership & HOA
-        isHomeowner: z.string().max(20).optional().nullable(),
-        isHOA: z.string().max(20).optional().nullable(),
-        hoaRestrictions: z.string().max(2000).optional().nullable(),
-
-        // 1️⃣3️⃣ Secondary Contact
+        // 9️⃣ Secondary Contact
         secondaryPhone: z.string().trim().max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
-        spouseCoOwnerName: z.string().trim().max(200).refine(isValidPersonName, `Spouse / co-owner name ${PERSON_NAME_VALIDATION_MESSAGE}`).optional().nullable(),
     })
     .superRefine((value, ctx) => {
         if (value.clientType === 'INDIVIDUAL' && !isValidPersonName(value.clientName)) {
@@ -112,7 +94,8 @@ const updateClientBodySchema = z.object({
         clientType: z.enum(['BUSINESS', 'INDIVIDUAL']).optional(),
         primaryEmail: z.string().trim().refine(isValidEmailAddress, EMAIL_VALIDATION_MESSAGE).optional(),
         primaryPhone: z.string().trim().min(1).max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional(),
-        status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+        status: z.enum(['ACTIVE', 'INACTIVE', 'CHURNED', 'PROSPECT']).optional(),
+        lifecycleStage: z.enum(['PROSPECT', 'NEW_CUSTOMER', 'ONBOARDING', 'ACTIVE', 'AT_RISK', 'CHURNED', 'RE_ENGAGED', 'VIP']).optional(),
         assignedOwner: z.string().uuid().optional().nullable(),
         website: z.string().trim().max(255).optional().nullable(),
         noOfEmployees: z.enum(['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+']).optional().nullable(),
@@ -154,31 +137,12 @@ const updateClientBodySchema = z.object({
         clientCategory: z.string().max(100).optional().nullable(),
         tags: z.array(z.string()).optional(),
 
-        // 8️⃣ Property Information
-        propertyType: z.string().max(100).optional().nullable(),
-        numberOfStories: z.string().max(10).optional().nullable(),
-
-        // 9️⃣ Service Details
-        serviceType: z.string().max(200).optional().nullable(),
+        // 8️⃣ Sales account preferences
         preferredContactMethod: z.string().max(50).optional().nullable(),
         bestTimeToContact: z.string().max(50).optional().nullable(),
 
-        // 🔟 Roof Details
-        currentRoofMaterial: z.string().max(100).optional().nullable(),
-        roofAge: z.string().max(50).optional().nullable(),
-
-        // 1️⃣1️⃣ Insurance Info
-        insuranceCompanyName: z.string().max(200).optional().nullable(),
-        isInsuranceClaim: z.string().max(20).optional().nullable(),
-
-        // 1️⃣2️⃣ Ownership & HOA
-        isHomeowner: z.string().max(20).optional().nullable(),
-        isHOA: z.string().max(20).optional().nullable(),
-        hoaRestrictions: z.string().max(2000).optional().nullable(),
-
-        // 1️⃣3️⃣ Secondary Contact
+        // 9️⃣ Secondary Contact
         secondaryPhone: z.string().trim().max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
-        spouseCoOwnerName: z.string().trim().max(200).refine(isValidPersonName, `Spouse / co-owner name ${PERSON_NAME_VALIDATION_MESSAGE}`).optional().nullable(),
     })
     .superRefine((value, ctx) => {
         if (value.clientType === 'INDIVIDUAL' && value.clientName && !isValidPersonName(value.clientName)) {

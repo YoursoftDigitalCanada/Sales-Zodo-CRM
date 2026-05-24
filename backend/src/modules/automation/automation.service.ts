@@ -131,9 +131,11 @@ export class AutomationService {
         this.activateHooks();
 
         // === Workflow automation services ===
-        estimationWorkflowService.initialize();
+        if (ENABLE_LEGACY_ROOFING_WORKFLOWS) {
+            estimationWorkflowService.initialize();
+            dealConversionService.initialize();
+        }
         proposalAutomationService.initialize();
-        dealConversionService.initialize();
         stage3WorkflowService.initialize();
         if (ENABLE_LEGACY_ROOFING_WORKFLOWS) {
             stage4SendWorkflowService.initialize();
@@ -641,24 +643,24 @@ export class AutomationService {
         eventBus.on('lead.converted', async (event: LeadConvertedEvent) => {
             if (event.ownerUserId) {
                 await notificationsService.create({
-                    title: '🎉 Lead Converted to Client',
-                    message: `"${event.leadName}" has been converted to a ${event.clientType} client by a team member.`,
+                    title: '🎉 Lead Converted to Organization',
+                    message: `"${event.leadName}" has been converted to a ${event.clientType} organization by a team member.`,
                     type: 'SUCCESS',
                     userId: event.ownerUserId,
                     tenantId: event.tenantId,
                     actionUrl: `/client-list/${event.clientId}`,
-                    actionLabel: 'View Client',
+                    actionLabel: 'View Organization',
                 });
             }
             if (event.convertedByUserId && event.convertedByUserId !== event.ownerUserId) {
                 await notificationsService.create({
                     title: '✅ Conversion Complete',
-                    message: `"${event.leadName}" is now a client. You can start creating projects and invoices.`,
+                    message: `"${event.leadName}" is now an organization. You can start creating deals and invoices.`,
                     type: 'SUCCESS',
                     userId: event.convertedByUserId,
                     tenantId: event.tenantId,
                     actionUrl: `/client-list/${event.clientId}`,
-                    actionLabel: 'View Client',
+                    actionLabel: 'View Organization',
                 });
             }
             logger.debug('[Automation] lead.converted → notifications sent', {
@@ -944,13 +946,13 @@ export class AutomationService {
         eventBus.on('client.created', async (event: ClientCreatedEvent) => {
             if (event.ownerUserId) {
                 await notificationsService.create({
-                    title: '🏢 New Client Created',
-                    message: `A new ${event.clientType} client "${event.clientName}" has been created.`,
+                    title: '🏢 New Organization Created',
+                    message: `A new ${event.clientType} organization "${event.clientName}" has been created.`,
                     type: 'INFO',
                     userId: event.ownerUserId,
                     tenantId: event.tenantId,
                     actionUrl: `/client-list/${event.clientId}`,
-                    actionLabel: 'View Client',
+                    actionLabel: 'View Organization',
                 });
                 logger.debug('[Automation] client.created → notification sent', { clientId: event.clientId });
             }
@@ -1903,18 +1905,18 @@ export class AutomationService {
                         VIP: '🌟 Client Promoted to VIP',
                         AT_RISK: '⚠️ Client Moved to At Risk',
                         CHURNED: '🔴 Client Churned',
-                        ONBOARDING: '🆕 Client Onboarding Started',
+                        ONBOARDING: '🆕 Organization Onboarding Started',
                     };
 
                     for (const admin of adminEmployees) {
                         await notificationsService.create({
-                            title: stageLabels[event.newStage] || `Client Lifecycle: ${event.newStage}`,
+                            title: stageLabels[event.newStage] || `Organization Lifecycle: ${event.newStage}`,
                             message: `"${event.clientName || 'Unknown'}" moved from ${event.previousStage} → ${event.newStage}.`,
                             type: event.newStage === 'VIP' ? 'SUCCESS' : 'INFO',
                             userId: admin.userId,
                             tenantId: event.tenantId,
                             actionUrl: `/client-list/${event.clientId}`,
-                            actionLabel: 'View Client',
+                            actionLabel: 'View Organization',
                         });
                     }
                 }
@@ -2192,13 +2194,13 @@ export class AutomationService {
 
                 for (const admin of adminEmployees) {
                     await notificationsService.create({
-                        title: '⚠️ Client At Risk — Action Required',
+                        title: '⚠️ Organization At Risk — Action Required',
                         message: `"${event.clientName}" has had no activity in ${event.inactivityDays}+ days. Consider a re-engagement call, discount offer, or check-in email.`,
                         type: 'WARNING',
                         userId: admin.userId,
                         tenantId: event.tenantId,
                         actionUrl: `/client-list/${event.clientId}`,
-                        actionLabel: 'View Client',
+                        actionLabel: 'View Organization',
                     });
                 }
 
@@ -2538,7 +2540,7 @@ export class AutomationService {
                 endDate.setHours(endDate.getHours() + 1); // 1-hour meeting
 
                 await calendarService.create(event.tenantId, {
-                    title: `Kickoff: ${event.quoteNumber} — ${clientName || 'New Client'}`,
+                    title: `Kickoff: ${event.quoteNumber} — ${clientName || 'New Organization'}`,
                     description: `Project kickoff meeting for approved quote ${event.quoteNumber}.\nQuote total: $${event.total.toLocaleString()}.\n\nAgenda:\n1. Project scope review\n2. Timeline & milestones\n3. Team introductions\n4. Next steps`,
                     eventType: 'MEETING',
                     startTime: kickoffDate.toISOString(),

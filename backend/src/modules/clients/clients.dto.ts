@@ -1,4 +1,4 @@
-import { Client, ClientType, ClientStatus } from '@prisma/client';
+import { Client, ClientType, ClientStatus, ClientLifecycleStage } from '@prisma/client';
 
 // ============================================================================
 // CLIENTS DTOs - Matching Form Fields
@@ -13,6 +13,7 @@ export interface CreateClientDto {
     primaryEmail: string;
     primaryPhone: string;
     status?: ClientStatus;
+    lifecycleStage?: ClientLifecycleStage;
     assignedOwner?: string | null;
     website?: string | null;
     noOfEmployees?: string | null;
@@ -54,44 +55,18 @@ export interface CreateClientDto {
     clientCategory?: string | null;
     tags?: string[];
 
-    // 8️⃣ Property Information
-    propertyType?: string | null;
-    numberOfStories?: string | null;
-
-    // 9️⃣ Service Details
-    serviceType?: string | null;
+    // 8️⃣ Sales account preferences
     preferredContactMethod?: string | null;
     bestTimeToContact?: string | null;
 
-    // 🔟 Roof Details
-    currentRoofMaterial?: string | null;
-    roofAge?: string | null;
-
-    // 1️⃣1️⃣ Insurance Info
-    insuranceCompanyName?: string | null;
-    isInsuranceClaim?: string | null;
-
-    // 1️⃣2️⃣ Ownership & HOA
-    isHomeowner?: string | null;
-    isHOA?: string | null;
-    hoaRestrictions?: string | null;
-
-    // 1️⃣3️⃣ Secondary Contact
+    // 9️⃣ Secondary Contact
     secondaryPhone?: string | null;
-    spouseCoOwnerName?: string | null;
 
-    // 1️⃣4️⃣ Extended Roof Details
-    roofSize?: string | null;
-    roofPitch?: string | null;
-
-    // 1️⃣5️⃣ Lead Tracking
+    // 🔟 Lead Tracking
     budgetRange?: string | null;
     urgencyLevel?: string | null;
 
-    // 1️⃣6️⃣ Warranty
-    warrantyExpiration?: Date | string | null;
-
-    // 1️⃣7️⃣ Communication Preferences
+    // 1️⃣1️⃣ Communication Preferences
     doNotContact?: boolean;
     nextFollowUp?: Date | string | null;
     language?: string | null;
@@ -121,6 +96,7 @@ export interface ClientResponseDto {
     primaryEmail: string;
     primaryPhone: string;
     status: ClientStatus;
+    lifecycleStage: ClientLifecycleStage;
     assignedOwner: { id: string; firstName: string; lastName: string } | null;
     website: string | null;
     noOfEmployees: string | null;
@@ -162,38 +138,16 @@ export interface ClientResponseDto {
     clientCategory: string | null;
     tags: string[];
 
-    // Property Information
-    propertyType: string | null;
-    numberOfStories: string | null;
-
-    // Service Details
-    serviceType: string | null;
+    // Sales account preferences
     preferredContactMethod: string | null;
     bestTimeToContact: string | null;
 
-    // Roof Details
-    currentRoofMaterial: string | null;
-    roofAge: string | null;
-
-    // Insurance Info
-    insuranceCompanyName: string | null;
-    isInsuranceClaim: string | null;
-
-    // Ownership & HOA
-    isHomeowner: string | null;
-    isHOA: string | null;
-    hoaRestrictions: string | null;
-
     // Secondary Contact
     secondaryPhone: string | null;
-    spouseCoOwnerName: string | null;
 
     // Extended
-    roofSize: string | null;
-    roofPitch: string | null;
     budgetRange: string | null;
     urgencyLevel: string | null;
-    warrantyExpiration: Date | null;
     doNotContact: boolean;
     nextFollowUp: Date | null;
     language: string | null;
@@ -213,6 +167,31 @@ type ClientWithRelations = Client & {
     _count?: { contacts: number; projects: number; invoices: number; quotes: number; files: number };
 };
 
+export const CLIENT_LEGACY_FIELD_NAMES = [
+    'propertyType',
+    'numberOfStories',
+    'serviceType',
+    'currentRoofMaterial',
+    'roofAge',
+    'insuranceCompanyName',
+    'isInsuranceClaim',
+    'isHomeowner',
+    'isHOA',
+    'hoaRestrictions',
+    'spouseCoOwnerName',
+    'roofSize',
+    'roofPitch',
+    'warrantyExpiration',
+] as const;
+
+export function stripLegacyClientFields<T extends object>(input: T): Omit<T, typeof CLIENT_LEGACY_FIELD_NAMES[number]> {
+    const cleaned = { ...input } as Record<string, unknown>;
+    for (const field of CLIENT_LEGACY_FIELD_NAMES) {
+        delete cleaned[field];
+    }
+    return cleaned as Omit<T, typeof CLIENT_LEGACY_FIELD_NAMES[number]>;
+}
+
 export function toClientResponseDto(c: ClientWithRelations): ClientResponseDto {
     return {
         id: c.id,
@@ -224,6 +203,7 @@ export function toClientResponseDto(c: ClientWithRelations): ClientResponseDto {
         primaryEmail: c.primaryEmail,
         primaryPhone: c.primaryPhone,
         status: c.status,
+        lifecycleStage: (c as any).lifecycleStage ?? 'NEW_CUSTOMER',
         assignedOwner: c.assignedOwner ? { id: c.assignedOwner.id, firstName: c.assignedOwner.user.firstName, lastName: c.assignedOwner.user.lastName } : null,
         website: (c as any).website ?? null,
         noOfEmployees: (c as any).noOfEmployees ?? null,
@@ -265,38 +245,16 @@ export function toClientResponseDto(c: ClientWithRelations): ClientResponseDto {
         clientCategory: c.clientCategory,
         tags: (c.tags as string[]) || [],
 
-        // Property Information
-        propertyType: c.propertyType ?? null,
-        numberOfStories: c.numberOfStories ?? null,
-
-        // Service Details
-        serviceType: c.serviceType ?? null,
+        // Sales account preferences
         preferredContactMethod: c.preferredContactMethod ?? null,
         bestTimeToContact: c.bestTimeToContact ?? null,
 
-        // Roof Details
-        currentRoofMaterial: c.currentRoofMaterial ?? null,
-        roofAge: c.roofAge ?? null,
-
-        // Insurance Info
-        insuranceCompanyName: c.insuranceCompanyName ?? null,
-        isInsuranceClaim: c.isInsuranceClaim ?? null,
-
-        // Ownership & HOA
-        isHomeowner: c.isHomeowner ?? null,
-        isHOA: c.isHOA ?? null,
-        hoaRestrictions: c.hoaRestrictions ?? null,
-
         // Secondary Contact
         secondaryPhone: c.secondaryPhone ?? null,
-        spouseCoOwnerName: c.spouseCoOwnerName ?? null,
 
         // Extended fields
-        roofSize: c.roofSize ?? null,
-        roofPitch: c.roofPitch ?? null,
         budgetRange: c.budgetRange ?? null,
         urgencyLevel: c.urgencyLevel ?? null,
-        warrantyExpiration: c.warrantyExpiration ?? null,
         doNotContact: c.doNotContact ?? false,
         nextFollowUp: c.nextFollowUp ?? null,
         language: c.language ?? null,

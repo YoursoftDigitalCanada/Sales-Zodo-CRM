@@ -354,6 +354,7 @@ router.patch(
  */
 router.patch(
   '/:id/estimation-method',
+  requireLegacyRoofingModule,
   requirePermission(PERMISSIONS.LEADS_UPDATE),
   validate(setEstimationMethodSchema),
   requireAccessibleLead(),

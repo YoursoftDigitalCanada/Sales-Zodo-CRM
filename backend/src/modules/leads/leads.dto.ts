@@ -1,5 +1,38 @@
 import { LeadStatus, LeadTemperature, EstimationMethod } from '@prisma/client';
 
+export const SALES_CRM_LEGACY_LEAD_FIELDS = [
+  'propertyAddress',
+  'propertyType',
+  'serviceType',
+  'isInsuranceClaim',
+  'roofAge',
+  'currentRoofMaterial',
+  'numberOfStories',
+  'knownDamageType',
+  'damageOccurrenceDate',
+  'previousRoofWork',
+  'previousRoofWorkDetails',
+  'insuranceCompanyName',
+  'hasClaimBeenFiled',
+  'claimNumber',
+  'adjusterAssigned',
+  'adjusterName',
+  'adjusterPhone',
+  'adjusterEmail',
+  'adjusterMeetingDate',
+  'inspectionAppointmentDate',
+] as const;
+
+const LEGACY_FIELD_SET = new Set<string>(SALES_CRM_LEGACY_LEAD_FIELDS);
+
+export function stripLegacyLeadFields<T extends Record<string, any>>(input: T): T {
+  const cleaned = { ...input };
+  for (const field of LEGACY_FIELD_SET) {
+    delete cleaned[field];
+  }
+  return cleaned;
+}
+
 // ============================================================================
 // REQUEST DTOs
 // ============================================================================
@@ -573,7 +606,7 @@ export interface LeadStatisticsDto {
 // ============================================================================
 
 export function toLeadResponseDto(lead: any): LeadResponseDto {
-  return {
+  const response: LeadResponseDto = {
     id: lead.id,
     leadNumber: lead.leadNumber || undefined,
     salutation: lead.salutation || undefined,
@@ -781,4 +814,6 @@ export function toLeadResponseDto(lead: any): LeadResponseDto {
       }
       : undefined,
   };
+
+  return stripLegacyLeadFields(response) as LeadResponseDto;
 }

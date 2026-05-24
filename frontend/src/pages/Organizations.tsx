@@ -16,6 +16,7 @@ import {
   updateClient,
   type ClientEntity,
 } from "@/features/clients";
+import { getEmployees } from "@/features/users";
 
 type Organization = ClientEntity & {
   id: string;
@@ -43,6 +44,13 @@ type OrgForm = {
   primaryEmail: string;
   primaryPhone: string;
   status: string;
+  lifecycleStage: string;
+  assignedOwner: string;
+  leadSource: string;
+  clientCategory: string;
+  tags: string;
+  internalNotes: string;
+  preferredContactMethod: string;
 };
 
 const employeeRanges = ["1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"];
@@ -63,6 +71,13 @@ const emptyForm: OrgForm = {
   primaryEmail: "",
   primaryPhone: "",
   status: "ACTIVE",
+  lifecycleStage: "PROSPECT",
+  assignedOwner: "",
+  leadSource: "",
+  clientCategory: "Prospect",
+  tags: "",
+  internalNotes: "",
+  preferredContactMethod: "",
 };
 
 const formatCurrency = (value?: number | string | null, currency = "CAD") => {
@@ -108,6 +123,7 @@ export default function OrganizationsPage() {
   const [proposals, setProposals] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [emails, setEmails] = useState<any[]>([]);
+  const [employeeOptions, setEmployeeOptions] = useState<{ value: string; label: string }[]>([]);
   const [linkedLoading, setLinkedLoading] = useState(false);
   const [form, setForm] = useState<OrgForm>(emptyForm);
 
@@ -130,6 +146,14 @@ export default function OrganizationsPage() {
 
   useEffect(() => {
     loadOrganizations();
+    getEmployees()
+      .then((employees: any[]) => {
+        setEmployeeOptions(employees.map((employee: any) => ({
+          value: String(employee.id),
+          label: `${employee.user?.firstName || employee.firstName || ""} ${employee.user?.lastName || employee.lastName || ""}`.trim() || String(employee.id),
+        })));
+      })
+      .catch(() => setEmployeeOptions([]));
   }, []);
 
   useEffect(() => {
@@ -190,6 +214,13 @@ export default function OrganizationsPage() {
       primaryEmail: org.primaryEmail || "",
       primaryPhone: org.primaryPhone || "",
       status: org.status || "ACTIVE",
+      lifecycleStage: String((org as any).lifecycleStage || "PROSPECT"),
+      assignedOwner: String((org as any).assignedOwner?.id || ""),
+      leadSource: String(org.leadSource || ""),
+      clientCategory: String(org.clientCategory || "Prospect"),
+      tags: Array.isArray((org as any).tags) ? (org as any).tags.join(", ") : String((org as any).tags || ""),
+      internalNotes: String((org as any).internalNotes || ""),
+      preferredContactMethod: String((org as any).preferredContactMethod || ""),
     });
     setModalOpen(true);
   }
@@ -208,6 +239,8 @@ export default function OrganizationsPage() {
       primaryEmail: form.primaryEmail.trim(),
       primaryPhone: form.primaryPhone.trim(),
       status: form.status,
+      lifecycleStage: form.lifecycleStage,
+      assignedOwner: form.assignedOwner || null,
       clientLogo: form.clientLogo.trim() || null,
       website: form.website.trim() || null,
       noOfEmployees: form.noOfEmployees,
@@ -218,6 +251,11 @@ export default function OrganizationsPage() {
       territory: form.territory || null,
       organizationAddress: form.organizationAddress.trim() || null,
       streetAddress: form.organizationAddress.trim() || null,
+      leadSource: form.leadSource || null,
+      clientCategory: form.clientCategory || null,
+      tags: form.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+      internalNotes: form.internalNotes.trim() || null,
+      preferredContactMethod: form.preferredContactMethod || null,
     };
 
     try {
@@ -254,7 +292,7 @@ export default function OrganizationsPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[#0F172A]">Organizations</h1>
-            <p className="text-sm text-[#64748B]">Company accounts from crm-develop, connected to deals and contacts.</p>
+            <p className="text-sm text-[#64748B]">Company accounts connected to contacts, deals, documents, invoices, and customer lifecycle automation.</p>
           </div>
           <Button onClick={openCreate} className="rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
             <Plus size={16} className="mr-2" /> Create
@@ -380,12 +418,48 @@ export default function OrganizationsPage() {
               <Label>Status</Label>
               <Select value={form.status} onValueChange={(value) => setForm({ ...form, status: value })}>
                 <SelectTrigger className="h-11 rounded-md"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="ACTIVE">Active</SelectItem><SelectItem value="INACTIVE">Inactive</SelectItem></SelectContent>
+                <SelectContent><SelectItem value="PROSPECT">Prospect</SelectItem><SelectItem value="ACTIVE">Active</SelectItem><SelectItem value="INACTIVE">Inactive</SelectItem><SelectItem value="CHURNED">Churned</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Lifecycle</Label>
+              <Select value={form.lifecycleStage} onValueChange={(value) => setForm({ ...form, lifecycleStage: value })}>
+                <SelectTrigger className="h-11 rounded-md"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PROSPECT">Prospect</SelectItem>
+                  <SelectItem value="NEW_CUSTOMER">New Customer</SelectItem>
+                  <SelectItem value="ONBOARDING">Onboarding</SelectItem>
+                  <SelectItem value="ACTIVE">Customer</SelectItem>
+                  <SelectItem value="AT_RISK">At Risk</SelectItem>
+                  <SelectItem value="CHURNED">Inactive</SelectItem>
+                  <SelectItem value="VIP">VIP</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Account Manager</Label>
+              <Select value={form.assignedOwner || "unassigned"} onValueChange={(value) => setForm({ ...form, assignedOwner: value === "unassigned" ? "" : value })}>
+                <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                <SelectContent><SelectItem value="unassigned">Unassigned</SelectItem>{employeeOptions.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <Field label="Source" value={form.leadSource} onChange={(value) => setForm({ ...form, leadSource: value })} />
+            <Field label="Category" value={form.clientCategory} onChange={(value) => setForm({ ...form, clientCategory: value })} />
+            <Field label="Tags" value={form.tags} onChange={(value) => setForm({ ...form, tags: value })} />
+            <div className="space-y-2">
+              <Label>Preferred Contact</Label>
+              <Select value={form.preferredContactMethod || "none"} onValueChange={(value) => setForm({ ...form, preferredContactMethod: value === "none" ? "" : value })}>
+                <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent><SelectItem value="none">Not set</SelectItem><SelectItem value="Phone Call">Phone Call</SelectItem><SelectItem value="Email">Email</SelectItem><SelectItem value="Text">Text</SelectItem></SelectContent>
               </Select>
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Address</Label>
               <Textarea value={form.organizationAddress} onChange={(event) => setForm({ ...form, organizationAddress: event.target.value })} className="min-h-[90px] rounded-md" />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Notes</Label>
+              <Textarea value={form.internalNotes} onChange={(event) => setForm({ ...form, internalNotes: event.target.value })} className="min-h-[90px] rounded-md" />
             </div>
           </div>
           <div className="flex justify-end gap-3 border-t border-[rgba(15,23,42,0.06)] p-5">
@@ -433,19 +507,26 @@ export default function OrganizationsPage() {
                         <span className="rounded-md bg-white px-2.5 py-1 text-[#0F766E]">{contacts.length} Contacts</span>
                         <span className="rounded-md bg-white px-2.5 py-1 text-[#1D4ED8]">{deals.length} Deals</span>
                         <span className="rounded-md bg-white px-2.5 py-1 text-[#6D28D9]">{tasks.length} Tasks</span>
-                        <span className="rounded-md bg-white px-2.5 py-1 text-[#B45309]">{String(viewing.status || "PROSPECT")}</span>
+                        <span className="rounded-md bg-white px-2.5 py-1 text-[#B45309]">{String((viewing as any).lifecycleStage || viewing.status || "PROSPECT").replace(/_/g, " ")}</span>
                       </div>
                     </div>
                   </div>
+                  <Detail label="Lifecycle" value={String((viewing as any).lifecycleStage || "-").replace(/_/g, " ")} />
+                  <Detail label="Account Manager" value={String((viewing as any).assignedOwner ? `${(viewing as any).assignedOwner.firstName || ""} ${(viewing as any).assignedOwner.lastName || ""}`.trim() : "-")} />
                   <Detail label="No. of Employees" value={String(viewing.noOfEmployees || "-")} />
                   <Detail label="Annual Revenue" value={formatCurrency(viewing.annualRevenue, String(viewing.currency || "CAD"))} />
                   <Detail label="Industry" value={String(viewing.industry || "-")} />
                   <Detail label="Territory" value={String(viewing.territory || "-")} />
                   <Detail label="Currency" value={String(viewing.currency || "CAD")} />
                   <Detail label="Exchange Rate" value={String(viewing.exchangeRate || 1)} />
+                  <Detail label="Source" value={String(viewing.leadSource || "-")} />
+                  <Detail label="Category" value={String(viewing.clientCategory || "-")} />
                   <Detail label="Email" value={viewing.primaryEmail || "-"} />
                   <Detail label="Phone" value={viewing.primaryPhone || "-"} />
+                  <Detail label="Preferred Contact" value={String((viewing as any).preferredContactMethod || "-")} />
                   <div className="md:col-span-2"><Detail label="Address" value={String(viewing.organizationAddress || "-")} /></div>
+                  <div className="md:col-span-2"><Detail label="Tags" value={Array.isArray((viewing as any).tags) ? (viewing as any).tags.join(", ") || "-" : String((viewing as any).tags || "-")} /></div>
+                  <div className="md:col-span-2"><Detail label="Notes" value={String((viewing as any).internalNotes || "-")} /></div>
                 </TabsContent>
                 <TabsContent value="leads" className="mt-5">
                   <LinkedTable loading={linkedLoading} rows={leads} columns={["firstName", "lastName", "status", "leadSource", "updatedAt"]} empty="No linked leads. Create or import a lead for this account." />

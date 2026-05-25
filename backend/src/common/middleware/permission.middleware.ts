@@ -3,6 +3,11 @@ import { ForbiddenError } from '../errors/HttpErrors';
 import { ErrorCodes } from '../errors/errorCodes';
 import { logger } from '../utils/logger';
 
+function isOwnerOrAdmin(req: Request): boolean {
+  const roleName = req.employee?.role?.name;
+  return roleName === 'Owner' || roleName === 'Admin';
+}
+
 /**
  * Permission check middleware factory
  * Checks if user has the required permission
@@ -16,7 +21,7 @@ export function requirePermission(permissionCode: string) {
     try {
       const permissions = req.permissions || [];
 
-      if (!permissions.includes(permissionCode)) {
+      if (!permissions.includes(permissionCode) && !isOwnerOrAdmin(req)) {
         logger.warn('Permission denied', {
           userId: req.user?.userId,
           required: permissionCode,
@@ -48,7 +53,7 @@ export function requireAnyPermission(permissionCodes: string[]) {
     try {
       const permissions = req.permissions || [];
 
-      const hasPermission = permissionCodes.some((code) =>
+      const hasPermission = isOwnerOrAdmin(req) || permissionCodes.some((code) =>
         permissions.includes(code)
       );
 
@@ -84,7 +89,7 @@ export function requireAllPermissions(permissionCodes: string[]) {
     try {
       const permissions = req.permissions || [];
 
-      const hasAllPermissions = permissionCodes.every((code) =>
+      const hasAllPermissions = isOwnerOrAdmin(req) || permissionCodes.every((code) =>
         permissions.includes(code)
       );
 

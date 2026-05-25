@@ -49,6 +49,18 @@ describe('module.middleware', () => {
     expect(next).toHaveBeenCalledWith();
   });
 
+  it('allows document routes when the tenant enables the legacy documents module slug', () => {
+    const next = runModuleGuard('/documents?limit=100', ['dashboard', 'documents']);
+
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  it('allows document folder routes when the tenant enables the legacy documents module slug', () => {
+    const next = runModuleGuard('/documents/folders?limit=100', ['dashboard', 'documents']);
+
+    expect(next).toHaveBeenCalledWith();
+  });
+
   it('still blocks finance routes when neither finance nor a child module is enabled', () => {
     const next = runModuleGuard('/invoices?limit=5', ['dashboard', 'leads']);
     const error = next.mock.calls[0]?.[0];

@@ -53,8 +53,8 @@ export const ROUTE_MODULE_MAP: Record<string, readonly string[]> = {
 
     // File Management
     'files': ['files'],
-    'folders': ['files'],        // sub-feature of files
-    'documents': ['files'],
+    'folders': ['files', 'documents'],        // sub-feature of files/documents
+    'documents': ['files', 'documents'],
 
     // Communication
     'emails': ['letterbox', 'communication'],

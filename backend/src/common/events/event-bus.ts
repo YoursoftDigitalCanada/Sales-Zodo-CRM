@@ -102,6 +102,10 @@ export interface InvoiceStatusChangedEvent {
     oldStatus: string;
     newStatus: string;
     clientId?: string;
+    contactId?: string;
+    projectId?: string;
+    proposalId?: string;
+    contractId?: string;
     ownerUserId?: string;
 }
 
@@ -138,6 +142,10 @@ export interface PaymentReceivedEvent {
     invoiceId: string;
     invoiceNumber: string;
     clientId?: string;
+    contactId?: string;
+    projectId?: string;
+    proposalId?: string;
+    contractId?: string;
     amount?: number | string;
     refundAmount?: number | string;
     status?: string;
@@ -176,6 +184,14 @@ export interface ExpenseApprovedEvent {
     expenseId: string;
     amount?: number | string;
     approvedById: string;
+}
+
+export interface ExpenseUpdatedEvent {
+    tenantId: string;
+    expenseId: string;
+    amount?: number | string;
+    category?: string;
+    updatedById?: string;
 }
 
 export interface ExpenseDeletedEvent {
@@ -338,6 +354,10 @@ export interface InvoiceSentEvent {
     invoiceId: string;
     invoiceNumber: string;
     clientId?: string;
+    contactId?: string;
+    projectId?: string;
+    proposalId?: string;
+    contractId?: string;
     recipientEmail?: string;
 }
 
@@ -346,6 +366,10 @@ export interface InvoiceDueEvent {
     invoiceId: string;
     invoiceNumber: string;
     clientId?: string;
+    contactId?: string;
+    projectId?: string;
+    proposalId?: string;
+    contractId?: string;
     ownerUserId?: string;
     dueDate?: Date;
     amountDue?: number | string;
@@ -568,6 +592,7 @@ export interface ContractSentEvent {
     contractId: string;
     contractNumber?: string;
     clientId?: string;
+    contactId?: string;
     projectId?: string;
     quoteId?: string;
     ownerUserId?: string;
@@ -749,6 +774,7 @@ export interface CRMEventMap {
     'booking.confirmed': BookingConfirmedEvent;
     'booking.cancelled': BookingCancelledEvent;
     'expense.created': ExpenseCreatedEvent;
+    'expense.updated': ExpenseUpdatedEvent;
     'expense.approved': ExpenseApprovedEvent;
     'expense.deleted': ExpenseDeletedEvent;
     'task.completed': TaskCompletedEvent;

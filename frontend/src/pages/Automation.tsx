@@ -14,6 +14,7 @@ import {
   getAutomationReminders,
   getAutomationRules,
   getAutomationRuns,
+  retryAutomationRun,
   seedAutomationDefaults,
 } from "@/features/automation";
 import { resolveNotificationTarget } from "@/features/notifications/utils/notification-navigation";
@@ -135,6 +136,16 @@ export default function AutomationPage() {
     }
   };
 
+  const retryRun = async (id: string) => {
+    try {
+      await retryAutomationRun(id);
+      toast.success("Automation retry started");
+      load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to retry automation run");
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#F8FAFC] p-4 md:p-6">
       <div className="mx-auto max-w-7xl space-y-5">
@@ -169,7 +180,7 @@ export default function AutomationPage() {
           <TabsContent value="overview">
             <Panel>
               <h2 className="mb-3 text-base font-semibold text-slate-950">Recent Automation Activity</h2>
-              <RunsTable rows={runs.slice(0, 8)} onOpen={(target) => navigate(target)} />
+              <RunsTable rows={runs.slice(0, 8)} onOpen={(target) => navigate(target)} onRetry={retryRun} />
             </Panel>
           </TabsContent>
 
@@ -216,7 +227,7 @@ export default function AutomationPage() {
             </Panel>
           </TabsContent>
 
-          <TabsContent value="runs"><Panel><RunsTable rows={runs} onOpen={(target) => navigate(target)} /></Panel></TabsContent>
+          <TabsContent value="runs"><Panel><RunsTable rows={runs} onOpen={(target) => navigate(target)} onRetry={retryRun} /></Panel></TabsContent>
           <TabsContent value="defaults">
             <Panel>
               <h2 className="mb-2 text-base font-semibold text-slate-950">Default Sales Automation Templates</h2>
@@ -230,10 +241,10 @@ export default function AutomationPage() {
   );
 }
 
-function RunsTable({ rows, onOpen }: { rows: AutomationRecord[]; onOpen: (target: string) => void }) {
+function RunsTable({ rows, onOpen, onRetry }: { rows: AutomationRecord[]; onOpen: (target: string) => void; onRetry: (id: string) => void }) {
   return (
     <Table>
-      <TableHeader><TableRow><TableHead>Created</TableHead><TableHead>Trigger</TableHead><TableHead>Entity</TableHead><TableHead>Status</TableHead><TableHead>Side Effects</TableHead><TableHead>Error</TableHead><TableHead>Open</TableHead></TableRow></TableHeader>
+      <TableHeader><TableRow><TableHead>Created</TableHead><TableHead>Trigger</TableHead><TableHead>Entity</TableHead><TableHead>Status</TableHead><TableHead>Side Effects</TableHead><TableHead>Error</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
       <TableBody>{rows.map((run) => {
         const target = automationTarget(run);
         return (
@@ -244,7 +255,13 @@ function RunsTable({ rows, onOpen }: { rows: AutomationRecord[]; onOpen: (target
             <TableCell>{statusBadge(run.status)}</TableCell>
             <TableCell className="max-w-xs truncate text-xs text-slate-600">{actionSummary(run)}</TableCell>
             <TableCell className="max-w-md truncate text-xs text-rose-600">{run.error || "-"}</TableCell>
-            <TableCell>{target ? <Button variant="ghost" size="sm" onClick={() => onOpen(target)}>Open</Button> : "-"}</TableCell>
+            <TableCell>
+              <div className="flex flex-wrap gap-1">
+                {target ? <Button variant="ghost" size="sm" onClick={() => onOpen(target)}>Open</Button> : null}
+                {String(run.status || "").toUpperCase() === "FAILED" ? <Button variant="ghost" size="sm" onClick={() => onRetry(run.id)}>Retry</Button> : null}
+                {!target && String(run.status || "").toUpperCase() !== "FAILED" ? "-" : null}
+              </div>
+            </TableCell>
           </TableRow>
         );
       })}</TableBody>

@@ -50,6 +50,56 @@ export class ContractsController {
             res.json(contract);
         } catch (e) { next(e); }
     }
+
+    async send(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.context.tenantId;
+            const contract = await contractsService.send(req.params.id, tenantId, req.user?.employeeId);
+            res.json(contract);
+        } catch (e) { next(e); }
+    }
+
+    async sign(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.context.tenantId;
+            const contract = await contractsService.sign(req.params.id, tenantId, req.user?.employeeId);
+            res.json(contract);
+        } catch (e) { next(e); }
+    }
+
+    async decline(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.context.tenantId;
+            const contract = await contractsService.decline(req.params.id, tenantId, req.user?.employeeId, req.body?.reason);
+            res.json(contract);
+        } catch (e) { next(e); }
+    }
+
+    async downloadPdf(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.context.tenantId;
+            const { buffer, fileName } = await contractsService.generatePdf(req.params.id, tenantId);
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+            res.send(buffer);
+        } catch (e) { next(e); }
+    }
+
+    async saveDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.context.tenantId;
+            const document = await contractsService.saveContractPdfToDocuments(tenantId, req.params.id, req.user?.employeeId, req.body?.variant === 'signed' ? 'signed' : 'sent');
+            res.json(document);
+        } catch (e) { next(e); }
+    }
+
+    async createInvoice(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const tenantId = req.context.tenantId;
+            const invoice = await contractsService.createInvoiceFromContract(req.params.id, tenantId);
+            res.status(201).json(invoice);
+        } catch (e) { next(e); }
+    }
 }
 
 export const contractsController = new ContractsController();

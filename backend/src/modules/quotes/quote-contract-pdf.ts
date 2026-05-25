@@ -20,8 +20,8 @@ export interface QuoteContractPdfInput {
     clientEmail?: string;
     clientPhone?: string;
     clientAddress?: string;
-    propertyAddress?: string;
-    jobType?: string;
+    serviceAddress?: string;
+    serviceType?: string;
     scopeOfWork?: string;
     currency: string;
     items: QuoteContractPdfItem[];
@@ -59,10 +59,12 @@ export function generateQuoteContractPdfBuffer(input: QuoteContractPdfInput): { 
         y += 5;
     }
 
+    const isSigned = Boolean(input.signedAt || input.signedBy);
+
     doc.setFontSize(16);
-    doc.text('Signed Estimate Contract', 145, 18, { align: 'right' });
+    doc.text(isSigned ? 'Signed Proposal' : 'Sales Proposal', 145, 18, { align: 'right' });
     doc.setFontSize(10);
-    doc.text(`Estimate: ${input.quoteNumber}`, 145, 25, { align: 'right' });
+    doc.text(`Proposal: ${input.quoteNumber}`, 145, 25, { align: 'right' });
     doc.text(`Issued: ${input.issueDate}`, 145, 30, { align: 'right' });
     if (input.signedAt) {
         doc.text(`Signed: ${input.signedAt}`, 145, 35, { align: 'right' });
@@ -75,7 +77,7 @@ export function generateQuoteContractPdfBuffer(input: QuoteContractPdfInput): { 
 
     doc.setFontSize(12);
     doc.text('Client Details', marginX, y);
-    doc.text('Project Details', 110, y);
+    doc.text('Service Details', 110, y);
     y += 6;
 
     doc.setFontSize(10);
@@ -86,8 +88,8 @@ export function generateQuoteContractPdfBuffer(input: QuoteContractPdfInput): { 
         input.clientAddress,
     ].filter(Boolean) as string[];
     const projectLines = [
-        input.propertyAddress,
-        input.jobType ? `Job Type: ${input.jobType}` : undefined,
+        input.serviceAddress,
+        input.serviceType ? `Service Type: ${input.serviceType}` : undefined,
     ].filter(Boolean) as string[];
 
     const clientStartY = y;
@@ -198,6 +200,6 @@ export function generateQuoteContractPdfBuffer(input: QuoteContractPdfInput): { 
     doc.text(`Date: ${input.signedAt || input.issueDate}`, 110, y + 15);
 
     const buffer = Buffer.from(doc.output('arraybuffer'));
-    const fileName = `${safeName(input.quoteNumber)}-signed-contract.pdf`;
+    const fileName = `${safeName(input.quoteNumber)}-${isSigned ? 'signed-proposal' : 'proposal'}.pdf`;
     return { buffer, fileName };
 }

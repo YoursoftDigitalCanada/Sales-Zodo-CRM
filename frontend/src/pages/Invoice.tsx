@@ -174,6 +174,8 @@ interface InvoicePayment {
   paymentDate: string;
   reference?: string | null;
   notes?: string | null;
+  status?: string;
+  refundAmount?: number;
 }
 
 interface AppUser {
@@ -346,6 +348,8 @@ const normalizeInvoice = (inv: any): Invoice => {
         paymentDate: payment?.paymentDate || payment?.createdAt || "",
         reference: payment?.reference || null,
         notes: payment?.notes || null,
+        status: payment?.status || "SUCCESSFUL",
+        refundAmount: Number(payment?.refundAmount || 0),
       }))
       : [],
     lastSent: inv?.sentAt || "",

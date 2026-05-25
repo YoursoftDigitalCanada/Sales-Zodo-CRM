@@ -6,7 +6,7 @@
  *   2. Custom Message (if provided)
  *   3. Scope of Services
  *   4. Pricing Section (line items, totals, payment schedule, service terms)
- *   5. Project Details Section
+ *   5. Supporting Details Section
  *   6. Terms and Conditions
  *   7. E-Signature Block (Accept / Decline / Sign)
  */
@@ -193,14 +193,14 @@ export function generateProposalPdfBuffer(data: ProposalPdfData): {
         y += lines.length * 5 + 10;
     }
 
-    // ── 3. Project Scope ─────────────────────────────────────────────────
+    // ── 3. Scope of Services ─────────────────────────────────────────────
 
     doc.addPage();
     y = 30;
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(8, 145, 178);
-    doc.text('Project Scope', margin, y);
+    doc.text('Scope of Services', margin, y);
     y += 12;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
@@ -212,7 +212,7 @@ export function generateProposalPdfBuffer(data: ProposalPdfData): {
     doc.text(scopeLines, margin, y);
     y += scopeLines.length * 5 + 10;
 
-    // ── 4. Quote Section ─────────────────────────────────────────────────
+    // ── 4. Pricing Section ───────────────────────────────────────────────
 
     y += 10;
     doc.setFontSize(16);
@@ -305,7 +305,7 @@ export function generateProposalPdfBuffer(data: ProposalPdfData): {
         }
     }
 
-    // ── 5. Project Details Section ───────────────────────────────────────
+    // ── 5. Supporting Details Section ────────────────────────────────────
 
     if (data.roofAreaSqft && data.roofAreaSqft > 0) {
         doc.addPage();
@@ -313,7 +313,7 @@ export function generateProposalPdfBuffer(data: ProposalPdfData): {
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(8, 145, 178);
-        doc.text('Project Details', margin, y);
+        doc.text('Supporting Details', margin, y);
         y += 12;
 
         const measRows: string[][] = [];

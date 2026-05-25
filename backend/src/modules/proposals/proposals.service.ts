@@ -15,6 +15,7 @@ import path from 'path';
 import { logger } from '../../common/utils/logger';
 import { config } from '../../config';
 import jwt from 'jsonwebtoken';
+import { isLegacyRoofingAutomationEnabled } from '../automation/legacy-automation.guard';
 
 const prisma = new PrismaClient();
 
@@ -47,14 +48,10 @@ export class ProposalsService {
             throw new BadRequestError('Lead ID mismatch. The quote must be linked to the same lead.');
         }
 
-        // 3. Validate: quote should have a linked AI estimate (soft check — warn but allow)
-        let roofEstimateId = data.roofEstimateId || quote.roofEstimateId || null;
-        if (!roofEstimateId) {
-            logger.warn('[ProposalsService] Creating proposal without AI estimate link', {
-                quoteId: data.quoteId,
-                leadId: data.leadId,
-            });
-        }
+        const includeLegacyRoofingContext = await isLegacyRoofingAutomationEnabled(tenantId);
+        const roofEstimateId = includeLegacyRoofingContext
+            ? data.roofEstimateId || quote.roofEstimateId || null
+            : null;
 
         // 4. Generate proposal number: PR-YYYY-NNNN
         const year = new Date().getFullYear();
@@ -193,18 +190,19 @@ export class ProposalsService {
         });
         if (!quote) throw new BadRequestError('Linked quote not found');
 
-        // Load AI estimate data
+        const includeLegacyRoofingContext = await isLegacyRoofingAutomationEnabled(tenantId);
+
+        // Load legacy estimate data only for tenants that explicitly enable the roofing module.
         let estimate: any = null;
-        if (proposal.roofEstimateId) {
+        if (includeLegacyRoofingContext && proposal.roofEstimateId) {
             estimate = await prisma.roofEstimate.findFirst({
                 where: { id: proposal.roofEstimateId, tenantId },
             });
         }
 
-        // Load company settings
-        const settings = await prisma.roofEstimateSettings.findUnique({
-            where: { tenantId },
-        });
+        const settings = includeLegacyRoofingContext
+            ? await prisma.roofEstimateSettings.findUnique({ where: { tenantId } })
+            : null;
 
         // Load lead info
         const lead = proposal.leadId
@@ -227,7 +225,7 @@ export class ProposalsService {
             proposalNumber: (proposal as any).proposalNumber,
             createdAt: proposal.createdAt.toISOString(),
             leadName,
-            propertyAddress: lead?.propertyAddress || '',
+            propertyAddress: includeLegacyRoofingContext ? lead?.propertyAddress || '' : '',
             customMessage: proposal.customMessageToClient || undefined,
             scopeOfWork: proposal.scopeOfWork || undefined,
             quoteNumber: quote.quoteNumber,
@@ -398,6 +396,7 @@ export class ProposalsService {
         const leadName = lead
             ? `${lead.firstName} ${lead.lastName}`.trim()
             : 'Direct deal proposal';
+        const includeLegacyRoofingContext = await isLegacyRoofingAutomationEnabled(tenantId);
 
         // Emit proposal.generated event for downstream automations
         eventBus.emit('proposal.generated', {
@@ -407,7 +406,7 @@ export class ProposalsService {
             proposalId: proposal.id,
             quoteId: proposal.quoteId,
             quoteNumber: p.quote?.quoteNumber || '',
-            estimateId: proposal.roofEstimateId || '',
+            estimateId: includeLegacyRoofingContext ? proposal.roofEstimateId || '' : '',
             total: p.quote ? Number(p.quote.total) : 0,
             pdfUrl: p.pdfUrl || undefined,
             ownerId: lead?.assignedToId || undefined,
@@ -478,11 +477,13 @@ export class ProposalsService {
 
         const proposalLink = `/proposal-view/${proposal.id}?token=${publicToken}`;
 
-        // Load AI estimate for report URL
+        const includeLegacyRoofingContext = await isLegacyRoofingAutomationEnabled(tenantId);
+
+        // Load legacy estimate report URL only for tenants that explicitly enable the roofing module.
         let aiReportUrl: string | undefined;
-        if (proposal.roofEstimateId) {
+        if (includeLegacyRoofingContext && proposal.roofEstimateId) {
             const estimate = await prisma.roofEstimate.findFirst({
-                where: { id: proposal.roofEstimateId },
+                where: { id: proposal.roofEstimateId, tenantId },
                 select: { pdfUrl: true },
             });
             aiReportUrl = estimate?.pdfUrl || undefined;
@@ -612,6 +613,9 @@ export class ProposalsService {
     async getByPublicToken(token: string) {
         const proposal = await proposalsRepository.findByPublicToken(token);
         if (!proposal) throw new NotFoundError('Proposal not found or link has expired');
+        if (!(await isLegacyRoofingAutomationEnabled(proposal.tenantId))) {
+            return { ...(proposal as any), roofEstimate: null, roofEstimateId: null };
+        }
         return proposal;
     }
 

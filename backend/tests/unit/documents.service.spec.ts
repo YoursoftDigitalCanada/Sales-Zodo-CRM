@@ -105,9 +105,9 @@ describe('DocumentsService', () => {
     await documentsService.upload('tenant-a', { path: '/tmp/file', originalname: 'Proposal.pdf', mimetype: 'application/pdf', size: 100 } as any, {
       description: 'Sales proposal',
       documentType: 'pdf',
-    });
+    }, 'user-1');
 
-    expect(mockFilesService.upload).toHaveBeenCalledWith('tenant-a', expect.any(Object), expect.any(Object));
+    expect(mockFilesService.upload).toHaveBeenCalledWith('tenant-a', expect.any(Object), expect.objectContaining({ uploadedById: 'user-1' }));
     expect(mockDb.documentMetadata.upsert).toHaveBeenCalledWith(expect.objectContaining({
       create: expect.objectContaining({ tenantId: 'tenant-a', fileId: 'file-1', documentType: 'pdf' }),
     }));

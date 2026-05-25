@@ -27,6 +27,21 @@ export interface InvoiceResponseDto {
         postalCode?: string | null;
         country?: string | null;
     } | null;
+    contact: {
+        id: string;
+        contactName: string;
+        email?: string | null;
+        officePhone?: string | null;
+        mobilePhone?: string | null;
+    } | null;
+    quote: { id: string; quoteNumber: string } | null;
+    project: { id: string; name: string | null; projectNumber: string | null } | null;
+    contract: { id: string; contractNumber: string; title: string } | null;
+    clientId: string | null;
+    contactId: string | null;
+    quoteId: string | null;
+    projectId: string | null;
+    contractId: string | null;
     issueDate: Date;
     dueDate: Date;
     paidAt: Date | null;
@@ -51,6 +66,10 @@ export interface InvoiceResponseDto {
         reference: string | null;
         notes: string | null;
         createdAt: Date;
+        status: string;
+        refundAmount: number;
+        refundedAt: Date | null;
+        voidedAt: Date | null;
     }>;
     createdAt: Date;
     updatedAt: Date;
@@ -69,6 +88,10 @@ type InvoiceWithRelations = Invoice & {
         postalCode: string | null;
         country: string | null;
     } | null;
+    contact?: { id: string; contactName: string; email: string | null; officePhone: string | null; mobilePhone: string | null } | null;
+    quote?: { id: string; quoteNumber: string } | null;
+    project?: { id: string; name: string | null; projectNumber: string | null } | null;
+    contract?: { id: string; contractNumber: string; title: string } | null;
     items?: { id: string; description: string; quantity: Decimal; unitPrice: Decimal; amount: Decimal; taxRate: Decimal | null; sortOrder: number }[];
     payments?: {
         id: string;
@@ -78,6 +101,10 @@ type InvoiceWithRelations = Invoice & {
         reference: string | null;
         notes: string | null;
         createdAt: Date;
+        status: string;
+        refundAmount: Decimal;
+        refundedAt: Date | null;
+        voidedAt: Date | null;
     }[];
 };
 
@@ -98,6 +125,21 @@ export function toInvoiceResponseDto(inv: InvoiceWithRelations): InvoiceResponse
             postalCode: inv.client.postalCode,
             country: inv.client.country,
         } : null,
+        contact: inv.contact ? {
+            id: inv.contact.id,
+            contactName: inv.contact.contactName,
+            email: inv.contact.email,
+            officePhone: inv.contact.officePhone,
+            mobilePhone: inv.contact.mobilePhone,
+        } : null,
+        quote: inv.quote ? { id: inv.quote.id, quoteNumber: inv.quote.quoteNumber } : null,
+        project: inv.project ? { id: inv.project.id, name: inv.project.name, projectNumber: inv.project.projectNumber } : null,
+        contract: inv.contract ? { id: inv.contract.id, contractNumber: inv.contract.contractNumber, title: inv.contract.title } : null,
+        clientId: (inv as any).clientId || null,
+        contactId: (inv as any).contactId || null,
+        quoteId: (inv as any).quoteId || null,
+        projectId: (inv as any).projectId || null,
+        contractId: (inv as any).contractId || null,
         issueDate: inv.issueDate,
         dueDate: inv.dueDate,
         paidAt: inv.paidAt,
@@ -129,6 +171,10 @@ export function toInvoiceResponseDto(inv: InvoiceWithRelations): InvoiceResponse
             reference: payment.reference,
             notes: payment.notes,
             createdAt: payment.createdAt,
+            status: payment.status,
+            refundAmount: Number(payment.refundAmount || 0),
+            refundedAt: payment.refundedAt,
+            voidedAt: payment.voidedAt,
         })),
         createdAt: inv.createdAt,
         updatedAt: inv.updatedAt,

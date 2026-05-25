@@ -17,7 +17,7 @@ export class DocumentsController {
     try {
       const file = (req as any).file as Express.Multer.File | undefined;
       if (!file) throw new Error('File is required');
-      const document = await documentsService.upload(req.context.tenantId, file, sanitizeBody(req.body));
+      const document = await documentsService.upload(req.context.tenantId, file, sanitizeBody(req.body), req.user?.userId || null);
       sendCreated(res, document, 'Document uploaded');
     } catch (error) { next(error); }
   }

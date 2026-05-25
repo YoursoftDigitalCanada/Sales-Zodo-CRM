@@ -401,7 +401,7 @@ export class BookkeepingService {
     const sourceId = `${original.sourceId || original.id}:${reason}:${serializeMoney(reversalAmount)}`;
     const existing = await db().bookkeepingTransaction.findFirst({ where: { tenantId, sourceType, sourceId } });
     if (existing) return existing;
-    const type = original.type === 'INCOME' ? 'REFUND' : 'ADJUSTMENT';
+    const type = original.type === 'INCOME' ? 'REFUND' : reason.includes('INCREASED') ? 'EXPENSE' : 'ADJUSTMENT';
     return this.createTransaction(tenantId, {
       accountId: original.accountId || null,
       categoryId: original.categoryId || null,
@@ -662,8 +662,8 @@ export class BookkeepingService {
     const now = new Date();
     const yearStart = new Date(now.getFullYear(), 0, 1);
     const transactions: any[] = await this.reportTransactions(tenantId, yearStart, now);
-    const income = transactions.filter((tx: any) => tx.type === 'INCOME' && tx.status !== 'VOID').reduce((sum: number, tx: any) => sum + toNumber(tx.amount), 0);
-    const expenses = transactions.filter((tx: any) => tx.type === 'EXPENSE' && tx.status !== 'VOID').reduce((sum: number, tx: any) => sum + toNumber(tx.amount), 0);
+    const income = transactions.reduce((sum: number, tx: any) => sum + this.incomeImpact(tx), 0);
+    const expenses = transactions.reduce((sum: number, tx: any) => sum + this.expenseImpact(tx), 0);
     const [accounts, unpaidInvoices, overdueInvoices, pendingExpenses, recentTransactions] = await Promise.all([
       db().bookkeepingAccount.findMany({ where: { tenantId, isActive: true } }),
       prisma.invoice.count({ where: { tenantId, status: { in: ['SENT', 'OVERDUE', 'PARTIALLY_PAID'] } as any } }),
@@ -694,15 +694,15 @@ export class BookkeepingService {
   async profitLoss(tenantId: string, query: Record<string, any>) {
     const { from, to } = this.dateRange(query);
     const transactions: any[] = await this.reportTransactions(tenantId, from, to);
-    const incomeRows = transactions.filter((tx: any) => tx.type === 'INCOME' && tx.status !== 'VOID');
-    const expenseRows = transactions.filter((tx: any) => tx.type === 'EXPENSE' && tx.status !== 'VOID');
-    const incomeTotal = incomeRows.reduce((sum: number, tx: any) => sum + toNumber(tx.amount), 0);
-    const expenseTotal = expenseRows.reduce((sum: number, tx: any) => sum + toNumber(tx.amount), 0);
+    const incomeRows = transactions.filter((tx: any) => this.incomeImpact(tx) !== 0);
+    const expenseRows = transactions.filter((tx: any) => this.expenseImpact(tx) !== 0);
+    const incomeTotal = incomeRows.reduce((sum: number, tx: any) => sum + this.incomeImpact(tx), 0);
+    const expenseTotal = expenseRows.reduce((sum: number, tx: any) => sum + this.expenseImpact(tx), 0);
     return {
       dateFrom: from,
       dateTo: to,
-      income: await this.groupByCategory(tenantId, incomeRows),
-      expenses: await this.groupByCategory(tenantId, expenseRows),
+      income: await this.groupByCategory(tenantId, incomeRows, (tx) => this.incomeImpact(tx)),
+      expenses: await this.groupByCategory(tenantId, expenseRows, (tx) => this.expenseImpact(tx)),
       grossProfit: serializeMoney(incomeTotal),
       netProfit: serializeMoney(incomeTotal - expenseTotal),
       totals: { income: serializeMoney(incomeTotal), expenses: serializeMoney(expenseTotal) },
@@ -712,8 +712,8 @@ export class BookkeepingService {
   async cashFlow(tenantId: string, query: Record<string, any>) {
     const { from, to } = this.dateRange(query);
     const transactions: any[] = await this.reportTransactions(tenantId, from, to);
-    const moneyIn = transactions.filter((tx: any) => tx.type === 'INCOME').reduce((sum: number, tx: any) => sum + toNumber(tx.amount), 0);
-    const moneyOut = transactions.filter((tx: any) => tx.type === 'EXPENSE' || tx.type === 'REFUND').reduce((sum: number, tx: any) => sum + toNumber(tx.amount), 0);
+    const moneyIn = transactions.reduce((sum: number, tx: any) => sum + this.cashInImpact(tx), 0);
+    const moneyOut = transactions.reduce((sum: number, tx: any) => sum + this.cashOutImpact(tx), 0);
     return { moneyIn: serializeMoney(moneyIn), moneyOut: serializeMoney(moneyOut), netCashMovement: serializeMoney(moneyIn - moneyOut), byMonth: this.cashFlowTrend(transactions) };
   }
 
@@ -913,10 +913,10 @@ export class BookkeepingService {
 
   private monthlyTrend(transactions: any[], type: string) {
     const map = new Map<string, number>();
-    transactions.filter((tx: any) => tx.type === type && tx.status !== 'VOID').forEach((tx: any) => {
+    transactions.filter((tx: any) => type === 'INCOME' ? this.incomeImpact(tx) !== 0 : this.expenseImpact(tx) !== 0).forEach((tx: any) => {
       const date = new Date(tx.transactionDate);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      map.set(key, (map.get(key) || 0) + toNumber(tx.amount));
+      map.set(key, (map.get(key) || 0) + (type === 'INCOME' ? this.incomeImpact(tx) : this.expenseImpact(tx)));
     });
     return Array.from(map.entries()).map(([month, total]) => ({ month, total: serializeMoney(total) }));
   }
@@ -927,26 +927,30 @@ export class BookkeepingService {
       const date = new Date(tx.transactionDate);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       const current = map.get(key) || { in: 0, out: 0 };
-      if (tx.type === 'INCOME') current.in += toNumber(tx.amount);
-      if (tx.type === 'EXPENSE' || tx.type === 'REFUND') current.out += toNumber(tx.amount);
+      current.in += this.cashInImpact(tx);
+      current.out += this.cashOutImpact(tx);
       map.set(key, current);
     });
     return Array.from(map.entries()).map(([month, value]) => ({ month, moneyIn: serializeMoney(value.in), moneyOut: serializeMoney(value.out), net: serializeMoney(value.in - value.out) }));
   }
 
-  private async groupByCategory(tenantId: string, transactions: any[]) {
+  private async groupByCategory(tenantId: string, transactions: any[], amountFor: (tx: any) => number = (tx) => toNumber(tx.amount)) {
     const categories = await db().bookkeepingCategory.findMany({ where: { tenantId, id: { in: transactions.map((tx: any) => tx.categoryId).filter(Boolean) } } });
     const names = new Map<string, string>(categories.map((category: any) => [String(category.id), String(category.name)]));
     const map = new Map<string, number>();
     transactions.forEach((tx: any) => {
       const name = names.get(tx.categoryId) || 'Uncategorized';
-      map.set(name, (map.get(name) || 0) + toNumber(tx.amount));
+      map.set(name, (map.get(name) || 0) + amountFor(tx));
     });
     return Array.from(map.entries()).map(([name, total]) => ({ name, total: serializeMoney(total) }));
   }
 
   private async topCategories(tenantId: string, type: string, from: Date, to: Date) {
-    return this.groupByCategory(tenantId, (await this.reportTransactions(tenantId, from, to)).filter((tx: any) => tx.type === type));
+    return this.groupByCategory(
+      tenantId,
+      (await this.reportTransactions(tenantId, from, to)).filter((tx: any) => type === 'INCOME' ? this.incomeImpact(tx) !== 0 : this.expenseImpact(tx) !== 0),
+      (tx) => type === 'INCOME' ? this.incomeImpact(tx) : this.expenseImpact(tx),
+    );
   }
 
   private async topCustomersByIncome(tenantId: string, from: Date, to: Date) {
@@ -967,6 +971,33 @@ export class BookkeepingService {
     const map = new Map<string, number>();
     rows.filter((tx: any) => tx.type === 'EXPENSE' && tx.vendorId).forEach((tx: any) => map.set(names.get(tx.vendorId) || 'Unknown', (map.get(names.get(tx.vendorId) || 'Unknown') || 0) + toNumber(tx.amount)));
     return Array.from(map.entries()).map(([name, total]) => ({ name, total: serializeMoney(total) })).sort((a, b) => b.total - a.total).slice(0, 5);
+  }
+
+  private incomeImpact(tx: any) {
+    if (tx.status === 'VOID') return 0;
+    if (tx.type === 'INCOME') return toNumber(tx.amount);
+    if (tx.type === 'REFUND') return -toNumber(tx.amount);
+    return 0;
+  }
+
+  private expenseImpact(tx: any) {
+    if (tx.status === 'VOID') return 0;
+    if (tx.type === 'EXPENSE') return toNumber(tx.amount);
+    if (tx.type === 'ADJUSTMENT' && tx.metadata?.originalSourceType === 'EXPENSE') return -toNumber(tx.amount);
+    return 0;
+  }
+
+  private cashInImpact(tx: any) {
+    if (tx.status === 'VOID') return 0;
+    if (tx.type === 'INCOME') return toNumber(tx.amount);
+    if (tx.type === 'ADJUSTMENT' && tx.metadata?.originalSourceType === 'EXPENSE') return toNumber(tx.amount);
+    return 0;
+  }
+
+  private cashOutImpact(tx: any) {
+    if (tx.status === 'VOID') return 0;
+    if (tx.type === 'EXPENSE' || tx.type === 'REFUND') return toNumber(tx.amount);
+    return 0;
   }
 }
 

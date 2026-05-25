@@ -61,6 +61,15 @@ export async function recordInvoicePayment(id: number | string, payload: RecordI
   return extractApiData<InvoiceEntity>(response.data);
 }
 
+export async function updateInvoicePaymentStatus(
+  invoiceId: number | string,
+  paymentId: number | string,
+  payload: { status: "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED" | "VOIDED"; refundAmount?: number; notes?: string | null },
+) {
+  const response = await api.patch(`/invoices/${invoiceId}/payments/${paymentId}/status`, payload);
+  return extractApiData<InvoiceEntity>(response.data);
+}
+
 export async function deleteInvoice(id: number | string): Promise<void> {
   await api.delete(`/invoices/${id}`);
 }

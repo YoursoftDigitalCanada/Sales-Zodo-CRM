@@ -27,6 +27,8 @@ import {
   recordInvoicePayment,
   sendInvoice,
   downloadInvoicePdf,
+  saveInvoicePdfToDocuments,
+  updateInvoicePaymentStatus,
 } from "@/services/invoiceService";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import {
@@ -51,6 +53,8 @@ import {
   MapPin,
   CreditCard,
   Copy,
+  FilePlus,
+  Undo2,
   BanknoteIcon,
   Wallet,
   type LucideIcon,
@@ -111,6 +115,20 @@ interface InvoiceData {
     postalCode?: string;
     country?: string;
   };
+  contact?: {
+    id: string;
+    contactName: string;
+    email?: string | null;
+    officePhone?: string | null;
+    mobilePhone?: string | null;
+  } | null;
+  quote?: { id: string; quoteNumber: string } | null;
+  project?: { id: string; name?: string | null; projectNumber?: string | null } | null;
+  contract?: { id: string; contractNumber: string; title: string } | null;
+  quoteId?: string | null;
+  projectId?: string | null;
+  contractId?: string | null;
+  contactId?: string | null;
   items: InvoiceItem[];
   payments?: Array<{
     id: string;
@@ -119,6 +137,10 @@ interface InvoiceData {
     paymentDate: string;
     reference?: string | null;
     notes?: string | null;
+    status?: string;
+    refundAmount?: number;
+    refundedAt?: string | null;
+    voidedAt?: string | null;
   }>;
   createdAt: string;
 }
@@ -324,6 +346,43 @@ const InvoiceDetailPage = () => {
     }
   };
 
+  const handleSaveDocument = async () => {
+    if (!invoice) return;
+    setActionLoading("save-document");
+    try {
+      await saveInvoicePdfToDocuments(invoice.id);
+      toast({ title: "Saved to Documents", description: "Invoice PDF is linked to this invoice." });
+    } catch {
+      toast({ title: "Error", description: "Failed to save invoice PDF to Documents.", variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handlePaymentStatus = async (
+    paymentId: string,
+    status: "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED" | "VOIDED",
+  ) => {
+    if (!invoice) return;
+    const payment = invoice.payments?.find((item) => item.id === paymentId);
+    const refundAmount = status === "PARTIALLY_REFUNDED"
+      ? Number(window.prompt("Refund amount", payment ? String(payment.amount / 2) : "0") || 0)
+      : undefined;
+    if (status === "PARTIALLY_REFUNDED" && (!refundAmount || refundAmount <= 0)) return;
+    const confirmed = window.confirm(`Mark this payment as ${status.replaceAll("_", " ").toLowerCase()}?`);
+    if (!confirmed) return;
+    setActionLoading(`payment-${paymentId}`);
+    try {
+      const updated = await updateInvoicePaymentStatus(invoice.id, paymentId, { status, refundAmount });
+      setInvoice(updated as InvoiceData);
+      toast({ title: "Payment Updated", description: "Invoice balance and bookkeeping sync were updated." });
+    } catch {
+      toast({ title: "Error", description: "Failed to update payment status.", variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   useEffect(() => {
     if (!invoice) return;
     const outstanding = Math.max(Number(invoice.amountDue || invoice.total - invoice.amountPaid), 0);
@@ -369,6 +428,7 @@ const InvoiceDetailPage = () => {
   const clientName = invoice.client?.clientName || invoice.clientBusinessName || "Client";
   const clientEmail = invoice.clientEmail || invoice.client?.primaryEmail;
   const clientPhone = invoice.clientPhone || invoice.client?.primaryPhone;
+  const contactPhone = invoice.contact?.mobilePhone || invoice.contact?.officePhone;
   const clientAddr = invoice.clientAddress
     ? [invoice.clientAddress.address, invoice.clientAddress.city, invoice.clientAddress.province, invoice.clientAddress.postalCode].filter(Boolean).join(", ")
     : invoice.client
@@ -435,15 +495,25 @@ const InvoiceDetailPage = () => {
                 </Button>
               </>
             )}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleDownload}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleDownload}
               disabled={!!actionLoading}
               className={cn("rounded-md border-[rgba(15,23,42,0.06)]", isMobile && "hidden")}
             >
               {actionLoading === "download" ? <Loader2 size={14} className="animate-spin mr-1.5" /> : <Download size={14} className="mr-1.5" />}
               PDF
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSaveDocument}
+              disabled={!!actionLoading}
+              className={cn("rounded-md border-[rgba(15,23,42,0.06)]", isMobile && "hidden")}
+            >
+              {actionLoading === "save-document" ? <Loader2 size={14} className="animate-spin mr-1.5" /> : <FilePlus size={14} className="mr-1.5" />}
+              Save Document
             </Button>
             {!isMobile && (
               <Button
@@ -515,9 +585,40 @@ const InvoiceDetailPage = () => {
               <InfoRow icon={Phone} label="Phone" value={clientPhone} />
               <InfoRow icon={MapPin} label="Address" value={clientAddr} />
               <InfoRow icon={Hash} label="GST/HST #" value={invoice.clientGstHstNumber || invoice.client?.clientName ? undefined : undefined} />
+              <InfoRow icon={Users} label="Primary Contact" value={invoice.contact?.contactName} />
+              <InfoRow icon={Mail} label="Contact Email" value={invoice.contact?.email || undefined} />
+              <InfoRow icon={Phone} label="Contact Phone" value={contactPhone || undefined} />
             </div>
           </SectionCard>
         </div>
+
+        {(invoice.project || invoice.quote || invoice.contract) && (
+          <SectionCard title="Sales Relationships" icon={FileText}>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {invoice.project ? (
+                <Button variant="outline" className="justify-start rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => navigate(`/deals?dealId=${invoice.project?.id}`)}>
+                  Deal: {invoice.project.name || invoice.project.projectNumber || "Open"}
+                </Button>
+              ) : null}
+              {invoice.quote ? (
+                <Button variant="outline" className="justify-start rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => navigate(`/proposals?quoteId=${invoice.quote?.id}`)}>
+                  Proposal: {invoice.quote.quoteNumber}
+                </Button>
+              ) : null}
+              {invoice.contract ? (
+                <Button variant="outline" className="justify-start rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => navigate(`/contracts?contractId=${invoice.contract?.id}`)}>
+                  Contract: {invoice.contract.contractNumber}
+                </Button>
+              ) : null}
+              <Button variant="outline" className="justify-start rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => navigate(`/bookkeeping?invoiceId=${invoice.id}`)}>
+                View Bookkeeping
+              </Button>
+              <Button variant="outline" className="justify-start rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => navigate(`/documents?linkedEntityType=Invoice&linkedEntityId=${invoice.id}`)}>
+                View Documents
+              </Button>
+            </div>
+          </SectionCard>
+        )}
 
         {/* Line Items */}
         <SectionCard title="Invoice Items" icon={Receipt}>
@@ -642,14 +743,39 @@ const InvoiceDetailPage = () => {
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-sm font-medium text-[#0F172A]">{payment.paymentMethod.replaceAll("_", " ")}</p>
-                      <p className="text-xs text-[#94A3B8]">{formatDate(payment.paymentDate)}</p>
+                      <p className="text-xs text-[#94A3B8]">
+                        {formatDate(payment.paymentDate)}
+                        {payment.status ? ` · ${payment.status.replaceAll("_", " ")}` : ""}
+                      </p>
                     </div>
-                    <span className="text-sm font-semibold text-green-600">{formatCurrency(payment.amount, invoice.currency)}</span>
+                    <span className={cn("text-sm font-semibold", ["REFUNDED", "VOIDED", "FAILED"].includes(String(payment.status || "").toUpperCase()) ? "text-slate-500" : "text-green-600")}>
+                      {formatCurrency(payment.amount, invoice.currency)}
+                    </span>
                   </div>
+                  {(payment.refundAmount || 0) > 0 ? (
+                    <p className="mt-2 text-xs text-amber-700">Refunded: {formatCurrency(payment.refundAmount, invoice.currency)}</p>
+                  ) : null}
                   {payment.reference || payment.notes ? (
                     <p className="mt-2 text-xs text-[#475569]">
                       {[payment.reference, payment.notes].filter(Boolean).join(" · ")}
                     </p>
+                  ) : null}
+                  {String(payment.status || "SUCCESSFUL").toUpperCase() === "SUCCESSFUL" ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" className="h-8 rounded-md border-[rgba(15,23,42,0.06)] text-xs" disabled={!!actionLoading} onClick={() => handlePaymentStatus(payment.id, "PARTIALLY_REFUNDED")}>
+                        <Undo2 size={13} className="mr-1.5" />
+                        Partial Refund
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 rounded-md border-amber-200 text-amber-700 text-xs" disabled={!!actionLoading} onClick={() => handlePaymentStatus(payment.id, "REFUNDED")}>
+                        Refund
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 rounded-md border-red-200 text-red-600 text-xs" disabled={!!actionLoading} onClick={() => handlePaymentStatus(payment.id, "VOIDED")}>
+                        Void
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 rounded-md border-slate-200 text-slate-600 text-xs" disabled={!!actionLoading} onClick={() => handlePaymentStatus(payment.id, "FAILED")}>
+                        Failed
+                      </Button>
+                    </div>
                   ) : null}
                 </div>
               ))}

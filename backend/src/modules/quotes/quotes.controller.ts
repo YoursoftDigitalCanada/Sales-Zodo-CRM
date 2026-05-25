@@ -19,6 +19,16 @@ export class QuotesController {
         } catch (err) { next(err); }
     }
 
+    async downloadPdf(req: Request, res: Response, next: NextFunction) {
+        try {
+            const tenantId = req.context.tenantId;
+            const { buffer, fileName } = await quotesService.downloadPdf(req.params.id, tenantId);
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+            res.send(buffer);
+        } catch (err) { next(err); }
+    }
+
     async getMany(req: Request, res: Response, next: NextFunction) {
         try {
             const tenantId = req.context.tenantId;
@@ -58,7 +68,7 @@ export class QuotesController {
             const tenantId = req.context.tenantId;
             const employeeId = req.user!.employeeId!;
             const dto = await quotesService.sendQuote(req.params.id, tenantId, employeeId);
-            res.json({ success: true, message: 'Quote sent successfully', data: dto });
+            res.json({ success: true, message: 'Proposal sent successfully', data: dto });
         } catch (e) { next(e); }
     }
 

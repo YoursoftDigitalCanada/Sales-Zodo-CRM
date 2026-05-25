@@ -1797,6 +1797,8 @@ model Contact {
   convertedLeads        Lead[]       @relation("LeadConvertedContact")
   deals                 ContactDeal[]
   proposals             Proposal[]
+  contracts             Contract[]
+  invoices              Invoice[]
 }
 
 model ContactDeal {
@@ -3357,6 +3359,7 @@ model File {
   // Metadata
   extension       String?
   checksum        String?     // For integrity verification
+  uploadedById    String?
   
   // Folder relation (optional)
   folderId        String?
@@ -3409,6 +3412,7 @@ model File {
   @@index([clientId])
   @@index([leadId])
   @@index([quoteId])
+  @@index([uploadedById])
   @@unique([id, tenantId])
 }
 
@@ -3484,6 +3488,10 @@ model Invoice {
   // Client
   clientId          String
   client            Client          @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  // Primary billing contact
+  contactId         String?
+  contact           Contact?        @relation(fields: [contactId], references: [id], onDelete: SetNull)
   
   // Dates
   issueDate         DateTime        @default(now())
@@ -3510,9 +3518,13 @@ model Invoice {
   quoteId           String?
   quote             Quote?          @relation(fields: [quoteId], references: [id], onDelete: SetNull)
   
-  // Linked project/job
+  // Linked deal/opportunity
   projectId         String?
   project           Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  // Linked contract
+  contractId        String?
+  contract          Contract?        @relation(fields: [contractId], references: [id], onDelete: SetNull)
   
   // Created by
   createdById       String?
@@ -3542,9 +3554,11 @@ model Invoice {
   @@index([tenantId])
   @@index([status])
   @@index([clientId])
+  @@index([contactId])
   @@index([dueDate])
   @@index([quoteId])
   @@index([projectId])
+  @@index([contractId])
   @@unique([id, tenantId])
 }
 
@@ -5411,6 +5425,9 @@ model Contract {
   // Linked entities
   clientId          String
   client            Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  contactId         String?
+  contact           Contact?        @relation(fields: [contactId], references: [id], onDelete: SetNull)
   
   quoteId           String?
   quote             Quote?          @relation(fields: [quoteId], references: [id], onDelete: SetNull)
@@ -5443,10 +5460,13 @@ model Contract {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
+  invoices          Invoice[]
+
   @@unique([tenantId, contractNumber])
   @@index([tenantId])
   @@index([status])
   @@index([clientId])
+  @@index([contactId])
   @@index([quoteId])
   @@index([projectId])
   @@index([startDate])

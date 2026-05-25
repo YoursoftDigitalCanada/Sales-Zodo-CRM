@@ -56,7 +56,7 @@ import {
 } from "./quotes-data";
 import {
   getQuotes, createQuote, updateQuote, deleteQuote as deleteQuoteApi,
-  sendQuoteEmail, type QuoteEntity,
+  sendQuoteEmail, downloadQuotePdf, type QuoteEntity,
 } from "@/features/quotes";
 import { createProjectFromQuote } from "@/features/projects";
 import { getClients, type ClientEntity } from "@/features/clients/services/clients-service";
@@ -115,10 +115,10 @@ const StatCard = ({ title, value, subtitle, icon: Icon, color, trend, delay = 0 
 // ============================================
 // QUOTE ROW (Table View)
 // ============================================
-const QuoteRow = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSend, onDuplicate, onConvert }: {
+const QuoteRow = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSend, onDuplicate, onConvert, onDownload }: {
   quote: Quote; isSelected: boolean; onSelect: (c: boolean) => void;
   onView: () => void; onEdit: () => void; onDelete: () => void;
-  onSend: () => void; onDuplicate: () => void; onConvert: () => void;
+  onSend: () => void; onDuplicate: () => void; onConvert: () => void; onDownload: () => void;
 }) => {
   const statusConfig = getStatusConfig(quote.status);
   const StatusIcon = statusConfig.icon;
@@ -207,7 +207,7 @@ const QuoteRow = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSen
               <DropdownMenuItem onClick={onDuplicate} className="rounded-md"><Copy size={14} className="mr-2" />Duplicate</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onSend} className="rounded-md"><Send size={14} className="mr-2" />Send for Signature</DropdownMenuItem>
-              <DropdownMenuItem className="rounded-md"><FileDown size={14} className="mr-2" />Download PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={onDownload} className="rounded-md"><FileDown size={14} className="mr-2" />Download PDF</DropdownMenuItem>
               <DropdownMenuItem className="rounded-md"><Printer size={14} className="mr-2" />Print</DropdownMenuItem>
               {isSignedQuote(quote.status) && !quote.linkedProjectId && (
                 <><DropdownMenuSeparator /><DropdownMenuItem onClick={onConvert} className="rounded-md text-green-600"><ArrowRight size={14} className="mr-2" />Convert to Deal</DropdownMenuItem></>
@@ -227,9 +227,9 @@ const QuoteRow = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSen
 // ============================================
 // QUOTE CARD (Grid View)
 // ============================================
-const QuoteCard = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSend, onConvert }: {
+const QuoteCard = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSend, onConvert, onDownload }: {
   quote: Quote; isSelected: boolean; onSelect: (c: boolean) => void;
-  onView: () => void; onEdit: () => void; onDelete: () => void; onSend: () => void; onConvert: () => void;
+  onView: () => void; onEdit: () => void; onDelete: () => void; onSend: () => void; onConvert: () => void; onDownload: () => void;
 }) => {
   const statusConfig = getStatusConfig(quote.status);
   const StatusIcon = statusConfig.icon;
@@ -261,6 +261,7 @@ const QuoteCard = ({ quote, isSelected, onSelect, onView, onEdit, onDelete, onSe
               <DropdownMenuItem onClick={onView} className="rounded-md"><Eye size={14} className="mr-2" />View</DropdownMenuItem>
               {!isSignedQuote(quote.status) && <DropdownMenuItem onClick={onEdit} className="rounded-md"><Pencil size={14} className="mr-2" />Edit</DropdownMenuItem>}
               <DropdownMenuItem onClick={onSend} className="rounded-md"><Send size={14} className="mr-2" />Send for Signature</DropdownMenuItem>
+              <DropdownMenuItem onClick={onDownload} className="rounded-md"><FileDown size={14} className="mr-2" />Download PDF</DropdownMenuItem>
               {isSignedQuote(quote.status) && !quote.linkedProjectId && (
                 <DropdownMenuItem onClick={onConvert} className="rounded-md text-green-600"><ArrowRight size={14} className="mr-2" />Convert to Deal</DropdownMenuItem>
               )}
@@ -650,7 +651,7 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
               <div><Label className="text-xs text-[#475569]">Company</Label>
                 <Input value={formData.clientCompany} onChange={e => setFormData(p => ({ ...p, clientCompany: e.target.value }))}
-                  placeholder="HOA, builder, or property company" className="mt-1 rounded-md" />
+                  placeholder="Company, account, or buying group" className="mt-1 rounded-md" />
               </div>
               <div><Label className="text-xs text-[#475569]">Valid Until</Label>
                 <Input type="date" value={formData.validUntil} onChange={e => setFormData(p => ({ ...p, validUntil: e.target.value }))}
@@ -809,9 +810,9 @@ const QuoteFormDialog = ({ isOpen, onClose, quote, onSubmit }: {
 // ============================================
 // QUOTE DETAIL DIALOG
 // ============================================
-const QuoteDetailDialog = ({ isOpen, onClose, quote, onEdit, onDelete, onSend, onConvert }: {
+const QuoteDetailDialog = ({ isOpen, onClose, quote, onEdit, onDelete, onSend, onConvert, onDownload }: {
   isOpen: boolean; onClose: () => void; quote: Quote | null;
-  onEdit: () => void; onDelete: () => void; onSend: () => void; onConvert: () => void;
+  onEdit: () => void; onDelete: () => void; onSend: () => void; onConvert: () => void; onDownload: () => void;
 }) => {
   if (!quote) return null;
   const statusConfig = getStatusConfig(quote.status);
@@ -908,6 +909,19 @@ const QuoteDetailDialog = ({ isOpen, onClose, quote, onEdit, onDelete, onSend, o
             <Trash2 size={16} className="mr-2" />Delete
           </Button>
           <div className="flex-1" />
+          <Button variant="outline" onClick={onDownload} className="rounded-md">
+            <FileDown size={16} className="mr-2" />Download PDF
+          </Button>
+          {isSignedQuote(quote.status) && quote.linkedProjectId && (
+            <>
+              <Button variant="outline" onClick={() => window.location.assign(`/contracts?dealId=${quote.linkedProjectId}&create=1`)} className="rounded-md">
+                <FilePlus size={16} className="mr-2" />Create Contract
+              </Button>
+              <Button variant="outline" onClick={() => window.location.assign(`/invoice/create?dealId=${quote.linkedProjectId}`)} className="rounded-md">
+                <DollarSign size={16} className="mr-2" />Create Invoice
+              </Button>
+            </>
+          )}
           {canSendForSignature(quote.status) && <Button onClick={onSend} className="rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"><Send size={16} className="mr-2" />Send for Signature</Button>}
           {isSignedQuote(quote.status) && !quote.linkedProjectId && <Button onClick={onConvert} className="rounded-md bg-green-600 hover:bg-green-700 text-white"><ArrowRight size={16} className="mr-2" />Convert to Deal</Button>}
           {!isSignedQuote(quote.status) && <Button onClick={onEdit} className="rounded-md bg-[#0891B2] hover:bg-[#0891B2]/90 text-white"><Pencil size={16} className="mr-2" />Edit</Button>}
@@ -1144,7 +1158,6 @@ const QuotesPage = () => {
           total: item.amount,
           sortOrder: idx,
         })),
-        roofEstimateId: data.roofEstimateId || null,
       };
       await createQuote(apiPayload);
       toast({ title: "Proposal Created", description: "New proposal has been created successfully." });
@@ -1173,7 +1186,6 @@ const QuotesPage = () => {
           total: item.amount,
           sortOrder: idx,
         })),
-        roofEstimateId: data.roofEstimateId || null,
       };
       await updateQuote(currentQuote.id, apiPayload);
       toast({ title: "Proposal Updated", description: `${currentQuote.quoteNumber} has been updated.` });
@@ -1220,6 +1232,24 @@ const QuotesPage = () => {
     } catch (err) {
       console.error("Failed to convert proposal into deal:", err);
       toast({ title: "Error", description: "Failed to convert proposal into a deal", variant: "destructive" });
+    }
+  };
+
+  const handleDownloadQuotePdf = async (quote: Quote) => {
+    try {
+      const blob = await downloadQuotePdf(quote.id);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${quote.quoteNumber || "proposal"}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: "PDF Downloaded", description: `${quote.quoteNumber} is ready.` });
+    } catch (err) {
+      console.error("Failed to download proposal PDF:", err);
+      toast({ title: "Error", description: "Failed to download proposal PDF", variant: "destructive" });
     }
   };
 
@@ -1666,7 +1696,8 @@ const QuotesPage = () => {
                           onDelete={() => setDeleteQuoteId(q.id)}
                           onSend={() => handleSendQuote(q.id)}
                           onDuplicate={() => handleDuplicate(q.id)}
-                          onConvert={() => handleConvertToJob(q.id)} />
+                          onConvert={() => handleConvertToJob(q.id)}
+                          onDownload={() => handleDownloadQuotePdf(q)} />
                       ))}
                     </AnimatePresence>
                   </tbody>
@@ -1705,7 +1736,8 @@ const QuotesPage = () => {
                     onEdit={() => { setCurrentQuote(q); setIsFormOpen(true); }}
                     onDelete={() => setDeleteQuoteId(q.id)}
                     onSend={() => handleSendQuote(q.id)}
-                    onConvert={() => handleConvertToJob(q.id)} />
+                    onConvert={() => handleConvertToJob(q.id)}
+                    onDownload={() => handleDownloadQuotePdf(q)} />
                 ))}
               </AnimatePresence>
             </div>
@@ -1767,7 +1799,8 @@ const QuotesPage = () => {
         onEdit={() => { setIsDetailOpen(false); setIsFormOpen(true); }}
         onDelete={() => { setIsDetailOpen(false); if (currentQuote) setDeleteQuoteId(currentQuote.id); }}
         onSend={() => { if (currentQuote) handleSendQuote(currentQuote.id); setIsDetailOpen(false); }}
-        onConvert={() => { if (currentQuote) handleConvertToJob(currentQuote.id); }} />
+        onConvert={() => { if (currentQuote) handleConvertToJob(currentQuote.id); }}
+        onDownload={() => { if (currentQuote) handleDownloadQuotePdf(currentQuote); }} />
 
       <AlertDialog open={!!deleteQuoteId} onOpenChange={() => setDeleteQuoteId(null)}>
         <AlertDialogContent className="rounded-md">

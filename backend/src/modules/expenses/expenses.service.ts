@@ -79,6 +79,13 @@ export class ExpensesService {
             metadata: { updatedFields: Object.keys(data) },
         });
 
+        eventBus.emit('expense.updated', {
+            tenantId,
+            expenseId: dto.id,
+            amount: (expense as any).amount,
+            category: (expense as any).category,
+        });
+
         bookkeepingService.syncExpense(tenantId, dto.id).catch((error) => logBookkeepingSyncFailure(tenantId, 'Expense', dto.id, error));
 
         return dto;

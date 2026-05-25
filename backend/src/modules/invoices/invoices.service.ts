@@ -82,6 +82,62 @@ export class InvoicesService {
         });
     }
 
+    private async normalizeAndValidateInvoiceLinks(
+        tenantId: string,
+        data: Record<string, any>,
+        existing?: Record<string, any> | null,
+    ) {
+        const next = { ...data };
+        const effectiveClientId = next.clientId !== undefined ? next.clientId : existing?.clientId;
+
+        if (next.contractId) {
+            const contract = await prisma.contract.findFirst({
+                where: { id: next.contractId, tenantId },
+                select: { id: true, clientId: true, contactId: true, quoteId: true, projectId: true },
+            });
+            if (!contract) throw new BadRequestError('Contract does not belong to this tenant', ErrorCodes.INVALID_INPUT);
+            next.clientId = next.clientId || contract.clientId;
+            next.contactId = next.contactId || contract.contactId || undefined;
+            next.quoteId = next.quoteId || contract.quoteId || undefined;
+            next.projectId = next.projectId || contract.projectId || undefined;
+        }
+
+        if (next.projectId) {
+            const deal = await prisma.project.findFirst({
+                where: { id: next.projectId, tenantId },
+                select: { id: true, clientId: true, contactId: true },
+            });
+            if (!deal) throw new BadRequestError('Deal does not belong to this tenant', ErrorCodes.INVALID_INPUT);
+            next.clientId = next.clientId || deal.clientId || undefined;
+            next.contactId = next.contactId || deal.contactId || undefined;
+        }
+
+        if (next.quoteId) {
+            const quote = await prisma.quote.findFirst({
+                where: { id: next.quoteId, tenantId },
+                select: { id: true, clientId: true },
+            });
+            if (!quote) throw new BadRequestError('Proposal does not belong to this tenant', ErrorCodes.INVALID_INPUT);
+            next.clientId = next.clientId || quote.clientId || undefined;
+        }
+
+        const clientId = next.clientId !== undefined ? next.clientId : effectiveClientId;
+        if (!clientId) throw new BadRequestError('Company is required for invoice billing', ErrorCodes.INVALID_INPUT);
+        const client = await prisma.client.findFirst({ where: { id: clientId, tenantId }, select: { id: true } });
+        if (!client) throw new BadRequestError('Company does not belong to this tenant', ErrorCodes.INVALID_INPUT);
+
+        const contactId = next.contactId !== undefined ? next.contactId : existing?.contactId;
+        if (contactId) {
+            const contact = await prisma.contact.findFirst({ where: { id: contactId, tenantId }, select: { id: true, companyId: true } });
+            if (!contact) throw new BadRequestError('Contact does not belong to this tenant', ErrorCodes.INVALID_INPUT);
+            if (contact.companyId && contact.companyId !== clientId) {
+                throw new BadRequestError('Contact does not belong to the selected company', ErrorCodes.INVALID_INPUT);
+            }
+        }
+
+        return next;
+    }
+
     private async getCompanyProfile(tenantId: string): Promise<CompanyProfile> {
         const settings = await prisma.tenantSettings.findUnique({
             where: { tenantId },
@@ -461,9 +517,9 @@ export class InvoicesService {
         invoice: any;
         company: CompanyProfile;
         recipientName: string;
-        roofAttachmentCount: number;
+        supportingAttachmentCount: number;
     }) {
-        const { invoice, company, recipientName, roofAttachmentCount } = params;
+        const { invoice, company, recipientName, supportingAttachmentCount } = params;
         const invoiceNumber = String(invoice.invoiceNumber || invoice.id);
         const issueDate = new Date(invoice.issueDate).toLocaleDateString();
         const dueDate = new Date(invoice.dueDate).toLocaleDateString();
@@ -480,9 +536,9 @@ export class InvoicesService {
                 </tr>
               `).join('')
             : '';
-        const attachmentNote = roofAttachmentCount > 0
+        const attachmentNote = supportingAttachmentCount > 0
             ? `<p style="margin:0 0 20px;font-size:13px;color:#0F766E;background:#ECFEFF;border:1px solid #A5F3FC;padding:12px 14px;border-radius:10px;">
-                ${roofAttachmentCount} supporting attachment${roofAttachmentCount === 1 ? '' : 's'} ${roofAttachmentCount === 1 ? 'is' : 'are'} included with this invoice for reference.
+                ${supportingAttachmentCount} supporting attachment${supportingAttachmentCount === 1 ? '' : 's'} ${supportingAttachmentCount === 1 ? 'is' : 'are'} included with this invoice for reference.
               </p>`
             : '';
 
@@ -552,7 +608,7 @@ export class InvoicesService {
             `Invoice date: ${issueDate}`,
             `Due date: ${dueDate}`,
             `Amount due: ${amountDue}`,
-            roofAttachmentCount > 0 ? `${roofAttachmentCount} supporting attachment${roofAttachmentCount === 1 ? '' : 's'} included for reference.` : '',
+            supportingAttachmentCount > 0 ? `${supportingAttachmentCount} supporting attachment${supportingAttachmentCount === 1 ? '' : 's'} included for reference.` : '',
             '',
             `Total invoice: ${total}`,
         ].filter(Boolean).join('\n');
@@ -561,7 +617,8 @@ export class InvoicesService {
     }
 
     async create(tenantId: string, data: CreateInvoiceDto) {
-        const invoice = await invoicesRepository.create(tenantId, data);
+        const normalizedData = await this.normalizeAndValidateInvoiceLinks(tenantId, data as any);
+        const invoice = await invoicesRepository.create(tenantId, normalizedData as any);
         const dto = toInvoiceResponseDto(invoice);
 
         eventBus.emit('invoice.created', {
@@ -569,9 +626,10 @@ export class InvoicesService {
             invoiceId: dto.id,
             invoiceNumber: (invoice as any).invoiceNumber || '',
             clientId: (invoice as any).clientId,
+            contactId: (invoice as any).contactId || undefined,
             projectId: (invoice as any).projectId || undefined,
-            proposalId: (data as any).proposalId || undefined,
-            contractId: (data as any).contractId || undefined,
+            proposalId: (invoice as any).quoteId || undefined,
+            contractId: (invoice as any).contractId || undefined,
             amount: (invoice as any).totalAmount || (invoice as any).total,
         });
 
@@ -837,6 +895,15 @@ export class InvoicesService {
             linkedEntityType: 'Invoice',
             linkedEntityId: invoiceId,
             description: 'Invoice PDF',
+            metadata: {
+                relatedEntities: {
+                    clientId: (invoice as any).clientId || null,
+                    contactId: (invoice as any).contactId || null,
+                    dealId: (invoice as any).projectId || null,
+                    proposalId: (invoice as any).quoteId || null,
+                    contractId: (invoice as any).contractId || null,
+                },
+            },
         });
         activityLogger.log({
             tenantId,
@@ -863,7 +930,8 @@ export class InvoicesService {
     async update(id: string, tenantId: string, data: UpdateInvoiceDto) {
         const existing = await invoicesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
-        const invoice = await invoicesRepository.update(id, tenantId, data);
+        const normalizedData = await this.normalizeAndValidateInvoiceLinks(tenantId, data as any, existing as any);
+        const invoice = await invoicesRepository.update(id, tenantId, normalizedData as any);
         const dto = toInvoiceResponseDto(invoice);
 
         eventBus.emit('invoice.updated', {
@@ -937,35 +1005,16 @@ export class InvoicesService {
                         id: true,
                         name: true,
                         projectNumber: true,
-                        jobSiteAddress: true,
-                        jobSiteCity: true,
-                        jobSiteState: true,
-                        jobSiteZip: true,
-                        projectPhotos: {
-                            select: {
-                                url: true,
-                                filename: true,
-                                mimeType: true,
-                                visibleToClient: true,
-                            },
-                            orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
-                            take: 12,
-                        },
                     },
                 },
                 quote: {
                     select: {
                         id: true,
                         quoteNumber: true,
-                        roofEstimate: {
-                            select: {
-                                address: true,
-                                satelliteImageUrl: true,
-                                photoUrls: true,
-                            },
-                        },
                     },
                 },
+                contract: { select: { id: true, contractNumber: true, title: true } },
+                contact: { select: { id: true, contactName: true, email: true } },
             },
         });
         if (!invoiceForSend) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
@@ -981,20 +1030,18 @@ export class InvoicesService {
             || 'Customer';
         const sender = await this.resolveInvoiceSender(tenantId, actorUserId);
         const { buffer, fileName } = await this.generatePdf(id, tenantId);
-        const roofAttachments = await this.collectRoofImageAttachments(invoiceForSend);
         const emailAttachments: InvoiceEmailAttachment[] = [
             {
                 filename: fileName,
                 content: buffer,
                 contentType: 'application/pdf',
             },
-            ...roofAttachments,
         ];
         const emailContent = this.buildInvoiceEmailContent({
             invoice: invoiceForSend,
             company,
             recipientName,
-            roofAttachmentCount: roofAttachments.length,
+            supportingAttachmentCount: 0,
         });
         const delivery = await sender.send({
             to: targetEmail,
@@ -1024,19 +1071,23 @@ export class InvoicesService {
             invoiceId: id,
             invoiceNumber: (existing as any).invoiceNumber || '',
             clientId: (existing as any).clientId || (existing as any).client?.id,
+            contactId: (existing as any).contactId || undefined,
+            projectId: (existing as any).projectId || undefined,
+            proposalId: (existing as any).quoteId || undefined,
+            contractId: (existing as any).contractId || undefined,
             recipientEmail: targetEmail,
         });
 
         activityLogger.log({
             tenantId, entityType: 'Invoice', entityId: id,
             action: 'STATUS_CHANGE', module: 'invoices',
-            description: `Invoice "${(existing as any).invoiceNumber || id}" emailed to ${targetEmail}${roofAttachments.length > 0 ? ` with ${roofAttachments.length} supporting attachment${roofAttachments.length === 1 ? '' : 's'}` : ''}`,
+            description: `Invoice "${(existing as any).invoiceNumber || id}" emailed to ${targetEmail}`,
             userId: actorUserId,
             metadata: {
                 newStatus: 'SENT',
                 recipientEmail: targetEmail,
                 senderEmail: sender.senderEmail,
-                roofAttachmentCount: roofAttachments.length,
+                attachmentCount: emailAttachments.length,
             },
         });
 
@@ -1126,6 +1177,10 @@ export class InvoicesService {
             oldStatus: (existing as any).status || 'DRAFT',
             newStatus,
             clientId,
+            contactId: (existing as any).contactId || undefined,
+            projectId: (existing as any).projectId || undefined,
+            proposalId: (existing as any).quoteId || undefined,
+            contractId: (existing as any).contractId || undefined,
             ownerUserId: actorUserId,
         });
 
@@ -1135,6 +1190,10 @@ export class InvoicesService {
             invoiceId: id,
             invoiceNumber: (existing as any).invoiceNumber || '',
             clientId,
+            contactId: (existing as any).contactId || undefined,
+            projectId: (existing as any).projectId || undefined,
+            proposalId: (existing as any).quoteId || undefined,
+            contractId: (existing as any).contractId || undefined,
             amount,
             status: newStatus,
             paidByUserId: actorUserId,
@@ -1273,6 +1332,10 @@ export class InvoicesService {
             invoiceId,
             invoiceNumber: (payment.invoice as any)?.invoiceNumber || '',
             clientId: payment.clientId,
+            contactId: (payment.invoice as any)?.contactId || undefined,
+            projectId: (payment.invoice as any)?.projectId || undefined,
+            proposalId: (payment.invoice as any)?.quoteId || undefined,
+            contractId: (payment.invoice as any)?.contractId || undefined,
             amount: payment.amount,
             refundAmount,
             status: normalizedStatus,

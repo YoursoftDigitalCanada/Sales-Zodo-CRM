@@ -103,3 +103,8 @@ export async function sendQuoteEmail(id: string): Promise<{ success: boolean; me
     const response = await api.post(`/quotes/${id}/send`);
     return response.data;
 }
+
+export async function downloadQuotePdf(id: string): Promise<Blob> {
+    const response = await api.get(`/quotes/${id}/pdf`, { responseType: "blob" });
+    return response.data;
+}

@@ -270,6 +270,30 @@ const DEFAULT_RULES = [
     runOncePerEntity: false,
   },
   {
+    name: 'Expense created bookkeeping sync',
+    description: 'Sync new expenses into bookkeeping with review status until approved or paid.',
+    triggerType: 'expense.created',
+    actions: ['sync_bookkeeping_expense'],
+    priority: 10,
+    runOncePerEntity: false,
+  },
+  {
+    name: 'Expense updated bookkeeping sync',
+    description: 'Update the linked bookkeeping transaction when an expense changes.',
+    triggerType: 'expense.updated',
+    actions: ['sync_bookkeeping_expense'],
+    priority: 10,
+    runOncePerEntity: false,
+  },
+  {
+    name: 'Expense approved bookkeeping sync',
+    description: 'Post approved expenses into bookkeeping.',
+    triggerType: 'expense.approved',
+    actions: ['sync_bookkeeping_expense'],
+    priority: 10,
+    runOncePerEntity: false,
+  },
+  {
     name: 'Expense deleted bookkeeping cleanup',
     description: 'Void the source bookkeeping transaction when an expense is deleted.',
     triggerType: 'expense.deleted',
@@ -390,7 +414,7 @@ class SalesAutomationService {
       else if (status === 'CANCELLED' || status === 'CANCELED') this.executeTrigger('invoice.cancelled', 'Invoice', event.invoiceId, event);
       else this.executeTrigger('invoice.status.changed', 'Invoice', event.invoiceId, event);
     });
-    eventBus.on('payment.received', (event) => this.executeTrigger('payment.received', 'InvoicePayment', event.invoiceId, event));
+    eventBus.on('payment.received', (event) => this.executeTrigger('payment.received', 'InvoicePayment', event.paymentId || event.invoiceId, event));
     eventBus.on('payment.failed', (event) => this.executeTrigger('payment.failed', 'InvoicePayment', event.paymentId || event.invoiceId, event));
     eventBus.on('payment.refunded', (event) => this.executeTrigger('payment.refunded', 'InvoicePayment', event.paymentId || event.invoiceId, event));
     eventBus.on('payment.partially_refunded', (event) => this.executeTrigger('payment.partially_refunded', 'InvoicePayment', event.paymentId || event.invoiceId, event));
@@ -402,6 +426,7 @@ class SalesAutomationService {
     eventBus.on('onboarding.completed', (event) => this.executeTrigger('onboarding.completed', 'Customer', event.customerId || event.clientId || '', event));
     eventBus.on('customer.followupDue', (event) => this.executeTrigger('customer.followupDue', 'Customer', event.customerId || event.clientId || '', event));
     eventBus.on('expense.created', (event) => this.executeTrigger('expense.created', 'Expense', event.expenseId, event));
+    eventBus.on('expense.updated', (event) => this.executeTrigger('expense.updated', 'Expense', event.expenseId, event));
     eventBus.on('expense.approved', (event) => this.executeTrigger('expense.approved', 'Expense', event.expenseId, event));
     eventBus.on('expense.deleted', (event) => this.executeTrigger('expense.deleted', 'Expense', event.expenseId, event));
 
@@ -795,6 +820,9 @@ class SalesAutomationService {
       add('create_customer_followup_task', { channel: 'TASK' });
       add('notify_owner', { channel: 'NOTIFICATION' });
     }
+    if (['expense.created', 'expense.updated', 'expense.approved'].includes(triggerType)) {
+      add('sync_bookkeeping_expense');
+    }
     if (['payment.failed', 'payment.refunded', 'payment.partially_refunded', 'payment.partiallyRefunded', 'payment.voided'].includes(triggerType)) {
       add('sync_bookkeeping_reversal');
       add('notify_accounting', { channel: 'NOTIFICATION' });
@@ -1160,7 +1188,7 @@ class SalesAutomationService {
         fullyPaid
           ? `Invoice ${input.invoiceNumber || invoiceId} is fully paid.`
           : `Partial payment recorded for invoice ${input.invoiceNumber || invoiceId}. Remaining reminders are still active.`,
-        `/invoices/${invoiceId}`,
+        `/invoice/${invoiceId}`,
         this.idempotencyKey(input.tenantId, triggerType, 'Invoice', invoiceId, 'payment-notification'),
         triggerType,
         'Invoice',
@@ -1194,9 +1222,22 @@ class SalesAutomationService {
         input.tenantId,
         'Payment needs accounting review',
         `Payment ${input.paymentId || entityId} was ${triggerType.replace('payment.', '').replace(/([A-Z])/g, ' $1').toLowerCase()}. Bookkeeping has been queued for correction.`,
-        input.invoiceId ? `/invoices/${input.invoiceId}` : '/bookkeeping',
+        input.invoiceId ? `/invoice/${input.invoiceId}` : '/bookkeeping',
       );
       output.actions.push('bookkeeping_reversal_synced');
+    }
+    if (['expense.created', 'expense.updated', 'expense.approved'].includes(triggerType)) {
+      await this.runSideEffect(
+        input.tenantId,
+        triggerType,
+        'Expense',
+        input.expenseId || entityId,
+        'bookkeeping-expense-sync',
+        'bookkeeping',
+        () => bookkeepingService.syncExpense(input.tenantId, input.expenseId || entityId),
+        input,
+      );
+      output.actions.push('expense_bookkeeping_synced');
     }
     if (triggerType === 'expense.deleted') {
       await this.runSideEffect(
@@ -2459,7 +2500,7 @@ class SalesAutomationService {
   }
 
   private entityUrl(reminder: any) {
-    if (reminder.entityType === 'Invoice') return `/invoices/${reminder.entityId}`;
+    if (reminder.entityType === 'Invoice') return `/invoice/${reminder.entityId}`;
     if (reminder.entityType === 'Proposal') return `/proposals/${reminder.entityId}`;
     if (reminder.entityType === 'Contract') return `/contracts/${reminder.entityId}`;
     return undefined;

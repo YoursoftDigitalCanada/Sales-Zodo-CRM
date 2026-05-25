@@ -13,6 +13,7 @@ router.use(loadEmployee);
 router.get('/', requirePermission(PERMISSIONS.QUOTES_VIEW), validateQuery(quoteQuerySchema), quotesController.getMany.bind(quotesController));
 router.post('/', requirePermission(PERMISSIONS.QUOTES_CREATE), validateBody(createQuoteSchema), quotesController.create.bind(quotesController));
 router.get('/:id', requirePermission(PERMISSIONS.QUOTES_VIEW), quotesController.getById.bind(quotesController));
+router.get('/:id/pdf', requirePermission(PERMISSIONS.QUOTES_VIEW), quotesController.downloadPdf.bind(quotesController));
 router.put('/:id', requirePermission(PERMISSIONS.QUOTES_UPDATE), validateBody(updateQuoteSchema), quotesController.update.bind(quotesController));
 router.delete('/:id', requirePermission(PERMISSIONS.QUOTES_DELETE), quotesController.delete.bind(quotesController));
 router.patch('/:id/status', requirePermission(PERMISSIONS.QUOTES_UPDATE), quotesController.updateStatus.bind(quotesController));

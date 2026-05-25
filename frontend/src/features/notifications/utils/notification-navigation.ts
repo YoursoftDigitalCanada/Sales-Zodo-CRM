@@ -52,7 +52,7 @@ export function resolveNotificationTarget(source?: NotificationNavigationSource 
     if (metadataClientId) return `/client-list/${metadataClientId}`;
     if (metadataProposalId) return withQuery("/proposals", "proposalId", metadataProposalId);
     if (metadataQuoteId) return withQuery("/proposals", "quoteId", metadataQuoteId);
-    if (metadataContractId) return `/documents?linkedEntityType=Contract&linkedEntityId=${encodeURIComponent(metadataContractId)}`;
+    if (metadataContractId) return withQuery("/contracts", "contractId", metadataContractId);
     if (metadataDocumentId) return `/documents?documentId=${encodeURIComponent(metadataDocumentId)}`;
     if (metadataRoomId) return withQuery("/chats", "conversationId", metadataRoomId);
     if (metadataTaskId) return withQuery("/tasks", "taskId", metadataTaskId);
@@ -93,10 +93,10 @@ export function resolveNotificationTarget(source?: NotificationNavigationSource 
     const proposalId = pathname.split("/")[2];
     return withQuery("/proposals", "proposalId", proposalId);
   }
-  if (pathname === "/contracts") return `/documents?linkedEntityType=Contract`;
+  if (pathname === "/contracts") return `/contracts${search}`;
   if (/^\/contracts\/[^/]+$/.test(pathname)) {
     const contractId = pathname.split("/")[2];
-    return `/documents?linkedEntityType=Contract&linkedEntityId=${encodeURIComponent(contractId)}`;
+    return withQuery("/contracts", "contractId", contractId);
   }
   if (pathname === "/chat") return `/chats${search}`;
   if (/^\/chat\/[^/]+$/.test(pathname)) {

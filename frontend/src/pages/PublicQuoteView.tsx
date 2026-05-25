@@ -183,12 +183,12 @@ const normalizeRoofEstimatePhotos = (photos?: Array<string | RoofEstimatePhoto> 
       if (typeof photo === "string") {
         const url = resolvePublicAssetUrl(photo);
         if (!url) return null;
-        return { label: `Roof Photo ${index + 1}`, url };
+        return { label: `Supporting Photo ${index + 1}`, url };
       }
       const url = resolvePublicAssetUrl(photo?.url);
       if (!url) return null;
       return {
-        label: photo?.label?.trim() || `Roof Photo ${index + 1}`,
+        label: photo?.label?.trim() || `Supporting Photo ${index + 1}`,
         url,
       };
     })
@@ -220,13 +220,13 @@ export default function PublicQuoteView() {
         const res = await fetch(buildApiUrl(`/public/quotes/${token}`));
         if (!res.ok) {
           const payload = await res.json().catch(() => ({}));
-          throw new Error(payload.message || "Estimate not found or link has expired.");
+          throw new Error(payload.message || "Proposal not found or link has expired.");
         }
         const data = await res.json();
         setQuote(data);
         setFullName((current) => current || data.client?.name || "");
       } catch (err: any) {
-        setError(err.message || "Unable to load estimate.");
+        setError(err.message || "Unable to load proposal.");
       } finally {
         setLoading(false);
       }
@@ -338,7 +338,7 @@ export default function PublicQuoteView() {
     const normalizedSignatureType = signatureMode === "type" ? "typed" : "drawn";
 
     if (action === "sign" && !name) {
-      setError("Full name is required to sign the estimate.");
+      setError("Full name is required to sign the proposal.");
       return;
     }
 
@@ -353,7 +353,7 @@ export default function PublicQuoteView() {
     }
 
     if (action === "sign" && !agreeToTerms) {
-      setError("Please agree to the estimate terms before signing.");
+      setError("Please agree to the proposal terms before signing.");
       return;
     }
 
@@ -400,7 +400,7 @@ export default function PublicQuoteView() {
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6">
         <div className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-8 text-center min-w-[280px]">
           <Loader2 className="h-8 w-8 animate-spin text-[#0891B2] mx-auto mb-3" />
-          <p className="text-sm text-[#475569]">Loading estimate...</p>
+          <p className="text-sm text-[#475569]">Loading proposal...</p>
         </div>
       </div>
     );
@@ -413,7 +413,7 @@ export default function PublicQuoteView() {
           <div className="w-12 h-12 rounded-md bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
             <AlertTriangle className="h-5 w-5" />
           </div>
-          <h1 className="text-xl font-bold text-[#0F172A] mb-2">Estimate Unavailable</h1>
+          <h1 className="text-xl font-bold text-[#0F172A] mb-2">Proposal Unavailable</h1>
           <p className="text-sm text-[#475569]">{error}</p>
         </div>
       </div>
@@ -436,7 +436,7 @@ export default function PublicQuoteView() {
                 )}
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wider text-[#94A3B8]">Estimate Contract</p>
+                <p className="text-xs uppercase tracking-wider text-[#94A3B8]">Sales Proposal</p>
                 <h1 className="text-xl font-bold text-[#0F172A]">{quote.company.companyName}</h1>
                 <p className="text-sm text-[#475569]">{quote.quoteNumber}</p>
               </div>
@@ -495,11 +495,11 @@ export default function PublicQuoteView() {
                     <div className="p-4 bg-[#F8FAFC] rounded-md">
                       <p className="text-xs text-[#94A3B8] mb-1">Assessment Type</p>
                       <p className="text-sm font-semibold text-[#0F172A]">
-                        {[quote.roofEstimate.pitch, quote.roofEstimate.roofType].filter(Boolean).join(" · ") || "Service Estimate"}
+                        {[quote.roofEstimate.pitch, quote.roofEstimate.roofType].filter(Boolean).join(" · ") || "Service Assessment"}
                       </p>
                     </div>
                     <div className="p-4 bg-[#F8FAFC] rounded-md">
-                      <p className="text-xs text-[#94A3B8] mb-1">AI Estimate Total</p>
+                      <p className="text-xs text-[#94A3B8] mb-1">Assessment Total</p>
                       <p className="text-sm font-semibold text-[#0F172A]">
                         {quote.roofEstimate.totalEstimate !== null && quote.roofEstimate.totalEstimate !== undefined
                           ? formatCurrency(quote.roofEstimate.totalEstimate, quote.currency)
@@ -541,12 +541,12 @@ export default function PublicQuoteView() {
                         <div className="border border-[rgba(15,23,42,0.06)] rounded-md overflow-hidden bg-[#F8FAFC]">
                           <img
                             src={roofEstimateSatelliteUrl}
-                            alt="Roof satellite view"
+                            alt="Assessment imagery"
                             className="w-full h-56 object-cover bg-white"
                           />
                           <div className="p-3">
                             <p className="text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Satellite View</p>
-                            <p className="text-sm text-[#475569] mt-1">{quote.roofEstimate.address || quote.project.address || "Property imagery"}</p>
+                            <p className="text-sm text-[#475569] mt-1">{quote.roofEstimate.address || quote.project.address || "Supporting imagery"}</p>
                           </div>
                         </div>
                       )}
@@ -559,7 +559,7 @@ export default function PublicQuoteView() {
                             className="w-full h-56 object-cover bg-white"
                           />
                           <div className="p-3">
-                            <p className="text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Roof Photo</p>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-[#94A3B8]">Supporting Photo</p>
                             <p className="text-sm text-[#475569] mt-1">{photo.label}</p>
                           </div>
                         </div>
@@ -635,7 +635,7 @@ export default function PublicQuoteView() {
 
                   {quote.roofEstimate.notes && (
                     <div className="p-4 bg-[#F8FAFC] rounded-md">
-                      <p className="text-xs text-[#94A3B8] mb-2">Roof Estimate Notes</p>
+                      <p className="text-xs text-[#94A3B8] mb-2">Assessment Notes</p>
                       <p className="text-sm text-[#475569] whitespace-pre-line">{quote.roofEstimate.notes}</p>
                     </div>
                   )}
@@ -729,7 +729,7 @@ export default function PublicQuoteView() {
                     <AlertTriangle className="h-5 w-5 text-[#0891B2] mt-0.5" />
                     <div>
                       <p className="text-sm font-semibold text-[#0F172A]">Digital signature required</p>
-                      <p className="text-sm text-[#475569]">Please review the estimate details above and complete the signature below to finalize your approval.</p>
+                      <p className="text-sm text-[#475569]">Please review the proposal details above and complete the signature below to finalize your approval.</p>
                     </div>
                   </div>
                 </div>
@@ -752,8 +752,8 @@ export default function PublicQuoteView() {
                   <div className="flex items-start gap-3">
                     <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-red-700">Estimate Rejected</p>
-                      <p className="text-sm text-red-700">This estimate has been rejected and is now read-only.</p>
+                      <p className="text-sm font-semibold text-red-700">Proposal Rejected</p>
+                      <p className="text-sm text-red-700">This proposal has been rejected and is now read-only.</p>
                     </div>
                   </div>
                 </div>
@@ -764,8 +764,8 @@ export default function PublicQuoteView() {
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-amber-700">Estimate Expired</p>
-                      <p className="text-sm text-amber-700">This estimate is no longer available for signature.</p>
+                      <p className="text-sm font-semibold text-amber-700">Proposal Expired</p>
+                      <p className="text-sm text-amber-700">This proposal is no longer available for signature.</p>
                     </div>
                   </div>
                 </div>
@@ -821,7 +821,7 @@ export default function PublicQuoteView() {
 
                   <label className="flex items-start gap-3 rounded-md p-3 bg-[#F8FAFC] cursor-pointer">
                     <Checkbox checked={agreeToTerms} onCheckedChange={(checked) => setAgreeToTerms(Boolean(checked))} />
-                    <span className="text-sm text-[#475569]">I agree to the estimate, scope of work, taxes, and terms shown above.</span>
+                    <span className="text-sm text-[#475569]">I agree to the proposal, scope of work, taxes, and terms shown above.</span>
                   </label>
 
                   {error && <p className="text-sm text-red-600">{error}</p>}
@@ -834,7 +834,7 @@ export default function PublicQuoteView() {
                       onClick={() => handleRespond("sign")}
                     >
                       {responding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                      Sign Contract
+                      Sign Proposal
                     </Button>
                     <Button
                       type="button"
@@ -843,7 +843,7 @@ export default function PublicQuoteView() {
                       disabled={responding || !quote.canReject}
                       onClick={() => handleRespond("reject")}
                     >
-                      Reject Estimate
+                      Reject Proposal
                     </Button>
                   </div>
                 </div>

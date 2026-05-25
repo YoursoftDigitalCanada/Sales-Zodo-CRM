@@ -32,6 +32,7 @@ export interface BusinessDocument {
   isShared: boolean;
   shareLink?: string | null;
   shareExpiresAt?: string | null;
+  uploadedById?: string | null;
   createdAt: string;
   updatedAt: string;
 }

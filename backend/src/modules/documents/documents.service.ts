@@ -111,6 +111,7 @@ function toDocument(file: any) {
     isShared: file.isShared,
     shareLink: file.shareLink,
     shareExpiresAt: file.shareExpiresAt,
+    uploadedById: file.uploadedById || null,
     createdAt: file.createdAt,
     updatedAt: file.updatedAt,
     deletedAt: file.deletedAt,
@@ -212,13 +213,14 @@ export class DocumentsService {
     };
   }
 
-  async upload(tenantId: string, file: Express.Multer.File, body: Record<string, unknown>) {
+  async upload(tenantId: string, file: Express.Multer.File, body: Record<string, unknown>, uploadedById?: string | null) {
     const saved = await filesService.upload(tenantId, file, {
       folderId: cleanString(body.folderId, 80) || undefined,
       projectId: cleanString(body.projectId, 80) || undefined,
       clientId: cleanString(body.clientId, 80) || undefined,
       leadId: cleanString(body.leadId, 80) || undefined,
       quoteId: cleanString(body.quoteId, 80) || undefined,
+      uploadedById: uploadedById || null,
     });
     await this.upsertMetadata(saved.id, tenantId, body);
     return this.get(saved.id, tenantId);

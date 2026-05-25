@@ -2,7 +2,11 @@ import { Prisma, ContractStatus } from '@prisma/client';
 import { CreateContractDto, UpdateContractDto, ContractQueryDto } from './contracts.dto';
 import { prisma } from '../../config/database';
 const contractInclude = {
-    client: { select: { id: true, clientName: true } },
+    client: { select: { id: true, clientName: true, companyName: true, primaryEmail: true, primaryPhone: true } },
+    contact: { select: { id: true, contactName: true, email: true, companyId: true } },
+    quote: { select: { id: true, quoteNumber: true, total: true, currency: true, terms: true, notes: true, items: { orderBy: { sortOrder: 'asc' as const } } } },
+    project: { select: { id: true, name: true, stage: true } },
+    createdBy: { select: { id: true, userId: true } },
 };
 
 async function generateContractNumber(tenantId: string): Promise<string> {
@@ -22,6 +26,7 @@ export class ContractsRepository {
                 title: data.title,
                 description: data.description || null,
                 clientId: data.clientId,
+                contactId: data.contactId || null,
                 quoteId: data.quoteId || null,
                 projectId: data.projectId || null,
                 value: data.value,
@@ -79,6 +84,7 @@ export class ContractsRepository {
                 ...(data.title !== undefined && { title: data.title }),
                 ...(data.description !== undefined && { description: data.description }),
                 ...(data.clientId !== undefined && { clientId: data.clientId }),
+                ...(data.contactId !== undefined && { contactId: data.contactId }),
                 ...(data.quoteId !== undefined && { quoteId: data.quoteId }),
                 ...(data.projectId !== undefined && { projectId: data.projectId }),
                 ...(data.value !== undefined && { value: data.value }),

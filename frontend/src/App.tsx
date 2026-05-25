@@ -9,7 +9,7 @@ import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { SessionTakeoverGuard } from "@/components/SessionTakeoverGuard";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate, useParams } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { ThemeProvider, useTheme } from "next-themes";
 import { CopilotContextProvider } from "@/contexts/CopilotContext";
 import { Sidebar, SidebarSuppressionContext } from "@/components/Sidebar";
@@ -105,6 +105,7 @@ import PaymentsPage from "./pages/Payments";
 import BookkeepingPage from "./pages/Bookkeeping";
 import AutomationPage from "./pages/Automation";
 import ExpensesPage from "./pages/Expenses";
+import ContractsPage from "./pages/Contracts";
 
 // import EcommercePage from "./pages/Ecommerce";
 // import ServicesPage from "./pages/ServicesPage";
@@ -235,14 +236,6 @@ const SETTINGS_ROUTE_PERMISSIONS = [
 ];
 
 const EMAIL_ROUTE_PERMISSIONS = ["emails.view", "emails.send"];
-
-const ContractDocumentRedirect = () => {
-  const { id } = useParams();
-  const target = id
-    ? `/documents?linkedEntityType=Contract&linkedEntityId=${encodeURIComponent(id)}`
-    : "/documents?linkedEntityType=Contract";
-  return <Navigate to={target} replace />;
-};
 
 const publicRoofingRoute = (element: ReactElement) =>
   isRoofingPublicMarketingEnabled ? element : <Navigate to="/product" replace />;
@@ -872,8 +865,22 @@ const AppRoutes = () => {
             </AccessGuard>
           }
         />
-        <Route path="/contracts" element={<ContractDocumentRedirect />} />
-        <Route path="/contracts/:id" element={<ContractDocumentRedirect />} />
+        <Route
+          path="/contracts"
+          element={
+            <AccessGuard featureId="finance" permissionModule="contracts" action="view">
+              <ContractsPage />
+            </AccessGuard>
+          }
+        />
+        <Route
+          path="/contracts/:id"
+          element={
+            <AccessGuard featureId="finance" permissionModule="contracts" action="view">
+              <ContractsPage />
+            </AccessGuard>
+          }
+        />
 
         {/* Invoice routes using Layout wrapper */}
         <Route element={<Layout />}>

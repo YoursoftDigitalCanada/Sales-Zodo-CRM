@@ -18,6 +18,7 @@ export interface UploadFileDto {
     quoteId?: string | null;
     applicationId?: string | null;
     checksum?: string | null;
+    uploadedById?: string | null;
     fromAddress?: string;
 }
 
@@ -78,6 +79,7 @@ export interface FileResponseDto {
     shareLink: string | null;
     shareExpiresAt: Date | null;
     checksum: string | null;
+    uploadedById: string | null;
     tags: { id: string; name: string; color: string | null }[];
     createdAt: Date;
     updatedAt: Date;
@@ -118,6 +120,7 @@ export function toFileResponseDto(f: FileWithRelations): FileResponseDto {
         shareLink: f.shareLink,
         shareExpiresAt: f.shareExpiresAt,
         checksum: f.checksum,
+        uploadedById: (f as any).uploadedById || null,
         tags: (f.tags || []).map((ft: any) => ({
             id: ft.tag?.id || ft.id,
             name: ft.tag?.name || ft.name,

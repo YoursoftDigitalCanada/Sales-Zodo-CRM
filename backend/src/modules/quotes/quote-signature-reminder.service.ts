@@ -19,9 +19,9 @@ interface ReminderSchedule {
 }
 
 const REMINDER_SCHEDULE: ReminderSchedule[] = [
-    { day: 3, subject: 'Quick reminder to review and sign your estimate', message: 'Just checking in on the estimate we sent over.' },
-    { day: 7, subject: 'Your roofing estimate is still waiting for signature', message: 'Your estimate is still open and ready whenever you are.' },
-    { day: 14, subject: 'Friendly follow-up on your roofing estimate', message: 'We wanted to make sure the estimate did not get buried in your inbox.' },
+    { day: 3, subject: 'Quick reminder to review and sign your proposal', message: 'Just checking in on the proposal we sent over.' },
+    { day: 7, subject: 'Your proposal is still waiting for signature', message: 'Your proposal is still open and ready whenever you are.' },
+    { day: 14, subject: 'Friendly follow-up on your proposal', message: 'We wanted to make sure the proposal did not get buried in your inbox.' },
 ];
 
 class QuoteSignatureReminderService {
@@ -90,11 +90,11 @@ class QuoteSignatureReminderService {
   <div style="max-width:640px;margin:0 auto;background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:32px;">
     <h2 style="margin:0 0 12px;font-size:20px;color:#0F172A;">Hi ${reminder.recipientName},</h2>
     <p style="margin:0 0 16px;font-size:14px;color:#475569;line-height:1.6;">${schedule.message}</p>
-    <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">You can open the estimate and sign it online using the secure link below.</p>
-    <a href="${reminder.publicLink}" style="display:inline-block;background:#0891B2;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:600;">Review &amp; Sign Estimate</a>
+    <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">You can open the proposal and sign it online using the secure link below.</p>
+    <a href="${reminder.publicLink}" style="display:inline-block;background:#0891B2;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:600;">Review &amp; Sign Proposal</a>
   </div>
 </div>`,
-                    text: `${schedule.message} Review and sign your estimate here: ${reminder.publicLink}`,
+                    text: `${schedule.message} Review and sign your proposal here: ${reminder.publicLink}`,
                 });
                 if (!delivery.sent) {
                     logger.warn('[QuoteReminder] Email reminder delivery failed', {

@@ -40,6 +40,11 @@ export async function getAutomationRuns(params?: Record<string, unknown>) {
   return extract<AutomationRecord[]>(res);
 }
 
+export async function retryAutomationRun(id: string) {
+  const res = await api.post(`/automation/runs/${id}/retry`);
+  return extract<AutomationRecord>(res);
+}
+
 export async function getAutomationReminders(params?: Record<string, unknown>) {
   const res = await api.get("/automation/reminders", { params });
   return extract<AutomationRecord[]>(res);

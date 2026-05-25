@@ -6,6 +6,9 @@ import { documentsService } from '../documents/documents.service';
 import { filesService } from '../files/files.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { eventBus } from '../../common/events/event-bus';
+import { BadRequestError, NotFoundError } from '../../common/errors/HttpErrors';
+import { ErrorCodes } from '../../common/errors/errorCodes';
+import { invoicesService } from '../invoices/invoices.service';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
@@ -13,14 +16,38 @@ import path from 'path';
 const db = prisma as any;
 
 export class ContractsService {
+    private async validateContractLinks(tenantId: string, data: Partial<CreateContractDto | UpdateContractDto>) {
+        if (data.clientId) {
+            const client = await prisma.client.findFirst({ where: { id: data.clientId, tenantId }, select: { id: true } });
+            if (!client) throw new BadRequestError('Client does not exist for this tenant.');
+        }
+        if ((data as any).contactId) {
+            const contact = await prisma.contact.findFirst({ where: { id: (data as any).contactId, tenantId }, select: { id: true, companyId: true } });
+            if (!contact) throw new BadRequestError('Contact does not exist for this tenant.');
+            if (data.clientId && contact.companyId && contact.companyId !== data.clientId) {
+                throw new BadRequestError('Contact does not belong to the selected company.');
+            }
+        }
+        if (data.quoteId) {
+            const quote = await prisma.quote.findFirst({ where: { id: data.quoteId, tenantId }, select: { id: true } });
+            if (!quote) throw new BadRequestError('Proposal does not exist for this tenant.');
+        }
+        if (data.projectId) {
+            const deal = await prisma.project.findFirst({ where: { id: data.projectId, tenantId }, select: { id: true } });
+            if (!deal) throw new BadRequestError('Deal does not exist for this tenant.');
+        }
+    }
+
     async create(tenantId: string, data: CreateContractDto, createdById?: string) {
+        await this.validateContractLinks(tenantId, data);
         const contract = await contractsRepository.create(tenantId, data, createdById);
         eventBus.emit('contract.created', {
             tenantId,
             contractId: contract.id,
-            contractNumber: contract.contractNumber,
-            clientId: contract.client?.id || (contract as any).clientId || undefined,
-            projectId: contract.projectId || undefined,
+                contractNumber: contract.contractNumber,
+                clientId: contract.client?.id || (contract as any).clientId || undefined,
+                contactId: (contract as any).contactId || undefined,
+                projectId: contract.projectId || undefined,
             quoteId: contract.quoteId || undefined,
             value: contract.value ? Number(contract.value) : undefined,
         });
@@ -29,7 +56,7 @@ export class ContractsService {
 
     async getById(id: string, tenantId: string) {
         const contract = await contractsRepository.findById(id, tenantId);
-        if (!contract) throw new Error('Contract not found');
+        if (!contract) throw new NotFoundError('Contract not found', ErrorCodes.RESOURCE_NOT_FOUND);
         return toContractResponseDto(contract);
     }
 
@@ -49,6 +76,7 @@ export class ContractsService {
     }
 
     async update(id: string, tenantId: string, data: UpdateContractDto) {
+        await this.validateContractLinks(tenantId, data);
         const contract = await contractsRepository.update(id, tenantId, data);
         return toContractResponseDto(contract);
     }
@@ -61,9 +89,11 @@ export class ContractsService {
                 contractId: id,
                 contractNumber: contract.contractNumber,
                 clientId: contract.client?.id,
+                contactId: (contract as any).contactId || undefined,
                 projectId: contract.projectId || undefined,
                 quoteId: contract.quoteId || undefined,
                 recipientEmail: (contract as any).client?.primaryEmail || undefined,
+                ownerUserId: (contract as any).createdBy?.userId || undefined,
             });
         }
         if (status === 'ACTIVE') {
@@ -72,10 +102,12 @@ export class ContractsService {
                 contractId: id,
                 contractNumber: contract.contractNumber,
                 clientId: contract.client?.id,
+                contactId: (contract as any).contactId || undefined,
                 projectId: contract.projectId || undefined,
                 quoteId: contract.quoteId || undefined,
                 signedAt: contract.signedAt || undefined,
                 recipientEmail: (contract as any).client?.primaryEmail || undefined,
+                ownerUserId: (contract as any).createdBy?.userId || undefined,
             });
         }
         if (status === 'CANCELLED') {
@@ -84,8 +116,10 @@ export class ContractsService {
                 contractId: id,
                 contractNumber: contract.contractNumber,
                 clientId: contract.client?.id,
+                contactId: (contract as any).contactId || undefined,
                 projectId: contract.projectId || undefined,
                 quoteId: contract.quoteId || undefined,
+                ownerUserId: (contract as any).createdBy?.userId || undefined,
             });
         }
         if (status === 'EXPIRED') {
@@ -94,12 +128,57 @@ export class ContractsService {
                 contractId: id,
                 contractNumber: contract.contractNumber,
                 clientId: contract.client?.id,
+                contactId: (contract as any).contactId || undefined,
                 projectId: contract.projectId || undefined,
                 quoteId: contract.quoteId || undefined,
                 expiredAt: new Date(),
+                ownerUserId: (contract as any).createdBy?.userId || undefined,
             });
         }
         return toContractResponseDto(contract);
+    }
+
+    async send(id: string, tenantId: string, actorUserId?: string) {
+        const contract = await this.updateStatus(id, tenantId, 'SENT', actorUserId);
+        activityLogger.log({
+            tenantId,
+            entityType: 'Contract',
+            entityId: id,
+            action: 'STATUS_CHANGE',
+            module: 'contracts',
+            description: `Contract "${contract.contractNumber}" sent`,
+            userId: actorUserId,
+        });
+        return contract;
+    }
+
+    async sign(id: string, tenantId: string, actorUserId?: string) {
+        const contract = await this.updateStatus(id, tenantId, 'ACTIVE', actorUserId);
+        activityLogger.log({
+            tenantId,
+            entityType: 'Contract',
+            entityId: id,
+            action: 'STATUS_CHANGE',
+            module: 'contracts',
+            description: `Contract "${contract.contractNumber}" signed`,
+            userId: actorUserId,
+        });
+        return contract;
+    }
+
+    async decline(id: string, tenantId: string, actorUserId?: string, reason?: string) {
+        const contract = await this.updateStatus(id, tenantId, 'CANCELLED', actorUserId);
+        activityLogger.log({
+            tenantId,
+            entityType: 'Contract',
+            entityId: id,
+            action: 'STATUS_CHANGE',
+            module: 'contracts',
+            description: `Contract "${contract.contractNumber}" declined${reason ? `: ${reason}` : ''}`,
+            userId: actorUserId,
+            metadata: reason ? { reason } : undefined,
+        });
+        return contract;
     }
 
     async generatePdf(id: string, tenantId: string): Promise<{ buffer: Buffer; fileName: string }> {
@@ -235,6 +314,7 @@ export class ContractsService {
                         projectId: (contract as any).projectId || null,
                         quoteId: (contract as any).quoteId || null,
                         clientId: (contract as any).client?.id || (contract as any).clientId || null,
+                        contactId: (contract as any).contactId || null,
                     },
                 },
             },
@@ -250,6 +330,58 @@ export class ContractsService {
             metadata: { fileId: saved.id, variant },
         });
         return document;
+    }
+
+    async createInvoiceFromContract(contractId: string, tenantId: string) {
+        const contract = await contractsRepository.findById(contractId, tenantId);
+        if (!contract) throw new NotFoundError('Contract not found', ErrorCodes.RESOURCE_NOT_FOUND);
+
+        const existing = await prisma.invoice.findFirst({
+            where: {
+                tenantId,
+                clientId: (contract as any).clientId,
+                ...(contract.quoteId ? { quoteId: contract.quoteId } : {}),
+                ...(contract.projectId ? { projectId: contract.projectId } : {}),
+                notes: { contains: `Contract: ${contract.contractNumber}` },
+            },
+            include: { client: true, items: true, payments: true },
+        });
+        if (existing) return existing;
+
+        const quoteItems = Array.isArray((contract as any).quote?.items) ? (contract as any).quote.items : [];
+        const items = quoteItems.length > 0
+            ? quoteItems.map((item: any, index: number) => ({
+                description: item.description || `Contract item ${index + 1}`,
+                quantity: Number(item.quantity || 1),
+                unitPrice: Number(item.unitPrice || item.rate || 0),
+                amount: Number(item.total || item.amount || (Number(item.quantity || 1) * Number(item.unitPrice || item.rate || 0))),
+                sortOrder: index,
+            }))
+            : [{
+                description: (contract as any).title || `Contract ${contract.contractNumber}`,
+                quantity: 1,
+                unitPrice: Number((contract as any).value || 0),
+                amount: Number((contract as any).value || 0),
+                sortOrder: 0,
+            }];
+
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 30);
+        return invoicesService.create(tenantId, {
+            clientId: (contract as any).clientId,
+            contactId: (contract as any).contactId || undefined,
+            quoteId: (contract as any).quoteId || undefined,
+            projectId: (contract as any).projectId || undefined,
+            contractId,
+            issueDate: new Date().toISOString(),
+            dueDate: dueDate.toISOString(),
+            currency: (contract as any).currency || 'CAD',
+            taxRate: 0,
+            discountAmount: 0,
+            notes: `Contract: ${contract.contractNumber}`,
+            terms: (contract as any).terms || undefined,
+            items,
+        } as any);
     }
 
     async delete(id: string, tenantId: string) {

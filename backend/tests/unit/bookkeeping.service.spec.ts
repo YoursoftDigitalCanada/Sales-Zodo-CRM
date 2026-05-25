@@ -338,6 +338,24 @@ describe('BookkeepingService', () => {
     }));
   });
 
+  it('profit and loss subtracts payment refunds from income', async () => {
+    mockDb.bookkeepingTransaction.findMany.mockResolvedValue([
+      { type: 'INCOME', amount: 250, status: 'POSTED', categoryId: 'category-1', transactionDate: new Date('2026-05-22T00:00:00.000Z') },
+      { type: 'REFUND', amount: 75, status: 'POSTED', categoryId: 'category-1', transactionDate: new Date('2026-05-23T00:00:00.000Z') },
+      { type: 'EXPENSE', amount: 40, status: 'POSTED', categoryId: 'category-2', transactionDate: new Date('2026-05-24T00:00:00.000Z') },
+    ]);
+    mockDb.bookkeepingCategory.findMany
+      .mockResolvedValueOnce([{ id: 'category-1', name: 'Subscriptions' }])
+      .mockResolvedValueOnce([{ id: 'category-2', name: 'Software' }]);
+
+    const report = await bookkeepingService.profitLoss('tenant-1', { dateFrom: '2026-05-01', dateTo: '2026-05-31' });
+
+    expect(report.totals.income).toBe(175);
+    expect(report.totals.expenses).toBe(40);
+    expect(report.netProfit).toBe(135);
+    expect(report.income).toEqual([{ name: 'Subscriptions', total: 175 }]);
+  });
+
   it('voided payment voids source bookkeeping transaction', async () => {
     mockDb.bookkeepingAccount.count.mockResolvedValue(1);
     mockDb.invoicePayment.findFirst.mockResolvedValue({ id: 'payment-1', tenantId: 'tenant-1', invoiceId: 'invoice-1', amount: 250, status: 'VOIDED', invoice: { currency: 'CAD' } });
@@ -467,6 +485,56 @@ describe('BookkeepingService', () => {
         metadata: expect.objectContaining({ syncStatus: 'reversed' }),
       }),
     }));
+  });
+
+  it('reconciled expense increase creates an additional expense adjustment instead of increasing cash', async () => {
+    mockDb.bookkeepingAccount.count.mockResolvedValue(1);
+    mockDb.bookkeepingAccount.findFirst.mockResolvedValue({ id: 'account-1', tenantId: 'tenant-1', name: 'Bank Account', type: 'ASSET' });
+    mockDb.bookkeepingCategory.findFirst.mockResolvedValue({ id: 'category-1', tenantId: 'tenant-1', name: 'Software', type: 'EXPENSE' });
+    mockDb.expense.findFirst.mockResolvedValueOnce({
+      id: 'expense-1',
+      tenantId: 'tenant-1',
+      title: 'Software subscription',
+      category: 'SOFTWARE',
+      amount: 125,
+      currency: 'CAD',
+      paymentDate: new Date('2026-05-22T00:00:00.000Z'),
+      paymentMethod: 'CARD',
+      vendor: 'Vendor One',
+      receiptNumber: 'R-1',
+      status: 'APPROVED',
+    });
+    mockDb.bookkeepingTransaction.findFirst
+      .mockResolvedValueOnce({ id: 'tx-1', tenantId: 'tenant-1', sourceType: 'EXPENSE', sourceId: 'expense-1', status: 'RECONCILED', isReconciled: true, accountId: 'account-1', amount: 75, currency: 'CAD', description: 'Software subscription', expenseId: 'expense-1' })
+      .mockResolvedValueOnce(null);
+
+    await bookkeepingService.syncExpense('tenant-1', 'expense-1');
+
+    expect(mockDb.bookkeepingTransaction.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        type: 'EXPENSE',
+        sourceType: 'EXPENSE_REVERSAL',
+        sourceId: 'expense-1:EXPENSE_INCREASED:50',
+        amount: 50,
+        metadata: expect.objectContaining({ syncStatus: 'reversed' }),
+      }),
+    }));
+  });
+
+  it('profit and loss subtracts reconciled expense reduction adjustments from expenses', async () => {
+    mockDb.bookkeepingTransaction.findMany.mockResolvedValue([
+      { type: 'EXPENSE', amount: 100, status: 'POSTED', categoryId: 'category-1', transactionDate: new Date('2026-05-22T00:00:00.000Z') },
+      { type: 'ADJUSTMENT', amount: 25, status: 'POSTED', categoryId: 'category-1', metadata: { originalSourceType: 'EXPENSE' }, transactionDate: new Date('2026-05-23T00:00:00.000Z') },
+    ]);
+    mockDb.bookkeepingCategory.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'category-1', name: 'Software' }]);
+
+    const report = await bookkeepingService.profitLoss('tenant-1', { dateFrom: '2026-05-01', dateTo: '2026-05-31' });
+
+    expect(report.totals.expenses).toBe(75);
+    expect(report.netProfit).toBe(-75);
+    expect(report.expenses).toEqual([{ name: 'Software', total: 75 }]);
   });
 
   it('source idempotency prevents duplicate active bookkeeping entries', async () => {

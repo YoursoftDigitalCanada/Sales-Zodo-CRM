@@ -71,6 +71,7 @@ import {
   CalendarOff,
   UserCheck,
   BadgeDollarSign,
+  FileSignature,
   type LucideIcon,
 } from "lucide-react";
 import { AUTH_ACCESS_UPDATED_EVENT, AUTH_STORAGE_KEYS, getStoredTenant } from "@/features/auth/lib/auth-storage";
@@ -296,6 +297,13 @@ const navigationItems: NavigationItem[] = [
     path: "/proposals",
     featureId: "finance",
     permissionModule: "quotes",
+  },
+  {
+    title: "Contracts",
+    icon: FileSignature,
+    path: "/contracts",
+    featureId: "finance",
+    permissionModule: "contracts",
   },
   {
     title: "Invoices",

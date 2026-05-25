@@ -6,6 +6,7 @@ export {
   updateInvoice,
   sendInvoice,
   recordInvoicePayment,
+  updateInvoicePaymentStatus,
   markInvoiceAsPaid,
   downloadInvoicePdf,
   saveInvoicePdfToDocuments,

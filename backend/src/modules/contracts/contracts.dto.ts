@@ -10,6 +10,7 @@ export interface CreateContractDto {
     title: string;
     description?: string | null;
     clientId: string;
+    contactId?: string | null;
     quoteId?: string | null;
     projectId?: string | null;
     value: number;
@@ -41,6 +42,8 @@ export interface ContractResponseDto {
     description: string | null;
     status: ContractStatus;
     client: { id: string; clientName: string } | null;
+    contact: { id: string; contactName: string; email: string | null } | null;
+    contactId: string | null;
     quoteId: string | null;
     projectId: string | null;
     value: number;
@@ -56,6 +59,7 @@ export interface ContractResponseDto {
 
 type ContractWithRelations = Contract & {
     client?: { id: string; clientName: string } | null;
+    contact?: { id: string; contactName: string; email: string | null } | null;
 };
 
 export function toContractResponseDto(c: ContractWithRelations): ContractResponseDto {
@@ -66,6 +70,8 @@ export function toContractResponseDto(c: ContractWithRelations): ContractRespons
         description: c.description,
         status: c.status,
         client: c.client ? { id: c.client.id, clientName: c.client.clientName } : null,
+        contact: c.contact ? { id: c.contact.id, contactName: c.contact.contactName, email: c.contact.email } : null,
+        contactId: c.contactId,
         quoteId: c.quoteId,
         projectId: c.projectId,
         value: Number(c.value),

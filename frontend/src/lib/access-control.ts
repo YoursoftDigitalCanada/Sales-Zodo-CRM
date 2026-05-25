@@ -17,6 +17,7 @@ const DASHBOARD_ROUTE_CANDIDATES: Array<{
   { path: "/leads", featureId: "leads", permissionModule: "leads" },
   { path: "/client-list", featureId: "clients", permissionModule: "clients" },
   { path: "/projects", featureId: "projects", permissionModule: "projects" },
+  { path: "/contracts", featureId: "finance", permissionModule: "contracts" },
   { path: "/tasks", featureId: "tasks", permissionModule: "tasks" },
   { path: "/calendar", featureId: "calendar", permissionModule: "calendar" },
   { path: "/invoice", featureId: "finance", permissionModule: "invoices" },

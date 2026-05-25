@@ -37,6 +37,14 @@ import {
 
 const typeIcons: Record<string, any> = {
   pdf: FileText,
+  proposal_pdf: FileText,
+  accepted_proposal_pdf: FileText,
+  contract_pdf: FileText,
+  signed_contract_pdf: FileText,
+  invoice_pdf: FileText,
+  payment_receipt: FileText,
+  expense_receipt: FileText,
+  general_attachment: File,
   document: FileText,
   spreadsheet: FileSpreadsheet,
   image: FileImage,
@@ -47,6 +55,14 @@ const typeIcons: Record<string, any> = {
 
 const typeStyles: Record<string, string> = {
   pdf: "bg-red-50 text-red-600",
+  proposal_pdf: "bg-violet-50 text-violet-600",
+  accepted_proposal_pdf: "bg-violet-50 text-violet-700",
+  contract_pdf: "bg-blue-50 text-blue-600",
+  signed_contract_pdf: "bg-blue-50 text-blue-700",
+  invoice_pdf: "bg-emerald-50 text-emerald-600",
+  payment_receipt: "bg-green-50 text-green-600",
+  expense_receipt: "bg-teal-50 text-teal-600",
+  general_attachment: "bg-slate-100 text-slate-600",
   document: "bg-blue-50 text-blue-600",
   spreadsheet: "bg-green-50 text-green-600",
   image: "bg-purple-50 text-purple-600",
@@ -54,6 +70,24 @@ const typeStyles: Record<string, string> = {
   archive: "bg-amber-50 text-amber-600",
   other: "bg-slate-100 text-slate-600",
 };
+
+const documentTypeOptions = [
+  { value: "proposal_pdf", label: "Proposal PDF" },
+  { value: "accepted_proposal_pdf", label: "Accepted Proposal PDF" },
+  { value: "contract_pdf", label: "Contract PDF" },
+  { value: "signed_contract_pdf", label: "Signed Contract PDF" },
+  { value: "invoice_pdf", label: "Invoice PDF" },
+  { value: "payment_receipt", label: "Payment Receipt" },
+  { value: "expense_receipt", label: "Expense Receipt" },
+  { value: "general_attachment", label: "General Attachment" },
+  { value: "pdf", label: "PDF" },
+  { value: "document", label: "Document" },
+  { value: "spreadsheet", label: "Spreadsheet" },
+  { value: "image", label: "Image" },
+  { value: "video", label: "Video" },
+  { value: "archive", label: "Archive" },
+  { value: "other", label: "Other" },
+];
 
 function getFolderScope(folderId: string) {
   if (folderId === "all") return "all";
@@ -115,9 +149,9 @@ export default function DocumentsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [uploadFileValue, setUploadFileValue] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadForm, setUploadForm] = useState({ description: "", categoryId: "", documentType: "document", folderId: "" });
+  const [uploadForm, setUploadForm] = useState({ description: "", categoryId: "", documentType: "document", folderId: "", visibleToClient: false, requiresSignature: false, expiresAt: "" });
   const [folderForm, setFolderForm] = useState({ name: "", parentId: "" });
-  const [editForm, setEditForm] = useState({ name: "", description: "", categoryId: "", documentType: "document", version: 1, visibleToClient: false, requiresSignature: false });
+  const [editForm, setEditForm] = useState({ name: "", description: "", categoryId: "", documentType: "document", version: 1, visibleToClient: false, requiresSignature: false, expiresAt: "" });
   const [linkForm, setLinkForm] = useState({ linkedEntityType: "Client", linkedEntityId: "" });
   const linkedEntityType = searchParams.get("linkedEntityType") || undefined;
   const linkedEntityId = searchParams.get("linkedEntityId") || undefined;
@@ -185,7 +219,7 @@ export default function DocumentsPage() {
       setUploadOpen(false);
       setUploadFileValue(null);
       setUploadProgress(0);
-      setUploadForm({ description: "", categoryId: "", documentType: "document", folderId: "" });
+      setUploadForm({ description: "", categoryId: "", documentType: "document", folderId: "", visibleToClient: false, requiresSignature: false, expiresAt: "" });
       invalidate();
     },
     onError: (error: any) => toast({ title: "Upload failed", description: error?.message || "Try again.", variant: "destructive" }),
@@ -231,6 +265,7 @@ export default function DocumentsPage() {
       version: doc.version || 1,
       visibleToClient: doc.visibleToClient,
       requiresSignature: doc.requiresSignature,
+      expiresAt: doc.expiresAt ? doc.expiresAt.slice(0, 10) : "",
     });
   };
 
@@ -292,12 +327,9 @@ export default function DocumentsPage() {
               <SelectTrigger className="w-[150px]"><SelectValue placeholder="Type" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="pdf">PDF</SelectItem>
-                <SelectItem value="document">Documents</SelectItem>
-                <SelectItem value="spreadsheet">Spreadsheets</SelectItem>
-                <SelectItem value="image">Images</SelectItem>
-                <SelectItem value="video">Videos</SelectItem>
-                <SelectItem value="archive">Archives</SelectItem>
+                {documentTypeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={folderId} onValueChange={setFolderId}>
@@ -467,8 +499,13 @@ export default function DocumentsPage() {
             ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <div><Label>Category</Label><Select value={uploadForm.categoryId || "none"} onValueChange={(value) => setUploadForm((prev) => ({ ...prev, categoryId: value === "none" ? "" : value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No category</SelectItem>{categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}</SelectContent></Select></div>
-              <div><Label>Type</Label><Select value={uploadForm.documentType} onValueChange={(value) => setUploadForm((prev) => ({ ...prev, documentType: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="document">Document</SelectItem><SelectItem value="pdf">PDF</SelectItem><SelectItem value="spreadsheet">Spreadsheet</SelectItem><SelectItem value="image">Image</SelectItem><SelectItem value="video">Video</SelectItem><SelectItem value="archive">Archive</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select></div>
+              <div><Label>Type</Label><Select value={uploadForm.documentType} onValueChange={(value) => setUploadForm((prev) => ({ ...prev, documentType: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{documentTypeOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>
               <div className="sm:col-span-2"><Label>Folder</Label><Select value={uploadForm.folderId || "root"} onValueChange={(value) => setUploadForm((prev) => ({ ...prev, folderId: value === "root" ? "" : value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="root">Root</SelectItem>{folders.map((folder) => <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>)}</SelectContent></Select></div>
+              <div><Label>Expires At</Label><Input type="date" value={uploadForm.expiresAt} onChange={(event) => setUploadForm((prev) => ({ ...prev, expiresAt: event.target.value }))} /></div>
+              <div className="flex flex-col justify-end gap-2 rounded-md border p-3 text-sm">
+                <label className="flex items-center gap-2"><Checkbox checked={uploadForm.visibleToClient} onCheckedChange={(checked) => setUploadForm((prev) => ({ ...prev, visibleToClient: Boolean(checked) }))} />Visible to client</label>
+                <label className="flex items-center gap-2"><Checkbox checked={uploadForm.requiresSignature} onCheckedChange={(checked) => setUploadForm((prev) => ({ ...prev, requiresSignature: Boolean(checked) }))} />Requires signature</label>
+              </div>
             </div>
             <div><Label>Description</Label><Textarea value={uploadForm.description} onChange={(event) => setUploadForm((prev) => ({ ...prev, description: event.target.value }))} placeholder="Add context for the sales or operations team..." /></div>
             {uploadProgress ? <div className="h-2 overflow-hidden rounded bg-[#E2E8F0]"><div className="h-full bg-[#0891B2]" style={{ width: `${uploadProgress}%` }} /></div> : null}
@@ -505,7 +542,7 @@ export default function DocumentsPage() {
 
       <Dialog open={Boolean(previewDoc)} onOpenChange={(open) => !open && setPreviewDoc(null)}>
         <DialogContent className="sm:max-w-5xl">
-          <DialogHeader><DialogTitle>{previewDoc?.name}</DialogTitle><DialogDescription>{previewDoc?.category?.name || "Document"} · {previewDoc ? formatFileSize(previewDoc.size) : ""}</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{previewDoc?.name}</DialogTitle><DialogDescription>{previewDoc?.category?.name || "Document"} · {previewDoc ? formatFileSize(previewDoc.size) : ""}{previewDoc?.expiresAt ? ` · Expires ${formatDate(previewDoc.expiresAt)}` : ""}</DialogDescription></DialogHeader>
           {previewDoc ? <iframe title={previewDoc.name} src={getDocumentPreviewUrl(previewDoc.id)} className="h-[70vh] w-full rounded-md border bg-white" /> : null}
           <DialogFooter><Button variant="outline" onClick={() => previewDoc && openDownload(previewDoc)}><Download size={16} className="mr-2" />Download</Button></DialogFooter>
         </DialogContent>
@@ -518,7 +555,9 @@ export default function DocumentsPage() {
             <div><Label>Name</Label><Input value={editForm.name} onChange={(event) => setEditForm((prev) => ({ ...prev, name: event.target.value }))} /></div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div><Label>Category</Label><Select value={editForm.categoryId || "none"} onValueChange={(value) => setEditForm((prev) => ({ ...prev, categoryId: value === "none" ? "" : value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No category</SelectItem>{categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}</SelectContent></Select></div>
+              <div><Label>Type</Label><Select value={editForm.documentType} onValueChange={(value) => setEditForm((prev) => ({ ...prev, documentType: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{documentTypeOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>
               <div><Label>Version</Label><Input type="number" min={1} value={editForm.version} onChange={(event) => setEditForm((prev) => ({ ...prev, version: Number(event.target.value || 1) }))} /></div>
+              <div><Label>Expires At</Label><Input type="date" value={editForm.expiresAt} onChange={(event) => setEditForm((prev) => ({ ...prev, expiresAt: event.target.value }))} /></div>
             </div>
             <div><Label>Description</Label><Textarea value={editForm.description} onChange={(event) => setEditForm((prev) => ({ ...prev, description: event.target.value }))} /></div>
             <div className="flex flex-wrap gap-4 text-sm"><label className="flex items-center gap-2"><Checkbox checked={editForm.visibleToClient} onCheckedChange={(checked) => setEditForm((prev) => ({ ...prev, visibleToClient: Boolean(checked) }))} />Visible to client</label><label className="flex items-center gap-2"><Checkbox checked={editForm.requiresSignature} onCheckedChange={(checked) => setEditForm((prev) => ({ ...prev, requiresSignature: Boolean(checked) }))} />Requires signature</label></div>
@@ -531,7 +570,7 @@ export default function DocumentsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Link Document</DialogTitle><DialogDescription>Attach this file to a CRM record by type and ID.</DialogDescription></DialogHeader>
           <div className="space-y-4">
-            <div><Label>Entity Type</Label><Select value={linkForm.linkedEntityType} onValueChange={(value) => setLinkForm((prev) => ({ ...prev, linkedEntityType: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Client">Account / Company</SelectItem><SelectItem value="Contact">Contact</SelectItem><SelectItem value="Lead">Lead</SelectItem><SelectItem value="Deal">Deal</SelectItem><SelectItem value="Proposal">Proposal</SelectItem><SelectItem value="Quote">Quote</SelectItem><SelectItem value="Invoice">Invoice</SelectItem><SelectItem value="Expense">Expense</SelectItem><SelectItem value="Contract">Contract</SelectItem></SelectContent></Select></div>
+            <div><Label>Entity Type</Label><Select value={linkForm.linkedEntityType} onValueChange={(value) => setLinkForm((prev) => ({ ...prev, linkedEntityType: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Client">Account / Company</SelectItem><SelectItem value="Contact">Contact</SelectItem><SelectItem value="Lead">Lead</SelectItem><SelectItem value="Deal">Deal</SelectItem><SelectItem value="Proposal">Proposal</SelectItem><SelectItem value="Quote">Quote</SelectItem><SelectItem value="Contract">Contract</SelectItem><SelectItem value="Invoice">Invoice</SelectItem><SelectItem value="Payment">Payment</SelectItem><SelectItem value="Expense">Expense</SelectItem><SelectItem value="BookkeepingTransaction">Bookkeeping Transaction</SelectItem></SelectContent></Select></div>
             <div><Label>Entity ID</Label><Input value={linkForm.linkedEntityId} onChange={(event) => setLinkForm((prev) => ({ ...prev, linkedEntityId: event.target.value }))} placeholder="Paste record ID" /></div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setLinkDoc(null)}>Cancel</Button><Button disabled={!linkForm.linkedEntityId} onClick={() => linkDoc && updateMutation.mutate({ id: linkDoc.id, data: linkForm })} className="bg-[#0891B2] text-white hover:bg-[#0E7490]">Link</Button></DialogFooter>

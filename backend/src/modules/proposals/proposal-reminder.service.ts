@@ -37,9 +37,9 @@ interface ReminderSchedule {
 }
 
 const REMINDER_SCHEDULE: ReminderSchedule[] = [
-    { day: 3, message: 'Just checking in on the proposal we sent.', subject: 'Following Up on Your Roofing Proposal' },
-    { day: 7, message: 'Your proposal expires in 23 days.', subject: 'Your Roofing Proposal – Expiring Soon' },
-    { day: 14, message: 'Quick reminder about your roofing proposal.', subject: 'Reminder: Your Roofing Proposal Awaits' },
+    { day: 3, message: 'Just checking in on the proposal we sent.', subject: 'Following Up on Your Proposal' },
+    { day: 7, message: 'Your proposal expires in 23 days.', subject: 'Your Proposal – Expiring Soon' },
+    { day: 14, message: 'Quick reminder about your proposal.', subject: 'Reminder: Your Proposal Awaits' },
     { day: 25, message: 'Last chance — proposal expires in 5 days.', subject: 'Last Chance – Proposal Expiring in 5 Days' },
 ];
 

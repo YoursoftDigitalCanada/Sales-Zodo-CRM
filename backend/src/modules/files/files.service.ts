@@ -2,6 +2,7 @@ import { filesRepository } from './files.repository';
 import { UploadFileDto, UpdateFileDto, FileQueryDto, toFileResponseDto, StorageAnalyticsDto } from './files.dto';
 import { NotFoundError, ForbiddenError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
+import { prisma } from '../../config/database';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { eventBus } from '../../common/events/event-bus';
 import crypto from 'crypto';
@@ -12,12 +13,50 @@ import path from 'path';
 const DEFAULT_STORAGE_LIMIT = 10 * 1024 * 1024 * 1024;
 
 export class FilesService {
+    private async validateUploadLinks(
+        tenantId: string,
+        opts?: {
+            folderId?: string | null;
+            projectId?: string | null;
+            clientId?: string | null;
+            leadId?: string | null;
+            quoteId?: string | null;
+        },
+    ) {
+        if (opts?.folderId) {
+            const folder = await prisma.folder.findFirst({ where: { id: opts.folderId, tenantId, deletedAt: null }, select: { id: true } });
+            if (!folder) throw new ForbiddenError('Folder does not belong to this tenant');
+        }
+
+        if (opts?.projectId) {
+            const deal = await prisma.project.findFirst({ where: { id: opts.projectId, tenantId }, select: { id: true } });
+            if (!deal) throw new ForbiddenError('Deal does not belong to this tenant');
+        }
+
+        if (opts?.clientId) {
+            const client = await prisma.client.findFirst({ where: { id: opts.clientId, tenantId }, select: { id: true } });
+            if (!client) throw new ForbiddenError('Company does not belong to this tenant');
+        }
+
+        if (opts?.leadId) {
+            const lead = await prisma.lead.findFirst({ where: { id: opts.leadId, tenantId }, select: { id: true } });
+            if (!lead) throw new ForbiddenError('Lead does not belong to this tenant');
+        }
+
+        if (opts?.quoteId) {
+            const quote = await prisma.quote.findFirst({ where: { id: opts.quoteId, tenantId }, select: { id: true } });
+            if (!quote) throw new ForbiddenError('Proposal does not belong to this tenant');
+        }
+    }
+
     // ── UPLOAD ──
     async upload(
         tenantId: string,
         file: Express.Multer.File,
-        opts?: { folderId?: string; projectId?: string; clientId?: string; leadId?: string; quoteId?: string },
+        opts?: { folderId?: string; projectId?: string; clientId?: string; leadId?: string; quoteId?: string; uploadedById?: string | null },
     ) {
+        await this.validateUploadLinks(tenantId, opts);
+
         // Compute checksum
         const fileBuffer = fs.readFileSync(file.path);
         const checksum = crypto.createHash('sha256').update(fileBuffer).digest('hex');
@@ -34,6 +73,7 @@ export class FilesService {
             clientId: opts?.clientId || null,
             leadId: opts?.leadId || null,
             quoteId: opts?.quoteId || null,
+            uploadedById: opts?.uploadedById || null,
             checksum,
         };
 
@@ -53,6 +93,7 @@ export class FilesService {
 
     // Legacy create (metadata-only for backwards compat)
     async create(tenantId: string, data: UploadFileDto) {
+        await this.validateUploadLinks(tenantId, data);
         const file = await filesRepository.create(tenantId, data);
         return toFileResponseDto(file);
     }

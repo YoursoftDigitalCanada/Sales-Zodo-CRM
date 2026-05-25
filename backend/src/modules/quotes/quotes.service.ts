@@ -14,6 +14,7 @@ import { generateQuoteContractPdfBuffer } from './quote-contract-pdf';
 import { quoteSignatureReminderService } from './quote-signature-reminder.service';
 import { buildQuoteSelect, stripUnsupportedQuoteSignatureFields } from './quote-schema-compat';
 import { logger } from '../../common/utils/logger';
+import { isLegacyRoofingAutomationEnabled } from '../automation/legacy-automation.guard';
 import fs from 'fs';
 import path from 'path';
 
@@ -175,8 +176,7 @@ export class QuotesService {
             email: client?.primaryEmail || lead?.email || undefined,
             phone: client?.primaryPhone || lead?.phone || undefined,
             company: client?.companyName || lead?.companyName || undefined,
-            address: quote.roofEstimate?.address
-                || lead?.propertyAddress
+            address: lead?.propertyAddress
                 || this.joinAddress([
                     client?.streetAddress,
                     client?.city,
@@ -193,6 +193,7 @@ export class QuotesService {
         company: CompanyProfile,
         recipient: RecipientProfile,
         contractVersion: number,
+        includeLegacyRoofingContext = false,
     ) {
         const issueDate = new Date(quote.issueDate).toISOString();
         const validUntil = new Date(quote.validUntil).toISOString();
@@ -220,8 +221,8 @@ export class QuotesService {
             },
             project: {
                 title: quote.quoteNumber,
-                address: quote.roofEstimate?.address || recipient.address || null,
-                jobType: quote.roofEstimate?.roofType || 'Roofing Service',
+                address: includeLegacyRoofingContext ? (quote.roofEstimate?.address || recipient.address || null) : (recipient.address || null),
+                jobType: includeLegacyRoofingContext ? (quote.roofEstimate?.roofType || 'Professional Service') : 'Professional Service',
                 recipientType: quote.leadId ? 'lead' : 'client',
             },
             scopeOfWork: quote.notes || null,
@@ -233,7 +234,7 @@ export class QuotesService {
             total: Number(quote.total),
             notes: quote.notes || null,
             terms: quote.terms || null,
-            roofEstimate: this.buildRoofEstimateSummary(quote.roofEstimate),
+            roofEstimate: includeLegacyRoofingContext ? this.buildRoofEstimateSummary(quote.roofEstimate) : null,
         };
     }
 
@@ -241,6 +242,7 @@ export class QuotesService {
         quote: QuoteContractRecord,
         company: CompanyProfile,
         recipient: RecipientProfile,
+        includeLegacyRoofingContext = false,
     ) {
         const snapshot = quote.contractSnapshot && typeof quote.contractSnapshot === 'object'
             ? quote.contractSnapshot as Record<string, any>
@@ -256,11 +258,13 @@ export class QuotesService {
         };
         const sourceProject = snapshot?.project ?? {
             title: quote.quoteNumber,
-            address: quote.roofEstimate?.address || recipient.address || null,
-            jobType: quote.roofEstimate?.roofType || 'Roofing Service',
+            address: includeLegacyRoofingContext ? (quote.roofEstimate?.address || recipient.address || null) : (recipient.address || null),
+            jobType: includeLegacyRoofingContext ? (quote.roofEstimate?.roofType || 'Professional Service') : 'Professional Service',
             recipientType: quote.leadId ? 'lead' : 'client',
         };
-        const sourceRoofEstimate = snapshot?.roofEstimate ?? this.buildRoofEstimateSummary(quote.roofEstimate);
+        const sourceRoofEstimate = includeLegacyRoofingContext
+            ? (snapshot?.roofEstimate ?? this.buildRoofEstimateSummary(quote.roofEstimate))
+            : null;
         const sourceItems = snapshot?.items ?? (quote.items || []).map((item: any) => ({
             description: item.description,
             quantity: Number(item.quantity),
@@ -375,26 +379,27 @@ export class QuotesService {
         });
     }
 
-    private async createSignedPdfFile(
+    private buildProposalPdfBuffer(
         quote: QuoteContractRecord,
-        tenantId: string,
+        company: CompanyProfile,
+        recipient: RecipientProfile,
         snapshot: Record<string, any>,
-        signature: { signedBy: string; signatureType?: string | null; signatureData?: string | null; signedAt: Date },
+        signature?: { signedBy: string; signatureType?: string | null; signatureData?: string | null; signedAt: Date },
     ) {
-        const { buffer, fileName } = generateQuoteContractPdfBuffer({
-            companyName: String(snapshot.company?.companyName || 'ZODO'),
-            companyEmail: snapshot.company?.email || undefined,
-            companyPhone: snapshot.company?.phone || undefined,
-            companyAddress: snapshot.company?.address || undefined,
+        return generateQuoteContractPdfBuffer({
+            companyName: String(snapshot.company?.companyName || company.companyName || 'ZODO'),
+            companyEmail: snapshot.company?.email || company.email || undefined,
+            companyPhone: snapshot.company?.phone || company.phone || undefined,
+            companyAddress: snapshot.company?.address || company.address || undefined,
             quoteNumber: String(snapshot.quoteNumber || quote.quoteNumber),
             issueDate: new Date(snapshot.issueDate || quote.issueDate).toLocaleDateString('en-CA'),
-            signedAt: signature.signedAt.toLocaleDateString('en-CA'),
-            clientName: String(snapshot.client?.name || 'Client'),
-            clientEmail: snapshot.client?.email || undefined,
-            clientPhone: snapshot.client?.phone || undefined,
-            clientAddress: snapshot.client?.address || undefined,
-            propertyAddress: snapshot.project?.address || undefined,
-            jobType: snapshot.project?.jobType || undefined,
+            signedAt: signature?.signedAt?.toLocaleDateString('en-CA'),
+            clientName: String(snapshot.client?.name || recipient.name || 'Client'),
+            clientEmail: snapshot.client?.email || recipient.email || undefined,
+            clientPhone: snapshot.client?.phone || recipient.phone || undefined,
+            clientAddress: snapshot.client?.address || recipient.address || undefined,
+            serviceAddress: snapshot.project?.address || undefined,
+            serviceType: snapshot.project?.jobType || undefined,
             scopeOfWork: snapshot.scopeOfWork || undefined,
             currency: String(snapshot.currency || quote.currency || 'CAD'),
             items: Array.isArray(snapshot.items) ? snapshot.items : [],
@@ -405,10 +410,21 @@ export class QuotesService {
             total: Number(snapshot.total || quote.total || 0),
             notes: snapshot.notes || undefined,
             terms: snapshot.terms || undefined,
-            signedBy: signature.signedBy,
-            signatureType: signature.signatureType || undefined,
-            signatureData: signature.signatureData || undefined,
+            signedBy: signature?.signedBy,
+            signatureType: signature?.signatureType || undefined,
+            signatureData: signature?.signatureData || undefined,
         });
+    }
+
+    private async createSignedPdfFile(
+        quote: QuoteContractRecord,
+        tenantId: string,
+        snapshot: Record<string, any>,
+        signature: { signedBy: string; signatureType?: string | null; signatureData?: string | null; signedAt: Date },
+    ) {
+        const company = await this.getCompanyProfile(tenantId);
+        const recipient = this.resolveRecipientProfile(quote);
+        const { buffer, fileName } = this.buildProposalPdfBuffer(quote, company, recipient, snapshot, signature);
 
         const uploadDir = path.join(process.cwd(), 'uploads', tenantId, 'quotes', 'contracts');
         fs.mkdirSync(uploadDir, { recursive: true });
@@ -433,6 +449,20 @@ export class QuotesService {
         return savedFile.id;
     }
 
+    async downloadPdf(id: string, tenantId: string): Promise<{ buffer: Buffer; fileName: string }> {
+        const quote = await this.loadQuoteContractRecord({ id, tenantId });
+        if (!quote) throw new NotFoundError('Proposal not found', ErrorCodes.RESOURCE_NOT_FOUND);
+
+        const company = await this.getCompanyProfile(tenantId);
+        const recipient = this.resolveRecipientProfile(quote);
+        const includeLegacyRoofingContext = await isLegacyRoofingAutomationEnabled(tenantId);
+        const snapshot = quote.contractSnapshot && typeof quote.contractSnapshot === 'object'
+            ? quote.contractSnapshot as Record<string, any>
+            : this.buildContractSnapshot(quote, company, recipient, Number(quote.contractVersion || 1), includeLegacyRoofingContext);
+
+        return this.buildProposalPdfBuffer(quote, company, recipient, snapshot);
+    }
+
     private async notifyQuoteSigner(quote: QuoteContractRecord, signerName: string) {
         if (!quote.createdById) return;
         const ownerUserId = await this.resolveUserId(quote.createdById);
@@ -440,13 +470,13 @@ export class QuotesService {
 
         try {
             await notificationsService.create({
-                title: 'Estimate Signed',
-                message: `${signerName} signed ${quote.quoteNumber}. You can now convert it to a job.`,
+                title: 'Proposal Signed',
+                message: `${signerName} signed ${quote.quoteNumber}. You can now convert it to a deal.`,
                 type: 'SUCCESS',
                 userId: ownerUserId,
                 tenantId: quote.tenantId,
-                actionUrl: `/quotes`,
-                actionLabel: 'View Estimate',
+                actionUrl: `/proposals`,
+                actionLabel: 'View Proposal',
             });
         } catch (error) {
             logger.error('[Quotes] Failed to create signed-estimate notification', {
@@ -467,7 +497,7 @@ export class QuotesService {
         activityLogger.log({
             tenantId, entityType: 'Quote', entityId: dto.id,
             action: 'CREATE', module: 'quotes',
-            description: `Created quote "${dto.quoteNumber}"`,
+            description: `Created proposal "${dto.quoteNumber}"`,
             userId: actorUserId,
             metadata: { quoteNumber: dto.quoteNumber, total: dto.total, clientId: dto.client?.id },
         });
@@ -512,7 +542,7 @@ export class QuotesService {
         activityLogger.log({
             tenantId, entityType: 'Quote', entityId: dto.id,
             action: 'UPDATE', module: 'quotes',
-            description: `Updated quote "${dto.quoteNumber}"`,
+            description: `Updated proposal "${dto.quoteNumber}"`,
             metadata: { updatedFields: Object.keys(data) },
         });
 
@@ -526,7 +556,7 @@ export class QuotesService {
         activityLogger.log({
             tenantId, entityType: 'Quote', entityId: id,
             action: 'DELETE', module: 'quotes',
-            description: `Deleted quote "${(existing as any).quoteNumber || id}"`,
+            description: `Deleted proposal "${(existing as any).quoteNumber || id}"`,
         });
 
         await quotesRepository.delete(id, tenantId);
@@ -557,7 +587,7 @@ export class QuotesService {
         activityLogger.log({
             tenantId, entityType: 'Quote', entityId: dto.id,
             action: 'STATUS_CHANGE', module: 'quotes',
-            description: `Quote "${dto.quoteNumber}" status: ${oldStatus} → ${status}`,
+            description: `Proposal "${dto.quoteNumber}" status: ${oldStatus} → ${status}`,
             userId: actorUserId,
             metadata: { oldStatus, newStatus: status },
         });
@@ -587,7 +617,7 @@ export class QuotesService {
 
         const q = quote as QuoteContractRecord;
         if (['SIGNED', 'ACCEPTED'].includes(String(q.status))) {
-            throw new BadRequestError('This estimate has already been signed');
+            throw new BadRequestError('This proposal has already been signed');
         }
 
         const recipient = this.resolveRecipientProfile(q);
@@ -599,7 +629,8 @@ export class QuotesService {
         const publicToken = randomUUID();
         const contractVersion = Math.max(Number(q.contractVersion || 0) + 1, 1);
         const sentAt = new Date();
-        const contractSnapshot = this.buildContractSnapshot(q, company, recipient, contractVersion);
+        const includeLegacyRoofingContext = await isLegacyRoofingAutomationEnabled(tenantId);
+        const contractSnapshot = this.buildContractSnapshot(q, company, recipient, contractVersion, includeLegacyRoofingContext);
 
         const updateData: any = {
             status: 'SENT',
@@ -641,10 +672,10 @@ export class QuotesService {
             </tr>`
         ).join('');
 
-        // ── Generate roof estimate PDF attachment (if linked) ────────────
+        // ── Generate legacy estimate PDF attachment only for roofing-enabled tenants ────────────
         const emailAttachments: Array<{ filename: string; content: Buffer; contentType: string }> = [];
 
-        if (q.roofEstimateId) {
+        if (includeLegacyRoofingContext && q.roofEstimateId) {
             try {
                 const estimate = await prisma.roofEstimate.findFirst({
                     where: { id: q.roofEstimateId, tenantId },
@@ -688,15 +719,15 @@ export class QuotesService {
                     });
                 }
             } catch (pdfErr: any) {
-                // Log but don't fail the send — quote email is more important
-                console.error('⚠️ Failed to generate roof estimate PDF attachment:', pdfErr.message);
+                // Log but don't fail the send — proposal email is more important.
+                logger.warn('[Quotes] Failed to generate legacy estimate PDF attachment', { quoteId: q.id, error: pdfErr.message });
             }
         }
 
         // Send email
         const attachmentNote = emailAttachments.length > 0
             ? `<p style="margin:16px 0 0;font-size:13px;color:#475569;line-height:1.6;">
-                📎 <strong>Attached:</strong> Roof Estimate Report (PDF) — AI-powered satellite measurement of the property.
+                <strong>Attached:</strong> Supporting estimate report (PDF).
               </p>`
             : '';
 
@@ -708,17 +739,17 @@ export class QuotesService {
 <div style="max-width:640px;margin:0 auto;padding:40px 20px;">
   <div style="background:linear-gradient(135deg,#0891B2,#0E7490);border-radius:16px 16px 0 0;padding:32px;text-align:center;">
     <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">${company.companyName}</h1>
-    <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Estimate Ready for Signature</p>
+    <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Proposal Ready for Signature</p>
   </div>
   <div style="background:#fff;padding:32px;border-radius:0 0 16px 16px;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
     <p style="margin:0 0 8px;font-size:16px;color:#0F172A;">Hi ${recipient.name},</p>
     <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
-      Your roofing estimate is ready. Review the scope, totals, and terms, then sign the contract online to approve the work.
+      Your proposal is ready. Review the scope, totals, and terms, then sign online to approve the work.
     </p>
     <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:20px;margin-bottom:24px;">
       <table style="width:100%;border-collapse:collapse;">
         <tr>
-          <td style="padding:4px 0;font-size:13px;color:#64748B;">Estimate Number</td>
+          <td style="padding:4px 0;font-size:13px;color:#64748B;">Proposal Number</td>
           <td style="padding:4px 0;font-size:13px;color:#0F172A;font-weight:600;text-align:right;">${q.quoteNumber}</td>
         </tr>
         <tr>
@@ -746,11 +777,11 @@ export class QuotesService {
     ${attachmentNote}
     <div style="text-align:center;margin:32px 0;">
       <a href="${publicLink}" style="display:inline-block;background:linear-gradient(135deg,#0891B2,#0E7490);color:#fff;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:600;letter-spacing:0.3px;box-shadow:0 4px 14px rgba(8,145,178,0.4);">
-        Review &amp; Sign Estimate
+        Review &amp; Sign Proposal
       </a>
     </div>
     <p style="margin:24px 0 0;font-size:12px;color:#94A3B8;text-align:center;line-height:1.5;">
-      This estimate is valid until ${validDate}. If you have any questions, reply to this email and we will help right away.
+      This proposal is valid until ${validDate}. If you have any questions, reply to this email and we will help right away.
     </p>
   </div>
   <div style="text-align:center;padding:24px;color:#94A3B8;font-size:12px;">
@@ -764,14 +795,14 @@ export class QuotesService {
             tenantId,
             preferredUserId: actorUserId,
             to: recipient.email,
-            subject: `Estimate ${q.quoteNumber} ready for signature`,
+            subject: `Proposal ${q.quoteNumber} ready for signature`,
             html,
-            text: `Hi ${recipient.name}, your estimate ${q.quoteNumber} for ${this.formatCurrency(Number(q.total), q.currency || 'CAD')} is ready to review and sign: ${publicLink}`,
+            text: `Hi ${recipient.name}, your proposal ${q.quoteNumber} for ${this.formatCurrency(Number(q.total), q.currency || 'CAD')} is ready to review and sign: ${publicLink}`,
             attachments: emailAttachments.length > 0 ? emailAttachments : undefined,
         });
         if (!delivery.sent) {
             throw new BadRequestError(
-                delivery.error || 'Estimate email could not be sent. Configure your mailbox in Settings > Email and try again.',
+                delivery.error || 'Proposal email could not be sent. Configure your mailbox in Settings > Email and try again.',
             );
         }
 
@@ -790,7 +821,7 @@ export class QuotesService {
         activityLogger.log({
             tenantId, entityType: 'Quote', entityId: dto.id,
             action: 'STATUS_CHANGE', module: 'quotes',
-            description: `Estimate "${dto.quoteNumber}" sent for signature to ${recipient.email}${emailAttachments.length > 0 ? ' (with roof estimate PDF)' : ''}`,
+            description: `Proposal "${dto.quoteNumber}" sent for signature to ${recipient.email}${emailAttachments.length > 0 ? ' (with supporting estimate PDF)' : ''}`,
             userId: actorUserId,
             metadata: { recipientEmail: recipient.email, publicToken, publicLink, hasRoofEstimatePdf: emailAttachments.length > 0, contractVersion },
         });
@@ -809,7 +840,7 @@ export class QuotesService {
     // ── Public: get quote by token (tracks views) ───────────────────────────
     async getByPublicToken(token: string) {
         const quote = await this.loadQuoteContractRecord({ publicToken: token });
-        if (!quote) throw new NotFoundError('Quote not found or link has expired');
+        if (!quote) throw new NotFoundError('Proposal not found or link has expired');
 
         const now = new Date();
         const nextViewCount = Number((quote as any).viewCount || 0) + 1;
@@ -852,14 +883,19 @@ export class QuotesService {
                 entityId: quote.id,
                 action: 'STATUS_CHANGE',
                 module: 'quotes',
-                description: `Estimate "${quote.quoteNumber}" viewed via public link`,
+                description: `Proposal "${quote.quoteNumber}" viewed via public link`,
                 metadata: { viewCount: nextViewCount, publicActorLabel: 'Public Visitor' },
             });
         }
 
         const company = await this.getCompanyProfile(quote.tenantId);
         const recipient = this.resolveRecipientProfile(quote);
-        return this.buildPublicPayload(effectiveQuote, company, recipient);
+        return this.buildPublicPayload(
+            effectiveQuote,
+            company,
+            recipient,
+            await isLegacyRoofingAutomationEnabled(quote.tenantId),
+        );
     }
 
     // ── Public: sign or reject quote by token ───────────────────────────────
@@ -877,11 +913,11 @@ export class QuotesService {
         },
     ) {
         const quote = await this.loadQuoteContractRecord({ publicToken: token });
-        if (!quote) throw new NotFoundError('Quote not found or link has expired');
+        if (!quote) throw new NotFoundError('Proposal not found or link has expired');
 
         const awaitingLegacySignature = this.isLegacyAcceptedAwaitingSignature(quote);
         if (!['SENT', 'VIEWED'].includes(String(quote.status)) && !awaitingLegacySignature) {
-            throw new BadRequestError(`This quote has already been ${quote.status.toLowerCase()}`);
+            throw new BadRequestError(`This proposal has already been ${quote.status.toLowerCase()}`);
         }
 
         if (action === 'reject') {
@@ -906,7 +942,7 @@ export class QuotesService {
                 entityId: quote.id,
                 action: 'STATUS_CHANGE',
                 module: 'quotes',
-                description: `Estimate "${quote.quoteNumber}" rejected via public link`,
+                description: `Proposal "${quote.quoteNumber}" rejected via public link`,
                 metadata: { action: 'reject', publicActorLabel: 'Public Visitor' },
             });
 
@@ -934,11 +970,11 @@ export class QuotesService {
 
         const signedByName = String(payload?.signedByName || '').trim();
         if (!signedByName) {
-            throw new BadRequestError('Full name is required to sign the estimate');
+            throw new BadRequestError('Full name is required to sign the proposal');
         }
 
         if (payload?.agreeToTerms !== true) {
-            throw new BadRequestError('Please agree to the estimate terms before signing');
+            throw new BadRequestError('Please agree to the proposal terms before signing');
         }
 
         const requestedSignatureType = String(payload?.signatureType || '').trim().toLowerCase();
@@ -968,7 +1004,13 @@ export class QuotesService {
         const company = await this.getCompanyProfile(quote.tenantId);
         const recipient = this.resolveRecipientProfile(quote);
         const contractVersion = Math.max(Number(quote.contractVersion || 0), 1);
-        const contractSnapshot = this.buildContractSnapshot(quote, company, recipient, contractVersion);
+        const contractSnapshot = this.buildContractSnapshot(
+            quote,
+            company,
+            recipient,
+            contractVersion,
+            await isLegacyRoofingAutomationEnabled(quote.tenantId),
+        );
         const signedPdfFileId = await this.createSignedPdfFile(quote, quote.tenantId, contractSnapshot, {
             signedBy: signedByName,
             signatureType: normalizedSignatureType,
@@ -1015,7 +1057,7 @@ export class QuotesService {
             entityId: quote.id,
             action: 'STATUS_CHANGE',
             module: 'quotes',
-            description: `Estimate "${quote.quoteNumber}" signed by ${signedByName}`,
+            description: `Proposal "${quote.quoteNumber}" signed by ${signedByName}`,
             metadata: {
                 action: 'sign',
                 signedByName,
@@ -1071,6 +1113,10 @@ export async function createQuoteFromEstimate(
     },
     createdById?: string,
 ) {
+    if (!(await isLegacyRoofingAutomationEnabled(tenantId))) {
+        throw new BadRequestError('Legacy estimate-based proposal creation is not enabled for this Sales CRM tenant.');
+    }
+
     // 1. Load the AI estimate
     const estimate = await prisma.roofEstimate.findFirst({
         where: { id: estimateId, tenantId },

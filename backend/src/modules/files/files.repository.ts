@@ -26,6 +26,7 @@ export class FilesRepository {
                 quoteId: data.quoteId,
                 applicationId: data.applicationId,
                 checksum: data.checksum,
+                uploadedById: data.uploadedById,
             },
             include: fileInclude,
         });

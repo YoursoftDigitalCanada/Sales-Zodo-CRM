@@ -1225,6 +1225,9 @@ const CreateInvoicePage = () => {
   const { toast } = useToast();
   const { branding: workspaceBranding } = useWorkspaceBranding();
   const linkedProjectId = searchParams.get("projectId");
+  const linkedContactId = searchParams.get("contactId");
+  const linkedQuoteId = searchParams.get("quoteId") || searchParams.get("proposalId");
+  const linkedContractId = searchParams.get("contractId");
   const requestedInvoiceId = searchParams.get("invoiceId") || routeInvoiceId;
   const isProjectReviewMode = Boolean(linkedProjectId);
   const isEditMode = Boolean(requestedInvoiceId) && !isProjectReviewMode;
@@ -1678,6 +1681,10 @@ const CreateInvoicePage = () => {
       },
       businessGstHstNumber: data.billedBy.gstNumber || null,
       clientId,
+      contactId: linkedContactId || undefined,
+      quoteId: linkedQuoteId || undefined,
+      projectId: linkedProjectId || undefined,
+      contractId: linkedContractId || undefined,
       clientBusinessName: data.billedTo.businessName || null,
       clientEmail: data.billedTo.email || null,
       clientPhone: data.billedTo.phone || null,

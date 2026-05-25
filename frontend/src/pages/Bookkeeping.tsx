@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Download, Eye, Landmark, Plus, RefreshCw, Search, WalletCards } from "lucide-react";
+import { Download, ExternalLink, Eye, Landmark, Plus, RefreshCw, Search, Upload, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   BookkeepingRecord,
+  attachReceipt,
   completeReconciliation,
   createAccount,
   createCategory,
@@ -44,6 +45,8 @@ import {
   runDueRecurringRules,
   setupBookkeeping,
   syncBookkeeping,
+  reconcileTransaction,
+  unreconcileTransaction,
   voidTransaction,
 } from "@/features/bookkeeping";
 import {
@@ -68,6 +71,12 @@ function syncStatusBadge(tx: BookkeepingRecord) {
   if (syncStatus === "voided" || syncStatus === "reversed") return <Badge variant="secondary">{syncStatus === "voided" ? "Voided" : "Reversed"}</Badge>;
   if (tx.sourceType && tx.sourceType !== "MANUAL") return <Badge variant="outline">Automated</Badge>;
   return <Badge variant="outline">Manual</Badge>;
+}
+
+function sourcePath(tx: BookkeepingRecord) {
+  if (tx.invoiceId) return `/invoice/${tx.invoiceId}`;
+  if (tx.expenseId) return `/expenses?expenseId=${tx.expenseId}`;
+  return null;
 }
 
 async function ensureReceiptsCategoryId() {
@@ -274,6 +283,30 @@ export default function BookkeepingPage() {
     }
   };
 
+  const attachReceiptToTransaction = async (tx: BookkeepingRecord, receipt: File) => {
+    try {
+      const categoryId = await ensureReceiptsCategoryId();
+      const uploaded = await uploadDocument(receipt, { documentType: "expense_receipt", categoryId });
+      await attachReceipt(tx.id, uploaded.fileId);
+      await linkDocument(uploaded.fileId, "BookkeepingTransaction", tx.id);
+      toast.success("Receipt attached");
+      reload();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to attach receipt");
+    }
+  };
+
+  const toggleReconciled = async (tx: BookkeepingRecord) => {
+    try {
+      if (tx.isReconciled || tx.status === "RECONCILED") await unreconcileTransaction(tx.id);
+      else await reconcileTransaction(tx.id);
+      toast.success(tx.isReconciled || tx.status === "RECONCILED" ? "Transaction unreconciled" : "Transaction reconciled");
+      reload();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to update reconciliation");
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#F8FAFC] p-4 md:p-6">
       <div className="mx-auto max-w-7xl space-y-5">
@@ -322,7 +355,7 @@ export default function BookkeepingPage() {
             <div className="grid gap-4 lg:grid-cols-3">
               <Panel className="lg:col-span-2">
                 <h2 className="mb-3 text-base font-semibold text-slate-900">Recent Transactions</h2>
-                <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} />
+                <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} />
               </Panel>
               <Panel>
                 <h2 className="mb-3 text-base font-semibold text-slate-900">Operating Signals</h2>
@@ -339,7 +372,7 @@ export default function BookkeepingPage() {
           <TabsContent value="transactions">
             <Panel>
               <div className="mb-3 flex items-center justify-between"><h2 className="text-base font-semibold">Transactions Ledger</h2><TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} /></div>
-              <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} />
+              <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} />
             </Panel>
           </TabsContent>
 
@@ -396,7 +429,23 @@ function Metric({ label, value }: { label: string; value: ReactNode }) {
   return <div className="flex items-center justify-between border-b border-slate-100 pb-2"><span className="text-slate-500">{label}</span><span className="font-semibold text-slate-900">{value}</span></div>;
 }
 
-function TransactionTable({ rows, accountName, categoryName, vendorName, onVoid }: { rows: BookkeepingRecord[]; accountName: (id?: string) => string; categoryName: (id?: string) => string; vendorName: (id?: string) => string; onVoid: (id: string) => Promise<void> }) {
+function TransactionTable({
+  rows,
+  accountName,
+  categoryName,
+  vendorName,
+  onVoid,
+  onReceipt,
+  onToggleReconcile,
+}: {
+  rows: BookkeepingRecord[];
+  accountName: (id?: string) => string;
+  categoryName: (id?: string) => string;
+  vendorName: (id?: string) => string;
+  onVoid: (id: string) => Promise<void>;
+  onReceipt: (tx: BookkeepingRecord, file: File) => Promise<void>;
+  onToggleReconcile: (tx: BookkeepingRecord) => Promise<void>;
+}) {
   if (!rows.length) return <EmptyState title="No transactions found." />;
   return (
     <div className="overflow-x-auto">
@@ -411,18 +460,42 @@ function TransactionTable({ rows, accountName, categoryName, vendorName, onVoid 
             <TableCell>{accountName(tx.accountId)}</TableCell>
             <TableCell>{categoryName(tx.categoryId)}</TableCell>
             <TableCell>{vendorName(tx.vendorId)}</TableCell>
-            <TableCell><Badge variant="outline">{tx.sourceType || "MANUAL"}</Badge></TableCell>
+            <TableCell>
+              <div className="flex items-center gap-1">
+                <Badge variant="outline">{tx.sourceType || "MANUAL"}</Badge>
+                {sourcePath(tx) ? (
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { window.location.href = sourcePath(tx) || "/bookkeeping"; }}>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Button>
+                ) : null}
+              </div>
+            </TableCell>
             <TableCell>{syncStatusBadge(tx)}</TableCell>
             <TableCell>
-              {tx.fileId ? (
-                <Button variant="ghost" size="sm" onClick={() => window.open(getDocumentPreviewUrl(tx.fileId), "_blank", "noopener,noreferrer")}>
-                  <Eye className="mr-1 h-3.5 w-3.5" />Open
-                </Button>
-              ) : "-"}
+              <div className="flex items-center gap-1">
+                {tx.fileId ? (
+                  <Button variant="ghost" size="sm" onClick={() => window.open(getDocumentPreviewUrl(tx.fileId), "_blank", "noopener,noreferrer")}>
+                    <Eye className="mr-1 h-3.5 w-3.5" />Open
+                  </Button>
+                ) : null}
+                <label className="inline-flex cursor-pointer items-center rounded-md px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100">
+                  <Upload className="mr-1 h-3.5 w-3.5" />{tx.fileId ? "Replace" : "Upload"}
+                  <input type="file" className="hidden" onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void onReceipt(tx, file);
+                    event.currentTarget.value = "";
+                  }} />
+                </label>
+              </div>
             </TableCell>
             <TableCell className={tx.type === "EXPENSE" ? "text-rose-600" : "text-emerald-600"}>{money(tx.amount, tx.currency || "CAD")}</TableCell>
             <TableCell>{tx.isReconciled ? <Badge>Reconciled</Badge> : <Badge variant="outline">{tx.status}</Badge>}</TableCell>
-            <TableCell>{tx.status !== "VOID" && <Button variant="ghost" size="sm" onClick={() => onVoid(tx.id)}>Void</Button>}</TableCell>
+            <TableCell>
+              <div className="flex flex-wrap gap-1">
+                <Button variant="ghost" size="sm" onClick={() => onToggleReconcile(tx)}>{tx.isReconciled || tx.status === "RECONCILED" ? "Unreconcile" : "Reconcile"}</Button>
+                {tx.status !== "VOID" && !(tx.isReconciled || tx.status === "RECONCILED") ? <Button variant="ghost" size="sm" onClick={() => onVoid(tx.id)}>Void</Button> : null}
+              </div>
+            </TableCell>
           </TableRow>
         ))}</TableBody>
       </Table>

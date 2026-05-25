@@ -49,6 +49,7 @@ jest.mock('../../src/modules/notifications/notifications.service', () => ({
 jest.mock('../../src/modules/bookkeeping/bookkeeping.service', () => ({
   bookkeepingService: {
     syncInvoicePayment: jest.fn(),
+    syncExpense: jest.fn(),
     createInvoicePaymentReversal: jest.fn(),
     voidSourceTransaction: jest.fn(),
   },
@@ -1007,6 +1008,48 @@ describe('SalesAutomationService', () => {
 
     expect(bookkeepingService.syncInvoicePayment).toHaveBeenCalledWith('tenant-1', 'payment-1');
     expect(bookkeepingService.syncInvoicePayment).toHaveBeenCalledWith('tenant-1', 'payment-2');
+  });
+
+  it('expense create/update/approve events sync bookkeeping once per event and expense', async () => {
+    const { bookkeepingService } = require('../../src/modules/bookkeeping/bookkeeping.service');
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-expense-sync', conditions: {}, actions: ['sync_bookkeeping_expense'], runOncePerEntity: false },
+    ]);
+
+    await salesAutomationService.executeTrigger('expense.updated', 'Expense', 'expense-1', {
+      tenantId: 'tenant-1',
+      expenseId: 'expense-1',
+      amount: 125,
+      category: 'Software',
+    });
+    await salesAutomationService.executeTrigger('expense.updated', 'Expense', 'expense-1', {
+      tenantId: 'tenant-1',
+      expenseId: 'expense-1',
+      amount: 125,
+      category: 'Software',
+    });
+
+    expect(bookkeepingService.syncExpense).toHaveBeenCalledTimes(1);
+    expect(bookkeepingService.syncExpense).toHaveBeenCalledWith('tenant-1', 'expense-1');
+  });
+
+  it('expense.deleted voids the source bookkeeping transaction once', async () => {
+    const { bookkeepingService } = require('../../src/modules/bookkeeping/bookkeeping.service');
+    mockDb.salesAutomationRule.findMany.mockResolvedValue([
+      { id: 'rule-expense-delete', conditions: {}, actions: ['void_bookkeeping_expense'], runOncePerEntity: false },
+    ]);
+
+    await salesAutomationService.executeTrigger('expense.deleted', 'Expense', 'expense-1', {
+      tenantId: 'tenant-1',
+      expenseId: 'expense-1',
+    });
+    await salesAutomationService.executeTrigger('expense.deleted', 'Expense', 'expense-1', {
+      tenantId: 'tenant-1',
+      expenseId: 'expense-1',
+    });
+
+    expect(bookkeepingService.voidSourceTransaction).toHaveBeenCalledTimes(1);
+    expect(bookkeepingService.voidSourceTransaction).toHaveBeenCalledWith('tenant-1', 'EXPENSE', 'expense-1');
   });
 
   it('idempotency keys are tenant-scoped', async () => {

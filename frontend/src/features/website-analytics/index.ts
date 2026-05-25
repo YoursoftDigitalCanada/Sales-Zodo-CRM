@@ -9,6 +9,7 @@ export {
   createWebsiteAiConversation,
   createWebsiteLiveEventSource,
   deleteWebsiteAnalyticsSegment,
+  deleteWebsiteAnalyticsSite,
   deleteWebsiteAnalyticsIntegration,
   deleteWebsiteFunnel,
   deleteWebsiteHeatmapSnapshot,

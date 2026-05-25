@@ -22,6 +22,7 @@ import {
   createWebsiteHeatmapSnapshot,
   createWebsiteAnalyticsSite,
   createWebsiteAnalyticsIntegration,
+  deleteWebsiteAnalyticsSite,
   deleteWebsiteAnalyticsSegment,
   deleteWebsiteAnalyticsIntegration,
   deleteWebsiteSessionTag,
@@ -421,6 +422,20 @@ export default function WebsiteAnalyticsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["website-analytics", "sites"] });
       toast({ title: "Privacy settings saved" });
+    },
+  });
+  const siteStatusMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => updateWebsiteAnalyticsSite(id, { isActive }),
+    onSuccess: async (_site, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "sites"] });
+      toast({ title: variables.isActive ? "Website reactivated" : "Website disabled" });
+    },
+  });
+  const disableSiteMutation = useMutation({
+    mutationFn: deleteWebsiteAnalyticsSite,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["website-analytics", "sites"] });
+      toast({ title: "Website disabled", description: "Public tracking calls for this site will now be rejected." });
     },
   });
   const favoriteMutation = useMutation({
@@ -940,13 +955,25 @@ export default function WebsiteAnalyticsPage() {
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                   {sites.length === 0 ? <p className="rounded-md bg-[#F8FAFC] p-4 text-sm text-[#64748B] md:col-span-2">No websites connected yet.</p> : null}
                   {sites.map((site: WebsiteAnalyticsSite) => (
-                    <button key={site.id} onClick={() => { setSelectedSiteId(site.id); setSnippet(""); }} className={`w-full rounded-md border p-3 text-left transition ${activeSiteId === site.id ? "border-[#0891B2] bg-[#ECFEFF]" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-[#0F172A]">{site.name}</span>
-                        <Badge variant={site.isActive ? "default" : "secondary"}>{site.isActive ? "Active" : "Inactive"}</Badge>
+                    <div key={site.id} className={`rounded-md border p-3 transition ${activeSiteId === site.id ? "border-[#0891B2] bg-[#ECFEFF]" : "border-[#E2E8F0] bg-white"}`}>
+                      <button type="button" onClick={() => { setSelectedSiteId(site.id); setSnippet(""); }} className="w-full text-left">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-[#0F172A]">{site.name}</span>
+                          <Badge variant={site.isActive ? "default" : "secondary"}>{site.isActive ? "Active" : "Inactive"}</Badge>
+                        </div>
+                        <p className="mt-1 text-xs text-[#64748B]">{site.domain}</p>
+                        <p className="mt-2 text-xs text-[#64748B]">{formatNumber(site.metrics?.totalSessions)} sessions · {formatNumber(site.metrics?.uniqueVisitors)} visitors</p>
+                      </button>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => { setSelectedSiteId(site.id); setSnippet(""); }}>View Dashboard</Button>
+                        <Button size="sm" variant="outline" disabled={snippetMutation.isPending} onClick={() => { setSelectedSiteId(site.id); snippetMutation.mutate(site.id); }}>Generate Script</Button>
+                        {site.isActive ? (
+                          <Button size="sm" variant="outline" disabled={disableSiteMutation.isPending || siteStatusMutation.isPending} onClick={() => disableSiteMutation.mutate(site.id)}>Disable</Button>
+                        ) : (
+                          <Button size="sm" variant="outline" disabled={siteStatusMutation.isPending} onClick={() => siteStatusMutation.mutate({ id: site.id, isActive: true })}>Reactivate</Button>
+                        )}
                       </div>
-                      <p className="mt-1 text-xs text-[#64748B]">{site.domain}</p>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>

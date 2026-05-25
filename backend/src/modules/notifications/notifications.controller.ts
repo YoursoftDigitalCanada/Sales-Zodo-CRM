@@ -81,7 +81,7 @@ export class NotificationsController {
     try {
       const userId = req.user!.userId;
       const tenantId = req.context.tenantId;
-      const { notificationIds } = req.body;
+      const notificationIds = req.body.notificationIds || req.body.ids;
 
       const count = await notificationsService.markManyAsRead(notificationIds, userId, tenantId);
 

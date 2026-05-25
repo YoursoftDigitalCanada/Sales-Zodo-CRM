@@ -127,6 +127,9 @@ describe('legacy roofing automation guard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     Object.keys(handlers).forEach((key) => delete handlers[key]);
+    delete process.env.PRODUCT_VARIANT;
+    delete process.env.PUBLIC_PRODUCT_VARIANT;
+    delete process.env.VITE_PUBLIC_PRODUCT_VARIANT;
     mockDb.tenant.findUnique.mockResolvedValue({ settings: { enabledModules: ['leads', 'automation', 'finance'] } });
   });
 
@@ -134,7 +137,14 @@ describe('legacy roofing automation guard', () => {
     await expect(isLegacyRoofingAutomationEnabled('tenant-sales')).resolves.toBe(false);
   });
 
-  it('enables legacy roofing automation only when explicitly configured', async () => {
+  it('does not enable legacy roofing automation from stale tenant settings in Sales CRM deployment', async () => {
+    mockDb.tenant.findUnique.mockResolvedValue({ settings: { enabledModules: ['roofing-automation'] } });
+
+    await expect(isLegacyRoofingAutomationEnabled('tenant-roof')).resolves.toBe(false);
+  });
+
+  it('enables legacy roofing automation only when deployment and tenant are explicitly configured', async () => {
+    process.env.PRODUCT_VARIANT = 'roofing';
     mockDb.tenant.findUnique.mockResolvedValue({ settings: { enabledModules: ['roofing-automation'] } });
 
     await expect(isLegacyRoofingAutomationEnabled('tenant-roof')).resolves.toBe(true);
@@ -184,6 +194,7 @@ describe('legacy roofing automation guard', () => {
   });
 
   it('runs legacy roofing lead automation only for explicitly enabled tenants', async () => {
+    process.env.PRODUCT_VARIANT = 'roofing';
     mockDb.tenant.findUnique.mockResolvedValue({ settings: { enabledModules: ['roofing-automation'] } });
     const service = new AutomationService();
     service.initialize();

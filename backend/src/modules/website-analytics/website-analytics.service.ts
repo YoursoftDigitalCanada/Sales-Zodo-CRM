@@ -1063,7 +1063,7 @@ export class WebsiteAnalyticsService {
   async liveHeartbeat(data: Record<string, unknown>, headers: Record<string, any> = {}, remoteAddress?: string) {
     if (jsonSize(data) > MAX_BODY_BYTES) throw new BadRequestError('Live payload is too large', ErrorCodes.VALIDATION_FAILED);
     const site = await this.getActiveSite(data.trackingKey);
-    this.enforcePublicPrivacy(site, data);
+    this.enforcePublicPrivacy(site, data, headers);
     const session = await this.getPublicSession(site, data.sessionKey);
     const state = await this.upsertLiveState(site, session, {
       ...data,
@@ -1342,9 +1342,9 @@ export class WebsiteAnalyticsService {
     return { recordingId: recording.id, chunks };
   }
 
-  async startRecording(data: Record<string, unknown>) {
+  async startRecording(data: Record<string, unknown>, headers: Record<string, any> = {}) {
     const site = await this.getActiveSite(data.trackingKey);
-    const publicPrivacy = this.enforcePublicPrivacy(site, data);
+    const publicPrivacy = this.enforcePublicPrivacy(site, data, headers);
     const privacy = defaultPrivacySettings(site.privacySettings || {});
     if (privacy.recordingsEnabled === false) {
       throw new ForbiddenError('Recordings are disabled for this site', ErrorCodes.AUTH_TOKEN_INVALID);
@@ -1373,9 +1373,9 @@ export class WebsiteAnalyticsService {
     return recording;
   }
 
-  async uploadRecordingChunk(data: Record<string, unknown>) {
+  async uploadRecordingChunk(data: Record<string, unknown>, headers: Record<string, any> = {}) {
     const site = await this.getActiveSite(data.trackingKey);
-    this.enforcePublicPrivacy(site, data);
+    this.enforcePublicPrivacy(site, data, headers);
     const session = await this.getPublicSession(site, data.sessionKey);
     const recording = await db.websiteRecording.findFirst({
       where: { tenantId: site.tenantId, siteId: site.id, sessionId: session.id },
@@ -1428,9 +1428,9 @@ export class WebsiteAnalyticsService {
     return { recordingId: recording.id, chunkId: chunk.id, sequence, accepted: events.length };
   }
 
-  async endRecording(data: Record<string, unknown>) {
+  async endRecording(data: Record<string, unknown>, headers: Record<string, any> = {}) {
     const site = await this.getActiveSite(data.trackingKey);
-    this.enforcePublicPrivacy(site, data);
+    this.enforcePublicPrivacy(site, data, headers);
     const session = await this.getPublicSession(site, data.sessionKey);
     const recording = await db.websiteRecording.findFirst({
       where: { tenantId: site.tenantId, siteId: site.id, sessionId: session.id },
@@ -1453,7 +1453,7 @@ export class WebsiteAnalyticsService {
 
   async startSession(data: Record<string, unknown>, headers: Record<string, any> = {}, remoteAddress?: string) {
     const site = await this.getActiveSite(data.trackingKey);
-    this.enforcePublicPrivacy(site, data);
+    this.enforcePublicPrivacy(site, data, headers);
     const anonymousId = this.requirePublicId(data.anonymousId, 'anonymousId');
     const sessionKey = this.requirePublicId(data.sessionKey || crypto.randomUUID(), 'sessionKey');
     const visitor = await this.upsertVisitor(site, anonymousId, data.metadata);
@@ -1498,7 +1498,6 @@ export class WebsiteAnalyticsService {
     this.publishLive('session.started', site.tenantId, site.id, { sessionId: session.id, currentUrl: entryUrl, currentPath: this.pathFromUrl(entryUrl), visitorId: visitor.id });
     return {
       siteId: site.id,
-      tenantId: site.tenantId,
       visitorId: visitor.id,
       sessionId: session.id,
       sessionKey,
@@ -1533,7 +1532,7 @@ export class WebsiteAnalyticsService {
   async collect(data: Record<string, unknown>, headers: Record<string, any> = {}, remoteAddress?: string) {
     if (jsonSize(data) > MAX_BODY_BYTES) throw new BadRequestError('Analytics payload is too large', ErrorCodes.VALIDATION_FAILED);
     const site = await this.getActiveSite(data.trackingKey);
-    const privacy = this.enforcePublicPrivacy(site, data);
+    const privacy = this.enforcePublicPrivacy(site, data, headers);
     const anonymousId = this.requirePublicId(data.anonymousId, 'anonymousId');
     const sessionKey = this.requirePublicId(data.sessionKey, 'sessionKey');
     const visitor = await this.upsertVisitor(site, anonymousId, data.metadata);
@@ -2516,10 +2515,14 @@ export class WebsiteAnalyticsService {
     return site;
   }
 
-  private enforcePublicPrivacy(site: any, data: Record<string, unknown>) {
+  private enforcePublicPrivacy(site: any, data: Record<string, unknown>, headers: Record<string, any> = {}) {
     const privacy = defaultPrivacySettings(site.privacySettings || {});
     if (privacy.trackingEnabled === false) throw new ForbiddenError('Tracking is disabled for this site', ErrorCodes.AUTH_TOKEN_INVALID);
     if (privacy.consentMode === true && data.consent !== 'granted') throw new ForbiddenError('Consent is required before tracking', ErrorCodes.AUTH_TOKEN_INVALID);
+    const dnt = String(data.doNotTrack || data.dnt || headers.dnt || headers['DNT'] || '').toLowerCase();
+    if (privacy.respectDoNotTrack !== false && ['1', 'yes', 'true'].includes(dnt)) {
+      throw new ForbiddenError('Do Not Track is enabled for this visitor', ErrorCodes.AUTH_TOKEN_INVALID);
+    }
     const allowed = stringArray(privacy.allowedDomains);
     if (allowed.length) {
       const host = hostnameFromUrl(data.url || data.entryUrl || data.currentUrl);

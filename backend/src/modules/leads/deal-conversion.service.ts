@@ -202,7 +202,7 @@ export class DealConversionService {
                 try {
                     await notificationsService.create({
                         title: '🏆 Deal Converted!',
-                        message: `"${event.leadName}" has been converted to:\n• Client: ${result.client.clientName}\n• Project: ${result.project.name}\n• Contract: ${(result.contract as any).contractNumber || result.contract.title}\n\nDeal value: $${(event.total || 0).toLocaleString()}`,
+                        message: `"${event.leadName}" has been converted to:\n• Customer: ${result.client.clientName}\n• Deal: ${result.project.name}\n• Contract: ${(result.contract as any).contractNumber || result.contract.title}\n\nDeal value: $${(event.total || 0).toLocaleString()}`,
                         type: 'SUCCESS',
                         userId: event.ownerUserId,
                         tenantId: event.tenantId,
@@ -229,12 +229,12 @@ export class DealConversionService {
                     if (admin.userId === event.ownerUserId) continue;
                     await notificationsService.create({
                         title: '🎉 New Deal Closed',
-                        message: `"${event.leadName}" converted to client & project.${event.total ? ` Value: $${event.total.toLocaleString()}` : ''}`,
+                        message: `"${event.leadName}" converted to customer and deal.${event.total ? ` Value: $${event.total.toLocaleString()}` : ''}`,
                         type: 'SUCCESS',
                         userId: admin.userId,
                         tenantId: event.tenantId,
-                        actionUrl: `/projects/${result.project.id}`,
-                        actionLabel: 'View Project',
+                        actionUrl: `/deals?dealId=${encodeURIComponent(result.project.id)}`,
+                        actionLabel: 'View Deal',
                     });
                 }
             } catch (err) {

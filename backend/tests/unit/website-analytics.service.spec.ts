@@ -323,6 +323,87 @@ describe('WebsiteAnalyticsService', () => {
     });
   });
 
+  it('rejects public tracking for inactive sites before writing sessions or events', async () => {
+    db.websiteAnalyticsSite.findUnique.mockResolvedValue({
+      id: 'site-1',
+      tenantId: 'tenant-1',
+      trackingKey: 'ys_key',
+      isActive: false,
+    });
+
+    await expect(websiteAnalyticsService.collect({
+      trackingKey: 'ys_key',
+      anonymousId: 'visitor-123',
+      sessionKey: 'session-123',
+      url: 'https://example.com',
+      events: [{ type: 'page_view', url: 'https://example.com' }],
+    })).rejects.toMatchObject({
+      statusCode: 403,
+      message: 'Tracking site is inactive',
+    });
+
+    expect(db.websiteVisitor.upsert).not.toHaveBeenCalled();
+    expect(db.websiteSession.create).not.toHaveBeenCalled();
+    expect(db.websiteEvent.createMany).not.toHaveBeenCalled();
+  });
+
+  it('public session start does not expose tenant id to browser clients', async () => {
+    db.websiteAnalyticsSite.findUnique.mockResolvedValue({
+      id: 'site-1',
+      tenantId: 'tenant-1',
+      trackingKey: 'ys_key',
+      isActive: true,
+      privacySettings: {},
+    });
+    db.websiteVisitor.upsert.mockResolvedValue({ id: 'visitor-1' });
+    db.websiteSession.findUnique.mockResolvedValue(null);
+    db.websiteSession.create.mockResolvedValue({
+      id: 'session-1',
+      tenantId: 'tenant-1',
+      siteId: 'site-1',
+      visitorId: 'visitor-1',
+      sessionKey: 'session-123',
+    });
+
+    const result = await websiteAnalyticsService.startSession({
+      trackingKey: 'ys_key',
+      anonymousId: 'visitor-123',
+      sessionKey: 'session-123',
+      url: 'https://example.com',
+    });
+
+    expect(result).toMatchObject({
+      siteId: 'site-1',
+      visitorId: 'visitor-1',
+      sessionId: 'session-1',
+      sessionKey: 'session-123',
+    });
+    expect(result).not.toHaveProperty('tenantId');
+  });
+
+  it('public APIs respect Do Not Track when enabled in privacy settings', async () => {
+    db.websiteAnalyticsSite.findUnique.mockResolvedValue({
+      id: 'site-1',
+      tenantId: 'tenant-1',
+      trackingKey: 'ys_key',
+      isActive: true,
+      privacySettings: { respectDoNotTrack: true },
+    });
+
+    await expect(websiteAnalyticsService.startSession({
+      trackingKey: 'ys_key',
+      anonymousId: 'visitor-123',
+      sessionKey: 'session-123',
+      url: 'https://example.com',
+    }, { dnt: '1' })).rejects.toMatchObject({
+      statusCode: 403,
+      message: 'Do Not Track is enabled for this visitor',
+    });
+
+    expect(db.websiteVisitor.upsert).not.toHaveBeenCalled();
+    expect(db.websiteSession.create).not.toHaveBeenCalled();
+  });
+
   it('public collect creates/updates visitor, session, and events for the site tenant', async () => {
     db.websiteAnalyticsSite.findUnique.mockResolvedValue({
       id: 'site-1',

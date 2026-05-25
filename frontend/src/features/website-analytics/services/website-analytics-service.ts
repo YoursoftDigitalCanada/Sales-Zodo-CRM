@@ -389,6 +389,10 @@ export async function updateWebsiteAnalyticsSite(id: string, payload: Partial<{ 
   return data(await api.put(`/website-analytics/sites/${id}`, payload));
 }
 
+export async function deleteWebsiteAnalyticsSite(id: string): Promise<void> {
+  await api.delete(`/website-analytics/sites/${id}`);
+}
+
 export async function getWebsiteAnalyticsSnippet(id: string): Promise<{ trackingKey: string; snippet: string }> {
   return data(await api.get(`/website-analytics/sites/${id}/snippet`));
 }

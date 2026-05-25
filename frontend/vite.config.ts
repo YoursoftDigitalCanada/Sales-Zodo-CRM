@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
+process.env.BROWSERSLIST_IGNORE_OLD_DATA = "1";
+
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
@@ -25,6 +27,10 @@ export default defineConfig(({ mode }) => ({
   },
 
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+
+  build: {
+    chunkSizeWarningLimit: 5500,
+  },
 
   resolve: {
     alias: [

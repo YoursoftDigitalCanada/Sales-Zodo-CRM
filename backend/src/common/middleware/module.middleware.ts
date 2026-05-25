@@ -18,6 +18,10 @@ import { ForbiddenError } from '../errors/HttpErrors';
 import { ErrorCodes } from '../errors/errorCodes';
 import { ROUTE_MODULE_MAP, CORE_MODULES } from '../constants/modules.guard';
 import { logger } from '../utils/logger';
+import {
+    isLegacyRoofingDeploymentEnabled,
+    LEGACY_ROOFING_PRODUCT_MODULES,
+} from '../../modules/automation/legacy-automation.guard';
 
 /**
  * Tenant settings shape for module configuration.
@@ -75,6 +79,22 @@ export function moduleGuard(
         // (defensive — shouldn't happen in production)
         if (!moduleSlugs || moduleSlugs.length === 0) {
             return next();
+        }
+
+        if (
+            moduleSlugs.some((moduleSlug) => LEGACY_ROOFING_PRODUCT_MODULES.has(moduleSlug))
+            && !isLegacyRoofingDeploymentEnabled()
+        ) {
+            logger.info('Legacy roofing module access blocked in Sales CRM deployment', {
+                routePrefix,
+                path: req.originalUrl,
+                userId: req.user?.userId,
+                acceptedModules: moduleSlugs,
+            });
+            return next(new ForbiddenError(
+                'This legacy workflow module is not enabled for this deployment.',
+                ErrorCodes.MODULE_DISABLED,
+            ));
         }
 
         // Tenant must be loaded by tenantContext middleware

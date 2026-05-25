@@ -463,6 +463,8 @@ export class InvoicesService {
             subject: string;
             html: string;
             text?: string;
+            replyTo?: string;
+            relatedEntityId?: string;
             attachments?: InvoiceEmailAttachment[];
         }) => Promise<{ sent: boolean; error?: string }>;
     }> {
@@ -475,6 +477,7 @@ export class InvoicesService {
                 const delivery = await tenantMailerService.sendTenantEmail({
                     tenantId,
                     preferredUserId: actorUserId,
+                    relatedEntityType: 'Invoice',
                     ...options,
                 });
                 return { sent: delivery.sent, error: delivery.error };
@@ -493,6 +496,8 @@ export class InvoicesService {
             subject: string;
             html: string;
             text?: string;
+            replyTo?: string;
+            relatedEntityId?: string;
             attachments?: InvoiceEmailAttachment[];
         }) => Promise<{ sent: boolean; error?: string }>;
     }> {
@@ -506,6 +511,7 @@ export class InvoicesService {
                     tenantId,
                     preferredUserId: actorUserId,
                     roleNames: ['Owner', 'Manager'],
+                    relatedEntityType: 'Invoice',
                     ...options,
                 });
                 return { sent: delivery.sent, error: delivery.error };
@@ -1048,6 +1054,7 @@ export class InvoicesService {
             subject: `Invoice ${invoiceForSend.invoiceNumber} from ${company.companyName}`,
             html: emailContent.html,
             text: emailContent.text,
+            relatedEntityId: id,
             attachments: emailAttachments,
         });
         if (!delivery.sent) {

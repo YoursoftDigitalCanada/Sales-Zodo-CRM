@@ -187,6 +187,8 @@ class ProposalReminderService {
                 to: reminder.leadEmail,
                 subject: schedule.subject,
                 html,
+                relatedEntityType: 'Proposal',
+                relatedEntityId: reminder.proposalId,
             });
             if (!delivery.sent) {
                 logger.warn('[ProposalReminder] Email reminder delivery failed', {

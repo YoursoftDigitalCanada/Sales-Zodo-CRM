@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { ForbiddenError } from '../errors/HttpErrors';
 import { ErrorCodes } from '../errors/errorCodes';
-import { LEGACY_ROOFING_AUTOMATION_MODULE } from '../../modules/automation/legacy-automation.guard';
+import {
+  isLegacyRoofingDeploymentEnabled,
+  LEGACY_ROOFING_AUTOMATION_MODULE,
+} from '../../modules/automation/legacy-automation.guard';
 
 type TenantSettings = {
   enabledModules?: unknown;
@@ -9,6 +12,7 @@ type TenantSettings = {
 };
 
 export function isLegacyRoofingModuleEnabledFromSettings(settings: TenantSettings | null | undefined): boolean {
+  if (!isLegacyRoofingDeploymentEnabled()) return false;
   if (!settings) return false;
   const enabledModules = Array.isArray(settings.enabledModules) ? settings.enabledModules : [];
   return settings.legacyRoofingAutomationEnabled === true

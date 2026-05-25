@@ -4,6 +4,7 @@ import { settingsRepository } from '../../modules/settings/settings.repository';
 import { requestContextStore } from './request-context.store';
 import { mailerService } from './mailer.service';
 import { config } from '../../config';
+import { activityLogger } from './activity-logger.service';
 
 export interface TenantEmailAttachment {
   filename: string;
@@ -20,19 +21,31 @@ export interface TenantEmailOptions {
   subject: string;
   html: string;
   text?: string;
+  replyTo?: string;
   attachments?: TenantEmailAttachment[];
+  relatedEntityType?: string;
+  relatedEntityId?: string;
 }
 
 type TenantSender = {
   senderName: string;
   senderEmail: string;
-  send: (options: Omit<TenantEmailOptions, 'tenantId' | 'preferredUserId'>) => Promise<{ sent: boolean; error?: string }>;
+  send: (options: Omit<TenantEmailOptions, 'tenantId' | 'preferredUserId' | 'relatedEntityType' | 'relatedEntityId'>) => Promise<{ sent: boolean; error?: string; messageId?: string }>;
 };
 
 const SIGNUP_FROM_EMAIL = config.email.from || config.email.user || 'security@zodo.ca';
 const SIGNUP_FROM_NAME = 'ZODO CRM';
 
 class TenantMailerService {
+  private async getTenantDefaultSenderName(tenantId: string): Promise<string> {
+    try {
+      const workspaceSmtp = await settingsRepository.getSmtpConfig(tenantId);
+      return workspaceSmtp.senderName || 'ZODO CRM';
+    } catch {
+      return 'ZODO CRM';
+    }
+  }
+
   async getTenantSender(tenantId: string, preferredUserId?: string): Promise<TenantSender> {
     const requestContext = requestContextStore.get();
     const candidateUserIds = [preferredUserId, requestContext?.userId].filter(
@@ -48,7 +61,7 @@ class TenantMailerService {
         && mailbox.smtp.user
         && mailbox.smtp.pass
       ) {
-        const senderName = mailbox.smtp.senderName || 'ZODO CRM';
+        const senderName = mailbox.smtp.senderName || await this.getTenantDefaultSenderName(tenantId);
         const senderEmail = mailbox.smtp.senderEmail || mailbox.smtp.user;
         return {
           senderName,
@@ -71,7 +84,7 @@ class TenantMailerService {
 
     const workspaceSmtp = await settingsRepository.getSmtpConfig(tenantId);
     if (workspaceSmtp.host && workspaceSmtp.user && workspaceSmtp.pass) {
-      const senderName = workspaceSmtp.senderName || 'ZODO CRM';
+      const senderName = workspaceSmtp.senderName || await this.getTenantDefaultSenderName(tenantId);
       const senderEmail = workspaceSmtp.senderEmail || workspaceSmtp.user;
       return {
         senderName,
@@ -93,7 +106,7 @@ class TenantMailerService {
 
     const fallbackMailbox = await mailboxRepository.findConfiguredSmtpForTenant(tenantId);
     if (fallbackMailbox) {
-      const senderName = fallbackMailbox.smtp.senderName || 'ZODO CRM';
+      const senderName = fallbackMailbox.smtp.senderName || await this.getTenantDefaultSenderName(tenantId);
       const senderEmail = fallbackMailbox.smtp.senderEmail || fallbackMailbox.smtp.user;
       return {
         senderName,
@@ -118,10 +131,19 @@ class TenantMailerService {
     );
   }
 
-  async sendTenantEmail(options: TenantEmailOptions): Promise<{ sent: boolean; error?: string; senderEmail: string; senderName: string }> {
+  async sendTenantEmail(options: TenantEmailOptions): Promise<{ sent: boolean; error?: string; senderEmail: string; senderName: string; messageId?: string }> {
     const sender = await this.getTenantSender(options.tenantId, options.preferredUserId);
-    const { tenantId: _tenantId, preferredUserId: _preferredUserId, ...mailOptions } = options;
+    const { tenantId: _tenantId, preferredUserId: _preferredUserId, relatedEntityType, relatedEntityId, ...mailOptions } = options;
     const delivery = await sender.send(mailOptions);
+    this.logDelivery(options.tenantId, delivery, {
+      subject: options.subject,
+      to: options.to,
+      senderEmail: sender.senderEmail,
+      senderName: sender.senderName,
+      preferredUserId: options.preferredUserId,
+      relatedEntityType,
+      relatedEntityId,
+    });
 
     return {
       ...delivery,
@@ -147,7 +169,7 @@ class TenantMailerService {
       );
     }
 
-    const senderName = privilegedMailbox.smtp.senderName || 'ZODO CRM';
+    const senderName = privilegedMailbox.smtp.senderName || await this.getTenantDefaultSenderName(tenantId);
     const senderEmail = privilegedMailbox.smtp.senderEmail || privilegedMailbox.smtp.user;
 
     return {
@@ -170,14 +192,24 @@ class TenantMailerService {
 
   async sendPrivilegedTenantEmail(
     options: TenantEmailOptions & { roleNames?: string[] },
-  ): Promise<{ sent: boolean; error?: string; senderEmail: string; senderName: string }> {
+  ): Promise<{ sent: boolean; error?: string; senderEmail: string; senderName: string; messageId?: string }> {
     const sender = await this.getPrivilegedTenantSender(
       options.tenantId,
       options.preferredUserId,
       options.roleNames,
     );
-    const { tenantId: _tenantId, preferredUserId: _preferredUserId, roleNames: _roleNames, ...mailOptions } = options;
+    const { tenantId: _tenantId, preferredUserId: _preferredUserId, roleNames: _roleNames, relatedEntityType, relatedEntityId, ...mailOptions } = options;
     const delivery = await sender.send(mailOptions);
+    this.logDelivery(options.tenantId, delivery, {
+      subject: options.subject,
+      to: options.to,
+      senderEmail: sender.senderEmail,
+      senderName: sender.senderName,
+      preferredUserId: options.preferredUserId,
+      relatedEntityType,
+      relatedEntityId,
+      privileged: true,
+    });
 
     return {
       ...delivery,
@@ -198,6 +230,30 @@ class TenantMailerService {
       senderEmail: SIGNUP_FROM_EMAIL,
       senderName: SIGNUP_FROM_NAME,
     };
+  }
+
+  private logDelivery(
+    tenantId: string,
+    delivery: { sent: boolean; error?: string; messageId?: string },
+    metadata: Record<string, unknown>,
+  ) {
+    activityLogger.log({
+      tenantId,
+      entityType: String(metadata.relatedEntityType || 'Email'),
+      entityId: String(metadata.relatedEntityId || delivery.messageId || metadata.subject || 'tenant-email'),
+      action: delivery.sent ? 'CREATE' : 'UPDATE',
+      module: 'emails',
+      userId: typeof metadata.preferredUserId === 'string' ? metadata.preferredUserId : undefined,
+      description: delivery.sent
+        ? `Tenant email sent: ${metadata.subject || '(no subject)'}`
+        : `Tenant email failed: ${metadata.subject || '(no subject)'}`,
+      metadata: {
+        ...metadata,
+        messageId: delivery.messageId,
+        error: delivery.error,
+        sent: delivery.sent,
+      },
+    });
   }
 }
 

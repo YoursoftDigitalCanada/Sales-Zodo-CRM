@@ -7,6 +7,8 @@ import {
   markReadSchema,
   notificationIdSchema,
 } from './notifications.validators';
+import { requirePermission } from '../../common/middleware/permission.middleware';
+import { PERMISSIONS } from '../../common/constants/permissions';
 
 const router = Router();
 
@@ -25,6 +27,7 @@ router.use(loadEmployee);
  */
 router.get(
   '/',
+  requirePermission(PERMISSIONS.NOTIFICATIONS_VIEW),
   validate(notificationQuerySchema),
   notificationsController.getNotifications.bind(notificationsController)
 );
@@ -40,6 +43,7 @@ router.get(
  */
 router.get(
   '/counts',
+  requirePermission(PERMISSIONS.NOTIFICATIONS_VIEW),
   notificationsController.getCounts.bind(notificationsController)
 );
 
@@ -54,6 +58,7 @@ router.get(
  */
 router.post(
   '/read',
+  requirePermission(PERMISSIONS.NOTIFICATIONS_VIEW),
   validate(markReadSchema),
   notificationsController.markManyAsRead.bind(notificationsController)
 );
@@ -69,6 +74,7 @@ router.post(
  */
 router.post(
   '/read-all',
+  requirePermission(PERMISSIONS.NOTIFICATIONS_VIEW),
   notificationsController.markAllAsRead.bind(notificationsController)
 );
 
@@ -83,6 +89,7 @@ router.post(
  */
 router.get(
   '/:id',
+  requirePermission(PERMISSIONS.NOTIFICATIONS_VIEW),
   validate(notificationIdSchema),
   notificationsController.getNotification.bind(notificationsController)
 );
@@ -98,6 +105,7 @@ router.get(
  */
 router.post(
   '/:id/read',
+  requirePermission(PERMISSIONS.NOTIFICATIONS_VIEW),
   validate(notificationIdSchema),
   notificationsController.markAsRead.bind(notificationsController)
 );
@@ -113,6 +121,7 @@ router.post(
  */
 router.delete(
   '/:id',
+  requirePermission(PERMISSIONS.NOTIFICATIONS_VIEW),
   validate(notificationIdSchema),
   notificationsController.deleteNotification.bind(notificationsController)
 );

@@ -28,6 +28,12 @@ function runGuard(settings: Record<string, any>) {
 }
 
 describe('legacy roofing route guard', () => {
+  beforeEach(() => {
+    delete process.env.PRODUCT_VARIANT;
+    delete process.env.PUBLIC_PRODUCT_VARIANT;
+    delete process.env.VITE_PUBLIC_PRODUCT_VARIANT;
+  });
+
   it('maps the top-level inspections route to the roofing module flag', () => {
     expect(ROUTE_MODULE_MAP.inspections).toEqual(['roofing-automation']);
   });
@@ -57,13 +63,26 @@ describe('legacy roofing route guard', () => {
     expect(error).toMatchObject({ statusCode: 403, code: 'MODULE_DISABLED' });
   });
 
-  it('roofing-enabled tenant can access legacy routes before normal permission checks', () => {
+  it('stale roofing tenant settings remain blocked in Sales CRM deployment', () => {
+    const next = runGuard({ enabledModules: ['leads', 'roofing-automation'], plan: 'enterprise' });
+
+    expect(next.mock.calls[0]?.[0]).toMatchObject({ statusCode: 403, code: 'MODULE_DISABLED' });
+  });
+
+  it('roofing-enabled tenant can access legacy routes in an explicit roofing deployment', () => {
+    process.env.PRODUCT_VARIANT = 'roofing';
     const next = runGuard({ enabledModules: ['leads', 'roofing-automation'], plan: 'enterprise' });
 
     expect(next).toHaveBeenCalledWith();
   });
 
-  it('legacy boolean flag also enables routes for explicitly configured tenants', () => {
+  it('legacy boolean flag only enables routes in an explicit roofing deployment', () => {
+    expect(isLegacyRoofingModuleEnabledFromSettings({
+      enabledModules: ['leads'],
+      legacyRoofingAutomationEnabled: true,
+    })).toBe(false);
+
+    process.env.PRODUCT_VARIANT = 'roofing';
     expect(isLegacyRoofingModuleEnabledFromSettings({
       enabledModules: ['leads'],
       legacyRoofingAutomationEnabled: true,

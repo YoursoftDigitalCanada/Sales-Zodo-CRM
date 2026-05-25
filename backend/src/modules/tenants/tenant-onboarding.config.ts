@@ -18,7 +18,6 @@ export const ONBOARDING_TASK_STATUSES = [
 export type OnboardingTaskStatus = (typeof ONBOARDING_TASK_STATUSES)[number];
 
 export const ONBOARDING_AI_BUSINESS_TYPES = [
-    'roofing',
     'saas',
     'b2b_sales',
     'professional_services',
@@ -93,13 +92,6 @@ export const ONBOARDING_MODULE_GROUPS = {
         moduleSlugs: ['team'],
         featureIds: ['team'],
     },
-    roofEstimator: {
-        label: 'AI Roof Estimator',
-        description: 'Premium AI-assisted roof measurements and estimating.',
-        plans: ['premium'],
-        moduleSlugs: ['roof-estimator'],
-        featureIds: ['roofEstimator'],
-    },
     analytics: {
         label: 'Advanced Analytics',
         description: 'Revenue, pipeline, and performance intelligence.',
@@ -129,7 +121,7 @@ export const ONBOARDING_MODULE_IDS = Object.keys(ONBOARDING_MODULE_GROUPS) as On
 export const DEFAULT_PLAN_MODULE_SELECTION: Record<SignupPlan, OnboardingModuleId[]> = {
     basic: ['leads', 'clients', 'finance', 'letterbox', 'support'],
     standard: ['leads', 'clients', 'finance', 'support', 'projects', 'communication', 'team'],
-    premium: ['leads', 'clients', 'finance', 'support', 'projects', 'communication', 'team', 'roofEstimator', 'analytics', 'reports', 'aiAssistant'],
+    premium: ['leads', 'clients', 'finance', 'support', 'projects', 'communication', 'team', 'analytics', 'reports', 'aiAssistant'],
 };
 
 const ALWAYS_ENABLED_ACCESS = {

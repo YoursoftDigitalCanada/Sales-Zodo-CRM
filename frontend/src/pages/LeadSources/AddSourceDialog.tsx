@@ -27,6 +27,7 @@ import GoogleAdsConfig from "./config/GoogleAdsConfig";
 import SocialMediaConfig from "./config/SocialMediaConfig";
 import EmailCampaignConfig from "./config/EmailCampaignConfig";
 import { buildLeadSourcePayload } from "./config/payload-utils";
+import { getEmployees } from "@/features/users";
 
 interface SourceTypeOption {
     type: string; name: string; category: string; icon: string; color: string; description: string; method: string;
@@ -69,14 +70,12 @@ const AddSourceDialog = ({ isOpen, onClose, onCreated }: Props) => {
                 integrationConfig: {},
             });
             api.get("/lead-sources/types").then((res) => setSourceTypes(res.data?.data || [])).catch(() => setSourceTypes([]));
-            import("@/features/users").then(({ getEmployees }) => {
-                getEmployees().then((emps: any[]) => {
-                    setEmployees(emps.map((emp: any) => ({
-                        id: emp.id,
-                        name: `${emp.user?.firstName || ""} ${emp.user?.lastName || ""}`.trim() || "Employee",
-                    })));
-                }).catch(() => setEmployees([]));
-            }).catch(() => { });
+            getEmployees().then((emps: any[]) => {
+                setEmployees(emps.map((emp: any) => ({
+                    id: emp.id,
+                    name: `${emp.user?.firstName || ""} ${emp.user?.lastName || ""}`.trim() || "Employee",
+                })));
+            }).catch(() => setEmployees([]));
         }
     }, [isOpen]);
 

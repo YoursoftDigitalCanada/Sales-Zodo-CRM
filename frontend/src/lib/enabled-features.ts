@@ -1,3 +1,5 @@
+import { isRoofingPublicMarketingEnabled } from "@/lib/public-product-config";
+
 export const APP_FEATURE_IDS = [
   "calendar",
   "tasks",
@@ -48,7 +50,7 @@ export const PLAN_FEATURE_ACCESS: Record<PlanKey, FeatureId[]> = {
     "files",
     "team",
   ],
-  premium: [...APP_FEATURE_IDS],
+  premium: APP_FEATURE_IDS.filter((featureId) => featureId !== "roofEstimator"),
 };
 
 export const DEFAULT_ENABLED_FEATURES: FeatureId[] = [...PLAN_FEATURE_ACCESS.standard];
@@ -69,7 +71,7 @@ const LEGACY_FEATURE_ALIASES: Record<string, FeatureId[]> = {
   quotes: ["finance"],
   email: ["letterbox", "chat", "support"],
   documents: ["files"],
-  api: ["team", "roofEstimator", "aiAssistant"],
+  api: ["team", "aiAssistant"],
   automation: ["aiAssistant"],
 };
 
@@ -105,6 +107,10 @@ export function normalizeEnabledFeatures(input: unknown): FeatureId[] {
   incoming.forEach((value) => {
     const key = String(value).trim();
     if (!key) return;
+
+    if (key === "roofEstimator" && !isRoofingPublicMarketingEnabled) {
+      return;
+    }
 
     if (allowed.has(key)) {
       normalized.add(key as FeatureId);

@@ -15,7 +15,14 @@ export const notificationQuerySchema = z.object({
 
 export const markReadSchema = z.object({
   body: z.object({
-    notificationIds: z.array(z.string().uuid()).min(1, 'At least one notification ID required'),
+    notificationIds: z.array(z.string().uuid()).optional(),
+    ids: z.array(z.string().uuid()).optional(),
+  }).refine((body) => {
+    const ids = body.notificationIds || body.ids || [];
+    return ids.length > 0;
+  }, {
+    message: 'At least one notification ID required',
+    path: ['notificationIds'],
   }),
 });
 

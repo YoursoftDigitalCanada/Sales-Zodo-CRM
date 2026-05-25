@@ -6,7 +6,7 @@ import {
   NotificationListResponseDto,
   NotificationCountDto,
 } from './notifications.dto';
-import { NotFoundError } from '../../common/errors/HttpErrors';
+import { BadRequestError, NotFoundError } from '../../common/errors/HttpErrors';
 import { logger } from '../../common/utils/logger';
 import { PushPayload, PushProvider } from './push.types';
 import { WebPushProvider } from './web-push.provider';
@@ -24,7 +24,9 @@ export class NotificationsService {
    * Create notification
    */
   async create(data: CreateNotificationDto): Promise<NotificationResponseDto> {
-    const notification = await notificationsRepository.create(data);
+    await this.assertRecipientBelongsToTenant(data.userId, data.tenantId);
+    const sanitized = this.sanitizeNotificationPayload(data);
+    const notification = await notificationsRepository.create(sanitized);
     return this.toResponseDto(notification);
   }
 
@@ -36,8 +38,9 @@ export class NotificationsService {
     tenantId: string,
     data: Omit<CreateNotificationDto, 'userId' | 'tenantId'>
   ): Promise<number> {
+    await Promise.all(userIds.map((userId) => this.assertRecipientBelongsToTenant(userId, tenantId)));
     const notifications = userIds.map((userId) => ({
-      ...data,
+      ...this.sanitizeNotificationPayload({ ...data, userId, tenantId }),
       userId,
       tenantId,
     }));
@@ -228,6 +231,114 @@ export class NotificationsService {
       createdAt: notification.createdAt,
       expiresAt: notification.expiresAt || undefined,
     };
+  }
+
+  private sanitizeNotificationPayload(data: CreateNotificationDto): CreateNotificationDto {
+    const metadata = this.sanitizeMetadata(data.metadata || {});
+    return {
+      ...data,
+      title: this.toSalesCrmText(data.title),
+      message: this.toSalesCrmText(data.message),
+      actionLabel: data.actionLabel ? this.toSalesCrmText(data.actionLabel) : data.actionLabel,
+      actionUrl: this.resolveActionUrl(data.actionUrl, metadata),
+      metadata,
+    };
+  }
+
+  private sanitizeMetadata(metadata: Record<string, any>): Record<string, any> {
+    const next = { ...metadata };
+    if (next.projectId && !next.dealId) next.dealId = next.projectId;
+    return next;
+  }
+
+  private toSalesCrmText(value: string): string {
+    return String(value || '')
+      .replace(/\bProject Status Updated\b/g, 'Deal Status Updated')
+      .replace(/\bView Project\b/g, 'View Deal')
+      .replace(/\bproject\b/g, 'deal')
+      .replace(/\bProject\b/g, 'Deal');
+  }
+
+  private resolveActionUrl(actionUrl?: string, metadata: Record<string, any> = {}): string | undefined {
+    const raw = typeof actionUrl === 'string' ? actionUrl.trim() : '';
+    const fallback = this.actionUrlFromMetadata(metadata);
+    if (!raw) return fallback;
+    if (/^https?:\/\//i.test(raw)) return raw;
+
+    const normalized = raw.startsWith('/') ? raw : `/${raw}`;
+    const [pathname, query = ''] = normalized.split('?');
+    const search = query ? `?${query}` : '';
+
+    if (pathname === '/invoices') return `/invoice${search}`;
+    if (/^\/invoices\/[^/]+$/.test(pathname)) return pathname.replace(/^\/invoices\//, '/invoice/') + search;
+    if (pathname === '/projects' || pathname === '/kanban') return `/deals${search}`;
+    if (/^\/projects\/[^/]+$/.test(pathname)) return this.withQuery('/deals', 'dealId', pathname.split('/')[2]);
+    if (/^\/projects\/[^/]+\/documents$/.test(pathname)) {
+      return `/documents?linkedEntityType=Deal&linkedEntityId=${encodeURIComponent(pathname.split('/')[2])}`;
+    }
+    if (/^\/deals\/[^/]+$/.test(pathname)) return this.withQuery('/deals', 'dealId', pathname.split('/')[2]);
+    if (pathname === '/quotes') return `/proposals${search}`;
+    if (/^\/quotes\/[^/]+$/.test(pathname)) return this.withQuery('/proposals', 'quoteId', pathname.split('/')[2]);
+    if (/^\/proposals\/[^/]+$/.test(pathname)) return this.withQuery('/proposals', 'proposalId', pathname.split('/')[2]);
+    if (/^\/contracts\/[^/]+$/.test(pathname)) return this.withQuery('/contracts', 'contractId', pathname.split('/')[2]);
+    if (pathname === '/chat') return `/chats${search}`;
+    if (/^\/chat\/[^/]+$/.test(pathname)) return this.withQuery('/chats', 'conversationId', pathname.split('/')[2]);
+    if (/^\/tasks\/[^/]+$/.test(pathname)) return this.withQuery('/tasks', 'taskId', pathname.split('/')[2]);
+    if (/^\/bookings\/[^/]+$/.test(pathname)) return this.withQuery('/calendar', 'bookingId', pathname.split('/')[2]);
+    if (pathname === '/bookings') return `/calendar${search}`;
+
+    return normalized;
+  }
+
+  private actionUrlFromMetadata(metadata: Record<string, any>): string | undefined {
+    const read = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : undefined);
+    const invoiceId = read(metadata.invoiceId);
+    const dealId = read(metadata.dealId) || read(metadata.projectId);
+    const leadId = read(metadata.leadId);
+    const clientId = read(metadata.clientId) || read(metadata.organizationId) || read(metadata.companyId);
+    const contactId = read(metadata.contactId);
+    const proposalId = read(metadata.proposalId);
+    const quoteId = read(metadata.quoteId);
+    const contractId = read(metadata.contractId);
+    const documentId = read(metadata.documentId) || read(metadata.fileId);
+    const taskId = read(metadata.taskId);
+    const expenseId = read(metadata.expenseId);
+    const paymentId = read(metadata.paymentId);
+
+    if (invoiceId) return `/invoice/${invoiceId}`;
+    if (dealId) return this.withQuery('/deals', 'dealId', dealId);
+    if (leadId) return `/leads/${leadId}`;
+    if (clientId) return `/client-list/${clientId}`;
+    if (contactId) return this.withQuery('/contacts', 'contactId', contactId);
+    if (proposalId) return this.withQuery('/proposals', 'proposalId', proposalId);
+    if (quoteId) return this.withQuery('/proposals', 'quoteId', quoteId);
+    if (contractId) return this.withQuery('/contracts', 'contractId', contractId);
+    if (documentId) return this.withQuery('/documents', 'documentId', documentId);
+    if (taskId) return this.withQuery('/tasks', 'taskId', taskId);
+    if (expenseId) return this.withQuery('/expenses', 'expenseId', expenseId);
+    if (paymentId) return this.withQuery('/bookkeeping', 'paymentId', paymentId);
+    return undefined;
+  }
+
+  private withQuery(pathname: string, key: string, value: string) {
+    return `${pathname}?${key}=${encodeURIComponent(value)}`;
+  }
+
+  private async assertRecipientBelongsToTenant(userId: string, tenantId: string): Promise<void> {
+    const user = await prisma.user.findFirst({
+      where: {
+        id: userId,
+        OR: [
+          { tenantId },
+          { employees: { some: { tenantId } } },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new BadRequestError('Notification recipient does not belong to this tenant');
+    }
   }
 
   private async resolveTenantIdForUser(userId: string): Promise<string | null> {

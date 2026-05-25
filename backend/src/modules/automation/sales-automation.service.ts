@@ -1987,6 +1987,8 @@ class SalesAutomationService {
         subject,
         html,
         text,
+        relatedEntityType: reminder.entityType,
+        relatedEntityId: reminder.entityId,
       }),
       { reminderId: reminder.id, reminderType: reminder.reminderType, recipient },
     );
@@ -2038,6 +2040,8 @@ class SalesAutomationService {
         subject,
         html,
         text,
+        relatedEntityType: 'Contract',
+        relatedEntityId: contractId,
       }),
       { contractId, recipient },
     );
@@ -2257,6 +2261,8 @@ class SalesAutomationService {
         subject,
         html,
         text,
+        relatedEntityType: 'Proposal',
+        relatedEntityId: proposalId,
       }),
       { proposalId, recipient },
     );

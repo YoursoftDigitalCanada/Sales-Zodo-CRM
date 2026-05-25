@@ -30,6 +30,13 @@ function runModuleGuard(path: string, enabledModules: string[]) {
 }
 
 describe('module.middleware', () => {
+  beforeEach(() => {
+    delete process.env.PRODUCT_VARIANT;
+    delete process.env.PUBLIC_PRODUCT_VARIANT;
+    delete process.env.VITE_PUBLIC_PRODUCT_VARIANT;
+    delete process.env.ENABLE_LEGACY_ROOFING_WORKFLOWS;
+  });
+
   it('allows invoice routes when the tenant enables the invoices child module', () => {
     const next = runModuleGuard('/invoices?limit=5', ['dashboard', 'invoices', 'payments']);
 
@@ -50,5 +57,23 @@ describe('module.middleware', () => {
       statusCode: 403,
       message: expect.stringContaining('finance'),
     });
+  });
+
+  it('blocks stale roof-estimator access in Sales CRM deployments even if the tenant setting still exists', () => {
+    const next = runModuleGuard('/roof-estimator', ['dashboard', 'roof-estimator']);
+    const error = next.mock.calls[0]?.[0];
+
+    expect(error).toMatchObject({
+      statusCode: 403,
+      code: 'MODULE_DISABLED',
+      message: expect.stringContaining('deployment'),
+    });
+  });
+
+  it('allows roof-estimator only for explicit roofing deployments with the tenant module enabled', () => {
+    process.env.PRODUCT_VARIANT = 'roofing';
+    const next = runModuleGuard('/roof-estimator', ['dashboard', 'roof-estimator']);
+
+    expect(next).toHaveBeenCalledWith();
   });
 });

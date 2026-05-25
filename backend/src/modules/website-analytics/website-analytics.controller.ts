@@ -422,15 +422,15 @@ export class WebsiteAnalyticsController {
   }
 
   startRecording(req: Request, res: Response, next: NextFunction) {
-    websiteAnalyticsService.startRecording(sanitizeBody(req.body)).then((data) => sendCreated(res, data, 'Recording started')).catch(next);
+    websiteAnalyticsService.startRecording(sanitizeBody(req.body), req.headers).then((data) => sendCreated(res, data, 'Recording started')).catch(next);
   }
 
   uploadRecordingChunk(req: Request, res: Response, next: NextFunction) {
-    websiteAnalyticsService.uploadRecordingChunk(sanitizeBody(req.body)).then((data) => sendCreated(res, data, 'Recording chunk stored')).catch(next);
+    websiteAnalyticsService.uploadRecordingChunk(sanitizeBody(req.body), req.headers).then((data) => sendCreated(res, data, 'Recording chunk stored')).catch(next);
   }
 
   endRecording(req: Request, res: Response, next: NextFunction) {
-    websiteAnalyticsService.endRecording(sanitizeBody(req.body)).then((data) => sendSuccess(res, data, 'Recording ended')).catch(next);
+    websiteAnalyticsService.endRecording(sanitizeBody(req.body), req.headers).then((data) => sendSuccess(res, data, 'Recording ended')).catch(next);
   }
 }
 

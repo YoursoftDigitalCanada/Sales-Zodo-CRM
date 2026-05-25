@@ -131,7 +131,7 @@ export class NotificationsManager {
       title: 'Expense Approval Request',
       message: `${submittedByName} submitted expense "${expenseTitle}" (${currency} ${amount.toFixed(2)}) for approval.`,
       type: 'INFO',
-      actionUrl: `/expenses/${expenseId}`,
+      actionUrl: `/expenses?expenseId=${encodeURIComponent(expenseId)}`,
       actionLabel: 'Review Expense',
       metadata: { expenseId, amount, currency, type: 'expense_approval_request' },
     });
@@ -155,7 +155,7 @@ export class NotificationsManager {
       title: approved ? 'Expense Approved' : 'Expense Rejected',
       message: `Your expense "${expenseTitle}" has been ${approved ? 'approved' : 'rejected'} by ${approverName}.${notes ? ` Note: ${notes}` : ''}`,
       type: approved ? 'SUCCESS' : 'WARNING',
-      actionUrl: `/expenses/${expenseId}`,
+      actionUrl: `/expenses?expenseId=${encodeURIComponent(expenseId)}`,
       actionLabel: 'View Expense',
       metadata: { expenseId, approved, type: 'expense_decision' },
     });
@@ -179,7 +179,7 @@ export class NotificationsManager {
       title: 'Invoice Paid',
       message: `Invoice ${invoiceNumber} for ${clientName} (${currency} ${amount.toFixed(2)}) has been paid.`,
       type: 'SUCCESS',
-      actionUrl: `/invoices/${invoiceId}`,
+      actionUrl: `/invoice/${invoiceId}`,
       actionLabel: 'View Invoice',
       metadata: { invoiceId, amount, currency, type: 'invoice_paid' },
     });
@@ -204,7 +204,7 @@ export class NotificationsManager {
       title: 'Invoice Overdue',
       message: `Invoice ${invoiceNumber} for ${clientName} (${currency} ${amount.toFixed(2)}) is ${daysOverdue} days overdue.`,
       type: 'ERROR',
-      actionUrl: `/invoices/${invoiceId}`,
+      actionUrl: `/invoice/${invoiceId}`,
       actionLabel: 'View Invoice',
       metadata: { invoiceId, amount, currency, daysOverdue, type: 'invoice_overdue' },
     });
@@ -272,7 +272,7 @@ export class NotificationsManager {
       title: 'New Message',
       message: `${senderName}: ${messagePreview.substring(0, 100)}${messagePreview.length > 100 ? '...' : ''}`,
       type: 'INFO',
-      actionUrl: `/chat/${roomId}`,
+      actionUrl: `/chats?conversationId=${encodeURIComponent(roomId)}`,
       actionLabel: 'Open Chat',
       metadata: { roomId, type: 'new_chat_message' },
     });
@@ -294,12 +294,12 @@ export class NotificationsManager {
       await this.createNotification({
         userId,
         tenantId,
-        title: 'Project Status Updated',
-        message: `${changedByName} changed project "${projectName}" status from ${oldStatus} to ${newStatus}.`,
+        title: 'Deal Status Updated',
+        message: `${changedByName} changed deal "${projectName}" status from ${oldStatus} to ${newStatus}.`,
         type: 'INFO',
-        actionUrl: `/projects/${projectId}`,
-        actionLabel: 'View Project',
-        metadata: { projectId, oldStatus, newStatus, type: 'project_status_change' },
+        actionUrl: `/deals?dealId=${encodeURIComponent(projectId)}`,
+        actionLabel: 'View Deal',
+        metadata: { dealId: projectId, projectId, oldStatus, newStatus, type: 'deal_status_change' },
       });
     }
   }

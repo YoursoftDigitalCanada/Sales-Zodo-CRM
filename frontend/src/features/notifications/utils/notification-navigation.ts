@@ -35,9 +35,12 @@ export function resolveNotificationTarget(source?: NotificationNavigationSource 
   const metadataProjectId = readString(metadata.projectId);
   const metadataLeadId = readString(metadata.leadId);
   const metadataClientId = readString(metadata.clientId);
+  const metadataContactId = readString(metadata.contactId);
+  const metadataOrganizationId = readString(metadata.organizationId) || readString(metadata.companyId);
   const metadataRoomId = readString(metadata.roomId);
   const metadataTaskId = readString(metadata.taskId);
   const metadataExpenseId = readString(metadata.expenseId);
+  const metadataPaymentId = readString(metadata.paymentId);
   const metadataBookingId = readString(metadata.bookingId);
   const metadataEventId = readString(metadata.eventId);
   const metadataQuoteId = readString(metadata.quoteId);
@@ -50,6 +53,8 @@ export function resolveNotificationTarget(source?: NotificationNavigationSource 
     if (metadataProjectId) return withQuery("/deals", "dealId", metadataProjectId);
     if (metadataLeadId) return `/leads/${metadataLeadId}`;
     if (metadataClientId) return `/client-list/${metadataClientId}`;
+    if (metadataOrganizationId) return withQuery("/organizations", "organizationId", metadataOrganizationId);
+    if (metadataContactId) return withQuery("/contacts", "contactId", metadataContactId);
     if (metadataProposalId) return withQuery("/proposals", "proposalId", metadataProposalId);
     if (metadataQuoteId) return withQuery("/proposals", "quoteId", metadataQuoteId);
     if (metadataContractId) return withQuery("/contracts", "contractId", metadataContractId);
@@ -57,6 +62,7 @@ export function resolveNotificationTarget(source?: NotificationNavigationSource 
     if (metadataRoomId) return withQuery("/chats", "conversationId", metadataRoomId);
     if (metadataTaskId) return withQuery("/tasks", "taskId", metadataTaskId);
     if (metadataExpenseId) return withQuery("/expenses", "expenseId", metadataExpenseId);
+    if (metadataPaymentId) return withQuery("/bookkeeping", "paymentId", metadataPaymentId);
     if (metadataBookingId) return withQuery("/calendar", "bookingId", metadataBookingId);
     if (metadataEventId) return withQuery("/calendar", "event", metadataEventId);
     return undefined;

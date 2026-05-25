@@ -41,7 +41,7 @@ export async function markNotificationAsRead(id: string): Promise<void> {
 }
 
 export async function markManyAsRead(ids: string[]): Promise<void> {
-    await api.post("/notifications/read", { ids });
+    await api.post("/notifications/read", { notificationIds: ids });
 }
 
 export async function markAllAsRead(): Promise<void> {

@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { API_ORIGIN, buildApiUrl } from "@/services/api";
+import { isRoofingPublicMarketingEnabled } from "@/lib/public-product-config";
 import { cn } from "@/lib/utils";
 
 interface QuoteCompany {
@@ -270,10 +271,11 @@ export default function PublicQuoteView() {
   const badge = statusConfig(currentStatus);
   const StatusIcon = badge.icon;
   const companyLogoUrl = resolvePublicAssetUrl(quote?.company.logoUrl);
-  const roofEstimateSatelliteUrl = resolvePublicAssetUrl(quote?.roofEstimate?.satelliteImageUrl);
+  const showLegacyAssessment = isRoofingPublicMarketingEnabled && Boolean(quote?.roofEstimate);
+  const roofEstimateSatelliteUrl = resolvePublicAssetUrl(showLegacyAssessment ? quote?.roofEstimate?.satelliteImageUrl : undefined);
   const roofEstimatePhotos = useMemo(
-    () => normalizeRoofEstimatePhotos(quote?.roofEstimate?.photoUrls),
-    [quote?.roofEstimate?.photoUrls],
+    () => showLegacyAssessment ? normalizeRoofEstimatePhotos(quote?.roofEstimate?.photoUrls) : [],
+    [showLegacyAssessment, quote?.roofEstimate?.photoUrls],
   );
 
   const getCanvasPoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -479,7 +481,7 @@ export default function PublicQuoteView() {
                 </div>
               </div>
 
-              {quote.roofEstimate && (
+              {showLegacyAssessment && quote.roofEstimate && (
                 <div className="mb-6 space-y-4">
                   <p className="text-sm font-semibold text-[#0F172A]">Service Assessment</p>
 

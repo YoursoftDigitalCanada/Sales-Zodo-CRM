@@ -798,6 +798,8 @@ export class QuotesService {
             subject: `Proposal ${q.quoteNumber} ready for signature`,
             html,
             text: `Hi ${recipient.name}, your proposal ${q.quoteNumber} for ${this.formatCurrency(Number(q.total), q.currency || 'CAD')} is ready to review and sign: ${publicLink}`,
+            relatedEntityType: 'Proposal',
+            relatedEntityId: dto.id,
             attachments: emailAttachments.length > 0 ? emailAttachments : undefined,
         });
         if (!delivery.sent) {

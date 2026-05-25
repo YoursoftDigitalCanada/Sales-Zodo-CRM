@@ -83,6 +83,7 @@ class MailerService {
             subject: string;
             html: string;
             text?: string;
+            replyTo?: string;
             attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
         }
     ): Promise<boolean> {
@@ -99,6 +100,7 @@ class MailerService {
             subject: string;
             html: string;
             text?: string;
+            replyTo?: string;
             attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
         }
     ): Promise<{ sent: boolean; error?: string; messageId?: string }> {
@@ -141,6 +143,7 @@ class MailerService {
                 subject: opts.subject,
                 html: opts.html,
                 text: opts.text,
+                replyTo: opts.replyTo,
                 attachments: opts.attachments?.map((a) => ({
                     filename: a.filename,
                     content: a.content,
@@ -224,6 +227,7 @@ class MailerService {
         subject: string;
         html: string;
         text?: string;
+        replyTo?: string;
         attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
         fromName?: string;
         fromEmail?: string;
@@ -239,6 +243,7 @@ class MailerService {
         subject: string;
         html: string;
         text?: string;
+        replyTo?: string;
         attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
         fromName?: string;
         fromEmail?: string;
@@ -263,6 +268,7 @@ class MailerService {
             subject: opts.subject,
             html: opts.html,
             text: opts.text,
+            replyTo: opts.replyTo,
             attachments: opts.attachments,
         });
     }

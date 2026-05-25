@@ -116,6 +116,9 @@ describe('legacy proposal automation gate', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     for (const key of Object.keys(handlers)) delete handlers[key];
+    delete process.env.PRODUCT_VARIANT;
+    delete process.env.PUBLIC_PRODUCT_VARIANT;
+    delete process.env.VITE_PUBLIC_PRODUCT_VARIANT;
     (proposalReminderService as any).scheduledProposals?.clear();
     (proposalReminderService as any).sentReminders?.clear();
 
@@ -201,6 +204,7 @@ describe('legacy proposal automation gate', () => {
   });
 
   it('roofing-enabled tenant can still execute legacy proposal workflow when explicitly enabled', async () => {
+    process.env.PRODUCT_VARIANT = 'roofing';
     mockDb.tenant.findUnique.mockResolvedValue({ id: 'tenant-roofing', settings: { enabledModules: ['roofing-automation'] } });
     stage4SendWorkflowService.initialize();
 
@@ -216,6 +220,7 @@ describe('legacy proposal automation gate', () => {
   });
 
   it('roofing-enabled tenant can still execute legacy Stage 5 workflow when explicitly enabled', async () => {
+    process.env.PRODUCT_VARIANT = 'roofing';
     mockDb.tenant.findUnique.mockResolvedValue({ id: 'tenant-roofing', settings: { enabledModules: ['roofing-automation'] } });
     stage5ConversionWorkflowService.initialize();
 

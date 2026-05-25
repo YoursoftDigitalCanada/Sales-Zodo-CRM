@@ -175,6 +175,8 @@ class InvoiceReminderService {
       subject,
       html,
       text,
+      relatedEntityType: 'Invoice',
+      relatedEntityId: invoice.id,
     });
 
     if (!delivery.sent) {

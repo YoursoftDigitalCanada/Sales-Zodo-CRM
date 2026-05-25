@@ -95,6 +95,8 @@ class QuoteSignatureReminderService {
   </div>
 </div>`,
                     text: `${schedule.message} Review and sign your proposal here: ${reminder.publicLink}`,
+                    relatedEntityType: 'Proposal',
+                    relatedEntityId: quoteId,
                 });
                 if (!delivery.sent) {
                     logger.warn('[QuoteReminder] Email reminder delivery failed', {

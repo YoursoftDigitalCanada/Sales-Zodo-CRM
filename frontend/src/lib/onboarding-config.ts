@@ -49,13 +49,6 @@ export const ONBOARDING_MODULES = {
     plans: ["standard", "premium"],
     featureIds: ["team"],
   },
-  roofEstimator: {
-    label: "AI Sales Assistant",
-    description: "Lead scoring, email writing, deal insights, and forecasting assistance.",
-    plans: ["premium"],
-    featureIds: ["roofEstimator"],
-    highlight: true,
-  },
   analytics: {
     label: "Advanced Analytics",
     description: "Track revenue, performance, and pipeline signals.",
@@ -84,7 +77,7 @@ export type OnboardingModuleId = keyof typeof ONBOARDING_MODULES;
 export const PLAN_MODULE_SELECTION: Record<PlanKey, OnboardingModuleId[]> = {
   basic: ["leads", "clients", "finance", "letterbox", "support"],
   standard: ["leads", "clients", "finance", "support", "projects", "communication", "team"],
-  premium: ["leads", "clients", "finance", "support", "projects", "communication", "team", "roofEstimator", "analytics", "reports", "aiAssistant"],
+  premium: ["leads", "clients", "finance", "support", "projects", "communication", "team", "analytics", "reports", "aiAssistant"],
 };
 
 export const CURRENCY_OPTIONS = [

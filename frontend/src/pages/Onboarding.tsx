@@ -566,7 +566,7 @@ export default function OnboardingPage() {
                 {currentStep.id === "intelligence" ? (
                   <div className="space-y-4">
                     <div className="grid gap-3 md:grid-cols-2">
-                      <TogglePanel label="AI Sales Assistant" checked={payload.modules.includes("roofEstimator")} onChange={(checked) => updatePayload((current) => ({ ...current, modules: checked ? Array.from(new Set([...current.modules, "roofEstimator" as OnboardingModuleId])) : current.modules.filter((module) => module !== "roofEstimator") }))} />
+                      <TogglePanel label="AI Sales Assistant" checked={payload.modules.includes("aiAssistant")} onChange={(checked) => updatePayload((current) => ({ ...current, modules: checked ? Array.from(new Set([...current.modules, "aiAssistant" as OnboardingModuleId])) : current.modules.filter((module) => module !== "aiAssistant") }))} />
                       <TogglePanel label="Advanced Analytics" checked={payload.modules.includes("analytics")} onChange={(checked) => updatePayload((current) => ({ ...current, modules: checked ? Array.from(new Set([...current.modules, "analytics" as OnboardingModuleId])) : current.modules.filter((module) => module !== "analytics") }))} />
                     </div>
                     {plan === "premium" ? <OptionCards title="Analytics Focus" values={ANALYTICS_METRIC_OPTIONS.map((option) => option.value)} labels={Object.fromEntries(ANALYTICS_METRIC_OPTIONS.map((option) => [option.value, option.label]))} selected={payload.analyticsSettings?.metrics || []} onToggle={(value) => updatePayload((current) => ({ ...current, analyticsSettings: { metrics: toggleValue(current.analyticsSettings?.metrics || [], value as any) } }))} /> : null}

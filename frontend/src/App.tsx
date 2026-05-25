@@ -629,7 +629,7 @@ const AppRoutes = () => {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/quote/:token" element={<PublicQuoteView />} />
         <Route path="/proposal/sign/:token" element={<PublicQuoteView />} />
-        <Route path="/estimate/sign/:token" element={<PublicQuoteView />} />
+        <Route path="/estimate/sign/:token" element={publicRoofingRoute(<PublicQuoteView />)} />
         <Route path="/shared-recording/:token" element={<SharedRecordingPage />} />
 
         {/* ========== DASHBOARD ========== */}

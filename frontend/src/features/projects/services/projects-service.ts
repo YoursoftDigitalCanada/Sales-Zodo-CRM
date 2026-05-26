@@ -284,7 +284,7 @@ export async function markDealLost(projectId: string | number, data: UpdateProje
 }
 
 export async function getDealsByStage(params?: Record<string, unknown>): Promise<Record<string, unknown>> {
-  const response = await api.get("/projects/pipeline/deals/by-stage", { params: { limit: 500, ...params } });
+  const response = await api.get("/projects/pipeline/deals/by-stage", { params: { limit: 200, ...params } });
   return extractApiData<Record<string, unknown>>(response.data);
 }
 

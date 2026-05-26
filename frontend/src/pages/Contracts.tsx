@@ -243,7 +243,17 @@ export default function ContractsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [contractResult, clientResult, contactResult] = await Promise.all([getContracts(), getClients(), getContractContacts()]);
+      const [contractResult, clientResult, contactResult] = await Promise.all([
+        getContracts(),
+        getClients().catch((error) => {
+          console.warn("Could not load companies for contracts", error);
+          return [];
+        }),
+        getContractContacts().catch((error) => {
+          console.warn("Could not load contacts for contracts", error);
+          return [];
+        }),
+      ]);
       setContracts(contractResult.data);
       setClients(Array.isArray(clientResult) ? clientResult : []);
       setContacts(contactResult);

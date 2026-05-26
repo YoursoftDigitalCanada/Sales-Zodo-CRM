@@ -709,7 +709,7 @@ export default function DealsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [confirm, setConfirm] = useState<{ deal: ProjectEntity; stage: string; value: string; lostReason: string } | null>(null);
 
-  const dealsQuery = useQuery({ queryKey: ["deals"], queryFn: () => getProjects({ limit: 500, sortBy: "updatedAt", sortOrder: "desc" }) });
+  const dealsQuery = useQuery({ queryKey: ["deals"], queryFn: () => getProjects({ limit: 200, sortBy: "updatedAt", sortOrder: "desc" }) });
   const ownersQuery = useQuery({ queryKey: ["deal-owners"], queryFn: getSalesReps });
   const clientsQuery = useQuery({
     queryKey: ["deal-clients"],

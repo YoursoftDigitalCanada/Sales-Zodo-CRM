@@ -50,7 +50,7 @@ export async function getContracts(params?: ContractQuery): Promise<{ data: Cont
 }
 
 export async function getContractContacts(): Promise<ContractContactEntity[]> {
-  const response = await api.get("/contacts", { params: { limit: 200 } });
+  const response = await api.get("/contacts", { params: { limit: 100 } });
   const payload = response.data;
   return payload?.data || payload?.items || (Array.isArray(payload) ? payload : []);
 }

@@ -14,10 +14,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { getLeadById, updateLead, convertLead } from "@/features/leads";
+import { getLeadById, updateLead, updateLeadStatus, convertLead } from "@/features/leads";
 import { getFiles, getDownloadUrl } from "@/features/files/services/files-service";
 import { getProjects } from "@/features/projects/services/projects-service";
 import { getTasks } from "@/features/tasks/services/tasks-service";
@@ -139,6 +146,16 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
     WON: { label: "Won", color: "text-green-700", bg: "bg-green-50 border-green-200" },
     LOST: { label: "Lost", color: "text-red-700", bg: "bg-red-50 border-red-200" },
 };
+
+const MANUAL_STAGE_OPTIONS = [
+    { value: "NEW", label: "New" },
+    { value: "CONTACTED", label: "Contacted" },
+    { value: "QUALIFIED", label: "Qualified" },
+    { value: "PROPOSAL", label: "Proposal" },
+    { value: "NEGOTIATION", label: "Negotiation" },
+    { value: "WON", label: "Won" },
+    { value: "LOST", label: "Lost" },
+] as const;
 
 const TEMP_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
     COLD: { label: "Cold", icon: Snowflake, color: "text-blue-600", bg: "bg-blue-50" },
@@ -468,6 +485,7 @@ const LeadDetailPage = () => {
     const [emails, setEmails] = useState<any[]>([]);
     const [loadingEmails, setLoadingEmails] = useState(false);
     const [showComposeEmail, setShowComposeEmail] = useState(false);
+    const [isUpdatingStage, setIsUpdatingStage] = useState(false);
 
     const navigationState = (location.state as LeadDetailNavigationState | null) ?? null;
     const persistedNavigationState = id ? readLeadDetailNavigationState(id) : null;
@@ -664,7 +682,7 @@ const LeadDetailPage = () => {
     const handleQualifyLead = async () => {
         if (!id || !lead) return;
         try {
-            const updatedLead = await updateLead(id, { status: "QUALIFIED" } as any);
+            const updatedLead = await updateLeadStatus(id, "QUALIFIED" as any);
             applyLeadState(updatedLead as LeadData);
             await fetchProjects();
             toast({ title: "Lead qualified", description: "A qualification deal and schedule-demo task will be prepared automatically." });
@@ -674,6 +692,30 @@ const LeadDetailPage = () => {
                 description: error?.response?.data?.message || "Please try again.",
                 variant: "destructive",
             });
+        }
+    };
+
+    const handleManualStageChange = async (nextStatus: string) => {
+        if (!id || !lead || nextStatus === lead.status || isUpdatingStage) return;
+
+        try {
+            setIsUpdatingStage(true);
+            const updatedLead = await updateLeadStatus(id, nextStatus as any);
+            applyLeadState(updatedLead as LeadData);
+            await fetchProjects();
+            const nextLabel = STATUS_CONFIG[nextStatus]?.label || nextStatus;
+            toast({
+                title: "Lead stage updated",
+                description: `${fullName} moved to ${nextLabel}.`,
+            });
+        } catch (error: any) {
+            toast({
+                title: "Could not update stage",
+                description: error?.response?.data?.message || "Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsUpdatingStage(false);
         }
     };
 
@@ -756,6 +798,20 @@ const LeadDetailPage = () => {
                         </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="hidden md:block min-w-[150px]">
+                            <Select value={lead.status} onValueChange={handleManualStageChange} disabled={isUpdatingStage}>
+                                <SelectTrigger className="h-9 rounded-lg border-[#E5E7EB] bg-white text-xs font-medium">
+                                    <SelectValue placeholder="Change stage" />
+                                </SelectTrigger>
+                                <SelectContent align="end">
+                                    {MANUAL_STAGE_OPTIONS.map((stage) => (
+                                        <SelectItem key={stage.value} value={stage.value}>
+                                            {stage.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                         <Button variant="outline" size="sm" onClick={() => navigate(`/ai/sales-assistant?leadId=${lead.id}`)} className="hidden lg:inline-flex gap-1.5 text-xs"><Sparkles size={14} />Ask AI</Button>
                         <Button variant="outline" size="sm" onClick={() => navigate(`/ai/lead-scoring?leadId=${lead.id}`)} className="hidden lg:inline-flex gap-1.5 text-xs"><Target size={14} />Score Lead</Button>
                         {lead.status !== "QUALIFIED" && lead.status !== "WON" && lead.status !== "LOST" && <Button size="sm" onClick={handleQualifyLead} className="hidden md:inline-flex bg-[#0891B2] text-white hover:bg-[#0E7490] gap-1.5 text-xs"><TrendingUp size={14} />Qualify Lead</Button>}

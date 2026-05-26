@@ -136,10 +136,13 @@ export class LeadsManager {
       throw new NotFoundError('Lead not found', ErrorCodes.RESOURCE_NOT_FOUND);
     }
 
-    // Use the reason-aware update if any closure fields are provided
-    const hasReasonFields = reasonPayload?.closureReason || reasonPayload?.duplicateOfLeadId || reasonPayload?.reactivateAt;
-    let lead: LeadResponseDto;
+    const hasReasonFields = Boolean(
+      reasonPayload?.closureReason ||
+      reasonPayload?.duplicateOfLeadId ||
+      reasonPayload?.reactivateAt
+    );
 
+    let lead: LeadResponseDto;
     if (hasReasonFields) {
       lead = await leadsService.updateStatusWithReason(id, tenantId, {
         status,
@@ -148,7 +151,7 @@ export class LeadsManager {
         reactivateAt: reasonPayload?.reactivateAt,
       });
     } else {
-      lead = await leadsService.updateStatusWithReason(id, tenantId, { status });
+      lead = await leadsService.updateStatus(id, tenantId, status);
     }
 
     logger.info('Lead status updated', {

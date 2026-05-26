@@ -15,6 +15,7 @@ import inspectionsRoutes from '../modules/inspections/inspections.routes';
 import tagsRoutes from '../modules/tags/tags.routes';
 import notificationsRoutes from '../modules/notifications/notifications.routes';
 import dashboardRoutes from '../modules/dashboard/dashboard.routes';
+import addressRoutes from '../modules/address/address.routes';
 
 // CRM modules
 import clientsRoutes from '../modules/clients/clients.routes';
@@ -159,6 +160,7 @@ export function registerRoutes(app: Application): void {
 
   // CRM - Leads
   protectedRouter.use('/dashboard', dashboardRoutes);
+  protectedRouter.use('/address', addressRoutes);
   protectedRouter.use('/leads', leadsRoutes);
   protectedRouter.use('/inspections', inspectionsRoutes);
   protectedRouter.use('/lead-sources', leadSourcesRoutes);

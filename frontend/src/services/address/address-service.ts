@@ -1,8 +1,23 @@
-import {
-  autocompleteAddress as autocompleteViaApi,
-  getPlaceDetails as getPlaceDetailsViaApi,
-  type PlaceDetailsResult,
-} from "@/features/roof-estimator/services/roof-estimator-service";
+import api from "@/lib/axios";
+
+export interface PlaceDetailsResult {
+  placeId: string;
+  formattedAddress: string;
+  lat: number;
+  lng: number;
+  addressLine1: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  locationType: string;
+  types: string[];
+  url: string | null;
+  viewport: {
+    northeast: { lat: number; lng: number };
+    southwest: { lat: number; lng: number };
+  } | null;
+}
 
 export type AddressSuggestion = {
   description: string;
@@ -82,10 +97,11 @@ async function searchNominatim(input: string): Promise<NominatimResult[]> {
 
 export async function autocompleteAddress(input: string): Promise<AddressSuggestion[]> {
   try {
-    const apiResults = await autocompleteViaApi(input);
+    const response = await api.get("/address/autocomplete", { params: { input } });
+    const apiResults = response.data?.data || [];
     if (apiResults.length > 0) return apiResults;
   } catch {
-    // Fall through to the browser-side fallback below.
+    // Fall through to the browser-side fallback below so address entry still works.
   }
 
   const fallbackResults = await searchNominatim(input);
@@ -111,7 +127,6 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResu
     return nominatimDetailsCache.get(placeId) || null;
   }
 
-  return getPlaceDetailsViaApi(placeId);
+  const response = await api.post("/address/place-details", { placeId });
+  return response.data?.data || null;
 }
-
-export type { PlaceDetailsResult };

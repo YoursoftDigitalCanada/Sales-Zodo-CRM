@@ -16,6 +16,7 @@ export const CORE_MODULES = [
     'auth',
     'tenants',
     'settings',
+    'address',
     'notifications',
     'tags',
 ] as const;

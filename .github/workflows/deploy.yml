@@ -9,15 +9,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Install SSH password client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: 22
-          script_stop: true
-          script: |
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          sshpass -p "$VPS_PASSWORD" ssh \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            "$VPS_USER@$VPS_HOST" <<'DEPLOY_SCRIPT'
             set -e
             echo "Pulling latest code..."
             cd /var/www/sales-zodo-crm
@@ -48,3 +54,4 @@ jobs:
             pm2 restart sales-zodo-crm-api
 
             echo "Deployment complete!"
+          DEPLOY_SCRIPT

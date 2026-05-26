@@ -111,6 +111,16 @@ function TransactionDialog({ accounts, categories, vendors, onSaved }: { account
   const [form, setForm] = useState<BookkeepingRecord>({ type: "EXPENSE", description: "", amount: "", currency: "CAD", transactionDate: today(), status: "POSTED" });
 
   const save = async () => {
+    const amount = Number(form.amount);
+    if (!form.description?.trim()) {
+      toast.error("Description is required");
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("Enter an amount greater than 0");
+      return;
+    }
+
     try {
       setSaving(true);
       let fileId: string | undefined;
@@ -119,11 +129,24 @@ function TransactionDialog({ accounts, categories, vendors, onSaved }: { account
         const uploaded = await uploadDocument(receipt, { documentType: "receipt", categoryId });
         fileId = uploaded.fileId;
       }
-      const transaction = await createTransaction({ ...form, fileId });
+      const transaction = await createTransaction({
+        ...form,
+        amount,
+        accountId: form.accountId || null,
+        categoryId: form.categoryId || null,
+        vendorId: form.vendorId || null,
+        currency: form.currency || "CAD",
+        transactionDate: form.transactionDate || today(),
+        status: form.status || "POSTED",
+        description: form.description.trim(),
+        fileId,
+      });
       if (fileId && transaction?.id) {
         await linkDocument(fileId, "BookkeepingTransaction", transaction.id);
       }
       toast.success("Transaction saved");
+      setForm({ type: "EXPENSE", description: "", amount: "", currency: "CAD", transactionDate: today(), status: "POSTED" });
+      setReceipt(null);
       setOpen(false);
       onSaved();
     } catch (error: any) {
@@ -220,42 +243,53 @@ export default function BookkeepingPage() {
 
   useEffect(() => {
     let mounted = true;
-    async function load() {
+    const emptyList = { data: [] as BookkeepingRecord[] };
+    const safe = async <T,>(promise: Promise<T>, fallback: T, label: string): Promise<T> => {
       try {
-        setLoading(true);
-        const [dash, accountRes, categoryRes, vendorRes, transactionRes, transferRes, journalRes, recRes, recurringRes, pl, cash, tax, balance] = await Promise.all([
-          getBookkeepingDashboard(),
-          getAccounts({ limit: 200 }),
-          getCategories({ limit: 200 }),
-          getVendors({ limit: 200 }),
-          getTransactions({ ...filters, limit: 100 }),
-          getTransfers({ limit: 100 }),
-          getJournalEntries({ limit: 100 }),
-          getReconciliations({ limit: 100 }),
-          getRecurringRules({ limit: 100 }),
-          getProfitLoss({ dateFrom, dateTo }),
-          getCashFlow({ dateFrom, dateTo }),
-          getTaxSummary({ dateFrom, dateTo }),
-          getBalanceSheet({ dateFrom, dateTo }),
-        ]);
-        if (!mounted) return;
-        setDashboard(dash);
-        setAccounts(accountRes.data);
-        setCategories(categoryRes.data);
-        setVendors(vendorRes.data);
-        setTransactions(transactionRes.data);
-        setTransfers(transferRes.data);
-        setJournalEntries(journalRes.data);
-        setReconciliations(recRes.data);
-        setRecurringRules(recurringRes.data);
-        setReports({ profitLoss: pl, cashFlow: cash, taxSummary: tax, balanceSheet: balance });
+        return await promise;
       } catch (error: any) {
-        toast.error(error?.response?.data?.message || "Failed to load bookkeeping");
-      } finally {
-        if (mounted) setLoading(false);
+        console.warn(`Bookkeeping ${label} failed`, error?.response?.data || error);
+        return fallback;
       }
+    };
+
+    async function load() {
+      setLoading(true);
+      const [dash, accountRes, categoryRes, vendorRes, transactionRes, transferRes, journalRes, recRes, recurringRes, pl, cash, tax, balance] = await Promise.all([
+        safe(getBookkeepingDashboard(), {}, "dashboard"),
+        safe(getAccounts({ limit: 200 }), emptyList, "accounts"),
+        safe(getCategories({ limit: 200 }), emptyList, "categories"),
+        safe(getVendors({ limit: 200 }), emptyList, "vendors"),
+        safe(getTransactions({ ...filters, limit: 100 }), emptyList, "transactions"),
+        safe(getTransfers({ limit: 100 }), emptyList, "transfers"),
+        safe(getJournalEntries({ limit: 100 }), emptyList, "journal entries"),
+        safe(getReconciliations({ limit: 100 }), emptyList, "reconciliations"),
+        safe(getRecurringRules({ limit: 100 }), emptyList, "recurring rules"),
+        safe(getProfitLoss({ dateFrom, dateTo }), {}, "profit and loss report"),
+        safe(getCashFlow({ dateFrom, dateTo }), {}, "cash flow report"),
+        safe(getTaxSummary({ dateFrom, dateTo }), {}, "tax summary report"),
+        safe(getBalanceSheet({ dateFrom, dateTo }), {}, "balance sheet report"),
+      ]);
+      if (!mounted) return;
+      setDashboard(dash);
+      setAccounts(accountRes.data);
+      setCategories(categoryRes.data);
+      setVendors(vendorRes.data);
+      setTransactions(transactionRes.data);
+      setTransfers(transferRes.data);
+      setJournalEntries(journalRes.data);
+      setReconciliations(recRes.data);
+      setRecurringRules(recurringRes.data);
+      setReports({ profitLoss: pl, cashFlow: cash, taxSummary: tax, balanceSheet: balance });
+      setLoading(false);
     }
-    load();
+    load().catch((error: any) => {
+      console.error("Bookkeeping load failed", error);
+      if (mounted) {
+        toast.error(error?.response?.data?.message || "Failed to load bookkeeping");
+        setLoading(false);
+      }
+    });
     return () => { mounted = false; };
   }, [refreshKey, filters, dateFrom, dateTo]);
 
@@ -266,7 +300,7 @@ export default function BookkeepingPage() {
   const sync = async () => {
     try {
       await syncBookkeeping();
-      toast.success("Invoices, payments, and expenses synced");
+      toast.success("Invoices, payments, and spending records synced");
       reload();
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Sync failed");

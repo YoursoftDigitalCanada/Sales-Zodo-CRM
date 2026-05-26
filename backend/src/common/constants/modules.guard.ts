@@ -49,7 +49,7 @@ export const ROUTE_MODULE_MAP: Record<string, readonly string[]> = {
     'proposals': ['finance', 'quotes', 'proposals'],
     'services': ['finance'],
     'expenses': ['finance'],
-    'bookkeeping': ['finance'],
+    'bookkeeping': ['finance', 'bookkeeping'],
     'bookings': ['finance'],
 
     // File Management

@@ -7,9 +7,10 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.5
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -18,32 +19,32 @@ jobs:
           script_stop: true
           script: |
             set -e
-            echo "📦 Pulling latest code..."
+            echo "Pulling latest code..."
             cd /var/www/sales-zodo-crm
-            
-            # Reset any local changes (e.g. package-lock.json modified by npm ci)
+
+            # Reset any local changes from previous deploys.
             git fetch origin main
             git reset --hard origin/main
-            
-            echo "🔧 Installing backend dependencies..."
+
+            echo "Installing backend dependencies..."
             cd /var/www/sales-zodo-crm/backend
             rm -rf node_modules
             npm ci --include=dev
-            
-            echo "🏗️ Building backend..."
+
+            echo "Building backend..."
             npx prisma generate
             npx prisma migrate deploy
             npm run build
-            
-            echo "🎨 Installing frontend dependencies..."
+
+            echo "Installing frontend dependencies..."
             cd /var/www/sales-zodo-crm/frontend
             rm -rf node_modules
             npm ci
-            
-            echo "🏗️ Building frontend..."
+
+            echo "Building frontend..."
             npx vite build
-            
-            echo "🔄 Restarting backend..."
+
+            echo "Restarting backend..."
             pm2 restart sales-zodo-crm-api
-            
-            echo "✅ Deployment complete!"
+
+            echo "Deployment complete!"

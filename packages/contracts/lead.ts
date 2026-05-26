@@ -18,6 +18,14 @@ import {
 
 const nullableDateTime = z.string().datetime().optional().nullable().or(z.literal(""));
 
+const WebsiteSchema = z.preprocess((value) => {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}, z.string().url().optional().nullable().or(z.literal("")));
+
 export const CreateLeadSchema = z.object({
   salutation: z.string().max(50).optional().nullable(),
   firstName: z
@@ -50,7 +58,7 @@ export const CreateLeadSchema = z.object({
   organization: z.string().max(255).optional().nullable(),
   companyName: z.string().max(255).default(""),
   jobTitle: z.string().max(100).optional().nullable(),
-  website: z.string().url().optional().nullable().or(z.literal("")),
+  website: WebsiteSchema,
   territory: z.string().max(100).optional().nullable(),
   industry: z.string().max(100).optional().nullable(),
   companySize: z.string().max(100).optional().nullable(),

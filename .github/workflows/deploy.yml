@@ -22,7 +22,7 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
           VPS_HOST="${VPS_HOST:-82.197.94.229}"
-          VPS_USER="${VPS_USER:-admin}"
+          VPS_USER="${VPS_USER:-root}"
           VPS_PORT="${VPS_PORT:-22}"
 
           if [ -z "$VPS_PASSWORD" ]; then

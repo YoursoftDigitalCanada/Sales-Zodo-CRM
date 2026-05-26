@@ -371,6 +371,17 @@ const leadStatuses = [
   { id: LeadStatus.DORMANT_PROPOSAL, name: "Dormant Proposal", color: "#7C3AED", bgColor: "#F5F3FF", icon: FileX2 },
 ];
 
+const manualLeadStageOptions = leadStatuses.filter((status) =>
+  [
+    LeadStatus.NEW,
+    LeadStatus.CONTACTED,
+    LeadStatus.QUALIFIED,
+    LeadStatus.PROPOSAL,
+    LeadStatus.NEGOTIATION,
+    LeadStatus.WON,
+    LeadStatus.LOST,
+  ].includes(status.id as LeadStatus)
+);
 
 // ============================================
 // UTILITY FUNCTIONS
@@ -1143,13 +1154,30 @@ const LeadRow = ({
         )}
       </TableCell>
       <TableCell>
-        <span
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium"
-          style={{ backgroundColor: statusInfo.bgColor, color: statusInfo.color }}
-        >
-          {statusInfo.icon && <statusInfo.icon size={12} />}
-          {statusInfo.name}
-        </span>
+        <div onClick={(event) => event.stopPropagation()} className="min-w-[142px]">
+          <Select
+            value={lead.status}
+            onValueChange={(value) => onStatusChange(value as Lead["status"])}
+            disabled={!canUpdate}
+          >
+            <SelectTrigger
+              className="h-8 w-[142px] rounded-md border-transparent px-2 text-xs font-medium"
+              style={{ backgroundColor: statusInfo.bgColor, color: statusInfo.color }}
+            >
+              <SelectValue placeholder="Stage" />
+            </SelectTrigger>
+            <SelectContent align="start" className="rounded-md">
+              {manualLeadStageOptions.map((status) => (
+                <SelectItem key={status.id} value={status.id} className="rounded-md">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: status.color }} />
+                    {status.name}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">

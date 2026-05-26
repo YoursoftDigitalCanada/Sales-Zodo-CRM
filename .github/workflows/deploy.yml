@@ -2,7 +2,13 @@ name: Deploy to VPS
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: sales-zodo-crm-deploy-main
+  cancel-in-progress: false
 
 jobs:
   deploy:

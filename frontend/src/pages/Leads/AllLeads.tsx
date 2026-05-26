@@ -1424,8 +1424,74 @@ export const LeadFormDialog = ({
     }
   }, []);
 
+  const getLiveFieldError = useCallback((field: string, value: any, nextFormData: typeof formData): string | null => {
+    const stringValue = typeof value === "string" ? value : "";
+    const trimmed = stringValue.trim();
+    const numberValue = Number(trimmed);
+
+    switch (field) {
+      case "firstName":
+        return trimmed ? getPersonNameError(trimmed, "First name") : null;
+      case "lastName":
+        return trimmed ? getPersonNameError(trimmed, "Last name") : null;
+      case "spouseCoOwnerName":
+        return trimmed ? getPersonNameError(trimmed, "Spouse / co-owner name") : null;
+      case "email":
+        return trimmed ? getEmailAddressError(trimmed, "Email") : null;
+      case "phone":
+        return trimmed ? getCanadianPhoneError(trimmed, "Phone number") : null;
+      case "secondaryPhone":
+        return trimmed ? getCanadianPhoneError(trimmed, "Secondary phone") : null;
+      case "zipCode":
+        return trimmed ? getCanadianPostalCodeError(trimmed, "Postal code") : null;
+      case "website": {
+        if (!trimmed) return null;
+        const normalizedWebsite = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+        try {
+          new URL(normalizedWebsite);
+          return null;
+        } catch {
+          return "Enter a valid website, for example zodo.ca or https://zodo.ca.";
+        }
+      }
+      case "annualRevenue":
+        return trimmed && (Number.isNaN(numberValue) || numberValue < 0)
+          ? "Annual revenue must be a number greater than or equal to zero."
+          : null;
+      case "numberOfUsers":
+        return trimmed && (!Number.isInteger(numberValue) || numberValue < 0)
+          ? "Number of users must be a whole number."
+          : null;
+      case "numberOfOtherQuotes":
+        if (nextFormData.gettingOtherQuotes !== "Yes" || !trimmed) return null;
+        return !Number.isInteger(numberValue) || numberValue < 0 || numberValue > 10
+          ? "Number of other vendors must be a whole number between 0 and 10."
+          : null;
+      case "leadScore":
+        return trimmed && (!Number.isInteger(numberValue) || numberValue < 1 || numberValue > 10)
+          ? "Lead score must be a whole number between 1 and 10."
+          : null;
+      case "potentialValue":
+        return trimmed && (Number.isNaN(numberValue) || numberValue < 0)
+          ? "Potential value must be zero or greater."
+          : null;
+      case "useCase":
+        return trimmed.length > 1000 ? "Use case must be 1000 characters or less." : null;
+      case "issueDescription":
+        return trimmed.length > 500 ? "Pain point notes must be 500 characters or less." : null;
+      default:
+        return null;
+    }
+  }, []);
+
   const setFieldValue = useCallback((field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    let nextFormDataSnapshot: typeof formData | null = null;
+
+    setFormData((prev) => {
+      nextFormDataSnapshot = { ...prev, [field]: value };
+      return nextFormDataSnapshot;
+    });
+
     setErrors((prev) => {
       const fieldsToClear = [field];
 
@@ -1433,17 +1499,19 @@ export const LeadFormDialog = ({
         fieldsToClear.push("numberOfOtherQuotes");
       }
 
-      if (!fieldsToClear.some((item) => prev[item])) {
-        return prev;
-      }
-
       const next = { ...prev };
       fieldsToClear.forEach((item) => {
         delete next[item];
       });
+
+      const fieldError = getLiveFieldError(field, value, nextFormDataSnapshot || formData);
+      if (fieldError) {
+        next[field] = fieldError;
+      }
+
       return next;
     });
-  }, []);
+  }, [formData, getLiveFieldError]);
 
   const updateDateTimeField = useCallback(
     (field: "followUpDateTime", patch: Partial<DateTimeFieldParts>) => {
@@ -1589,10 +1657,13 @@ export const LeadFormDialog = ({
           }
         }
         if (formData.website.trim()) {
+          const normalizedWebsite = /^https?:\/\//i.test(formData.website.trim())
+            ? formData.website.trim()
+            : `https://${formData.website.trim()}`;
           try {
-            new URL(formData.website);
+            new URL(normalizedWebsite);
           } catch {
-            nextErrors.website = "Enter a valid website URL, including http:// or https://";
+            nextErrors.website = "Enter a valid website, for example zodo.ca or https://zodo.ca.";
           }
         }
         break;
@@ -4299,7 +4370,8 @@ const AllLeads = () => {
       buyingIntent: opt(data.buyingIntent),
       purchaseTimeline: opt(data.purchaseTimeline) || opt(data.workTimeline),
       productInterest: opt(data.productInterest),
-      numberOfUsers: data.numberOfUsers || undefined,
+      annualRevenue: data.annualRevenue != null && data.annualRevenue !== "" ? Number(data.annualRevenue) : undefined,
+      numberOfUsers: data.numberOfUsers != null && data.numberOfUsers !== "" ? Number(data.numberOfUsers) : undefined,
       currentSolution: opt(data.currentSolution),
       teamRegion: opt(data.teamRegion) || opt(data.territory),
       country: opt(data.country),
@@ -4323,13 +4395,13 @@ const AllLeads = () => {
       workTimeline: opt(data.workTimeline),
       financingNeeded: opt(data.financingNeeded),
       gettingOtherQuotes: opt(data.gettingOtherQuotes),
-      numberOfOtherQuotes: data.numberOfOtherQuotes || undefined,
+      numberOfOtherQuotes: data.numberOfOtherQuotes != null && data.numberOfOtherQuotes !== "" ? Number(data.numberOfOtherQuotes) : undefined,
       topPriority: opt(data.topPriority),
       // Stage 2: Procurement
       isHOA: opt(data.isHOA),
       hoaRestrictions: opt(data.hoaRestrictions),
       // Stage 2: Assessment
-      leadScore: data.leadScore || undefined,
+      leadScore: data.leadScore != null && data.leadScore !== "" ? Number(data.leadScore) : undefined,
       disqualifiedReason: opt(data.disqualifiedReason),
       nextStep: opt(data.nextStep),
       followUpDateTime: opt(data.followUpDateTime),

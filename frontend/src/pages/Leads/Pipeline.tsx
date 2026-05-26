@@ -1086,6 +1086,8 @@ const Pipeline = () => {
     };
 
     return {
+      annualRevenue: data.annualRevenue != null && data.annualRevenue !== "" ? Number(data.annualRevenue) : undefined,
+      numberOfUsers: data.numberOfUsers != null && data.numberOfUsers !== "" ? Number(data.numberOfUsers) : undefined,
       city: opt(data.city),
       state: opt(data.state),
       zipCode: data.zipCode ? normalizeCanadianPostalCode(data.zipCode) : undefined,
@@ -1104,11 +1106,11 @@ const Pipeline = () => {
       workTimeline: opt(data.workTimeline),
       financingNeeded: opt(data.financingNeeded),
       gettingOtherQuotes: opt(data.gettingOtherQuotes),
-      numberOfOtherQuotes: data.numberOfOtherQuotes || undefined,
+      numberOfOtherQuotes: data.numberOfOtherQuotes != null && data.numberOfOtherQuotes !== "" ? Number(data.numberOfOtherQuotes) : undefined,
       topPriority: opt(data.topPriority),
       isHOA: opt(data.isHOA),
       hoaRestrictions: opt(data.hoaRestrictions),
-      leadScore: data.leadScore || undefined,
+      leadScore: data.leadScore != null && data.leadScore !== "" ? Number(data.leadScore) : undefined,
       disqualifiedReason: opt(data.disqualifiedReason),
       nextStep: opt(data.nextStep),
       followUpDateTime: opt(data.followUpDateTime),

@@ -104,7 +104,6 @@ import PricingPlansPage from "./pages/PricingPlans";
 import PaymentsPage from "./pages/Payments";
 import BookkeepingPage from "./pages/Bookkeeping";
 import AutomationPage from "./pages/Automation";
-import ExpensesPage from "./pages/Expenses";
 import ContractsPage from "./pages/Contracts";
 
 // import EcommercePage from "./pages/Ecommerce";
@@ -658,7 +657,8 @@ const AppRoutes = () => {
         <Route path="/subscriptions" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><SubscriptionsPage /></AccessGuard>} />
         <Route path="/pricing-plans" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><PricingPlansPage /></AccessGuard>} />
         <Route path="/payments" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><PaymentsPage /></AccessGuard>} />
-        <Route path="/expenses" element={<AccessGuard featureId="finance" permissionModule="expenses" action="view"><ExpensesPage /></AccessGuard>} />
+        <Route path="/expenses" element={<Navigate to="/bookkeeping" replace />} />
+        <Route path="/expenses/:id" element={<Navigate to="/bookkeeping" replace />} />
         <Route path="/bookkeeping" element={<AccessGuard featureId="finance" permissionModule="bookkeeping" action="view"><BookkeepingPage /></AccessGuard>} />
         <Route path="/automation" element={<AccessGuard permissionModule="automation" action="view"><AutomationPage /></AccessGuard>} />
         <Route path="/accounts" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><OrganizationsPage /></AccessGuard>} />

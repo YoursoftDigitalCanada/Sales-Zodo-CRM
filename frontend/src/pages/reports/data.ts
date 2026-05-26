@@ -73,7 +73,7 @@ export interface CustomReportTemplate {
 export const reportTabs: ReportTabItem[] = [
     { id: "sales", label: "Sales Report", icon: Briefcase, description: "Team performance & deal analytics" },
     { id: "revenue", label: "Revenue Report", icon: DollarSign, description: "Income breakdown & growth trends" },
-    { id: "expenses", label: "Expense Report", icon: Receipt, description: "Spending analysis & budget tracking" },
+    { id: "expenses", label: "Bookkeeping Spending", icon: Receipt, description: "Spending analysis from bookkeeping records" },
     { id: "custom", label: "Custom Reports", icon: FileText, description: "Build & schedule custom reports" },
 ];
 

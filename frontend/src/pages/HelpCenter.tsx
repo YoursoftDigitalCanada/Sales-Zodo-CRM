@@ -136,7 +136,7 @@ const kbArticles: KBArticle[] = [
     // Invoicing
     { id: "kb12", title: "Creating professional invoices", content: "Navigate to Finance → Invoices → Create Invoice. Fill in client details, add line items with quantities and rates, apply taxes and discounts, then send directly via email or download as PDF.", category: "Invoicing" },
     { id: "kb13", title: "Setting up recurring invoices", content: "Enable recurring billing on any invoice. Set the frequency (weekly, monthly, quarterly, annually), start date, and optional end date. The system auto-generates and sends invoices on schedule.", category: "Invoicing" },
-    { id: "kb14", title: "Tracking expenses and payments", content: "Log expenses under Finance → Expenses. Categorize by type, attach receipts, and link to projects or clients. Track payment statuses across all invoices from the Payments dashboard.", category: "Invoicing" },
+    { id: "kb14", title: "Tracking spending and payments", content: "Use Finance → Bookkeeping to record spending, attach receipts, reconcile accounts, and keep income, refunds, and payments synced from invoices.", category: "Invoicing" },
     // Integrations
     { id: "kb15", title: "Connecting email services", content: "Integrate your Gmail, Outlook, or SMTP email under Settings → Email Settings. Once connected, send and receive emails directly from the CRM Letterbox. All correspondence is automatically logged in contact timelines.", category: "Integrations" },
     { id: "kb16", title: "API and webhook configuration", content: "Access the API documentation at /api/docs. Generate API keys under Settings → Security. Configure webhooks to receive real-time notifications when CRM events occur (lead created, invoice paid, etc.).", category: "Integrations" },

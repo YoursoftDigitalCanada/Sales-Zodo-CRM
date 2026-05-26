@@ -156,7 +156,7 @@ export const SIDEBAR_MODULES: SidebarModule[] = [
     name: 'Finance',
     icon: 'dollar-sign',
     path: '/finance',
-    requiredPermissions: [PERMISSIONS.INVOICES_VIEW, PERMISSIONS.EXPENSES_VIEW],
+    requiredPermissions: [PERMISSIONS.INVOICES_VIEW],
     order: 80,
     children: [
       {
@@ -168,20 +168,12 @@ export const SIDEBAR_MODULES: SidebarModule[] = [
         order: 0,
       },
       {
-        id: 'expenses',
-        name: 'Expenses',
-        icon: 'receipt',
-        path: '/finance/expenses',
-        requiredPermissions: [PERMISSIONS.EXPENSES_VIEW],
-        order: 1,
-      },
-      {
         id: 'contracts',
         name: 'Contracts',
         icon: 'file-signature',
         path: '/finance/contracts',
         requiredPermissions: [PERMISSIONS.CONTRACTS_VIEW],
-        order: 2,
+        order: 1,
       },
     ],
   },

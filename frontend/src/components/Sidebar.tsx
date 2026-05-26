@@ -320,13 +320,6 @@ const navigationItems: NavigationItem[] = [
     permissionModule: "invoices",
   },
   {
-    title: "Expenses",
-    icon: Receipt,
-    path: "/expenses",
-    featureId: "finance",
-    permissionModule: "expenses",
-  },
-  {
     title: "Bookkeeping",
     icon: Landmark,
     path: "/bookkeeping",

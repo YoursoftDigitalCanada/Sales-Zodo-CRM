@@ -131,8 +131,8 @@ export class NotificationsManager {
       title: 'Expense Approval Request',
       message: `${submittedByName} submitted expense "${expenseTitle}" (${currency} ${amount.toFixed(2)}) for approval.`,
       type: 'INFO',
-      actionUrl: `/expenses?expenseId=${encodeURIComponent(expenseId)}`,
-      actionLabel: 'Review Expense',
+      actionUrl: `/bookkeeping?expenseId=${encodeURIComponent(expenseId)}`,
+      actionLabel: 'Review in Bookkeeping',
       metadata: { expenseId, amount, currency, type: 'expense_approval_request' },
     });
   }
@@ -155,8 +155,8 @@ export class NotificationsManager {
       title: approved ? 'Expense Approved' : 'Expense Rejected',
       message: `Your expense "${expenseTitle}" has been ${approved ? 'approved' : 'rejected'} by ${approverName}.${notes ? ` Note: ${notes}` : ''}`,
       type: approved ? 'SUCCESS' : 'WARNING',
-      actionUrl: `/expenses?expenseId=${encodeURIComponent(expenseId)}`,
-      actionLabel: 'View Expense',
+      actionUrl: `/bookkeeping?expenseId=${encodeURIComponent(expenseId)}`,
+      actionLabel: 'View in Bookkeeping',
       metadata: { expenseId, approved, type: 'expense_decision' },
     });
   }

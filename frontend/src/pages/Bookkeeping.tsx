@@ -75,7 +75,7 @@ function syncStatusBadge(tx: BookkeepingRecord) {
 
 function sourcePath(tx: BookkeepingRecord) {
   if (tx.invoiceId) return `/invoice/${tx.invoiceId}`;
-  if (tx.expenseId) return `/expenses?expenseId=${tx.expenseId}`;
+  if (tx.expenseId) return `/bookkeeping?expenseId=${tx.expenseId}`;
   return null;
 }
 

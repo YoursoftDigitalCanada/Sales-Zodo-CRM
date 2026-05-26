@@ -315,7 +315,7 @@ export class NotificationsService {
     if (contractId) return this.withQuery('/contracts', 'contractId', contractId);
     if (documentId) return this.withQuery('/documents', 'documentId', documentId);
     if (taskId) return this.withQuery('/tasks', 'taskId', taskId);
-    if (expenseId) return this.withQuery('/expenses', 'expenseId', expenseId);
+    if (expenseId) return this.withQuery('/bookkeeping', 'expenseId', expenseId);
     if (paymentId) return this.withQuery('/bookkeeping', 'paymentId', paymentId);
     return undefined;
   }

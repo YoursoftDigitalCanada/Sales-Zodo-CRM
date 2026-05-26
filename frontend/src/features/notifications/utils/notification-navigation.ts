@@ -61,7 +61,7 @@ export function resolveNotificationTarget(source?: NotificationNavigationSource 
     if (metadataDocumentId) return `/documents?documentId=${encodeURIComponent(metadataDocumentId)}`;
     if (metadataRoomId) return withQuery("/chats", "conversationId", metadataRoomId);
     if (metadataTaskId) return withQuery("/tasks", "taskId", metadataTaskId);
-    if (metadataExpenseId) return withQuery("/expenses", "expenseId", metadataExpenseId);
+    if (metadataExpenseId) return withQuery("/bookkeeping", "expenseId", metadataExpenseId);
     if (metadataPaymentId) return withQuery("/bookkeeping", "paymentId", metadataPaymentId);
     if (metadataBookingId) return withQuery("/calendar", "bookingId", metadataBookingId);
     if (metadataEventId) return withQuery("/calendar", "event", metadataEventId);
@@ -119,8 +119,9 @@ export function resolveNotificationTarget(source?: NotificationNavigationSource 
   }
   if (/^\/expenses\/[^/]+$/.test(pathname)) {
     const expenseId = pathname.split("/")[2];
-    return withQuery("/expenses", "expenseId", expenseId);
+    return withQuery("/bookkeeping", "expenseId", expenseId);
   }
+  if (pathname === "/expenses") return `/bookkeeping${search}`;
   if (/^\/bookings\/[^/]+$/.test(pathname)) {
     const bookingId = pathname.split("/")[2];
     return withQuery("/calendar", "bookingId", bookingId);

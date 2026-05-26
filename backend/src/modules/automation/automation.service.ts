@@ -1711,8 +1711,8 @@ export class AutomationService {
                         type: 'INFO',
                         userId: admin.userId,
                         tenantId: event.tenantId,
-                        actionUrl: `/expenses`,
-                        actionLabel: 'Review Expense',
+                        actionUrl: `/bookkeeping?expenseId=${encodeURIComponent(event.expenseId)}`,
+                        actionLabel: 'Review in Bookkeeping',
                     }));
                 }
             } catch (err) {
@@ -1732,8 +1732,8 @@ export class AutomationService {
                         type: 'SUCCESS',
                         userId: event.approvedById,
                         tenantId: event.tenantId,
-                        actionUrl: `/expenses`,
-                        actionLabel: 'View Expenses',
+                        actionUrl: `/bookkeeping?expenseId=${encodeURIComponent(event.expenseId)}`,
+                        actionLabel: 'View in Bookkeeping',
                     }));
                 } catch (err) {
                     logger.error('[Automation] expense.approved → notification failed', { err });

@@ -41,7 +41,7 @@ jobs:
             npm ci
             
             echo "🏗️ Building frontend..."
-            VITE_API_URL=https://salesapi.zodo.ca npx vite build
+            npx vite build
             
             echo "🔄 Restarting backend..."
             pm2 restart sales-zodo-crm-api

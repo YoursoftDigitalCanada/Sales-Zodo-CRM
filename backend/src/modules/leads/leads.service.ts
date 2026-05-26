@@ -739,7 +739,7 @@ export class LeadsService {
 
     let lead = await leadsRepository.update(id, tenantId, data as any);
 
-    if (data.status === 'QUALIFIED' && existing.status !== 'QUALIFIED') {
+    if (data.status === 'QUALIFIED' && (existing.status !== 'QUALIFIED' || !(existing as any).convertedToDealId)) {
       await this.ensureQualifiedLeadDeal(tenantId, lead as any);
       lead = await leadsRepository.findById(id, tenantId) || lead;
     }
@@ -840,7 +840,7 @@ export class LeadsService {
       },
     });
 
-    if (status === 'QUALIFIED' && oldStatus !== 'QUALIFIED') {
+    if (status === 'QUALIFIED' && (oldStatus !== 'QUALIFIED' || !(existing as any).convertedToDealId)) {
       await this.ensureQualifiedLeadDeal(tenantId, rawLead);
       rawLead = await prisma.lead.findFirst({
         where: { id, tenantId },
@@ -984,7 +984,7 @@ export class LeadsService {
       updateData.lifecycleStage = newLifecycle;
     }
 
-    const rawLead = await prisma.lead.update({
+    let rawLead = await prisma.lead.update({
       where: { id, tenantId },
       data: updateData,
       include: {
@@ -993,6 +993,18 @@ export class LeadsService {
         tags: { include: { tag: true } },
       },
     });
+
+    if (status === 'QUALIFIED' && (oldStatus !== 'QUALIFIED' || !(existing as any).convertedToDealId)) {
+      await this.ensureQualifiedLeadDeal(tenantId, rawLead);
+      rawLead = await prisma.lead.findFirst({
+        where: { id, tenantId },
+        include: {
+          assignedTo: { include: { user: true } },
+          leadSource: true,
+          tags: { include: { tag: true } },
+        },
+      }) || rawLead;
+    }
 
     const dto = toLeadResponseDto(rawLead);
 

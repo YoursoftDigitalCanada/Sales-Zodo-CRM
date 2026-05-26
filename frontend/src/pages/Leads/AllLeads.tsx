@@ -4664,23 +4664,24 @@ const AllLeads = () => {
       return;
     }
 
-    // Intercept QUALIFIED status → show meeting scheduling dialog
-    if (status === LeadStatus.QUALIFIED && lead.status !== LeadStatus.QUALIFIED) {
-      setPendingQualifiedLead(lead);
-      setMeetingDialogMode("qualification");
-      setIsMeetingDialogOpen(true);
-      return;
-    }
-
     try {
-      await updateLeadStatus(lead.id, status.toUpperCase());
-      setLeads((prev) =>
-        prev.map((l) =>
-          l.id === lead.id
-            ? { ...l, status, updatedAt: new Date().toISOString() }
-            : l
-        )
-      );
+      const responseData = await updateLeadStatus(lead.id, status.toUpperCase());
+      const updatedLead = mapApiLead(responseData);
+      syncLeadRecord(updatedLead);
+
+      if (status === LeadStatus.QUALIFIED) {
+        setPendingQualifiedLead(updatedLead);
+        setMeetingDialogMode("followUp");
+        setIsMeetingDialogOpen(true);
+        toast({
+          title: "Lead Qualified",
+          description: (responseData as any)?.convertedToDealId
+            ? "A deal was created automatically. You can schedule the next follow-up now."
+            : "Lead qualified. If a deal already existed, it was linked automatically.",
+        });
+        return;
+      }
+
       toast({
         title: "Status Updated",
         description: `Lead status changed to ${status}.`,

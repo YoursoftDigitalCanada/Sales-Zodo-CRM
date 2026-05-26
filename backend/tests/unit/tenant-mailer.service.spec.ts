@@ -205,4 +205,64 @@ describe('TenantMailerService', () => {
     const [, payload] = mockMailerService.sendMailWithConfigDetailed.mock.calls[0];
     expect(`${payload.subject} ${payload.html} ${payload.text}`).not.toMatch(/roof|roofing|shingles|underlayment|flashing|decking|inspection|insurance claim/i);
   });
+
+  it('uses configured admin mailboxes for privileged automation email delivery', async () => {
+    mockSettingsRepository.getSmtpConfig.mockResolvedValue({
+      host: '',
+      port: 587,
+      user: '',
+      pass: '',
+      encryption: 'STARTTLS',
+      senderName: '',
+      senderEmail: '',
+    });
+    mockMailboxRepository.findConfiguredSmtpForTenantByRoleNames.mockResolvedValue({
+      tenantId: 'tenant-1',
+      userId: 'admin-user',
+      mailboxAddress: 'admin@example.com',
+      smtp: {
+        host: 'smtp.admin.example.com',
+        port: 465,
+        user: 'admin@example.com',
+        pass: 'secret',
+        encryption: 'SSL/TLS',
+        senderName: 'Admin Sender',
+        senderEmail: 'admin@example.com',
+      },
+      imap: {
+        host: 'imap.admin.example.com',
+        port: 993,
+        user: 'admin@example.com',
+        pass: 'secret',
+        encryption: 'SSL/TLS',
+      },
+    });
+
+    await tenantMailerService.sendPrivilegedTenantEmail({
+      tenantId: 'tenant-1',
+      to: 'buyer@example.com',
+      subject: 'Invoice INV-1 from Acme',
+      html: '<p>Your invoice is ready.</p>',
+      relatedEntityType: 'Invoice',
+      relatedEntityId: 'invoice-1',
+    });
+
+    expect(mockMailboxRepository.findConfiguredSmtpForTenantByRoleNames).toHaveBeenCalledWith(
+      'tenant-1',
+      ['Owner', 'Admin', 'Manager'],
+      undefined,
+    );
+    expect(mockMailerService.sendMailWithConfigDetailed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        host: 'smtp.admin.example.com',
+        user: 'admin@example.com',
+        senderName: 'Admin Sender',
+        senderEmail: 'admin@example.com',
+      }),
+      expect.objectContaining({
+        to: 'buyer@example.com',
+        subject: 'Invoice INV-1 from Acme',
+      }),
+    );
+  });
 });

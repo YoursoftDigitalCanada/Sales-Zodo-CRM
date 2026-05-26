@@ -155,7 +155,7 @@ class TenantMailerService {
   async getPrivilegedTenantSender(
     tenantId: string,
     preferredUserId?: string,
-    roleNames: string[] = ['Owner', 'Manager'],
+    roleNames: string[] = ['Owner', 'Admin', 'Manager'],
   ): Promise<TenantSender> {
     const privilegedMailbox = await mailboxRepository.findConfiguredSmtpForTenantByRoleNames(
       tenantId,
@@ -165,7 +165,7 @@ class TenantMailerService {
 
     if (!privilegedMailbox) {
       throw new ServiceUnavailableError(
-        'Invoice automation email delivery requires a configured mailbox for a workspace owner or manager.',
+        'Invoice automation email delivery requires a configured mailbox for a workspace owner, admin, or manager.',
       );
     }
 

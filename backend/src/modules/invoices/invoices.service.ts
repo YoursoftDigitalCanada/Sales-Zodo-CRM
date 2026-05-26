@@ -501,7 +501,7 @@ export class InvoicesService {
             attachments?: InvoiceEmailAttachment[];
         }) => Promise<{ sent: boolean; error?: string }>;
     }> {
-        const sender = await tenantMailerService.getPrivilegedTenantSender(tenantId, actorUserId, ['Owner', 'Manager']);
+        const sender = await tenantMailerService.getPrivilegedTenantSender(tenantId, actorUserId, ['Owner', 'Admin', 'Manager']);
 
         return {
             senderName: sender.senderName,
@@ -510,7 +510,7 @@ export class InvoicesService {
                 const delivery = await tenantMailerService.sendPrivilegedTenantEmail({
                     tenantId,
                     preferredUserId: actorUserId,
-                    roleNames: ['Owner', 'Manager'],
+                    roleNames: ['Owner', 'Admin', 'Manager'],
                     relatedEntityType: 'Invoice',
                     ...options,
                 });

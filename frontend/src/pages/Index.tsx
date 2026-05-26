@@ -88,6 +88,7 @@ interface LeadItem {
   nextAction: string;
   phone: string;
   email: string;
+  createdAt: string;
   updatedAt: string;
   isStalled: boolean;
 }
@@ -98,6 +99,7 @@ interface InvoiceItem {
   amount: number;
   outstandingAmount: number;
   dueDate: string;
+  paidAt?: string | null;
   status: "overdue" | "pending" | "paid" | "draft";
   daysOverdue?: number;
   invoiceNo: string;
@@ -491,6 +493,31 @@ function formatDateLabel(value: string | null | undefined): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+function isDateInRange(value: string | null | undefined, start: Date, end: Date): boolean {
+  if (!value) return false;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) && time >= start.getTime() && time < end.getTime();
+}
+
+function formatTrend(current: number, previous: number) {
+  if (current === 0 && previous === 0) {
+    return { label: "No prior data", tone: "neutral" as const };
+  }
+
+  if (previous === 0) {
+    return { label: "New activity", tone: "positive" as const };
+  }
+
+  const change = ((current - previous) / Math.abs(previous)) * 100;
+  const rounded = Math.abs(change) >= 10 ? Math.round(change) : Number(change.toFixed(1));
+  const prefix = change > 0 ? "+" : change < 0 ? "-" : "";
+
+  return {
+    label: `${prefix}${Math.abs(rounded)}%`,
+    tone: change > 0 ? "positive" as const : change < 0 ? "negative" as const : "neutral" as const,
+  };
+}
+
 function formatDateTimeLabel(date: Date | null): string {
   if (!date) return "Schedule pending";
   return date.toLocaleDateString("en-US", {
@@ -588,6 +615,7 @@ function mapLead(lead: DashboardLead): LeadItem {
     nextAction: getLeadNextAction(stage, temperature),
     phone: readText(lead.phone),
     email: readText(lead.email),
+    createdAt: lead.createdAt,
     updatedAt: lead.updatedAt,
     isStalled: daysSinceUpdate >= 5 && stage !== "won" && stage !== "lost",
   };
@@ -619,6 +647,7 @@ function mapInvoice(invoice: DashboardInvoice): InvoiceItem {
     amount: Number(invoice.total || 0),
     outstandingAmount: Number(invoice.amountDue || invoice.total || 0),
     dueDate: formatDateLabel(invoice.dueDate),
+    paidAt: invoice.paidAt || null,
     status: statusMap[invoice.status] || "draft",
     daysOverdue,
     invoiceNo: invoice.invoiceNumber,
@@ -1258,6 +1287,23 @@ const Index = () => {
     lost: 0,
   };
   const salesForecast = openPipelineLeads.reduce((sum, lead) => sum + (lead.value * forecastWeights[lead.stage]), 0);
+  const currentPeriodStart = new Date(currentTime.getTime() - 7 * 86400000);
+  const previousPeriodStart = new Date(currentTime.getTime() - 14 * 86400000);
+  const newLeadsCurrentPeriod = leads.filter((lead) => isDateInRange(lead.createdAt, currentPeriodStart, currentTime)).length;
+  const newLeadsPreviousPeriod = leads.filter((lead) => isDateInRange(lead.createdAt, previousPeriodStart, currentPeriodStart)).length;
+  const wonDealsCurrentPeriod = wonLeads.filter((lead) => isDateInRange(lead.updatedAt, currentPeriodStart, currentTime)).length;
+  const wonDealsPreviousPeriod = wonLeads.filter((lead) => isDateInRange(lead.updatedAt, previousPeriodStart, currentPeriodStart)).length;
+  const revenueCurrentPeriod = invoices
+    .filter((invoice) => invoice.status === "paid" && isDateInRange(invoice.paidAt, currentPeriodStart, currentTime))
+    .reduce((sum, invoice) => sum + invoice.amount, 0);
+  const revenuePreviousPeriod = invoices
+    .filter((invoice) => invoice.status === "paid" && isDateInRange(invoice.paidAt, previousPeriodStart, currentPeriodStart))
+    .reduce((sum, invoice) => sum + invoice.amount, 0);
+  const kpiTrends = {
+    newLeads: formatTrend(newLeadsCurrentPeriod, newLeadsPreviousPeriod),
+    wonDeals: formatTrend(wonDealsCurrentPeriod, wonDealsPreviousPeriod),
+    revenue: formatTrend(revenueCurrentPeriod, revenuePreviousPeriod),
+  };
   const todaysActivities = siteVisits.filter((visit) => {
     if (!visit.scheduledAt) return false;
     const today = new Date();
@@ -1390,11 +1436,11 @@ const Index = () => {
 
         <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {[
-          { label: "New Leads", value: newLeadCount.toLocaleString(), detail: "vs last 7 days", icon: Target, tone: "text-[#22A06B]", bg: "bg-[#E7F7EF]", trend: "+ 18.2%" },
-          { label: "Open Deals", value: openPipelineLeads.length.toLocaleString(), detail: "vs last 7 days", icon: Briefcase, tone: "text-[#7C3AED]", bg: "bg-[#F1EAFF]", trend: "+ 12.5%" },
-          { label: "Revenue", value: formatMoney(closedWonRevenue || salesForecast), detail: "vs last 7 days", icon: DollarSign, tone: "text-[#159A62]", bg: "bg-[#E7F7EF]", trend: "+ 24.6%" },
-          { label: "Won Deals", value: wonLeads.length.toLocaleString(), detail: "vs last 7 days", icon: FileText, tone: "text-[#F97316]", bg: "bg-[#FFF1E8]", trend: "+ 38.7%" },
-          { label: "Tasks Due", value: pendingTasksCount.toLocaleString(), detail: "vs last 7 days", icon: Clock, tone: "text-[#2F80ED]", bg: "bg-[#EAF3FF]", trend: "- 8.3%" },
+          { label: "New Leads", value: newLeadCount.toLocaleString(), detail: "vs previous 7 days", icon: Target, tone: "text-[#22A06B]", bg: "bg-[#E7F7EF]", trend: kpiTrends.newLeads },
+          { label: "Open Deals", value: openPipelineLeads.length.toLocaleString(), detail: "Current snapshot", icon: Briefcase, tone: "text-[#7C3AED]", bg: "bg-[#F1EAFF]" },
+          { label: "Revenue", value: formatMoney(closedWonRevenue || salesForecast), detail: "paid vs previous 7 days", icon: DollarSign, tone: "text-[#159A62]", bg: "bg-[#E7F7EF]", trend: kpiTrends.revenue },
+          { label: "Won Deals", value: wonLeads.length.toLocaleString(), detail: "vs previous 7 days", icon: FileText, tone: "text-[#F97316]", bg: "bg-[#FFF1E8]", trend: kpiTrends.wonDeals },
+          { label: "Tasks Due", value: pendingTasksCount.toLocaleString(), detail: "Current snapshot", icon: Clock, tone: "text-[#2F80ED]", bg: "bg-[#EAF3FF]" },
         ].map((card, index) => (
           <motion.button
             key={card.label}
@@ -1410,8 +1456,11 @@ const Index = () => {
                   </div>
                   <p className="text-[11px] font-medium text-[#64748B]">{card.label}</p>
                   <p className="mt-1 text-lg font-semibold leading-none text-[#0F172A]">{isLoading ? "..." : card.value}</p>
-                  <p className={cn("mt-3 text-[11px] font-semibold", card.trend.startsWith("-") ? "text-[#EF4444]" : "text-[#16A34A]")}>{card.trend}</p>
-                  <p className="mt-0.5 text-[10px] text-[#64748B]">{card.detail}</p>
+                  <p className={cn(
+                    "mt-3 text-[11px] font-semibold",
+                    card.trend?.tone === "positive" ? "text-[#16A34A]" : card.trend?.tone === "negative" ? "text-[#EF4444]" : "text-[#64748B]",
+                  )}>{card.trend?.label || card.detail}</p>
+                  <p className="mt-0.5 text-[10px] text-[#64748B]">{card.trend ? card.detail : "Live count from CRM data"}</p>
               </div>
                 <svg className="mt-10 h-8 w-20" viewBox="0 0 100 36" fill="none" aria-hidden="true">
                   <path d={index % 2 === 0 ? "M2 31 C14 29 13 13 28 16 C43 19 40 4 55 9 C70 14 68 31 82 17 C89 9 94 11 98 14" : "M2 29 C13 25 15 23 28 24 C40 25 37 11 52 10 C67 9 66 24 78 17 C87 12 89 2 98 9"} stroke="currentColor" strokeWidth="2" className={card.tone} />

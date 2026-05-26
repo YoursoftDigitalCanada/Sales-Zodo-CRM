@@ -21,12 +21,14 @@ jobs:
           VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
-          if [ -z "$VPS_HOST" ] || [ -z "$VPS_USER" ] || [ -z "$VPS_PASSWORD" ]; then
-            echo "::error::Missing one or more required VPS secrets: VPS_HOST, VPS_USER, VPS_PASSWORD"
+          VPS_HOST="${VPS_HOST:-82.197.94.229}"
+          VPS_USER="${VPS_USER:-admin}"
+          VPS_PORT="${VPS_PORT:-22}"
+
+          if [ -z "$VPS_PASSWORD" ]; then
+            echo "::error::Missing required VPS_PASSWORD repository secret"
             exit 1
           fi
-
-          VPS_PORT="${VPS_PORT:-22}"
 
           sshpass -p "$VPS_PASSWORD" ssh \
             -p "$VPS_PORT" \

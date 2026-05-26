@@ -2,13 +2,7 @@ name: Deploy to VPS
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
-
-concurrency:
-  group: sales-zodo-crm-deploy-main
-  cancel-in-progress: false
+    branches: [main]
 
 jobs:
   deploy:
@@ -17,8 +11,8 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.VPS_HOST || '82.197.94.229' }}
-          username: ${{ secrets.VPS_USER || 'root' }}
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
           script_stop: true

@@ -1272,6 +1272,149 @@ export class InvoicesService {
         return this.normalizePdfText(result?.text || '');
     }
 
+    private cleanAiString(value: unknown, max = 255) {
+        if (typeof value !== 'string') return null;
+        const trimmed = value.trim();
+        return trimmed ? trimmed.slice(0, max) : null;
+    }
+
+    private async extractInvoiceFieldsWithAi(file: Express.Multer.File, localText: string) {
+        if (!config.ai.openaiApiKey) return null;
+        if (file.size > 50 * 1024 * 1024) return null;
+
+        try {
+            const OpenAI = (await import('openai')).default;
+            const client = new OpenAI({ apiKey: config.ai.openaiApiKey });
+            const buffer = await fs.readFile(file.path);
+            const response = await (client.responses as any).create({
+                model: config.ai.openaiModel || 'gpt-4o-mini',
+                input: [
+                    {
+                        role: 'user',
+                        content: [
+                            {
+                                type: 'input_file',
+                                filename: file.originalname || 'invoice.pdf',
+                                file_data: `data:application/pdf;base64,${buffer.toString('base64')}`,
+                            },
+                            {
+                                type: 'input_text',
+                                text: [
+                                    'Extract invoice data from this PDF for a Sales CRM import.',
+                                    'Return JSON only, no markdown.',
+                                    'Schema:',
+                                    '{',
+                                    '  "invoiceNumber": string|null,',
+                                    '  "issueDate": "YYYY-MM-DD"|null,',
+                                    '  "dueDate": "YYYY-MM-DD"|null,',
+                                    '  "currency": "CAD"|"USD"|null,',
+                                    '  "companyName": string|null,',
+                                    '  "clientEmail": string|null,',
+                                    '  "clientPhone": string|null,',
+                                    '  "subtotal": number|null,',
+                                    '  "taxRate": number|null,',
+                                    '  "taxAmount": number|null,',
+                                    '  "total": number|null,',
+                                    '  "lineItems": [{"description": string, "quantity": number, "unitPrice": number, "amount": number}],',
+                                    '  "confidence": number',
+                                    '}',
+                                    'Rules: use the customer/bill-to company as companyName, not the sender. Use amount due/grand total/invoice total as total. If exact line items are unclear, return one line item using the total.',
+                                    localText ? `Local extracted text preview:\n${localText.slice(0, 4000)}` : '',
+                                ].join('\n'),
+                            },
+                        ],
+                    },
+                ],
+            });
+
+            const output = String(response.output_text || '').trim();
+            const jsonText = output.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+            const parsed = JSON.parse(jsonText);
+            const issueDate = this.parsePdfDate(this.cleanAiString(parsed.issueDate, 40));
+            const dueDate = this.parsePdfDate(this.cleanAiString(parsed.dueDate, 40));
+            const total = this.parsePdfMoney(parsed.total == null ? null : String(parsed.total));
+            const subtotal = this.parsePdfMoney(parsed.subtotal == null ? null : String(parsed.subtotal));
+            const taxAmount = this.parsePdfMoney(parsed.taxAmount == null ? null : String(parsed.taxAmount));
+            const taxRate = this.parsePdfMoney(parsed.taxRate == null ? null : String(parsed.taxRate));
+            const lineItems = Array.isArray(parsed.lineItems)
+                ? parsed.lineItems
+                    .map((item: any) => {
+                        const amount = this.parsePdfMoney(item?.amount == null ? null : String(item.amount));
+                        const quantity = Number(item?.quantity || 1);
+                        const unitPrice = this.parsePdfMoney(item?.unitPrice == null ? null : String(item.unitPrice));
+                        return {
+                            description: this.cleanAiString(item?.description, 255) || 'Imported invoice item',
+                            quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+                            unitPrice: unitPrice ?? amount ?? total ?? 0,
+                            amount: amount ?? ((Number.isFinite(quantity) && quantity > 0 ? quantity : 1) * (unitPrice ?? total ?? 0)),
+                        };
+                    })
+                    .filter((item: any) => item.amount > 0 || item.unitPrice > 0)
+                : [];
+
+            return {
+                invoiceNumber: this.cleanAiString(parsed.invoiceNumber, 50),
+                issueDate,
+                dueDate,
+                currency: this.cleanAiString(parsed.currency, 3)?.toUpperCase(),
+                clientEmail: this.cleanAiString(parsed.clientEmail, 255),
+                clientPhone: this.cleanAiString(parsed.clientPhone, 40),
+                companyName: this.cleanAiString(parsed.companyName, 180),
+                subtotal,
+                taxAmount,
+                taxRate,
+                total,
+                lineItems,
+                confidence: Number(parsed.confidence || 0),
+            };
+        } catch (error) {
+            logger.warn('[Invoices] AI PDF invoice extraction failed', {
+                fileName: file.originalname,
+                error: (error as Error)?.message || String(error),
+            });
+            return null;
+        }
+    }
+
+    private mergeAiInvoiceFields(
+        current: ReturnType<InvoicesService['extractInvoiceFieldsFromPdf']>,
+        ai: Awaited<ReturnType<InvoicesService['extractInvoiceFieldsWithAi']>>,
+        fileName: string,
+    ) {
+        if (!ai) return current;
+        const fallback = this.fallbackInvoiceFieldsFromPdfFile(fileName, 'AI extraction fallback');
+        const issueDate = ai.issueDate || current.issueDate || fallback.issueDate;
+        const dueDate = ai.dueDate || current.dueDate || new Date(issueDate.getTime() + 30 * 86400000);
+        const total = ai.total || current.total || 0;
+        const invoiceNumber = (ai.invoiceNumber || current.invoiceNumber || fallback.invoiceNumber)
+            .replace(/[^\w./-]/g, '-')
+            .slice(0, 50);
+
+        return {
+            ...current,
+            invoiceNumber,
+            issueDate,
+            dueDate,
+            currency: ai.currency || current.currency || 'CAD',
+            clientEmail: ai.clientEmail || current.clientEmail,
+            clientPhone: ai.clientPhone || current.clientPhone,
+            companyName: ai.companyName || current.companyName || fallback.companyName,
+            subtotal: ai.subtotal ?? current.subtotal,
+            taxAmount: ai.taxAmount ?? current.taxAmount,
+            taxRate: ai.taxRate ?? current.taxRate,
+            total,
+            aiExtracted: true,
+            aiConfidence: ai.confidence,
+            lineItems: ai.lineItems && ai.lineItems.length ? ai.lineItems : undefined,
+            confidence: {
+                invoiceNumber: Boolean(invoiceNumber),
+                dates: Boolean(issueDate && dueDate),
+                total: total > 0,
+                client: Boolean(ai.companyName || current.companyName),
+            },
+        };
+    }
+
     private fallbackInvoiceFieldsFromPdfFile(fileName: string, reason: string) {
         const compactFileName = path.basename(fileName, path.extname(fileName)).trim();
         const invoiceNumber = (compactFileName || `PDF-${Date.now()}`).replace(/[^\w./-]/g, '-').slice(0, 50);
@@ -1390,31 +1533,51 @@ export class InvoicesService {
                     : this.fallbackInvoiceFieldsFromPdfFile(file.originalname, reviewReasons[0] || 'PDF needs review');
                 if (!extracted.total || extracted.total <= 0) reviewReasons.push('Could not detect invoice total.');
 
+                const shouldUseAi = Boolean(
+                    config.ai.openaiApiKey
+                    && (!extracted.total || extracted.total <= 0 || !extracted.clientEmail || extracted.companyName === 'Imported Invoice Customer'),
+                );
+                const aiFields = shouldUseAi ? await this.extractInvoiceFieldsWithAi(file, text) : null;
+                const finalExtracted = this.mergeAiInvoiceFields(extracted, aiFields, file.originalname);
+                if (aiFields?.total && aiFields.total > 0) {
+                    const index = reviewReasons.indexOf('Could not detect invoice total.');
+                    if (index >= 0) reviewReasons.splice(index, 1);
+                }
+                if (aiFields) {
+                    const index = reviewReasons.findIndex((reason) => reason.includes('No readable text was found') || reason.includes('PDF text extraction failed'));
+                    if (index >= 0 && finalExtracted.total > 0) reviewReasons.splice(index, 1);
+                }
+
                 let invoice = await prisma.invoice.findFirst({
-                    where: { tenantId, invoiceNumber: extracted.invoiceNumber },
+                    where: { tenantId, invoiceNumber: finalExtracted.invoiceNumber },
                     select: { id: true, clientId: true, projectId: true, quoteId: true },
                 });
                 let createdInvoice: any = null;
                 if (!invoice) {
-                    const clientId = await this.findOrCreatePdfImportClient(tenantId, extracted);
-                    createdInvoice = await this.create(tenantId, {
-                        invoiceNumber: extracted.invoiceNumber,
-                        issueDate: extracted.issueDate.toISOString(),
-                        invoiceDate: extracted.issueDate.toISOString(),
-                        dueDate: extracted.dueDate.toISOString(),
-                        currency: extracted.currency as any,
-                        clientId,
-                        taxRate: extracted.taxRate || undefined,
-                        notes: reviewReasons.length
-                            ? `Created from imported invoice PDF. Review required: ${reviewReasons.join(' ')}`
-                            : 'Created by parsing an imported invoice PDF. Review extracted fields before sending.',
-                        terms: null,
-                        items: [{
+                    const clientId = await this.findOrCreatePdfImportClient(tenantId, finalExtracted);
+                    const lineItems = Array.isArray((finalExtracted as any).lineItems) && (finalExtracted as any).lineItems.length
+                        ? (finalExtracted as any).lineItems
+                        : [{
                             description: reviewReasons.length ? 'Imported invoice total - review required' : 'Imported invoice total',
                             quantity: 1,
-                            unitPrice: extracted.total || 0,
-                            amount: extracted.total || 0,
-                        }],
+                            unitPrice: finalExtracted.total || 0,
+                            amount: finalExtracted.total || 0,
+                        }];
+                    createdInvoice = await this.create(tenantId, {
+                        invoiceNumber: finalExtracted.invoiceNumber,
+                        issueDate: finalExtracted.issueDate.toISOString(),
+                        invoiceDate: finalExtracted.issueDate.toISOString(),
+                        dueDate: finalExtracted.dueDate.toISOString(),
+                        currency: finalExtracted.currency as any,
+                        clientId,
+                        taxRate: finalExtracted.taxRate || undefined,
+                        notes: reviewReasons.length
+                            ? `Created from imported invoice PDF. Review required: ${reviewReasons.join(' ')}`
+                            : (finalExtracted as any).aiExtracted
+                                ? 'Created by AI extraction from an imported invoice PDF. Review before sending.'
+                                : 'Created by parsing an imported invoice PDF. Review extracted fields before sending.',
+                        terms: null,
+                        items: lineItems,
                     } as CreateInvoiceDto);
                     invoice = {
                         id: createdInvoice.id,
@@ -1432,7 +1595,7 @@ export class InvoicesService {
                         : createdInvoice ? 'converted' : 'matched_existing_invoice',
                     reviewRequired: reviewReasons.length > 0,
                     reviewReasons,
-                    extracted,
+                    extracted: finalExtracted,
                 });
                 const generatedDocument = await this.saveInvoicePdfToDocuments(tenantId, invoice.id, actorUserId);
                 imported.push({
@@ -1445,7 +1608,7 @@ export class InvoicesService {
                         convertedToCrmTemplate: true,
                         reviewRequired: reviewReasons.length > 0,
                         reviewReasons,
-                        extracted,
+                        extracted: finalExtracted,
                     },
                 });
                 if (reviewReasons.length) {

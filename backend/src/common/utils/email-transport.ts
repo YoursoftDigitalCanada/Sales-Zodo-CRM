@@ -86,3 +86,25 @@ export function getSmtpTransportGuidance(port: number, host?: string): string {
   providerHints.push('If this is still timing out, the VPS/network may be blocked from reaching that SMTP port. Ask the provider to enable SMTP for the server IP or try the alternate provider-supported port.');
   return providerHints.join(' ');
 }
+
+export function getSmtpAuthenticationGuidance(host?: string): string {
+  const normalizedHost = normalizeHost(host);
+
+  if (normalizedHost.includes('gmail')) {
+    return 'Gmail requires the full Gmail address as the username and an App Password when 2FA is enabled.';
+  }
+
+  if (normalizedHost.includes('office365') || normalizedHost.includes('outlook') || normalizedHost.includes('microsoft')) {
+    return 'Microsoft 365 requires the full mailbox email as the username, the mailbox password, and SMTP AUTH enabled for that mailbox.';
+  }
+
+  if (normalizedHost.includes('hostinger')) {
+    return 'Hostinger requires the full mailbox email as the username and the mailbox password from hPanel. Do not use the Hostinger account login password unless it is also the mailbox password.';
+  }
+
+  if (normalizedHost.includes('zoho')) {
+    return 'Zoho requires the full mailbox email as the username and may require an app-specific password.';
+  }
+
+  return 'Check that the SMTP username is the full mailbox email and that the password belongs to that mailbox.';
+}

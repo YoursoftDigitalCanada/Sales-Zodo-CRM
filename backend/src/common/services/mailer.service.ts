@@ -1,5 +1,5 @@
 import { config } from '../../config';
-import { getSmtpTransportGuidance, normalizeSmtpTransportConfig } from '../utils/email-transport';
+import { getSmtpAuthenticationGuidance, getSmtpTransportGuidance, normalizeSmtpTransportConfig } from '../utils/email-transport';
 
 // Dynamic import to prevent crash if nodemailer is not installed
 let nodemailer: any;
@@ -164,6 +164,9 @@ class MailerService {
             if (/greeting never received|etimedout/i.test(errorMessage)) {
                 return { sent: false, error: `${errorMessage}. ${guidance}` };
             }
+            if (/authentication|535|invalid login|username|password/i.test(errorMessage)) {
+                return { sent: false, error: `${errorMessage}. ${getSmtpAuthenticationGuidance(normalizedForGuidance.host)}` };
+            }
             return { sent: false, error: errorMessage };
         }
     }
@@ -214,7 +217,7 @@ class MailerService {
                 return { ok: false, error: `${errorMessage}. ${guidance}` };
             }
             if (/authentication|535|invalid login|username|password/i.test(errorMessage)) {
-                return { ok: false, error: `${errorMessage}. Tip: If you use Gmail with 2FA, you need an App Password instead of your regular password.` };
+                return { ok: false, error: `${errorMessage}. ${getSmtpAuthenticationGuidance(normalizedForGuidance.host)}` };
             }
             return { ok: false, error: errorMessage };
         }

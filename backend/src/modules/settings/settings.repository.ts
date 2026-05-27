@@ -35,6 +35,22 @@ function mergeSecret(existingValue: unknown, nextValue: string | undefined): str
   return encryptSecret(nextValue);
 }
 
+function smtpPortForEncryption(encryption: unknown, currentPort: unknown): number {
+  const normalized = String(encryption || '').toUpperCase();
+  const port = Number(currentPort || 587);
+  if (normalized === 'SSL/TLS') return 465;
+  if (normalized === 'STARTTLS' && port === 465) return 587;
+  return port;
+}
+
+function imapPortForEncryption(encryption: unknown, currentPort: unknown): number {
+  const normalized = String(encryption || '').toUpperCase();
+  const port = Number(currentPort || 993);
+  if (normalized === 'SSL/TLS') return 993;
+  if (normalized === 'STARTTLS' && port === 993) return 143;
+  return port;
+}
+
 export class SettingsRepository {
   async findByTenantId(tenantId: string): Promise<WorkspaceSettingsRecord | null> {
     return prisma.tenantSettings.findUnique({
@@ -153,7 +169,9 @@ export class SettingsRepository {
       }
       const normalizedSmtp = normalizeSmtpTransportConfig({
         host: String(nextIntegrations.smtpHost ?? ''),
-        port: Number(nextIntegrations.smtpPort ?? 587),
+        port: data.smtp.encryption !== undefined
+          ? smtpPortForEncryption(nextIntegrations.smtpEncryption, nextIntegrations.smtpPort)
+          : Number(nextIntegrations.smtpPort ?? 587),
         encryption: String(nextIntegrations.smtpEncryption ?? 'STARTTLS') as EmailEncryption,
       });
       nextIntegrations.smtpHost = normalizedSmtp.host;
@@ -173,7 +191,9 @@ export class SettingsRepository {
       }
       const normalizedImap = normalizeImapTransportConfig({
         host: String(nextIntegrations.imapHost ?? ''),
-        port: Number(nextIntegrations.imapPort ?? 993),
+        port: data.imap.encryption !== undefined
+          ? imapPortForEncryption(nextIntegrations.imapEncryption, nextIntegrations.imapPort)
+          : Number(nextIntegrations.imapPort ?? 993),
         encryption: String(nextIntegrations.imapEncryption ?? 'SSL/TLS') as EmailEncryption,
       });
       nextIntegrations.imapHost = normalizedImap.host;

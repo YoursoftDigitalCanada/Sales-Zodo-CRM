@@ -1759,6 +1759,16 @@ function normalizeSmtpEncryption(portValue: string | number, encryption: Mailbox
   return encryption;
 }
 
+function smtpPortForEncryption(encryption: MailboxFormState["smtpEncryption"], currentPort: string): string {
+  if (encryption === "SSL/TLS") {
+    return "465";
+  }
+  if (encryption === "STARTTLS" && currentPort === "465") {
+    return "587";
+  }
+  return currentPort || "587";
+}
+
 function normalizeImapEncryption(portValue: string | number, encryption: MailboxFormState["imapEncryption"]): MailboxFormState["imapEncryption"] {
   const port = Number(portValue || 0);
   if (port === 993) {
@@ -1768,6 +1778,16 @@ function normalizeImapEncryption(portValue: string | number, encryption: Mailbox
     return encryption === "NONE" ? "NONE" : "STARTTLS";
   }
   return encryption;
+}
+
+function imapPortForEncryption(encryption: MailboxFormState["imapEncryption"], currentPort: string): string {
+  if (encryption === "SSL/TLS") {
+    return "993";
+  }
+  if (encryption === "STARTTLS" && currentPort === "993") {
+    return "143";
+  }
+  return currentPort || "993";
 }
 
 function mapMailboxSettingsToForm(settings: MailboxSettings | null): MailboxFormState {
@@ -1851,7 +1871,17 @@ const MailboxSettingsDialog = ({
           </div>
           <div className="space-y-2">
             <Label>SMTP Encryption</Label>
-            <Select value={form.smtpEncryption} onValueChange={(value) => onFormChange((current) => ({ ...current, smtpEncryption: value as MailboxFormState["smtpEncryption"] }))}>
+            <Select
+              value={form.smtpEncryption}
+              onValueChange={(value) => onFormChange((current) => {
+                const encryption = value as MailboxFormState["smtpEncryption"];
+                return {
+                  ...current,
+                  smtpEncryption: encryption,
+                  smtpPort: smtpPortForEncryption(encryption, current.smtpPort),
+                };
+              })}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -1902,7 +1932,17 @@ const MailboxSettingsDialog = ({
           </div>
           <div className="space-y-2">
             <Label>IMAP Encryption</Label>
-            <Select value={form.imapEncryption} onValueChange={(value) => onFormChange((current) => ({ ...current, imapEncryption: value as MailboxFormState["imapEncryption"] }))}>
+            <Select
+              value={form.imapEncryption}
+              onValueChange={(value) => onFormChange((current) => {
+                const encryption = value as MailboxFormState["imapEncryption"];
+                return {
+                  ...current,
+                  imapEncryption: encryption,
+                  imapPort: imapPortForEncryption(encryption, current.imapPort),
+                };
+              })}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

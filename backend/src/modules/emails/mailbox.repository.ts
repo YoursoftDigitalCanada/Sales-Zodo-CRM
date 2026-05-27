@@ -50,6 +50,22 @@ function toMaskedSecret(value: string): string {
   return value ? MASKED_SECRET : '';
 }
 
+function smtpPortForEncryption(encryption: unknown, currentPort: unknown): number {
+  const normalized = String(encryption || '').toUpperCase();
+  const port = Number(currentPort || 587);
+  if (normalized === 'SSL/TLS') return 465;
+  if (normalized === 'STARTTLS' && port === 465) return 587;
+  return port;
+}
+
+function imapPortForEncryption(encryption: unknown, currentPort: unknown): number {
+  const normalized = String(encryption || '').toUpperCase();
+  const port = Number(currentPort || 993);
+  if (normalized === 'SSL/TLS') return 993;
+  if (normalized === 'STARTTLS' && port === 993) return 143;
+  return port;
+}
+
 export interface MailboxRuntimeConfig {
   tenantId: string;
   userId: string;
@@ -244,12 +260,16 @@ export class MailboxRepository {
 
     const nextSmtpNormalized = normalizeSmtpTransportConfig({
       host: String(nextSmtpRaw.host ?? ''),
-      port: Number(nextSmtpRaw.port ?? 587),
+      port: data.smtp?.encryption !== undefined
+        ? smtpPortForEncryption(nextSmtpRaw.encryption, nextSmtpRaw.port)
+        : Number(nextSmtpRaw.port ?? 587),
       encryption: String(nextSmtpRaw.encryption ?? 'STARTTLS') as EmailEncryption,
     });
     const nextImapNormalized = normalizeImapTransportConfig({
       host: String(nextImapRaw.host ?? ''),
-      port: Number(nextImapRaw.port ?? 993),
+      port: data.imap?.encryption !== undefined
+        ? imapPortForEncryption(nextImapRaw.encryption, nextImapRaw.port)
+        : Number(nextImapRaw.port ?? 993),
       encryption: String(nextImapRaw.encryption ?? 'SSL/TLS') as EmailEncryption,
     });
 

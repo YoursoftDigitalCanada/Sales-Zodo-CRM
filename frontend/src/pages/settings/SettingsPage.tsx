@@ -159,6 +159,24 @@ function normalizeSmtpEncryptionForPort(port: number, current: EmailSettings["sm
   return current;
 }
 
+function getSmtpPortForEncryption(encryption: EmailSettings["smtp"]["encryption"], currentPort: number): number {
+  if (encryption === "SSL/TLS") return 465;
+  if (encryption === "STARTTLS" && currentPort === 465) return 587;
+  return currentPort || 587;
+}
+
+function normalizeImapEncryptionForPort(port: number, current: EmailSettings["imap"]["encryption"]): EmailSettings["imap"]["encryption"] {
+  if (port === 993) return "SSL/TLS";
+  if (port === 143) return current === "NONE" ? "NONE" : "STARTTLS";
+  return current;
+}
+
+function getImapPortForEncryption(encryption: EmailSettings["imap"]["encryption"], currentPort: number): number {
+  if (encryption === "SSL/TLS") return 993;
+  if (encryption === "STARTTLS" && currentPort === 993) return 143;
+  return currentPort || 993;
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const units = ["KB", "MB", "GB", "TB"];
@@ -1434,7 +1452,21 @@ export default function SettingsPage() {
                       <input className={fieldClass} type="password" value={emailSettings.smtp.passwordMasked} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, passwordMasked: event.target.value } })} />
                     </Field>
                     <Field label="Encryption">
-                      <select className={fieldClass} value={emailSettings.smtp.encryption} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, encryption: event.target.value as typeof emailSettings.smtp.encryption } })}>
+                      <select
+                        className={fieldClass}
+                        value={emailSettings.smtp.encryption}
+                        onChange={(event) => {
+                          const encryption = event.target.value as typeof emailSettings.smtp.encryption;
+                          setEmailSettings({
+                            ...emailSettings,
+                            smtp: {
+                              ...emailSettings.smtp,
+                              encryption,
+                              port: getSmtpPortForEncryption(encryption, emailSettings.smtp.port),
+                            },
+                          });
+                        }}
+                      >
                         {emailEncryptions.map((encryption) => (
                           <option key={encryption} value={encryption}>
                             {encryption}
@@ -1471,7 +1503,22 @@ export default function SettingsPage() {
                       <input className={fieldClass} value={emailSettings.imap.host} onChange={(event) => setEmailSettings({ ...emailSettings, imap: { ...emailSettings.imap, host: event.target.value } })} />
                     </Field>
                     <Field label="Port">
-                      <input className={fieldClass} type="number" value={emailSettings.imap.port} onChange={(event) => setEmailSettings({ ...emailSettings, imap: { ...emailSettings.imap, port: Number(event.target.value || 0) } })} />
+                      <input
+                        className={fieldClass}
+                        type="number"
+                        value={emailSettings.imap.port}
+                        onChange={(event) => {
+                          const port = Number(event.target.value || 0);
+                          setEmailSettings({
+                            ...emailSettings,
+                            imap: {
+                              ...emailSettings.imap,
+                              port,
+                              encryption: normalizeImapEncryptionForPort(port, emailSettings.imap.encryption),
+                            },
+                          });
+                        }}
+                      />
                     </Field>
                     <Field label="Username">
                       <input className={fieldClass} value={emailSettings.imap.username} onChange={(event) => setEmailSettings({ ...emailSettings, imap: { ...emailSettings.imap, username: event.target.value } })} />
@@ -1480,7 +1527,21 @@ export default function SettingsPage() {
                       <input className={fieldClass} type="password" value={emailSettings.imap.passwordMasked} onChange={(event) => setEmailSettings({ ...emailSettings, imap: { ...emailSettings.imap, passwordMasked: event.target.value } })} />
                     </Field>
                     <Field label="Encryption">
-                      <select className={fieldClass} value={emailSettings.imap.encryption} onChange={(event) => setEmailSettings({ ...emailSettings, imap: { ...emailSettings.imap, encryption: event.target.value as typeof emailSettings.imap.encryption } })}>
+                      <select
+                        className={fieldClass}
+                        value={emailSettings.imap.encryption}
+                        onChange={(event) => {
+                          const encryption = event.target.value as typeof emailSettings.imap.encryption;
+                          setEmailSettings({
+                            ...emailSettings,
+                            imap: {
+                              ...emailSettings.imap,
+                              encryption,
+                              port: getImapPortForEncryption(encryption, emailSettings.imap.port),
+                            },
+                          });
+                        }}
+                      >
                         {emailEncryptions.map((encryption) => (
                           <option key={encryption} value={encryption}>
                             {encryption}

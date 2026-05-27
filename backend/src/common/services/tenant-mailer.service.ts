@@ -164,9 +164,7 @@ class TenantMailerService {
     );
 
     if (!privilegedMailbox) {
-      throw new ServiceUnavailableError(
-        'Invoice automation email delivery requires a configured mailbox for a workspace owner, admin, or manager.',
-      );
+      return this.getTenantSender(tenantId, preferredUserId);
     }
 
     const senderName = privilegedMailbox.smtp.senderName || await this.getTenantDefaultSenderName(tenantId);

@@ -28,6 +28,29 @@ export interface ImapConfig {
 }
 
 class ImapService {
+    private getMessageDate(parsedDate: unknown, fallbackDate?: unknown): Date {
+        const candidates = [parsedDate, fallbackDate];
+        for (const candidate of candidates) {
+            if (!candidate) continue;
+            const date = candidate instanceof Date ? candidate : new Date(candidate as any);
+            if (!Number.isNaN(date.getTime())) {
+                return date;
+            }
+        }
+        return new Date();
+    }
+
+    private isSeenMessage(flags: unknown): boolean {
+        if (!flags) return false;
+        if (flags instanceof Set) {
+            return flags.has('\\Seen');
+        }
+        if (Array.isArray(flags)) {
+            return flags.some((flag) => String(flag).toLowerCase() === '\\seen');
+        }
+        return false;
+    }
+
     private async storeAttachments(tenantId: string, parsedAttachments: any[] = []) {
         if (!Array.isArray(parsedAttachments) || parsedAttachments.length === 0) {
             return [];
@@ -189,10 +212,14 @@ class ImapService {
             : sortedUids;
         let fetched = 0;
 
-        for await (const msg of client.fetch(latestUids, { source: true, envelope: true, uid: true }, { uid: true })) {
+        for await (const msg of client.fetch(latestUids, { source: true, envelope: true, uid: true, flags: true, internalDate: true }, { uid: true })) {
             try {
                 const parsed = await simpleParser(msg.source);
-                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, folder, { notifyIncoming: false });
+                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, folder, {
+                    fallbackDate: msg.envelope?.date || msg.internalDate,
+                    isRead: this.isSeenMessage(msg.flags),
+                    notifyIncoming: false,
+                });
             } catch (parseErr: any) {
                 console.error(`⚠️ Failed to parse initial-sync email UID ${msg.uid}:`, parseErr.message);
             }
@@ -215,13 +242,16 @@ class ImapService {
 
             const sentMessages = client.fetch(
                 { since: sentSince },
-                { source: true, envelope: true, uid: true },
+                { source: true, envelope: true, uid: true, flags: true, internalDate: true },
             );
 
             for await (const msg of sentMessages) {
                 try {
                     const parsed = await simpleParser(msg.source);
-                    fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, folder);
+                    fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, folder, {
+                        fallbackDate: msg.envelope?.date || msg.internalDate,
+                        isRead: this.isSeenMessage(msg.flags),
+                    });
                 } catch (parseErr: any) {
                     console.error(`⚠️ Failed to parse sent email UID ${msg.uid}:`, parseErr.message);
                 }
@@ -235,13 +265,16 @@ class ImapService {
 
         const unseenMessages = client.fetch(
             { since: unseenSince, seen: false },
-            { source: true, envelope: true, uid: true }
+            { source: true, envelope: true, uid: true, flags: true, internalDate: true }
         );
 
         for await (const msg of unseenMessages) {
             try {
                 const parsed = await simpleParser(msg.source);
-                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, folder);
+                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, folder, {
+                    fallbackDate: msg.envelope?.date || msg.internalDate,
+                    isRead: this.isSeenMessage(msg.flags),
+                });
             } catch (parseErr: any) {
                 console.error(`⚠️ Failed to parse email UID ${msg.uid}:`, parseErr.message);
             }
@@ -252,13 +285,16 @@ class ImapService {
 
         const seenMessages = client.fetch(
             { since: seenSince, seen: true },
-            { source: true, envelope: true, uid: true }
+            { source: true, envelope: true, uid: true, flags: true, internalDate: true }
         );
 
         for await (const msg of seenMessages) {
             try {
                 const parsed = await simpleParser(msg.source);
-                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, folder);
+                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, folder, {
+                    fallbackDate: msg.envelope?.date || msg.internalDate,
+                    isRead: this.isSeenMessage(msg.flags),
+                });
             } catch (parseErr: any) {
                 console.error(`⚠️ Failed to parse seen email UID ${msg.uid}:`, parseErr.message);
             }
@@ -276,7 +312,7 @@ class ImapService {
         mailboxOwnerUserId: string,
         parsed: any,
         folder: EmailFolder,
-        options: { notifyIncoming?: boolean } = {},
+        options: { fallbackDate?: unknown; isRead?: boolean; notifyIncoming?: boolean } = {},
     ): Promise<number> {
         const messageId = parsed.messageId || null;
 
@@ -301,7 +337,7 @@ class ImapService {
         ).map((a: any) => ({ email: a.address || '', name: a.name || '' }));
 
         const isSent = folder === 'SENT';
-        const timestamp = parsed.date || new Date();
+        const timestamp = this.getMessageDate(parsed.date, options.fallbackDate);
 
         const storedAttachments = await this.storeAttachments(tenantId, parsed.attachments || []);
 
@@ -321,7 +357,7 @@ class ImapService {
                 bodyHtml: parsed.html || null,
                 folder,
                 status: isSent ? 'SENT' : 'RECEIVED',
-                isRead: isSent, // Sent emails are read by default
+                isRead: isSent || options.isRead === true,
                 hasAttachments: storedAttachments.length > 0,
                 attachments: storedAttachments.length > 0
                     ? {

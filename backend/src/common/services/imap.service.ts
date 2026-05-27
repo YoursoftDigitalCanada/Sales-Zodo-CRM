@@ -365,7 +365,7 @@ class ImapService {
                     }
                     : undefined,
                 size: BigInt(parsed.html?.length || parsed.text?.length || 0),
-                receivedAt: isSent ? null : timestamp,
+                receivedAt: timestamp,
                 sentAt: isSent ? timestamp : null,
             },
         });

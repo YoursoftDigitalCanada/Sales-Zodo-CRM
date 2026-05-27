@@ -41,6 +41,8 @@ export class EmailsRepository {
         data: SendEmailDto,
         options: { sentByEmployeeId?: string; mailboxOwnerUserId: string },
     ) {
+        const sentAt = new Date();
+
         return prisma.email.create({
             data: {
                 tenantId,
@@ -59,7 +61,8 @@ export class EmailsRepository {
                 status: 'SENT',
                 sentById: options.sentByEmployeeId,
                 mailboxOwnerUserId: options.mailboxOwnerUserId,
-                sentAt: new Date(),
+                receivedAt: sentAt,
+                sentAt,
                 hasAttachments: (data.attachments?.length || 0) > 0,
                 attachments: data.attachments && data.attachments.length > 0
                     ? {
@@ -365,6 +368,7 @@ export class EmailsRepository {
                 messageId: data.messageId || undefined,
                 fromName: data.fromName,
                 fromAddress: data.fromAddress,
+                receivedAt: data.sentAt,
                 sentAt: data.sentAt,
                 scheduledFor: null,
             },

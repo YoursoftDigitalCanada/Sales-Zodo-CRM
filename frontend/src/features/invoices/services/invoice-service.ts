@@ -36,6 +36,37 @@ export async function getInvoices(params?: Partial<InvoiceQueryDto>) {
   return extractApiArray<InvoiceEntity>(response.data);
 }
 
+export async function exportInvoicesCsv(params?: Partial<InvoiceQueryDto>): Promise<void> {
+  const response = await api.get("/invoices/export/csv", { params, responseType: "blob" });
+  const blob = new Blob([response.data], { type: "text/csv;charset=utf-8" });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `invoices-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function importInvoicesCsv(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await api.post("/invoices/import/csv", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return extractApiData<InvoiceEntity>(response.data);
+}
+
+export async function importInvoicePdfs(files: File[]) {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("files", file));
+  const response = await api.post("/invoices/import/pdfs", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return extractApiData<InvoiceEntity>(response.data);
+}
+
 export async function getInvoiceById(id: string) {
   const response = await api.get(`/invoices/${id}`);
   return extractApiData<InvoiceEntity>(response.data);

@@ -924,6 +924,291 @@ export class InvoicesService {
         return document;
     }
 
+    private csvEscape(value: unknown) {
+        const raw = value === null || value === undefined ? '' : String(value);
+        if (/[",\n\r]/.test(raw)) return `"${raw.replace(/"/g, '""')}"`;
+        return raw;
+    }
+
+    private parseCsv(content: string): string[][] {
+        const rows: string[][] = [];
+        let row: string[] = [];
+        let cell = '';
+        let quoted = false;
+
+        for (let index = 0; index < content.length; index += 1) {
+            const char = content[index];
+            const next = content[index + 1];
+            if (char === '"' && quoted && next === '"') {
+                cell += '"';
+                index += 1;
+                continue;
+            }
+            if (char === '"') {
+                quoted = !quoted;
+                continue;
+            }
+            if (char === ',' && !quoted) {
+                row.push(cell.trim());
+                cell = '';
+                continue;
+            }
+            if ((char === '\n' || char === '\r') && !quoted) {
+                if (char === '\r' && next === '\n') index += 1;
+                row.push(cell.trim());
+                if (row.some((value) => value.length > 0)) rows.push(row);
+                row = [];
+                cell = '';
+                continue;
+            }
+            cell += char;
+        }
+
+        row.push(cell.trim());
+        if (row.some((value) => value.length > 0)) rows.push(row);
+        return rows;
+    }
+
+    private csvRowToObject(headers: string[], values: string[]) {
+        return headers.reduce<Record<string, string>>((acc, header, index) => {
+            const key = header.toLowerCase().replace(/[^a-z0-9]/g, '');
+            acc[key] = values[index] || '';
+            return acc;
+        }, {});
+    }
+
+    private csvNumber(value: unknown, fallback = 0) {
+        const parsed = Number(String(value || '').replace(/[$,\s]/g, ''));
+        return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    private csvDate(value: unknown, fallback: Date) {
+        const raw = String(value || '').trim();
+        const date = raw ? new Date(raw) : fallback;
+        return Number.isNaN(date.getTime()) ? fallback : date;
+    }
+
+    private async findOrCreateImportClient(tenantId: string, row: Record<string, string>) {
+        const clientId = row.clientid || row.companyid || row.organizationid;
+        if (clientId) {
+            const client = await prisma.client.findFirst({ where: { id: clientId, tenantId }, select: { id: true } });
+            if (!client) throw new BadRequestError('CSV clientId does not belong to this tenant', ErrorCodes.INVALID_INPUT);
+            return client.id;
+        }
+
+        const email = row.clientemail || row.companyemail || row.email;
+        const companyName = row.client || row.company || row.organization || row.customer || row.clientbusinessname;
+        if (!email || !companyName) {
+            throw new BadRequestError('Each imported invoice row needs clientId or company/client name and email', ErrorCodes.INVALID_INPUT);
+        }
+
+        const existing = await prisma.client.findFirst({
+            where: { tenantId, primaryEmail: email },
+            select: { id: true },
+        });
+        if (existing) return existing.id;
+
+        const created = await prisma.client.create({
+            data: {
+                tenantId,
+                clientName: companyName,
+                companyName,
+                primaryEmail: email,
+                primaryPhone: row.clientphone || row.phone || 'N/A',
+                currency: (row.currency || 'CAD').toUpperCase(),
+                leadSource: 'Invoice Import',
+            },
+            select: { id: true },
+        });
+        return created.id;
+    }
+
+    async exportCsv(tenantId: string, query: InvoiceQueryDto) {
+        const { data } = await invoicesRepository.findMany(tenantId, {
+            ...query,
+            page: 1,
+            limit: 5000,
+        } as InvoiceQueryDto);
+        const headers = [
+            'invoiceNumber',
+            'status',
+            'company',
+            'clientEmail',
+            'issueDate',
+            'dueDate',
+            'currency',
+            'subtotal',
+            'taxRate',
+            'taxAmount',
+            'discountAmount',
+            'total',
+            'amountPaid',
+            'amountDue',
+            'notes',
+            'terms',
+        ];
+        const rows = data.map((invoice: any) => [
+            invoice.invoiceNumber,
+            invoice.status,
+            invoice.client?.clientName || invoice.client?.companyName || '',
+            invoice.client?.primaryEmail || '',
+            invoice.issueDate ? new Date(invoice.issueDate).toISOString().slice(0, 10) : '',
+            invoice.dueDate ? new Date(invoice.dueDate).toISOString().slice(0, 10) : '',
+            invoice.currency,
+            invoice.subtotal,
+            invoice.taxRate || '',
+            invoice.taxAmount,
+            invoice.discountAmount,
+            invoice.total,
+            invoice.amountPaid,
+            invoice.amountDue,
+            invoice.notes || '',
+            invoice.terms || '',
+        ]);
+        const csv = [headers, ...rows].map((row) => row.map((value) => this.csvEscape(value)).join(',')).join('\n');
+        return { csv, fileName: `invoices-${new Date().toISOString().slice(0, 10)}.csv` };
+    }
+
+    async importCsv(tenantId: string, file: Express.Multer.File | undefined, actorUserId?: string) {
+        if (!file) throw new BadRequestError('CSV file is required', ErrorCodes.VALIDATION_FAILED);
+        const extension = path.extname(file.originalname || '').toLowerCase();
+        if (extension !== '.csv' && !String(file.mimetype || '').includes('csv')) {
+            await fs.unlink(file.path).catch(() => undefined);
+            throw new BadRequestError('Only CSV invoice imports are supported here', ErrorCodes.VALIDATION_FAILED);
+        }
+
+        const content = await fs.readFile(file.path, 'utf8');
+        await fs.unlink(file.path).catch(() => undefined);
+        const rows = this.parseCsv(content);
+        if (rows.length < 2) throw new BadRequestError('CSV must include a header row and at least one invoice row', ErrorCodes.VALIDATION_FAILED);
+
+        const headers = rows[0];
+        const imported: any[] = [];
+        const skipped: Array<{ row: number; reason: string }> = [];
+
+        for (const [index, values] of rows.slice(1).entries()) {
+            const rowNumber = index + 2;
+            try {
+                const row = this.csvRowToObject(headers, values);
+                const invoiceNumber = row.invoicenumber || row.invoice || row.number || `IMP-${Date.now()}-${rowNumber}`;
+                const duplicate = await prisma.invoice.findFirst({ where: { tenantId, invoiceNumber }, select: { id: true } });
+                if (duplicate) {
+                    skipped.push({ row: rowNumber, reason: `Invoice ${invoiceNumber} already exists` });
+                    continue;
+                }
+
+                const clientId = await this.findOrCreateImportClient(tenantId, row);
+                const issueDate = this.csvDate(row.issuedate || row.invoicedate || row.date, new Date());
+                const dueDate = this.csvDate(row.duedate, new Date(issueDate.getTime() + 30 * 86400000));
+                const quantity = this.csvNumber(row.quantity || row.qty, 1) || 1;
+                const unitPrice = this.csvNumber(row.unitprice || row.rate || row.amount || row.total, 0);
+                const lineTotal = this.csvNumber(row.linetotal || row.amount || row.total, quantity * unitPrice);
+                const invoice = await this.create(tenantId, {
+                    invoiceNumber,
+                    issueDate: issueDate.toISOString(),
+                    invoiceDate: issueDate.toISOString(),
+                    dueDate: dueDate.toISOString(),
+                    currency: (row.currency || 'CAD').toUpperCase() as any,
+                    clientId,
+                    taxRate: row.taxrate ? this.csvNumber(row.taxrate, 0) : undefined,
+                    discountAmount: row.discountamount || row.discount ? this.csvNumber(row.discountamount || row.discount, 0) : undefined,
+                    notes: row.notes || null,
+                    terms: row.terms || null,
+                    items: [{
+                        description: row.itemdescription || row.description || row.item || 'Imported invoice item',
+                        quantity,
+                        unitPrice,
+                        amount: lineTotal,
+                    }],
+                } as CreateInvoiceDto);
+                imported.push(invoice);
+            } catch (error) {
+                skipped.push({ row: rowNumber, reason: (error as Error)?.message || 'Import failed' });
+            }
+        }
+
+        activityLogger.log({
+            tenantId,
+            entityType: 'Invoice',
+            entityId: tenantId,
+            action: 'CREATE',
+            module: 'invoices',
+            description: `Imported ${imported.length} invoices from CSV`,
+            userId: actorUserId,
+            metadata: { imported: imported.length, skipped: skipped.length },
+        });
+
+        return { importedCount: imported.length, skippedCount: skipped.length, imported, skipped };
+    }
+
+    async importPdfs(tenantId: string, files: Express.Multer.File[], actorUserId?: string) {
+        if (!files.length) throw new BadRequestError('At least one PDF file is required', ErrorCodes.VALIDATION_FAILED);
+        const categories = await documentsService.categories(tenantId);
+        const invoicesCategory = categories.find((category: any) => String(category.name).toLowerCase() === 'invoices');
+        const imported: any[] = [];
+        const skipped: Array<{ fileName: string; reason: string }> = [];
+
+        for (const file of files) {
+            const extension = path.extname(file.originalname || '').toLowerCase();
+            const isPdf = extension === '.pdf' || file.mimetype === 'application/pdf';
+            if (!isPdf) {
+                await fs.unlink(file.path).catch(() => undefined);
+                skipped.push({ fileName: file.originalname, reason: 'Only PDF files are supported' });
+                continue;
+            }
+
+            try {
+                const baseName = path.basename(file.originalname, extension).trim();
+                const invoice = await prisma.invoice.findFirst({
+                    where: { tenantId, invoiceNumber: baseName },
+                    select: { id: true, clientId: true, projectId: true, quoteId: true },
+                });
+                const saved = await filesService.upload(tenantId, file, {
+                    uploadedById: actorUserId || null,
+                    clientId: invoice?.clientId || undefined,
+                    projectId: invoice?.projectId || undefined,
+                    quoteId: invoice?.quoteId || undefined,
+                });
+                const document = await documentsService.update(saved.id, tenantId, {
+                    categoryId: invoicesCategory?.id,
+                    documentType: invoice ? 'invoice_pdf' : 'imported_invoice_pdf',
+                    linkedEntityType: invoice ? 'Invoice' : null,
+                    linkedEntityId: invoice?.id || null,
+                    description: invoice
+                        ? `Imported invoice PDF linked to ${baseName}`
+                        : 'Imported invoice PDF. Create or link an invoice record after review.',
+                    metadata: {
+                        importSource: 'bulk_invoice_pdf',
+                        originalFileName: file.originalname,
+                        matchedInvoiceNumber: invoice ? baseName : null,
+                    },
+                });
+                imported.push({ fileName: file.originalname, document, linkedInvoiceId: invoice?.id || null });
+            } catch (error) {
+                skipped.push({ fileName: file.originalname, reason: (error as Error)?.message || 'PDF import failed' });
+            }
+        }
+
+        activityLogger.log({
+            tenantId,
+            entityType: 'Invoice',
+            entityId: tenantId,
+            action: 'CREATE',
+            module: 'documents',
+            description: `Imported ${imported.length} invoice PDFs`,
+            userId: actorUserId,
+            metadata: { imported: imported.length, skipped: skipped.length },
+        });
+
+        return {
+            importedCount: imported.length,
+            skippedCount: skipped.length,
+            imported,
+            skipped,
+            note: 'PDFs are stored exactly as uploaded. Automatic OCR extraction is not enabled in this build.',
+        };
+    }
+
     async getMany(tenantId: string, query: InvoiceQueryDto) {
         const { data, total } = await invoicesRepository.findMany(tenantId, query);
         const page = query.page || 1, limit = query.limit || 20;

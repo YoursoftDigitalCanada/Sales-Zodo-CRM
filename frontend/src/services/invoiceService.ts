@@ -1,6 +1,9 @@
 export {
   getInvoices,
   getInvoiceById,
+  exportInvoicesCsv,
+  importInvoicesCsv,
+  importInvoicePdfs,
   createInvoice,
   deleteInvoice,
   updateInvoice,

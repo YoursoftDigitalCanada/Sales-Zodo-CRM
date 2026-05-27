@@ -18,6 +18,31 @@ export class InvoicesController {
         } catch (e) { next(e); }
     }
 
+    async exportCsv(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { csv, fileName } = await invoicesService.exportCsv(req.context.tenantId, req.query as any);
+            res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+            res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+            res.send(csv);
+        } catch (e) { next(e); }
+    }
+
+    async importCsv(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const file = (req as any).file as Express.Multer.File | undefined;
+            const result = await invoicesService.importCsv(req.context.tenantId, file, req.user?.userId);
+            sendSuccess(res, result, 'Invoice import processed');
+        } catch (e) { next(e); }
+    }
+
+    async importPdfs(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const files = ((req as any).files || []) as Express.Multer.File[];
+            const result = await invoicesService.importPdfs(req.context.tenantId, files, req.user?.userId);
+            sendSuccess(res, result, 'Invoice PDFs imported');
+        } catch (e) { next(e); }
+    }
+
     async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const invoice = await invoicesService.getById(req.params.id, req.context.tenantId);

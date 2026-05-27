@@ -51,7 +51,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { getInvoices, getInvoiceById, deleteInvoice, createInvoice, downloadInvoicePdf, saveInvoicePdfToDocuments, recordInvoicePayment, sendInvoice } from "@/services/invoiceService";
+import {
+  getInvoices,
+  getInvoiceById,
+  deleteInvoice,
+  createInvoice,
+  downloadInvoicePdf,
+  saveInvoicePdfToDocuments,
+  recordInvoicePayment,
+  sendInvoice,
+  exportInvoicesCsv,
+  importInvoicesCsv,
+  importInvoicePdfs,
+} from "@/services/invoiceService";
 import { printInvoiceDocument } from "@/features/invoices/utils/invoice-print";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import {
@@ -1442,6 +1454,115 @@ const EmptyState = ({ onAdd, canCreate }: { onAdd: () => void; canCreate: boolea
   </motion.div>
 );
 
+function InvoiceImportDialog({
+  open,
+  onOpenChange,
+  onImported,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onImported: () => void;
+}) {
+  const { toast } = useToast();
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [pdfFiles, setPdfFiles] = useState<File[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
+
+  const handleImport = async () => {
+    if (!csvFile && pdfFiles.length === 0) {
+      toast({
+        title: "Choose files",
+        description: "Upload a CSV to create invoices, or one or more PDFs to store invoice documents.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const summaries: string[] = [];
+      if (csvFile) {
+        const result: any = await importInvoicesCsv(csvFile);
+        summaries.push(`${result.importedCount || 0} invoices created`);
+        if (result.skippedCount) summaries.push(`${result.skippedCount} CSV rows skipped`);
+      }
+      if (pdfFiles.length) {
+        const result: any = await importInvoicePdfs(pdfFiles);
+        summaries.push(`${result.importedCount || 0} PDFs stored in Documents`);
+        if (result.skippedCount) summaries.push(`${result.skippedCount} PDFs skipped`);
+      }
+      toast({
+        title: "Import complete",
+        description: summaries.join(" · "),
+      });
+      setCsvFile(null);
+      setPdfFiles([]);
+      onOpenChange(false);
+      onImported();
+    } catch (error: any) {
+      toast({
+        title: "Import failed",
+        description: error?.response?.data?.message || "Could not import invoice files.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xl rounded-2xl">
+        <DialogHeader>
+          <DialogTitle>Bulk Import Invoices</DialogTitle>
+          <DialogDescription>
+            CSV files create invoice records. PDF files are preserved exactly as uploaded and saved to Documents; matching filenames link to existing invoice numbers.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="rounded-xl border border-[rgba(15,23,42,0.08)] bg-slate-50 p-4">
+            <label className="text-sm font-semibold text-[#0F172A]">Invoice CSV</label>
+            <p className="mt-1 text-xs text-[#64748B]">
+              Accepted columns include invoiceNumber, company, clientEmail, clientPhone, issueDate, dueDate, currency, description, quantity, unitPrice, total, taxRate, discount, notes, and terms.
+            </p>
+            <Input
+              type="file"
+              accept=".csv,text/csv"
+              className="mt-3"
+              onChange={(event) => setCsvFile(event.target.files?.[0] || null)}
+            />
+          </div>
+
+          <div className="rounded-xl border border-[rgba(15,23,42,0.08)] bg-white p-4">
+            <label className="text-sm font-semibold text-[#0F172A]">Invoice PDFs</label>
+            <p className="mt-1 text-xs text-[#64748B]">
+              Upload up to 10 PDFs. If a PDF filename matches an invoice number, it will be linked to that invoice.
+            </p>
+            <Input
+              type="file"
+              accept="application/pdf,.pdf"
+              multiple
+              className="mt-3"
+              onChange={(event) => setPdfFiles(Array.from(event.target.files || []))}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isImporting}>
+            Cancel
+          </Button>
+          <Button onClick={handleImport} disabled={isImporting}>
+            {isImporting ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Upload size={16} className="mr-2" />}
+            Import
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ============================================
 // MAIN COMPONENT
 // ============================================
@@ -1489,6 +1610,7 @@ const InvoicePage = () => {
   const [invoiceForPayment, setInvoiceForPayment] = useState<Invoice | null>(null);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [invoiceToSend, setInvoiceToSend] = useState<Invoice | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // ============================================
   // EFFECTS
@@ -1879,34 +2001,35 @@ const InvoicePage = () => {
     }
   };
 
-  const handleExport = () => {
-    const data = filteredInvoices.map((inv) => ({
-      "Invoice #": inv.invoiceNumber,
-      Client: inv.clientName,
-      Date: formatDate(inv.invoiceDate),
-      "Due Date": inv.dueDate ? formatDate(inv.dueDate) : "-",
-      Status: inv.status,
-      Total: inv.total,
-      Paid: inv.amountPaid || 0,
-      Due: (inv.total || 0) - (inv.amountPaid || 0),
-    }));
-
-    const csv = [
-      Object.keys(data[0] || {}).join(","),
-      ...data.map((row) => Object.values(row).join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "invoices.csv";
-    a.click();
-
-    toast({
-      title: "Exported",
-      description: "Invoices exported to CSV successfully.",
-    });
+  const handleExport = async () => {
+    const activeStatusFilter = isMobile ? mobileStatusTab : filterStatus;
+    const exportStatusMap: Record<string, string> = {
+      draft: "DRAFT",
+      sent: "SENT",
+      viewed: "VIEWED",
+      paid: "PAID",
+      partial: "PARTIALLY_PAID",
+      overdue: "OVERDUE",
+      cancelled: "CANCELLED",
+    };
+    try {
+      await exportInvoicesCsv({
+        search: searchTerm || undefined,
+        status: activeStatusFilter !== "all" ? (exportStatusMap[activeStatusFilter] as any) : undefined,
+        sortBy: "issueDate",
+        sortOrder: "desc",
+      });
+      toast({
+        title: "Exported",
+        description: "Invoices exported to CSV successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Could not export invoices.",
+        variant: "destructive",
+      });
+    }
   };
 
   const openDeleteDialog = (invoice: Invoice) => {
@@ -2045,6 +2168,18 @@ const InvoicePage = () => {
                 </motion.button>
               ) : (
                 <>
+                  {canCreateInvoices ? (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setImportDialogOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-md border border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC] text-[#475569] transition-colors"
+                    >
+                      <Upload size={18} />
+                      <span className="font-medium">Import</span>
+                    </motion.button>
+                  ) : null}
+
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -3007,6 +3142,24 @@ const InvoicePage = () => {
                   Export current results
                 </Button>
               </div>
+
+              {canCreateInvoices ? (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#475569]">Import</label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsFilterDrawerOpen(false);
+                      setImportDialogOpen(true);
+                    }}
+                    className="h-11 w-full rounded-xl border-[rgba(15,23,42,0.06)]"
+                  >
+                    <Upload size={16} className="mr-2" />
+                    Import CSV or PDFs
+                  </Button>
+                </div>
+              ) : null}
             </div>
             <DrawerFooter className="border-t border-[rgba(15,23,42,0.06)] bg-white px-5 pb-6 pt-4">
               <Button
@@ -3034,6 +3187,12 @@ const InvoicePage = () => {
         {/* ============================================ */}
         {/* DIALOGS */}
         {/* ============================================ */}
+
+        <InvoiceImportDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          onImported={loadInvoices}
+        />
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

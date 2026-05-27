@@ -38,6 +38,14 @@ interface InvoiceRoofAttachmentCandidate {
     contentType?: string | null;
 }
 
+type CsvInvoiceRow = Record<string, string>;
+
+interface CsvInvoiceGroup {
+    rowNumbers: number[];
+    rows: CsvInvoiceRow[];
+    invoiceNumber: string;
+}
+
 export class InvoicesService {
     private static readonly MAX_ROOF_ATTACHMENTS = 6;
     private static readonly MAX_ATTACHMENT_BYTES = 6 * 1024 * 1024;
@@ -930,15 +938,25 @@ export class InvoicesService {
         return raw;
     }
 
+    private detectCsvDelimiter(content: string) {
+        const sample = content.split(/\r?\n/).find((line) => line.trim().length > 0) || '';
+        const delimiters = [',', ';', '\t'];
+        return delimiters
+            .map((delimiter) => ({ delimiter, count: sample.split(delimiter).length - 1 }))
+            .sort((a, b) => b.count - a.count)[0]?.delimiter || ',';
+    }
+
     private parseCsv(content: string): string[][] {
         const rows: string[][] = [];
         let row: string[] = [];
         let cell = '';
         let quoted = false;
+        const delimiter = this.detectCsvDelimiter(content);
+        const normalized = content.replace(/^\uFEFF/, '');
 
-        for (let index = 0; index < content.length; index += 1) {
-            const char = content[index];
-            const next = content[index + 1];
+        for (let index = 0; index < normalized.length; index += 1) {
+            const char = normalized[index];
+            const next = normalized[index + 1];
             if (char === '"' && quoted && next === '"') {
                 cell += '"';
                 index += 1;
@@ -948,7 +966,7 @@ export class InvoicesService {
                 quoted = !quoted;
                 continue;
             }
-            if (char === ',' && !quoted) {
+            if (char === delimiter && !quoted) {
                 row.push(cell.trim());
                 cell = '';
                 continue;
@@ -978,49 +996,164 @@ export class InvoicesService {
     }
 
     private csvNumber(value: unknown, fallback = 0) {
-        const parsed = Number(String(value || '').replace(/[$,\s]/g, ''));
-        return Number.isFinite(parsed) ? parsed : fallback;
+        const raw = String(value ?? '').trim();
+        if (!raw) return fallback;
+        const negative = /^\(.+\)$/.test(raw) || /^-/.test(raw);
+        const parsed = Number(raw.replace(/[^\d.-]/g, ''));
+        const amount = Number.isFinite(parsed) ? Math.abs(parsed) * (negative ? -1 : 1) : fallback;
+        return Number.isFinite(amount) ? amount : fallback;
+    }
+
+    private csvText(row: CsvInvoiceRow, aliases: string[], fallback = '') {
+        for (const alias of aliases) {
+            const key = alias.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const value = row[key];
+            if (value !== undefined && String(value).trim() !== '') return String(value).trim();
+        }
+        return fallback;
+    }
+
+    private csvValidEmail(value: string) {
+        const email = value.trim().toLowerCase();
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '';
+    }
+
+    private csvCurrency(value: string) {
+        const currency = String(value || '').trim().toUpperCase();
+        const aliases: Record<string, string> = {
+            '$': 'CAD',
+            C$: 'CAD',
+            CAD$: 'CAD',
+            US$: 'USD',
+            '€': 'EUR',
+            '£': 'GBP',
+            '₹': 'INR',
+        };
+        const normalized = aliases[currency] || currency.replace(/[^A-Z]/g, '');
+        return ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'INR', 'JPY', 'CNY'].includes(normalized) ? normalized : 'CAD';
+    }
+
+    private csvInvoiceStatus(value: string) {
+        const normalized = String(value || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+        const aliases: Record<string, string> = {
+            PARTIAL: 'PARTIALLY_PAID',
+            PARTIALLYPAID: 'PARTIALLY_PAID',
+            PARTIALLY_PAID: 'PARTIALLY_PAID',
+            CANCELED: 'CANCELLED',
+            CANCELLED: 'CANCELLED',
+            DRAFT: 'DRAFT',
+            SENT: 'SENT',
+            VIEWED: 'VIEWED',
+            PAID: 'PAID',
+            OVERDUE: 'OVERDUE',
+            REFUNDED: 'REFUNDED',
+        };
+        return aliases[normalized] || aliases[normalized.replace(/_/g, '')] || '';
     }
 
     private csvDate(value: unknown, fallback: Date) {
         const raw = String(value || '').trim();
-        const date = raw ? new Date(raw) : fallback;
+        let date = raw ? new Date(raw) : fallback;
+        const slashDate = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+        if (slashDate && Number.isNaN(date.getTime())) {
+            const [, first, second, yearRaw] = slashDate;
+            const year = Number(yearRaw.length === 2 ? `20${yearRaw}` : yearRaw);
+            const firstNumber = Number(first);
+            const secondNumber = Number(second);
+            const month = firstNumber > 12 ? secondNumber : firstNumber;
+            const day = firstNumber > 12 ? firstNumber : secondNumber;
+            date = new Date(Date.UTC(year, month - 1, day));
+        }
         return Number.isNaN(date.getTime()) ? fallback : date;
     }
 
     private async findOrCreateImportClient(tenantId: string, row: Record<string, string>) {
-        const clientId = row.clientid || row.companyid || row.organizationid;
+        const clientId = this.csvText(row, ['clientId', 'companyId', 'organizationId', 'customerId']);
         if (clientId) {
             const client = await prisma.client.findFirst({ where: { id: clientId, tenantId }, select: { id: true } });
             if (!client) throw new BadRequestError('CSV clientId does not belong to this tenant', ErrorCodes.INVALID_INPUT);
             return client.id;
         }
 
-        const email = row.clientemail || row.companyemail || row.email;
-        const companyName = row.client || row.company || row.organization || row.customer || row.clientbusinessname;
-        if (!email || !companyName) {
-            throw new BadRequestError('Each imported invoice row needs clientId or company/client name and email', ErrorCodes.INVALID_INPUT);
+        const email = this.csvValidEmail(this.csvText(row, ['clientEmail', 'companyEmail', 'customerEmail', 'billToEmail', 'email']));
+        const companyName = this.csvText(row, ['client', 'company', 'organization', 'customer', 'clientBusinessName', 'billTo', 'billToName'], 'Imported Invoice Customer');
+
+        if (email) {
+            const existing = await prisma.client.findFirst({
+                where: { tenantId, primaryEmail: email },
+                select: { id: true },
+            });
+            if (existing) return existing.id;
         }
 
-        const existing = await prisma.client.findFirst({
-            where: { tenantId, primaryEmail: email },
+        const existingByName = await prisma.client.findFirst({
+            where: { tenantId, companyName: { equals: companyName, mode: 'insensitive' } },
             select: { id: true },
         });
-        if (existing) return existing.id;
+        if (existingByName) return existingByName.id;
 
         const created = await prisma.client.create({
             data: {
                 tenantId,
                 clientName: companyName,
                 companyName,
-                primaryEmail: email,
-                primaryPhone: row.clientphone || row.phone || 'N/A',
-                currency: (row.currency || 'CAD').toUpperCase(),
+                primaryEmail: email || `invoice-import-${crypto.randomUUID()}@import.local`,
+                primaryPhone: this.csvText(row, ['clientPhone', 'companyPhone', 'customerPhone', 'phone'], 'N/A'),
+                currency: this.csvCurrency(this.csvText(row, ['currency'])),
                 leadSource: 'Invoice Import',
             },
             select: { id: true },
         });
         return created.id;
+    }
+
+    private csvBuildGroups(headers: string[], bodyRows: string[][]): CsvInvoiceGroup[] {
+        const groups = new Map<string, CsvInvoiceGroup>();
+
+        bodyRows.forEach((values, index) => {
+            const rowNumber = index + 2;
+            const row = this.csvRowToObject(headers, values);
+            const invoiceNumber = this.csvText(row, ['invoiceNumber', 'invoiceNo', 'invoice', 'number', 'invoiceId'], `IMP-${Date.now()}-${rowNumber}`);
+            const existing = groups.get(invoiceNumber);
+            if (existing) {
+                existing.rowNumbers.push(rowNumber);
+                existing.rows.push(row);
+                return;
+            }
+            groups.set(invoiceNumber, { rowNumbers: [rowNumber], rows: [row], invoiceNumber });
+        });
+
+        return [...groups.values()];
+    }
+
+    private csvBuildItems(rows: CsvInvoiceRow[]) {
+        return rows.map((row, index) => {
+            const quantity = this.csvNumber(this.csvText(row, ['quantity', 'qty', 'hours', 'units']), 1) || 1;
+            const rate = this.csvNumber(this.csvText(row, ['unitPrice', 'unit price', 'rate', 'price']), Number.NaN);
+            const lineTotal = this.csvNumber(this.csvText(row, ['lineTotal', 'line total', 'lineAmount', 'line amount', 'itemTotal', 'item total', 'amount']), Number.NaN);
+            const invoiceTotal = this.csvNumber(this.csvText(row, ['total', 'invoiceTotal', 'grandTotal', 'amountDue', 'balanceDue']), Number.NaN);
+            const discount = this.csvNumber(this.csvText(row, ['discountAmount', 'discount']), 0);
+            const taxAmount = this.csvNumber(this.csvText(row, ['taxAmount', 'tax']), 0);
+            const taxRate = this.csvNumber(this.csvText(row, ['taxRate', 'taxPercent', 'taxPercentage']), 0);
+            const inferredSubtotal = Number.isFinite(invoiceTotal)
+                ? Math.max(invoiceTotal + discount - taxAmount, 0) / (taxRate > 0 && !taxAmount ? 1 + (taxRate / 100) : 1)
+                : Number.NaN;
+            const amount = Number.isFinite(lineTotal)
+                ? lineTotal
+                : Number.isFinite(rate)
+                    ? quantity * rate
+                    : Number.isFinite(inferredSubtotal)
+                        ? inferredSubtotal
+                        : 0;
+            const unitPrice = Number.isFinite(rate) ? rate : quantity > 0 ? amount / quantity : amount;
+
+            return {
+                description: this.csvText(row, ['itemDescription', 'item description', 'description', 'item', 'service', 'product'], `Imported invoice item ${index + 1}`),
+                quantity,
+                unitPrice,
+                amount,
+            };
+        }).filter((item) => item.description || item.amount > 0);
     }
 
     async exportCsv(tenantId: string, query: InvoiceQueryDto) {
@@ -1084,46 +1217,70 @@ export class InvoicesService {
 
         const headers = rows[0];
         const imported: any[] = [];
-        const skipped: Array<{ row: number; reason: string }> = [];
+        const skipped: Array<{ row?: number; rows?: number[]; reason: string }> = [];
+        const groups = this.csvBuildGroups(headers, rows.slice(1));
 
-        for (const [index, values] of rows.slice(1).entries()) {
-            const rowNumber = index + 2;
+        for (const group of groups) {
             try {
-                const row = this.csvRowToObject(headers, values);
-                const invoiceNumber = row.invoicenumber || row.invoice || row.number || `IMP-${Date.now()}-${rowNumber}`;
+                const row = group.rows[0];
+                const invoiceNumber = group.invoiceNumber;
                 const duplicate = await prisma.invoice.findFirst({ where: { tenantId, invoiceNumber }, select: { id: true } });
                 if (duplicate) {
-                    skipped.push({ row: rowNumber, reason: `Invoice ${invoiceNumber} already exists` });
+                    skipped.push({ rows: group.rowNumbers, reason: `Invoice ${invoiceNumber} already exists` });
                     continue;
                 }
 
                 const clientId = await this.findOrCreateImportClient(tenantId, row);
-                const issueDate = this.csvDate(row.issuedate || row.invoicedate || row.date, new Date());
-                const dueDate = this.csvDate(row.duedate, new Date(issueDate.getTime() + 30 * 86400000));
-                const quantity = this.csvNumber(row.quantity || row.qty, 1) || 1;
-                const unitPrice = this.csvNumber(row.unitprice || row.rate || row.amount || row.total, 0);
-                const lineTotal = this.csvNumber(row.linetotal || row.amount || row.total, quantity * unitPrice);
-                const invoice = await this.create(tenantId, {
+                const issueDate = this.csvDate(this.csvText(row, ['issueDate', 'invoiceDate', 'date', 'createdDate']), new Date());
+                const dueDate = this.csvDate(this.csvText(row, ['dueDate', 'paymentDue', 'due']), new Date(issueDate.getTime() + 30 * 86400000));
+                const taxRate = this.csvNumber(this.csvText(row, ['taxRate', 'taxPercent', 'taxPercentage']), Number.NaN);
+                const discountAmount = this.csvNumber(this.csvText(row, ['discountAmount', 'discount']), 0);
+                const items = this.csvBuildItems(group.rows);
+                if (items.length === 0) {
+                    skipped.push({ rows: group.rowNumbers, reason: `Invoice ${invoiceNumber} has no usable line item amount` });
+                    continue;
+                }
+
+                let invoice = await this.create(tenantId, {
                     invoiceNumber,
                     issueDate: issueDate.toISOString(),
                     invoiceDate: issueDate.toISOString(),
                     dueDate: dueDate.toISOString(),
-                    currency: (row.currency || 'CAD').toUpperCase() as any,
+                    currency: this.csvCurrency(this.csvText(row, ['currency'])) as any,
                     clientId,
-                    taxRate: row.taxrate ? this.csvNumber(row.taxrate, 0) : undefined,
-                    discountAmount: row.discountamount || row.discount ? this.csvNumber(row.discountamount || row.discount, 0) : undefined,
-                    notes: row.notes || null,
-                    terms: row.terms || null,
-                    items: [{
-                        description: row.itemdescription || row.description || row.item || 'Imported invoice item',
-                        quantity,
-                        unitPrice,
-                        amount: lineTotal,
-                    }],
+                    taxRate: Number.isFinite(taxRate) ? taxRate : undefined,
+                    discountAmount: discountAmount > 0 ? discountAmount : undefined,
+                    notes: this.csvText(row, ['notes', 'memo', 'message']) || null,
+                    terms: this.csvText(row, ['terms', 'paymentTerms']) || null,
+                    items,
                 } as CreateInvoiceDto);
+
+                const status = this.csvInvoiceStatus(this.csvText(row, ['status', 'invoiceStatus']));
+                const explicitPaid = this.csvNumber(this.csvText(row, ['amountPaid', 'paid', 'paidAmount', 'paymentAmount']), Number.NaN);
+                const amountPaid = Number.isFinite(explicitPaid)
+                    ? explicitPaid
+                    : status === 'PAID'
+                        ? Number((invoice as any).total || 0)
+                        : 0;
+
+                if (amountPaid > 0) {
+                    const payableAmount = Math.min(amountPaid, Number((invoice as any).amountDue || (invoice as any).total || 0));
+                    if (payableAmount > 0) {
+                        invoice = await this.recordPayment(invoice.id, tenantId, {
+                            amount: payableAmount,
+                            paymentMethod: 'OTHER',
+                            paymentDate: issueDate.toISOString(),
+                            reference: this.csvText(row, ['paymentReference', 'reference', 'transactionId']) || `CSV import ${invoiceNumber}`,
+                            notes: 'Imported from invoice CSV',
+                        });
+                    }
+                } else if (status && status !== 'DRAFT') {
+                    invoice = await this.update(invoice.id, tenantId, { status: status as any });
+                }
+
                 imported.push(invoice);
             } catch (error) {
-                skipped.push({ row: rowNumber, reason: (error as Error)?.message || 'Import failed' });
+                skipped.push({ rows: group.rowNumbers, reason: (error as Error)?.message || 'Import failed' });
             }
         }
 

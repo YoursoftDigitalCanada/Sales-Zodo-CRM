@@ -1525,7 +1525,7 @@ function InvoiceImportDialog({
           <div className="rounded-xl border border-[rgba(15,23,42,0.08)] bg-slate-50 p-4">
             <label className="text-sm font-semibold text-[#0F172A]">Invoice CSV</label>
             <p className="mt-1 text-xs text-[#64748B]">
-              Accepted columns include invoiceNumber, company, clientEmail, clientPhone, issueDate, dueDate, currency, description, quantity, unitPrice, total, taxRate, discount, notes, and terms.
+              Accepted columns include invoiceNumber, company, clientEmail, clientPhone, issueDate, dueDate, currency, description, quantity, unitPrice, lineTotal, total, taxRate, discount, status, amountPaid, notes, and terms. Use the same invoiceNumber on multiple rows to import multiple line items.
             </p>
             <Input
               type="file"

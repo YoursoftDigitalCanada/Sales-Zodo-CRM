@@ -32,7 +32,7 @@ function downloadPdfBlob(blob: Blob, fileName: string) {
 }
 
 export async function getInvoices(params?: Partial<InvoiceQueryDto>) {
-  const response = await api.get("/invoices", { params });
+  const response = await api.get("/invoices", { params: { limit: 100, ...params } });
   return extractApiArray<InvoiceEntity>(response.data);
 }
 

@@ -153,6 +153,12 @@ function getErrorMessage(error: unknown): string {
   return maybeError.response?.data?.message || maybeError.message || "Something went wrong.";
 }
 
+function normalizeSmtpEncryptionForPort(port: number, current: EmailSettings["smtp"]["encryption"]): EmailSettings["smtp"]["encryption"] {
+  if (port === 465) return "SSL/TLS";
+  if (port === 587 || port === 25) return current === "NONE" ? "NONE" : "STARTTLS";
+  return current;
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const units = ["KB", "MB", "GB", "TB"];
@@ -1404,7 +1410,22 @@ export default function SettingsPage() {
                       <input className={fieldClass} value={emailSettings.smtp.host} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, host: event.target.value } })} />
                     </Field>
                     <Field label="Port">
-                      <input className={fieldClass} type="number" value={emailSettings.smtp.port} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, port: Number(event.target.value || 0) } })} />
+                      <input
+                        className={fieldClass}
+                        type="number"
+                        value={emailSettings.smtp.port}
+                        onChange={(event) => {
+                          const port = Number(event.target.value || 0);
+                          setEmailSettings({
+                            ...emailSettings,
+                            smtp: {
+                              ...emailSettings.smtp,
+                              port,
+                              encryption: normalizeSmtpEncryptionForPort(port, emailSettings.smtp.encryption),
+                            },
+                          });
+                        }}
+                      />
                     </Field>
                     <Field label="Username">
                       <input className={fieldClass} value={emailSettings.smtp.username} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, username: event.target.value } })} />
@@ -1430,6 +1451,9 @@ export default function SettingsPage() {
                     <Field label="Signature" hint="Stored with your mailbox profile for future personal email defaults.">
                       <textarea className={cn(fieldClass, "min-h-[120px]")} value={emailSettings.smtp.signature} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, signature: event.target.value } })} />
                     </Field>
+                  </div>
+                  <div className="mt-4 rounded-md border border-[#BAE6FD] bg-[#F0F9FF] p-3 text-xs leading-5 text-[#075985]">
+                    Use port 465 with SSL/TLS, or port 587 with STARTTLS. Gmail needs an App Password, Microsoft 365 needs SMTP AUTH enabled, and some providers block SMTP from VPS servers until the server IP is allowed.
                   </div>
                   <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                     <div className="inline-flex items-center gap-2 rounded-full bg-[#F8FAFC] px-3 py-1 text-xs font-medium text-[#475569]">

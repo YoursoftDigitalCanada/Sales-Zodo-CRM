@@ -2784,6 +2784,7 @@ const LetterBoxPage = () => {
       };
 
       const settings = await apiUpdateMailboxSettings(payload);
+      const connectionTest = (settings as any).connectionTest as { ok: boolean; error?: string } | undefined;
       setMailboxSettings(settings);
       setMailboxForm(mapMailboxSettingsToForm(settings));
       setEmailConfigured({
@@ -2792,15 +2793,30 @@ const LetterBoxPage = () => {
         mailboxAddress: settings.mailboxAddress,
       });
       autoSyncAttemptedRef.current = false;
-      setShowMailboxSettings(false);
-      if (settings.imap.configured) {
+      if (!connectionTest || connectionTest.ok) {
+        setShowMailboxSettings(false);
+      }
+      if (settings.imap.configured && (!connectionTest || connectionTest.ok)) {
         await fetchEmailsNow();
       }
-      toast({
-        title: "Mailbox Connected",
-        description: "Your personal Zodo Mail settings were saved successfully.",
-      });
-      await loadEmails(true);
+      if (connectionTest?.ok) {
+        toast({
+          title: "SMTP verified",
+          description: "Mailbox settings were saved and the SMTP connection test passed.",
+        });
+      } else if (connectionTest && !connectionTest.ok) {
+        toast({
+          title: "SMTP saved, but connection failed",
+          description: connectionTest.error || "Could not verify SMTP. Check host, port, encryption, username, and password.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Mailbox Connected",
+          description: "Your personal Zodo Mail settings were saved successfully.",
+        });
+      }
+      if (!connectionTest || connectionTest.ok) await loadEmails(true);
     } catch (err: any) {
       toast({
         title: "Mailbox Save Failed",

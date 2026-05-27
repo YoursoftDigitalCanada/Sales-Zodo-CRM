@@ -66,8 +66,20 @@ export class EmailsService {
         return mailboxRepository.getMailboxSettings(userId);
     }
 
-    async updateMailboxSettings(userId: string, data: UpdateMailboxSettingsDto): Promise<MailboxSettingsResponseDto> {
-        return mailboxRepository.updateMailboxSettings(userId, data);
+    async updateMailboxSettings(userId: string, data: UpdateMailboxSettingsDto): Promise<MailboxSettingsResponseDto & { connectionTest?: { ok: boolean; error?: string } }> {
+        const settings = await mailboxRepository.updateMailboxSettings(userId, data);
+        const runtime = await mailboxRepository.getRuntimeConfig(userId);
+        let connectionTest: { ok: boolean; error?: string } | undefined;
+        if (data.smtp && runtime?.smtp.host && runtime.smtp.user && runtime.smtp.pass) {
+            connectionTest = await mailerService.testSmtpConnection({
+                host: runtime.smtp.host,
+                port: runtime.smtp.port,
+                user: runtime.smtp.user,
+                pass: runtime.smtp.pass,
+                encryption: runtime.smtp.encryption,
+            });
+        }
+        return { ...settings, connectionTest };
     }
 
     async getMailboxConfigStatus(userId: string): Promise<MailboxConfigStatusDto> {

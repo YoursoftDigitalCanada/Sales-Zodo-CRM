@@ -157,7 +157,8 @@ class MailerService {
             };
         } catch (err: any) {
             const errorMessage = this.formatErrorMessage(err);
-            const guidance = getSmtpTransportGuidance(normalizeSmtpTransportConfig(smtpConfig).port || 587);
+            const normalizedForGuidance = normalizeSmtpTransportConfig(smtpConfig);
+            const guidance = getSmtpTransportGuidance(normalizedForGuidance.port || 587, normalizedForGuidance.host);
             console.error('❌ Email send failed:', errorMessage);
             if (/greeting never received|etimedout/i.test(errorMessage)) {
                 return { sent: false, error: `${errorMessage}. ${guidance}` };
@@ -204,7 +205,8 @@ class MailerService {
             return { ok: true };
         } catch (err: any) {
             const errorMessage = this.formatErrorMessage(err);
-            const guidance = getSmtpTransportGuidance(normalizeSmtpTransportConfig(smtpConfig).port || 587);
+            const normalizedForGuidance = normalizeSmtpTransportConfig(smtpConfig);
+            const guidance = getSmtpTransportGuidance(normalizedForGuidance.port || 587, normalizedForGuidance.host);
             console.warn('❌ SMTP connection test failed:', errorMessage);
             if (/greeting never received|etimedout/i.test(errorMessage)) {
                 return { ok: false, error: `${errorMessage}. ${guidance}` };

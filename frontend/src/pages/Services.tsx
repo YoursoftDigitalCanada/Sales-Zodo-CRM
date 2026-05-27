@@ -97,7 +97,7 @@ export default function Services() {
 
       {/* Add Service Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/60 backdrop-blur-sm">
           <div className="bg-white p-8 rounded-md card-shadow w-96 animate-in zoom-in duration-200">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold">Add Service</h2>

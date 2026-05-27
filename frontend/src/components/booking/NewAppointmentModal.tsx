@@ -138,7 +138,7 @@ export default function NewAppointmentModal({ apiBase, onClose }: { apiBase: str
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/60 backdrop-blur-sm">
       <div className="w-[760px] max-w-full bg-white rounded p-6 card-shadow">
         <h3 className="text-lg font-semibold mb-4">New Appointment</h3>
 

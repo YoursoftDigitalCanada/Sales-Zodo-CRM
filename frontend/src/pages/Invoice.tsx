@@ -1488,7 +1488,8 @@ function InvoiceImportDialog({
       }
       if (pdfFiles.length) {
         const result: any = await importInvoicePdfs(pdfFiles);
-        summaries.push(`${result.importedCount || 0} PDFs stored in Documents`);
+        summaries.push(`${result.convertedCount || result.importedCount || 0} PDFs converted to CRM invoices`);
+        if (result.reviewNeededCount) summaries.push(`${result.reviewNeededCount} PDFs need review`);
         if (result.skippedCount) summaries.push(`${result.skippedCount} PDFs skipped`);
       }
       toast({
@@ -1516,7 +1517,7 @@ function InvoiceImportDialog({
         <DialogHeader>
           <DialogTitle>Bulk Import Invoices</DialogTitle>
           <DialogDescription>
-            CSV files create invoice records. PDF files are preserved exactly as uploaded and saved to Documents; matching filenames link to existing invoice numbers.
+            CSV files create invoice records. Text-readable PDFs are parsed into CRM invoices, then regenerated with your CRM invoice template.
           </DialogDescription>
         </DialogHeader>
 
@@ -1537,7 +1538,7 @@ function InvoiceImportDialog({
           <div className="rounded-xl border border-[rgba(15,23,42,0.08)] bg-white p-4">
             <label className="text-sm font-semibold text-[#0F172A]">Invoice PDFs</label>
             <p className="mt-1 text-xs text-[#64748B]">
-              Upload up to 10 PDFs. If a PDF filename matches an invoice number, it will be linked to that invoice.
+              Upload up to 10 PDFs. We extract invoice details, create or match invoice records, save the original PDF, and generate a clean CRM-format invoice PDF.
             </p>
             <Input
               type="file"

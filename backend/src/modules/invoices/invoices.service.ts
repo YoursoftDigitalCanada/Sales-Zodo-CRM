@@ -1141,11 +1141,198 @@ export class InvoicesService {
         return { importedCount: imported.length, skippedCount: skipped.length, imported, skipped };
     }
 
+    private normalizePdfText(text: string) {
+        return String(text || '')
+            .replace(/\u00a0/g, ' ')
+            .replace(/[ \t]+/g, ' ')
+            .replace(/\r/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
+    private firstMatch(text: string, patterns: RegExp[]) {
+        for (const pattern of patterns) {
+            const match = text.match(pattern);
+            if (match?.[1]) return match[1].trim();
+        }
+        return null;
+    }
+
+    private parsePdfMoney(value: string | null | undefined) {
+        if (!value) return null;
+        const normalized = value.replace(/[^\d.,-]/g, '').replace(/,/g, '');
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? Math.abs(parsed) : null;
+    }
+
+    private parsePdfDate(value: string | null | undefined) {
+        if (!value) return null;
+        const cleaned = value.replace(/(\d+)(st|nd|rd|th)/gi, '$1').trim();
+        const parsed = new Date(cleaned);
+        if (!Number.isNaN(parsed.getTime())) return parsed;
+
+        const numeric = cleaned.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b/);
+        if (!numeric) return null;
+        const first = Number(numeric[1]);
+        const second = Number(numeric[2]);
+        const year = Number(numeric[3].length === 2 ? `20${numeric[3]}` : numeric[3]);
+        const month = first > 12 ? second - 1 : first - 1;
+        const day = first > 12 ? first : second;
+        const date = new Date(year, month, day);
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    private extractCompanyNameFromPdf(text: string) {
+        const lines = text
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .slice(0, 80);
+        const billToIndex = lines.findIndex((line) => /^(bill\s*to|customer|client|sold\s*to|invoice\s*to)\b/i.test(line));
+        if (billToIndex >= 0) {
+            const candidate = lines.slice(billToIndex + 1, billToIndex + 5).find((line) =>
+                !/@/.test(line)
+                && !/\b(phone|email|address|invoice|date|due|total|subtotal|tax)\b/i.test(line)
+                && line.length > 1
+            );
+            if (candidate) return candidate.slice(0, 180);
+        }
+        const fallback = lines.find((line) =>
+            !/\b(invoice|date|due|total|subtotal|tax|amount|balance|qty|quantity|description)\b/i.test(line)
+            && !/@/.test(line)
+            && /[a-z]/i.test(line)
+        );
+        return (fallback || 'Imported Invoice Customer').slice(0, 180);
+    }
+
+    private extractInvoiceFieldsFromPdf(fileName: string, text: string) {
+        const normalized = this.normalizePdfText(text);
+        const compactFileName = path.basename(fileName, path.extname(fileName)).trim();
+        const invoiceNumber = this.firstMatch(normalized, [
+            /\binvoice\s*(?:number|no\.?|#)\s*[:#-]?\s*([A-Z0-9][A-Z0-9._/-]{1,50})/i,
+            /\binv(?:oice)?\s*[:#-]\s*([A-Z0-9][A-Z0-9._/-]{1,50})/i,
+        ]) || compactFileName || `PDF-${Date.now()}`;
+
+        const issueDate = this.parsePdfDate(this.firstMatch(normalized, [
+            /\b(?:invoice\s*date|date\s*issued|issued\s*date|date)\s*[:#-]?\s*([A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2})/i,
+        ])) || new Date();
+        const dueDate = this.parsePdfDate(this.firstMatch(normalized, [
+            /\b(?:due\s*date|payment\s*due)\s*[:#-]?\s*([A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2})/i,
+        ])) || new Date(issueDate.getTime() + 30 * 86400000);
+
+        const total = this.parsePdfMoney(this.firstMatch(normalized, [
+            /\b(?:amount\s*due|balance\s*due|total\s*due|grand\s*total|invoice\s*total|total)\s*[:#-]?\s*(?:CAD|USD|C\$|\$)?\s*([0-9][0-9,]*(?:\.\d{2})?)/i,
+        ]));
+        const subtotal = this.parsePdfMoney(this.firstMatch(normalized, [
+            /\bsubtotal\s*[:#-]?\s*(?:CAD|USD|C\$|\$)?\s*([0-9][0-9,]*(?:\.\d{2})?)/i,
+        ]));
+        const taxAmount = this.parsePdfMoney(this.firstMatch(normalized, [
+            /\b(?:tax|hst|gst|pst)\s*[:#-]?\s*(?:CAD|USD|C\$|\$)?\s*([0-9][0-9,]*(?:\.\d{2})?)/i,
+        ]));
+        const taxRate = this.parsePdfMoney(this.firstMatch(normalized, [
+            /\b(?:tax|hst|gst|pst)\s*\(?\s*([0-9]+(?:\.\d+)?)\s*%\s*\)?/i,
+        ]));
+        const currency = /\bUSD\b|US\$/i.test(normalized) ? 'USD' : 'CAD';
+        const clientEmail = this.firstMatch(normalized, [
+            /\b([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})\b/i,
+        ]);
+        const clientPhone = this.firstMatch(normalized, [
+            /\b(?:phone|tel|mobile)?\s*[:#-]?\s*(\+?\d[\d\s().-]{7,}\d)\b/i,
+        ]);
+        const companyName = this.extractCompanyNameFromPdf(normalized);
+
+        const amount = total || subtotal || 0;
+        return {
+            invoiceNumber: invoiceNumber.replace(/[^\w./-]/g, '-').slice(0, 50),
+            issueDate,
+            dueDate,
+            currency,
+            clientEmail,
+            clientPhone,
+            companyName,
+            subtotal,
+            taxAmount,
+            taxRate,
+            total: amount,
+            confidence: {
+                invoiceNumber: Boolean(invoiceNumber),
+                dates: Boolean(issueDate && dueDate),
+                total: amount > 0,
+                client: Boolean(companyName),
+            },
+            rawTextPreview: normalized.slice(0, 2000),
+        };
+    }
+
+    private async parsePdfText(file: Express.Multer.File) {
+        const buffer = await fs.readFile(file.path);
+        const pdfParseModule = await import('pdf-parse');
+        const pdfParse = (pdfParseModule as any).default || pdfParseModule;
+        const result = await pdfParse(buffer);
+        return this.normalizePdfText(result?.text || '');
+    }
+
+    private async findOrCreatePdfImportClient(
+        tenantId: string,
+        fields: ReturnType<InvoicesService['extractInvoiceFieldsFromPdf']>,
+    ) {
+        const email = fields.clientEmail || `invoice-import-${crypto.randomUUID()}@import.local`;
+        const existing = await prisma.client.findFirst({
+            where: { tenantId, primaryEmail: email },
+            select: { id: true },
+        });
+        if (existing) return existing.id;
+
+        const created = await prisma.client.create({
+            data: {
+                tenantId,
+                clientName: fields.companyName || 'Imported Invoice Customer',
+                companyName: fields.companyName || 'Imported Invoice Customer',
+                primaryEmail: email,
+                primaryPhone: fields.clientPhone || 'N/A',
+                currency: fields.currency,
+                leadSource: 'Invoice PDF Import',
+                internalNotes: fields.clientEmail
+                    ? 'Created from imported invoice PDF.'
+                    : 'Created from imported invoice PDF. Email was not detected; replace placeholder import.local email after review.',
+            },
+            select: { id: true },
+        });
+        return created.id;
+    }
+
+    private async storeImportedInvoicePdf(
+        tenantId: string,
+        file: Express.Multer.File,
+        actorUserId: string | undefined,
+        categoryId: string | undefined,
+        invoice: { id: string; clientId?: string | null; projectId?: string | null; quoteId?: string | null } | null,
+        metadata: Record<string, unknown>,
+    ) {
+        const saved = await filesService.upload(tenantId, file, {
+            uploadedById: actorUserId || null,
+            clientId: invoice?.clientId || undefined,
+            projectId: invoice?.projectId || undefined,
+            quoteId: invoice?.quoteId || undefined,
+        });
+        return documentsService.update(saved.id, tenantId, {
+            categoryId,
+            documentType: invoice ? 'imported_invoice_source_pdf' : 'imported_invoice_pdf_needs_review',
+            linkedEntityType: invoice ? 'Invoice' : null,
+            linkedEntityId: invoice?.id || null,
+            description: invoice
+                ? 'Original imported invoice PDF used to create CRM invoice'
+                : 'Imported invoice PDF could not be converted automatically and needs review.',
+            metadata,
+        });
+    }
+
     async importPdfs(tenantId: string, files: Express.Multer.File[], actorUserId?: string) {
         if (!files.length) throw new BadRequestError('At least one PDF file is required', ErrorCodes.VALIDATION_FAILED);
         const categories = await documentsService.categories(tenantId);
         const invoicesCategory = categories.find((category: any) => String(category.name).toLowerCase() === 'invoices');
         const imported: any[] = [];
+        const reviewNeeded: any[] = [];
         const skipped: Array<{ fileName: string; reason: string }> = [];
 
         for (const file of files) {
@@ -1158,33 +1345,83 @@ export class InvoicesService {
             }
 
             try {
-                const baseName = path.basename(file.originalname, extension).trim();
-                const invoice = await prisma.invoice.findFirst({
-                    where: { tenantId, invoiceNumber: baseName },
-                    select: { id: true, clientId: true, projectId: true, quoteId: true },
-                });
-                const saved = await filesService.upload(tenantId, file, {
-                    uploadedById: actorUserId || null,
-                    clientId: invoice?.clientId || undefined,
-                    projectId: invoice?.projectId || undefined,
-                    quoteId: invoice?.quoteId || undefined,
-                });
-                const document = await documentsService.update(saved.id, tenantId, {
-                    categoryId: invoicesCategory?.id,
-                    documentType: invoice ? 'invoice_pdf' : 'imported_invoice_pdf',
-                    linkedEntityType: invoice ? 'Invoice' : null,
-                    linkedEntityId: invoice?.id || null,
-                    description: invoice
-                        ? `Imported invoice PDF linked to ${baseName}`
-                        : 'Imported invoice PDF. Create or link an invoice record after review.',
-                    metadata: {
+                const text = await this.parsePdfText(file);
+                if (text.length < 40) {
+                    const document = await this.storeImportedInvoicePdf(tenantId, file, actorUserId, invoicesCategory?.id, null, {
                         importSource: 'bulk_invoice_pdf',
                         originalFileName: file.originalname,
-                        matchedInvoiceNumber: invoice ? baseName : null,
+                        status: 'needs_review',
+                        reason: 'No readable text was found. This PDF may be scanned and needs OCR.',
+                    });
+                    reviewNeeded.push({ fileName: file.originalname, document, reason: 'Scanned/image PDF needs OCR review' });
+                    continue;
+                }
+
+                const extracted = this.extractInvoiceFieldsFromPdf(file.originalname, text);
+                if (!extracted.total || extracted.total <= 0) {
+                    const document = await this.storeImportedInvoicePdf(tenantId, file, actorUserId, invoicesCategory?.id, null, {
+                        importSource: 'bulk_invoice_pdf',
+                        originalFileName: file.originalname,
+                        status: 'needs_review',
+                        reason: 'Could not detect invoice total.',
+                        extracted,
+                    });
+                    reviewNeeded.push({ fileName: file.originalname, document, reason: 'Could not detect invoice total' });
+                    continue;
+                }
+
+                let invoice = await prisma.invoice.findFirst({
+                    where: { tenantId, invoiceNumber: extracted.invoiceNumber },
+                    select: { id: true, clientId: true, projectId: true, quoteId: true },
+                });
+                let createdInvoice: any = null;
+                if (!invoice) {
+                    const clientId = await this.findOrCreatePdfImportClient(tenantId, extracted);
+                    createdInvoice = await this.create(tenantId, {
+                        invoiceNumber: extracted.invoiceNumber,
+                        issueDate: extracted.issueDate.toISOString(),
+                        invoiceDate: extracted.issueDate.toISOString(),
+                        dueDate: extracted.dueDate.toISOString(),
+                        currency: extracted.currency as any,
+                        clientId,
+                        taxRate: extracted.taxRate || undefined,
+                        notes: 'Created by parsing an imported invoice PDF. Review extracted fields before sending.',
+                        terms: null,
+                        items: [{
+                            description: 'Imported invoice total',
+                            quantity: 1,
+                            unitPrice: extracted.total,
+                            amount: extracted.total,
+                        }],
+                    } as CreateInvoiceDto);
+                    invoice = {
+                        id: createdInvoice.id,
+                        clientId,
+                        projectId: null,
+                        quoteId: null,
+                    };
+                }
+
+                const sourceDocument = await this.storeImportedInvoicePdf(tenantId, file, actorUserId, invoicesCategory?.id, invoice, {
+                    importSource: 'bulk_invoice_pdf',
+                    originalFileName: file.originalname,
+                    status: createdInvoice ? 'converted' : 'matched_existing_invoice',
+                    extracted,
+                });
+                const generatedDocument = await this.saveInvoicePdfToDocuments(tenantId, invoice.id, actorUserId);
+                imported.push({
+                    fileName: file.originalname,
+                    invoice: createdInvoice || await this.getById(invoice.id, tenantId),
+                    sourceDocument,
+                    generatedDocument,
+                    linkedInvoiceId: invoice.id,
+                    metadata: {
+                        convertedToCrmTemplate: true,
+                        extracted,
                     },
                 });
-                imported.push({ fileName: file.originalname, document, linkedInvoiceId: invoice?.id || null });
             } catch (error) {
+                await fs.unlink(file.path).catch(() => undefined);
                 skipped.push({ fileName: file.originalname, reason: (error as Error)?.message || 'PDF import failed' });
             }
         }
@@ -1195,17 +1432,20 @@ export class InvoicesService {
             entityId: tenantId,
             action: 'CREATE',
             module: 'documents',
-            description: `Imported ${imported.length} invoice PDFs`,
+            description: `Converted ${imported.length} invoice PDFs`,
             userId: actorUserId,
-            metadata: { imported: imported.length, skipped: skipped.length },
+            metadata: { imported: imported.length, reviewNeeded: reviewNeeded.length, skipped: skipped.length },
         });
 
         return {
             importedCount: imported.length,
+            convertedCount: imported.length,
+            reviewNeededCount: reviewNeeded.length,
             skippedCount: skipped.length,
             imported,
+            reviewNeeded,
             skipped,
-            note: 'PDFs are stored exactly as uploaded. Automatic OCR extraction is not enabled in this build.',
+            note: 'Text-readable PDFs are converted into CRM invoices and regenerated with the CRM invoice template. Scanned PDFs are stored for review because OCR is not enabled.',
         };
     }
 

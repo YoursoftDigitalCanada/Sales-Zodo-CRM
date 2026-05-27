@@ -103,6 +103,18 @@ export const createEmailLabelSchema = z.object({
 
 const emailEncryptionSchema = z.enum(['SSL/TLS', 'STARTTLS', 'NONE']);
 
+function normalizeMailHost(host?: string): string {
+    return String(host || '')
+        .trim()
+        .replace(/^(smtp|imap|pop3):\/\//i, '')
+        .replace(/\/.*$/, '')
+        .toLowerCase();
+}
+
+function isHostingerHost(host?: string): boolean {
+    return normalizeMailHost(host).includes('hostinger.com');
+}
+
 export const updateMailboxSettingsSchema = z.object({
     body: z.object({
         smtp: z.object({
@@ -113,6 +125,14 @@ export const updateMailboxSettingsSchema = z.object({
             encryption: emailEncryptionSchema.optional(),
             senderName: z.string().trim().max(255).optional(),
             senderEmail: z.string().trim().email().optional(),
+        }).superRefine((data, ctx) => {
+            if (isHostingerHost(data.host) && data.port !== undefined && ![465, 587].includes(data.port)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['port'],
+                    message: 'Hostinger SMTP uses port 465 with SSL/TLS or port 587 with STARTTLS. Port 467 will timeout.',
+                });
+            }
         }).optional(),
         imap: z.object({
             host: z.string().trim().max(255).optional(),
@@ -120,6 +140,22 @@ export const updateMailboxSettingsSchema = z.object({
             username: z.string().trim().max(255).optional(),
             password: z.string().max(255).optional(),
             encryption: emailEncryptionSchema.optional(),
+        }).superRefine((data, ctx) => {
+            const host = normalizeMailHost(data.host);
+            if (host === 'imap.histinger.com') {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['host'],
+                    message: 'Use imap.hostinger.com for Hostinger IMAP.',
+                });
+            }
+            if (isHostingerHost(data.host) && data.port !== undefined && ![993, 143].includes(data.port)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['port'],
+                    message: 'Hostinger IMAP uses port 993 with SSL/TLS or port 143 with STARTTLS.',
+                });
+            }
         }).optional(),
     }).refine((data) => Boolean(data.smtp || data.imap), {
         message: 'Provide SMTP or IMAP mailbox settings to update',

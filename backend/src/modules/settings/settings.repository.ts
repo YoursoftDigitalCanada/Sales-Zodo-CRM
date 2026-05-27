@@ -151,6 +151,14 @@ export class SettingsRepository {
       if (data.smtp.password !== undefined) {
         nextIntegrations.smtpPass = mergeSecret(existingIntegrations.smtpPass, data.smtp.password);
       }
+      const normalizedSmtp = normalizeSmtpTransportConfig({
+        host: String(nextIntegrations.smtpHost ?? ''),
+        port: Number(nextIntegrations.smtpPort ?? 587),
+        encryption: String(nextIntegrations.smtpEncryption ?? 'STARTTLS') as EmailEncryption,
+      });
+      nextIntegrations.smtpHost = normalizedSmtp.host;
+      nextIntegrations.smtpPort = normalizedSmtp.port;
+      nextIntegrations.smtpEncryption = normalizedSmtp.encryption;
     }
 
     if (data.imap) {
@@ -163,6 +171,14 @@ export class SettingsRepository {
       if (data.imap.password !== undefined) {
         nextIntegrations.imapPass = mergeSecret(existingIntegrations.imapPass, data.imap.password);
       }
+      const normalizedImap = normalizeImapTransportConfig({
+        host: String(nextIntegrations.imapHost ?? ''),
+        port: Number(nextIntegrations.imapPort ?? 993),
+        encryption: String(nextIntegrations.imapEncryption ?? 'SSL/TLS') as EmailEncryption,
+      });
+      nextIntegrations.imapHost = normalizedImap.host;
+      nextIntegrations.imapPort = normalizedImap.port;
+      nextIntegrations.imapEncryption = normalizedImap.encryption;
     }
 
     if (data.templates && data.templates.length > 0) {

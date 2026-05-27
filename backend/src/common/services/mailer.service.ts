@@ -120,6 +120,7 @@ class MailerService {
             const transport = nodemailer.createTransport({
                 host: normalizedConfig.host,
                 port: normalizedConfig.port || 587,
+                family: 4,
                 secure: encryption === 'SSL/TLS',
                 requireTLS: encryption === 'STARTTLS',
                 ignoreTLS: encryption === 'NONE',
@@ -191,13 +192,14 @@ class MailerService {
             const transport = nodemailer.createTransport({
                 host: normalizedConfig.host,
                 port: normalizedConfig.port || 587,
+                family: 4,
                 secure: encryption === 'SSL/TLS',
                 requireTLS: encryption === 'STARTTLS',
                 ignoreTLS: encryption === 'NONE',
                 auth: { user: normalizedConfig.user, pass: normalizedConfig.pass },
-                connectionTimeout: 15000,
-                greetingTimeout: 15000,
-                dnsTimeout: 10000,
+                connectionTimeout: 30000,
+                greetingTimeout: 30000,
+                dnsTimeout: 15000,
                 tls: { servername: normalizedConfig.host },
             });
             await transport.verify();

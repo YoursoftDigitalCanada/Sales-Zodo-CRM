@@ -243,22 +243,26 @@ export class MailboxRepository {
     };
 
     const nextSmtpNormalized = normalizeSmtpTransportConfig({
+      host: String(nextSmtpRaw.host ?? ''),
       port: Number(nextSmtpRaw.port ?? 587),
       encryption: String(nextSmtpRaw.encryption ?? 'STARTTLS') as EmailEncryption,
     });
     const nextImapNormalized = normalizeImapTransportConfig({
+      host: String(nextImapRaw.host ?? ''),
       port: Number(nextImapRaw.port ?? 993),
       encryption: String(nextImapRaw.encryption ?? 'SSL/TLS') as EmailEncryption,
     });
 
     const nextSmtp: JsonMap = {
       ...nextSmtpRaw,
+      host: nextSmtpNormalized.host,
       port: nextSmtpNormalized.port,
       encryption: nextSmtpNormalized.encryption,
     };
 
     const nextImap: JsonMap = {
       ...nextImapRaw,
+      host: nextImapNormalized.host,
       port: nextImapNormalized.port,
       encryption: nextImapNormalized.encryption,
     };

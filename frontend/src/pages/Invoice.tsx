@@ -1488,8 +1488,8 @@ function InvoiceImportDialog({
       }
       if (pdfFiles.length) {
         const result: any = await importInvoicePdfs(pdfFiles);
-        summaries.push(`${result.convertedCount || result.importedCount || 0} PDFs converted to CRM invoices`);
-        if (result.reviewNeededCount) summaries.push(`${result.reviewNeededCount} PDFs need review`);
+        summaries.push(`${result.convertedCount || result.importedCount || 0} PDFs created as CRM invoice drafts`);
+        if (result.reviewNeededCount) summaries.push(`${result.reviewNeededCount} drafts need review`);
         if (result.skippedCount) summaries.push(`${result.skippedCount} PDFs skipped`);
       }
       toast({
@@ -1517,7 +1517,7 @@ function InvoiceImportDialog({
         <DialogHeader>
           <DialogTitle>Bulk Import Invoices</DialogTitle>
           <DialogDescription>
-            CSV files create invoice records. Text-readable PDFs are parsed into CRM invoices, then regenerated with your CRM invoice template.
+            CSV files create invoice records. PDFs create visible CRM invoice drafts, then regenerate with your CRM invoice template.
           </DialogDescription>
         </DialogHeader>
 
@@ -1538,7 +1538,7 @@ function InvoiceImportDialog({
           <div className="rounded-xl border border-[rgba(15,23,42,0.08)] bg-white p-4">
             <label className="text-sm font-semibold text-[#0F172A]">Invoice PDFs</label>
             <p className="mt-1 text-xs text-[#64748B]">
-              Upload up to 10 PDFs. We extract invoice details, create or match invoice records, save the original PDF, and generate a clean CRM-format invoice PDF.
+              Upload up to 10 PDFs. We extract what we can, create or match invoice drafts, save the original PDF, and generate a clean CRM-format invoice PDF.
             </p>
             <Input
               type="file"

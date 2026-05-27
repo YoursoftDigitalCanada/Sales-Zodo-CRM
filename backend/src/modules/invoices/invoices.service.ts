@@ -1272,6 +1272,34 @@ export class InvoicesService {
         return this.normalizePdfText(result?.text || '');
     }
 
+    private fallbackInvoiceFieldsFromPdfFile(fileName: string, reason: string) {
+        const compactFileName = path.basename(fileName, path.extname(fileName)).trim();
+        const invoiceNumber = (compactFileName || `PDF-${Date.now()}`).replace(/[^\w./-]/g, '-').slice(0, 50);
+        const issueDate = new Date();
+        return {
+            invoiceNumber,
+            issueDate,
+            dueDate: new Date(issueDate.getTime() + 30 * 86400000),
+            currency: 'CAD',
+            clientEmail: null,
+            clientPhone: null,
+            companyName: 'Imported Invoice Customer',
+            subtotal: null,
+            taxAmount: null,
+            taxRate: null,
+            total: 0,
+            confidence: {
+                invoiceNumber: Boolean(invoiceNumber),
+                dates: false,
+                total: false,
+                client: false,
+            },
+            rawTextPreview: '',
+            reviewRequired: true,
+            reviewReason: reason,
+        };
+    }
+
     private async findOrCreatePdfImportClient(
         tenantId: string,
         fields: ReturnType<InvoicesService['extractInvoiceFieldsFromPdf']>,
@@ -1345,30 +1373,22 @@ export class InvoicesService {
             }
 
             try {
-                const text = await this.parsePdfText(file);
-                if (text.length < 40) {
-                    const document = await this.storeImportedInvoicePdf(tenantId, file, actorUserId, invoicesCategory?.id, null, {
-                        importSource: 'bulk_invoice_pdf',
-                        originalFileName: file.originalname,
-                        status: 'needs_review',
-                        reason: 'No readable text was found. This PDF may be scanned and needs OCR.',
-                    });
-                    reviewNeeded.push({ fileName: file.originalname, document, reason: 'Scanned/image PDF needs OCR review' });
-                    continue;
+                let text = '';
+                let parseError: string | null = null;
+                try {
+                    text = await this.parsePdfText(file);
+                } catch (error) {
+                    parseError = (error as Error)?.message || 'PDF text extraction failed';
                 }
 
-                const extracted = this.extractInvoiceFieldsFromPdf(file.originalname, text);
-                if (!extracted.total || extracted.total <= 0) {
-                    const document = await this.storeImportedInvoicePdf(tenantId, file, actorUserId, invoicesCategory?.id, null, {
-                        importSource: 'bulk_invoice_pdf',
-                        originalFileName: file.originalname,
-                        status: 'needs_review',
-                        reason: 'Could not detect invoice total.',
-                        extracted,
-                    });
-                    reviewNeeded.push({ fileName: file.originalname, document, reason: 'Could not detect invoice total' });
-                    continue;
-                }
+                const reviewReasons: string[] = [];
+                if (parseError) reviewReasons.push(parseError);
+                if (!parseError && text.length < 40) reviewReasons.push('No readable text was found. This PDF may be scanned and needs OCR.');
+
+                const extracted = text.length >= 40
+                    ? this.extractInvoiceFieldsFromPdf(file.originalname, text)
+                    : this.fallbackInvoiceFieldsFromPdfFile(file.originalname, reviewReasons[0] || 'PDF needs review');
+                if (!extracted.total || extracted.total <= 0) reviewReasons.push('Could not detect invoice total.');
 
                 let invoice = await prisma.invoice.findFirst({
                     where: { tenantId, invoiceNumber: extracted.invoiceNumber },
@@ -1385,13 +1405,15 @@ export class InvoicesService {
                         currency: extracted.currency as any,
                         clientId,
                         taxRate: extracted.taxRate || undefined,
-                        notes: 'Created by parsing an imported invoice PDF. Review extracted fields before sending.',
+                        notes: reviewReasons.length
+                            ? `Created from imported invoice PDF. Review required: ${reviewReasons.join(' ')}`
+                            : 'Created by parsing an imported invoice PDF. Review extracted fields before sending.',
                         terms: null,
                         items: [{
-                            description: 'Imported invoice total',
+                            description: reviewReasons.length ? 'Imported invoice total - review required' : 'Imported invoice total',
                             quantity: 1,
-                            unitPrice: extracted.total,
-                            amount: extracted.total,
+                            unitPrice: extracted.total || 0,
+                            amount: extracted.total || 0,
                         }],
                     } as CreateInvoiceDto);
                     invoice = {
@@ -1405,7 +1427,11 @@ export class InvoicesService {
                 const sourceDocument = await this.storeImportedInvoicePdf(tenantId, file, actorUserId, invoicesCategory?.id, invoice, {
                     importSource: 'bulk_invoice_pdf',
                     originalFileName: file.originalname,
-                    status: createdInvoice ? 'converted' : 'matched_existing_invoice',
+                    status: reviewReasons.length
+                        ? 'converted_needs_review'
+                        : createdInvoice ? 'converted' : 'matched_existing_invoice',
+                    reviewRequired: reviewReasons.length > 0,
+                    reviewReasons,
                     extracted,
                 });
                 const generatedDocument = await this.saveInvoicePdfToDocuments(tenantId, invoice.id, actorUserId);
@@ -1417,9 +1443,18 @@ export class InvoicesService {
                     linkedInvoiceId: invoice.id,
                     metadata: {
                         convertedToCrmTemplate: true,
+                        reviewRequired: reviewReasons.length > 0,
+                        reviewReasons,
                         extracted,
                     },
                 });
+                if (reviewReasons.length) {
+                    reviewNeeded.push({
+                        fileName: file.originalname,
+                        linkedInvoiceId: invoice.id,
+                        reason: reviewReasons.join(' '),
+                    });
+                }
             } catch (error) {
                 await fs.unlink(file.path).catch(() => undefined);
                 skipped.push({ fileName: file.originalname, reason: (error as Error)?.message || 'PDF import failed' });
@@ -1445,7 +1480,7 @@ export class InvoicesService {
             imported,
             reviewNeeded,
             skipped,
-            note: 'Text-readable PDFs are converted into CRM invoices and regenerated with the CRM invoice template. Scanned PDFs are stored for review because OCR is not enabled.',
+            note: 'Every valid PDF is converted into a visible CRM invoice draft and regenerated with the CRM invoice template. Low-confidence or scanned PDFs are marked for review.',
         };
     }
 

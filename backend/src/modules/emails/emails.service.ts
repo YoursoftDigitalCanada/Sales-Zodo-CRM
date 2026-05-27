@@ -14,6 +14,7 @@ import { BadRequestError, NotFoundError, ServiceUnavailableError } from '../../c
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { mailerService } from '../../common/services/mailer.service';
+import { imapPoller } from '../../common/services/imap-poller.service';
 import { mailboxRepository } from './mailbox.repository';
 import { config } from '../../config';
 import fs from 'fs/promises';
@@ -66,10 +67,11 @@ export class EmailsService {
         return mailboxRepository.getMailboxSettings(userId);
     }
 
-    async updateMailboxSettings(userId: string, data: UpdateMailboxSettingsDto): Promise<MailboxSettingsResponseDto & { connectionTest?: { ok: boolean; error?: string } }> {
+    async updateMailboxSettings(userId: string, data: UpdateMailboxSettingsDto): Promise<MailboxSettingsResponseDto & { connectionTest?: { ok: boolean; error?: string }; syncResult?: { fetched: number; error: string | null } }> {
         const settings = await mailboxRepository.updateMailboxSettings(userId, data);
         const runtime = await mailboxRepository.getRuntimeConfig(userId);
         let connectionTest: { ok: boolean; error?: string } | undefined;
+        let syncResult: { fetched: number; error: string | null } | undefined;
         if (data.smtp && runtime?.smtp.host && runtime.smtp.user && runtime.smtp.pass) {
             connectionTest = await mailerService.testSmtpConnection({
                 host: runtime.smtp.host,
@@ -79,7 +81,10 @@ export class EmailsService {
                 encryption: runtime.smtp.encryption,
             });
         }
-        return { ...settings, connectionTest };
+        if (data.imap && runtime?.imap.host && runtime.imap.user && runtime.imap.pass) {
+            syncResult = await imapPoller.fetchForUser(userId);
+        }
+        return { ...settings, connectionTest, syncResult };
     }
 
     async getMailboxConfigStatus(userId: string): Promise<MailboxConfigStatusDto> {

@@ -1,6 +1,7 @@
 import { BadRequestError } from '../../common/errors/HttpErrors';
 import { prisma } from '../../config/database';
 import { mailerService } from '../../common/services/mailer.service';
+import { imapPoller } from '../../common/services/imap-poller.service';
 import { mailboxRepository } from '../emails/mailbox.repository';
 import { settingsManager } from './settings.manager';
 import { settingsRepository } from './settings.repository';
@@ -302,7 +303,10 @@ export class SettingsService {
       },
     });
 
-    return this.buildEmailSettingsResponse(tenantId, userId);
+    const emailSettings = await this.buildEmailSettingsResponse(tenantId, userId);
+    const syncResult = await imapPoller.fetchForUser(userId);
+
+    return { ...emailSettings, syncResult };
   }
 
   async sendTestEmail(userId: string, toEmail: string) {

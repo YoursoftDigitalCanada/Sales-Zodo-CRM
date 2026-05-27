@@ -8,7 +8,7 @@ import { config } from '../../config';
 import { notificationsService } from '../../modules/notifications/notifications.service';
 
 const prisma = new PrismaClient();
-const INITIAL_SYNC_MAX_MESSAGES = 250;
+const INITIAL_SYNC_MAX_MESSAGES = Number(process.env.IMAP_INITIAL_SYNC_MAX_MESSAGES || 5000);
 const INCREMENTAL_UNSEEN_LOOKBACK_DAYS = 7;
 const INCREMENTAL_SEEN_LOOKBACK_DAYS = 3;
 const INCREMENTAL_SENT_LOOKBACK_DAYS = 14;
@@ -183,13 +183,16 @@ class ImapService {
             return 0;
         }
 
-        const latestUids = [...uidList].sort((a, b) => a - b).slice(-INITIAL_SYNC_MAX_MESSAGES);
+        const sortedUids = [...uidList].sort((a, b) => a - b);
+        const latestUids = INITIAL_SYNC_MAX_MESSAGES > 0
+            ? sortedUids.slice(-INITIAL_SYNC_MAX_MESSAGES)
+            : sortedUids;
         let fetched = 0;
 
         for await (const msg of client.fetch(latestUids, { source: true, envelope: true, uid: true }, { uid: true })) {
             try {
                 const parsed = await simpleParser(msg.source);
-                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, folder);
+                fetched += await this._storeEmail(tenantId, mailboxOwnerUserId, parsed, folder, { notifyIncoming: false });
             } catch (parseErr: any) {
                 console.error(`⚠️ Failed to parse initial-sync email UID ${msg.uid}:`, parseErr.message);
             }
@@ -273,6 +276,7 @@ class ImapService {
         mailboxOwnerUserId: string,
         parsed: any,
         folder: EmailFolder,
+        options: { notifyIncoming?: boolean } = {},
     ): Promise<number> {
         const messageId = parsed.messageId || null;
 
@@ -331,7 +335,7 @@ class ImapService {
         });
 
         // Trigger notification bell for incoming emails
-        if (!isSent) {
+        if (!isSent && options.notifyIncoming !== false) {
             const senderLabel = fromAddr?.name || fromAddr?.address || 'Unknown sender';
             const subjectLabel = parsed.subject || '(No Subject)';
             try {

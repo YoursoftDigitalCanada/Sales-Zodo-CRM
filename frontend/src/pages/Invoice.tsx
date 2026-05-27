@@ -1467,6 +1467,7 @@ function InvoiceImportDialog({
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [pdfFiles, setPdfFiles] = useState<File[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+  const [importIssues, setImportIssues] = useState<Array<{ row?: number; rows?: number[]; reason: string }>>([]);
 
   const handleImport = async () => {
     if (!csvFile && pdfFiles.length === 0) {
@@ -1484,7 +1485,9 @@ function InvoiceImportDialog({
       if (csvFile) {
         const result: any = await importInvoicesCsv(csvFile);
         summaries.push(`${result.importedCount || 0} invoices created`);
+        if (result.aiImportedCount) summaries.push(`${result.aiImportedCount} created with AI mapping`);
         if (result.skippedCount) summaries.push(`${result.skippedCount} CSV rows skipped`);
+        setImportIssues(Array.isArray(result.skipped) ? result.skipped : []);
       }
       if (pdfFiles.length) {
         const result: any = await importInvoicePdfs(pdfFiles);
@@ -1498,7 +1501,9 @@ function InvoiceImportDialog({
       });
       setCsvFile(null);
       setPdfFiles([]);
-      onOpenChange(false);
+      if (!summaries.some((summary) => summary.includes("CSV rows skipped"))) {
+        onOpenChange(false);
+      }
       onImported();
     } catch (error: any) {
       toast({
@@ -1548,6 +1553,19 @@ function InvoiceImportDialog({
               onChange={(event) => setPdfFiles(Array.from(event.target.files || []))}
             />
           </div>
+
+          {importIssues.length ? (
+            <div className="max-h-44 overflow-auto rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+              <div className="mb-2 font-semibold">Rows needing review</div>
+              <div className="space-y-1">
+                {importIssues.slice(0, 12).map((issue, index) => (
+                  <div key={`${issue.reason}-${index}`}>
+                    Row{issue.rows && issue.rows.length > 1 ? "s" : ""} {issue.rows?.join(", ") || issue.row || "?"}: {issue.reason}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <DialogFooter>

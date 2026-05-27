@@ -46,6 +46,28 @@ interface CsvInvoiceGroup {
     invoiceNumber: string;
 }
 
+interface AiCsvInvoice {
+    invoiceNumber?: string | null;
+    companyName?: string | null;
+    clientEmail?: string | null;
+    clientPhone?: string | null;
+    issueDate?: string | null;
+    dueDate?: string | null;
+    currency?: string | null;
+    status?: string | null;
+    amountPaid?: number | null;
+    taxRate?: number | null;
+    discountAmount?: number | null;
+    notes?: string | null;
+    terms?: string | null;
+    lineItems?: Array<{
+        description?: string | null;
+        quantity?: number | null;
+        unitPrice?: number | null;
+        amount?: number | null;
+    }>;
+}
+
 export class InvoicesService {
     private static readonly MAX_ROOF_ATTACHMENTS = 6;
     private static readonly MAX_ATTACHMENT_BYTES = 6 * 1024 * 1024;
@@ -1051,6 +1073,29 @@ export class InvoicesService {
         return aliases[normalized] || aliases[normalized.replace(/_/g, '')] || '';
     }
 
+    private sanitizeImportedInvoiceNumber(value: string, rowNumber: number) {
+        const cleaned = String(value || '')
+            .trim()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-zA-Z0-9._-]/g, '')
+            .slice(0, 42);
+        return cleaned || `IMP-${Date.now()}-${rowNumber}`;
+    }
+
+    private async uniqueImportedInvoiceNumber(tenantId: string, requested: string) {
+        const base = String(requested || `IMP-${Date.now()}`).slice(0, 42);
+        let candidate = base;
+        let suffix = 2;
+
+        while (await prisma.invoice.findFirst({ where: { tenantId, invoiceNumber: candidate }, select: { id: true } })) {
+            const suffixText = `-${suffix}`;
+            candidate = `${base.slice(0, 50 - suffixText.length)}${suffixText}`;
+            suffix += 1;
+        }
+
+        return candidate;
+    }
+
     private csvDate(value: unknown, fallback: Date) {
         const raw = String(value || '').trim();
         let date = raw ? new Date(raw) : fallback;
@@ -1113,7 +1158,10 @@ export class InvoicesService {
         bodyRows.forEach((values, index) => {
             const rowNumber = index + 2;
             const row = this.csvRowToObject(headers, values);
-            const invoiceNumber = this.csvText(row, ['invoiceNumber', 'invoiceNo', 'invoice', 'number', 'invoiceId'], `IMP-${Date.now()}-${rowNumber}`);
+            const invoiceNumber = this.sanitizeImportedInvoiceNumber(
+                this.csvText(row, ['invoiceNumber', 'invoiceNo', 'invoice', 'number', 'invoiceId'], `IMP-${Date.now()}-${rowNumber}`),
+                rowNumber,
+            );
             const existing = groups.get(invoiceNumber);
             if (existing) {
                 existing.rowNumbers.push(rowNumber);
@@ -1154,6 +1202,130 @@ export class InvoicesService {
                 amount,
             };
         }).filter((item) => item.description || item.amount > 0);
+    }
+
+    private async extractCsvInvoicesWithAi(content: string): Promise<AiCsvInvoice[] | null> {
+        if (!config.ai.openaiApiKey) return null;
+        const sample = content.slice(0, 60000);
+        if (!sample.trim()) return null;
+
+        try {
+            const OpenAI = (await import('openai')).default;
+            const client = new OpenAI({ apiKey: config.ai.openaiApiKey });
+            const response = await (client.responses as any).create({
+                model: config.ai.openaiModel || 'gpt-4o-mini',
+                input: [
+                    {
+                        role: 'user',
+                        content: [
+                            {
+                                type: 'input_text',
+                                text: [
+                                    'Extract invoice records from this CSV text for a Sales CRM import.',
+                                    'Return JSON only, no markdown.',
+                                    'Schema:',
+                                    '{ "invoices": [',
+                                    '  {',
+                                    '    "invoiceNumber": string|null,',
+                                    '    "companyName": string|null,',
+                                    '    "clientEmail": string|null,',
+                                    '    "clientPhone": string|null,',
+                                    '    "issueDate": "YYYY-MM-DD"|null,',
+                                    '    "dueDate": "YYYY-MM-DD"|null,',
+                                    '    "currency": "CAD"|"USD"|"EUR"|"GBP"|"AUD"|"INR"|"JPY"|"CNY"|null,',
+                                    '    "status": "DRAFT"|"SENT"|"PAID"|"PARTIALLY_PAID"|"OVERDUE"|"CANCELLED"|null,',
+                                    '    "amountPaid": number|null,',
+                                    '    "taxRate": number|null,',
+                                    '    "discountAmount": number|null,',
+                                    '    "notes": string|null,',
+                                    '    "terms": string|null,',
+                                    '    "lineItems": [{"description": string, "quantity": number, "unitPrice": number, "amount": number}]',
+                                    '  }',
+                                    '] }',
+                                    'Rules:',
+                                    '- Group rows with the same invoice number into one invoice with multiple line items.',
+                                    '- If line item details are unclear, create one line item using the invoice total.',
+                                    '- Use the bill-to/customer/company as companyName.',
+                                    '- If an email is missing, leave clientEmail null.',
+                                    '- Do not invent tax unless the CSV clearly contains it.',
+                                    '',
+                                    sample,
+                                ].join('\n'),
+                            },
+                        ],
+                    },
+                ],
+            });
+            const output = String(response.output_text || '').trim();
+            const jsonText = output.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+            const parsed = JSON.parse(jsonText);
+            return Array.isArray(parsed?.invoices) ? parsed.invoices : null;
+        } catch (error) {
+            logger.warn('[Invoices] AI CSV extraction failed', { error: (error as Error)?.message || String(error) });
+            return null;
+        }
+    }
+
+    private async createInvoiceFromAiCsv(tenantId: string, invoiceData: AiCsvInvoice, fallbackIndex: number) {
+        const row: CsvInvoiceRow = {
+            client: this.cleanAiString(invoiceData.companyName, 255) || 'Imported Invoice Customer',
+            clientemail: this.cleanAiString(invoiceData.clientEmail, 255) || '',
+            clientphone: this.cleanAiString(invoiceData.clientPhone, 30) || 'N/A',
+            currency: this.cleanAiString(invoiceData.currency, 10) || 'CAD',
+        };
+        const clientId = await this.findOrCreateImportClient(tenantId, row);
+        const issueDate = this.csvDate(invoiceData.issueDate, new Date());
+        const dueDate = this.csvDate(invoiceData.dueDate, new Date(issueDate.getTime() + 30 * 86400000));
+        const requestedNumber = this.sanitizeImportedInvoiceNumber(invoiceData.invoiceNumber || `AI-IMP-${Date.now()}-${fallbackIndex}`, fallbackIndex + 2);
+        const invoiceNumber = await this.uniqueImportedInvoiceNumber(tenantId, requestedNumber);
+        const items = Array.isArray(invoiceData.lineItems) && invoiceData.lineItems.length
+            ? invoiceData.lineItems.map((item, index) => {
+                const quantity = Number(item.quantity || 1) || 1;
+                const amount = Number(item.amount || 0);
+                const unitPrice = Number(item.unitPrice || (quantity > 0 ? amount / quantity : amount) || 0);
+                return {
+                    description: this.cleanAiString(item.description, 500) || `Imported invoice item ${index + 1}`,
+                    quantity,
+                    unitPrice,
+                    amount: Number.isFinite(amount) ? amount : quantity * unitPrice,
+                };
+            })
+            : [{ description: 'Imported invoice item - review required', quantity: 1, unitPrice: 0, amount: 0 }];
+
+        let invoice = await this.create(tenantId, {
+            invoiceNumber,
+            issueDate: issueDate.toISOString(),
+            invoiceDate: issueDate.toISOString(),
+            dueDate: dueDate.toISOString(),
+            currency: this.csvCurrency(invoiceData.currency || '') as any,
+            clientId,
+            taxRate: Number.isFinite(Number(invoiceData.taxRate)) ? Number(invoiceData.taxRate) : undefined,
+            discountAmount: Number.isFinite(Number(invoiceData.discountAmount)) ? Number(invoiceData.discountAmount) : undefined,
+            notes: invoiceData.notes || 'Created by AI-assisted CSV import. Review before sending.',
+            terms: invoiceData.terms || null,
+            items,
+        } as CreateInvoiceDto);
+
+        const amountPaid = Number(invoiceData.amountPaid || 0);
+        if (Number.isFinite(amountPaid) && amountPaid > 0) {
+            const payableAmount = Math.min(amountPaid, Number((invoice as any).amountDue || (invoice as any).total || 0));
+            if (payableAmount > 0) {
+                invoice = await this.recordPayment(invoice.id, tenantId, {
+                    amount: payableAmount,
+                    paymentMethod: 'OTHER',
+                    paymentDate: issueDate.toISOString(),
+                    reference: `AI CSV import ${invoiceNumber}`,
+                    notes: 'Imported from invoice CSV',
+                });
+            }
+        } else {
+            const status = this.csvInvoiceStatus(invoiceData.status || '');
+            if (status && status !== 'DRAFT') {
+                invoice = await this.update(invoice.id, tenantId, { status: status as any });
+            }
+        }
+
+        return invoice;
     }
 
     async exportCsv(tenantId: string, query: InvoiceQueryDto) {
@@ -1223,12 +1395,7 @@ export class InvoicesService {
         for (const group of groups) {
             try {
                 const row = group.rows[0];
-                const invoiceNumber = group.invoiceNumber;
-                const duplicate = await prisma.invoice.findFirst({ where: { tenantId, invoiceNumber }, select: { id: true } });
-                if (duplicate) {
-                    skipped.push({ rows: group.rowNumbers, reason: `Invoice ${invoiceNumber} already exists` });
-                    continue;
-                }
+                const invoiceNumber = await this.uniqueImportedInvoiceNumber(tenantId, group.invoiceNumber);
 
                 const clientId = await this.findOrCreateImportClient(tenantId, row);
                 const issueDate = this.csvDate(this.csvText(row, ['issueDate', 'invoiceDate', 'date', 'createdDate']), new Date());
@@ -1284,6 +1451,24 @@ export class InvoicesService {
             }
         }
 
+        let aiImportedCount = 0;
+        if (imported.length === 0 && skipped.length > 0) {
+            const aiInvoices = await this.extractCsvInvoicesWithAi(content);
+            if (aiInvoices?.length) {
+                const previousSkipped = skipped.splice(0, skipped.length);
+                for (const [index, invoiceData] of aiInvoices.entries()) {
+                    try {
+                        const invoice = await this.createInvoiceFromAiCsv(tenantId, invoiceData, index);
+                        imported.push(invoice);
+                        aiImportedCount += 1;
+                    } catch (error) {
+                        skipped.push({ row: index + 1, reason: (error as Error)?.message || 'AI-assisted import failed' });
+                    }
+                }
+                if (imported.length === 0) skipped.push(...previousSkipped);
+            }
+        }
+
         activityLogger.log({
             tenantId,
             entityType: 'Invoice',
@@ -1292,10 +1477,10 @@ export class InvoicesService {
             module: 'invoices',
             description: `Imported ${imported.length} invoices from CSV`,
             userId: actorUserId,
-            metadata: { imported: imported.length, skipped: skipped.length },
+            metadata: { imported: imported.length, skipped: skipped.length, aiImported: aiImportedCount },
         });
 
-        return { importedCount: imported.length, skippedCount: skipped.length, imported, skipped };
+        return { importedCount: imported.length, skippedCount: skipped.length, aiImportedCount, imported, skipped };
     }
 
     private normalizePdfText(text: string) {

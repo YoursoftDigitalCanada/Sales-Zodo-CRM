@@ -71,6 +71,8 @@ export function getSmtpTransportGuidance(port: number, host?: string): string {
     providerHints.push('Microsoft 365 usually uses smtp.office365.com with port 587 STARTTLS. SMTP AUTH must be enabled for the mailbox.');
   } else if (normalizedHost.includes('hostinger')) {
     providerHints.push('Hostinger usually uses smtp.hostinger.com with port 465 SSL/TLS or 587 STARTTLS.');
+  } else if (normalizedHost.includes('titan')) {
+    providerHints.push('Titan Mail uses smtp.titan.email with port 465 SSL/TLS or 587 STARTTLS. Third-party app access must be enabled in Titan.');
   } else if (normalizedHost.includes('zoho')) {
     providerHints.push('Zoho usually uses smtp.zoho.com with port 465 SSL/TLS or 587 STARTTLS and may require an app-specific password.');
   }
@@ -100,6 +102,10 @@ export function getSmtpAuthenticationGuidance(host?: string): string {
 
   if (normalizedHost.includes('hostinger')) {
     return 'Hostinger requires the full mailbox email as the username and the mailbox password from hPanel. Do not use the Hostinger account login password unless it is also the mailbox password.';
+  }
+
+  if (normalizedHost.includes('titan')) {
+    return 'Titan Mail requires the full mailbox email as the username and the Titan mailbox password. Third-party app access must be enabled, and Titan 2FA can block third-party clients.';
   }
 
   if (normalizedHost.includes('zoho')) {

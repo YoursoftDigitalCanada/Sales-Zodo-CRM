@@ -115,6 +115,10 @@ function isHostingerHost(host?: string): boolean {
     return normalizeMailHost(host).includes('hostinger.com');
 }
 
+function isTitanHost(host?: string): boolean {
+    return normalizeMailHost(host).includes('titan.email');
+}
+
 export const updateMailboxSettingsSchema = z.object({
     body: z.object({
         smtp: z.object({
@@ -131,6 +135,13 @@ export const updateMailboxSettingsSchema = z.object({
                     code: z.ZodIssueCode.custom,
                     path: ['port'],
                     message: 'Hostinger SMTP uses port 465 with SSL/TLS or port 587 with STARTTLS. Port 467 will timeout.',
+                });
+            }
+            if (isTitanHost(data.host) && data.port !== undefined && ![465, 587].includes(data.port)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['port'],
+                    message: 'Titan Mail SMTP uses port 465 with SSL/TLS or port 587 with STARTTLS.',
                 });
             }
         }).optional(),
@@ -154,6 +165,13 @@ export const updateMailboxSettingsSchema = z.object({
                     code: z.ZodIssueCode.custom,
                     path: ['port'],
                     message: 'Hostinger IMAP uses port 993 with SSL/TLS or port 143 with STARTTLS.',
+                });
+            }
+            if (isTitanHost(data.host) && data.port !== undefined && ![993, 143].includes(data.port)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    path: ['port'],
+                    message: 'Titan Mail IMAP uses port 993 with SSL/TLS or port 143 with STARTTLS.',
                 });
             }
         }).optional(),

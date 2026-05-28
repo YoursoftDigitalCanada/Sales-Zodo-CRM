@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { Building2, ExternalLink, Loader2, Mail, Pencil, Phone, Plus, Search, Trash2, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -105,6 +106,50 @@ const mapOrganization = (item: any): Organization => ({
   contactsCount: item.contactsCount || 0,
   projectsCount: item.projectsCount || 0,
 });
+
+function OrganizationStatCard({
+  title,
+  value,
+  Icon,
+  color = "#6637F4",
+  delay = 0,
+}: {
+  title: string;
+  value: string | number;
+  Icon: any;
+  color?: string;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      whileHover={{ y: -4 }}
+      className="group relative overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-5 transition-all hover:border-[#6637F4]/30 hover:shadow-lg"
+    >
+      <div
+        className="absolute -right-4 -top-4 h-20 w-20 rounded-full opacity-10 transition-all group-hover:opacity-20"
+        style={{ backgroundColor: color }}
+      />
+
+      <div className="relative flex items-start justify-between">
+        <div>
+          <p className="mb-1 text-sm text-[#94A3B8]">{title}</p>
+          <p className="text-xl font-bold text-[#0F172A] sm:text-2xl">
+            {typeof value === "number" ? value.toLocaleString() : value}
+          </p>
+        </div>
+        <div
+          className="flex h-12 w-12 items-center justify-center rounded-md"
+          style={{ backgroundColor: `${color}15` }}
+        >
+          <Icon size={22} style={{ color }} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function OrganizationsPage() {
   const { toast } = useToast();
@@ -301,22 +346,19 @@ export default function OrganizationsPage() {
 
         <div className="grid gap-3 md:grid-cols-4">
           {[
-            ["Organizations", stats.total, Building2],
-            ["Active", stats.active, Users],
-            ["Annual Revenue", formatCurrency(stats.revenue), Mail],
-            ["Contacts", stats.contacts, Phone],
-          ].map(([label, value, Icon]: any) => (
-            <div key={label} className="group rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 transition-all hover:border-[#6637F4]/30 hover:shadow-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-[#64748B]">{label}</p>
-                  <p className="mt-1 text-xl font-bold text-[#0F172A]">{value}</p>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#6637F4]/10 text-[#6637F4] transition-colors group-hover:bg-[#6637F4] group-hover:text-white">
-                  <Icon size={18} />
-                </div>
-              </div>
-            </div>
+            ["Organizations", stats.total, Building2, "#6637F4"],
+            ["Active", stats.active, Users, "#10B981"],
+            ["Annual Revenue", formatCurrency(stats.revenue), Mail, "#F59E0B"],
+            ["Contacts", stats.contacts, Phone, "#3B82F6"],
+          ].map(([label, value, Icon, color]: any, index) => (
+            <OrganizationStatCard
+              key={label}
+              title={label}
+              value={value}
+              Icon={Icon}
+              color={color}
+              delay={index * 0.05}
+            />
           ))}
         </div>
 

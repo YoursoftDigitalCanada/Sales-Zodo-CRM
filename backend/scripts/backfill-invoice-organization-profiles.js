@@ -31,6 +31,32 @@ const useAi = args.has('--ai') && Boolean(process.env.OPENAI_API_KEY);
 const tenantArg = process.argv.find((arg) => arg.startsWith('--tenant-id='));
 const tenantId = tenantArg ? tenantArg.split('=').slice(1).join('=').trim() : '';
 
+const PUBLIC_MAIL_DOMAINS = [
+  'gmail.com',
+  'googlemail.com',
+  'yahoo.com',
+  'yahoo.ca',
+  'outlook.com',
+  'hotmail.com',
+  'hotmail.ca',
+  'live.com',
+  'icloud.com',
+  'aol.com',
+  'protonmail.com',
+  'mail.com',
+];
+
+const isPublicMailDomain = (value) => {
+  const domain = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//i, '')
+    .replace(/^www\./i, '')
+    .split('/')[0]
+    .replace(/[),.;]+$/g, '');
+  return PUBLIC_MAIL_DOMAINS.some((publicDomain) => domain === publicDomain || domain.endsWith(`.${publicDomain}`));
+};
+
 const normalizeWebsite = (value) => {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -39,12 +65,13 @@ const normalizeWebsite = (value) => {
     .replace(/^www\./i, '')
     .replace(/[),.;]+$/g, '')
     .trim();
+  if (isPublicMailDomain(withoutProtocol)) return '';
   return withoutProtocol && withoutProtocol.includes('.') ? withoutProtocol.slice(0, 255) : '';
 };
 
 const websiteFromEmail = (email) => {
   const domain = String(email || '').split('@')[1] || '';
-  if (!domain || /^(gmail|yahoo|outlook|hotmail|icloud|aol|protonmail)\./i.test(domain)) return '';
+  if (!domain || isPublicMailDomain(domain)) return '';
   return normalizeWebsite(domain);
 };
 
@@ -222,7 +249,8 @@ const main = async () => {
   for (const client of clients) {
     const profile = await buildProfile(client, client.invoices);
     const data = {};
-    if (!client.website && profile.website) data.website = profile.website;
+    if ((!client.website || isPublicMailDomain(client.website)) && profile.website) data.website = profile.website;
+    if (client.website && isPublicMailDomain(client.website) && !profile.website) data.website = null;
     if (!client.industry && profile.industry) data.industry = profile.industry;
     if (!client.noOfEmployees && profile.noOfEmployees) data.noOfEmployees = profile.noOfEmployees;
     if (!client.territory && profile.territory) data.territory = profile.territory;

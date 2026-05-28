@@ -287,14 +287,14 @@ export default function OrganizationsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8FAFC] p-4 md:p-6">
+    <main className="min-h-screen bg-[#F7F7FB] p-4 md:p-6">
       <div className="mx-auto max-w-7xl space-y-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[#0F172A]">Organizations</h1>
             <p className="text-sm text-[#64748B]">Company accounts connected to contacts, deals, documents, invoices, and customer lifecycle automation.</p>
           </div>
-          <Button onClick={openCreate} className="rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
+          <Button onClick={openCreate} className="rounded-md bg-[#6637F4] text-white shadow-[0_12px_28px_rgba(102,55,244,0.24)] hover:bg-[#6637F4]/90">
             <Plus size={16} className="mr-2" /> Create
           </Button>
         </div>
@@ -306,13 +306,13 @@ export default function OrganizationsPage() {
             ["Annual Revenue", formatCurrency(stats.revenue), Mail],
             ["Contacts", stats.contacts, Phone],
           ].map(([label, value, Icon]: any) => (
-            <div key={label} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4">
+            <div key={label} className="group rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 transition-all hover:border-[#6637F4]/30 hover:shadow-lg">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-[#64748B]">{label}</p>
                   <p className="mt-1 text-xl font-bold text-[#0F172A]">{value}</p>
                 </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#0891B2]/10 text-[#0891B2]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#6637F4]/10 text-[#6637F4] transition-colors group-hover:bg-[#6637F4] group-hover:text-white">
                   <Icon size={18} />
                 </div>
               </div>
@@ -320,11 +320,11 @@ export default function OrganizationsPage() {
           ))}
         </div>
 
-        <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white">
+        <div className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white">
           <div className="flex items-center gap-3 border-b border-[rgba(15,23,42,0.06)] p-4">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search organizations, website, industry, territory..." className="h-11 rounded-md pl-10" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search organizations, website, industry, territory..." className="h-10 rounded-md border-[rgba(15,23,42,0.06)] pl-10 focus-visible:ring-[#6637F4]/20" />
             </div>
             <Button variant="outline" onClick={loadOrganizations} className="rounded-md">Refresh</Button>
           </div>
@@ -346,10 +346,10 @@ export default function OrganizationsPage() {
                 {loading ? (
                   <tr><td colSpan={7} className="px-4 py-10 text-center text-[#64748B]"><Loader2 className="mx-auto mb-2 animate-spin" />Loading organizations...</td></tr>
                 ) : filtered.length ? filtered.map((org) => (
-                  <tr key={org.id} className="border-t border-[rgba(15,23,42,0.06)] hover:bg-[#F8FAFC]">
+                  <tr key={org.id} className="group border-l-2 border-l-transparent border-t border-[rgba(15,23,42,0.06)] transition-colors hover:border-l-[#6637F4] hover:bg-[#F0EEFF]">
                     <td className="px-4 py-4">
                       <button onClick={() => setViewing(org)} className="flex items-center gap-3 text-left">
-                        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md bg-[#0891B2]/10 font-semibold text-[#0891B2]">
+                        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md bg-[#6637F4]/10 font-semibold text-[#6637F4]">
                           {org.clientLogo ? <img src={String(org.clientLogo)} alt="" className="h-full w-full object-cover" /> : org.clientName.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
@@ -358,14 +358,14 @@ export default function OrganizationsPage() {
                         </div>
                       </button>
                     </td>
-                    <td className="px-4 py-4">{org.website ? <a className="text-[#0891B2]" href={withProtocol(String(org.website))} target="_blank" rel="noreferrer">{cleanWebsite(String(org.website))}</a> : "-"}</td>
+                    <td className="px-4 py-4">{org.website ? <a className="text-[#6637F4]" href={withProtocol(String(org.website))} target="_blank" rel="noreferrer">{cleanWebsite(String(org.website))}</a> : "-"}</td>
                     <td className="px-4 py-4">{org.industry || "-"}</td>
                     <td className="px-4 py-4">{org.noOfEmployees || "-"}</td>
                     <td className="px-4 py-4 text-right font-medium">{formatCurrency(org.annualRevenue, String(org.currency || "CAD"))}</td>
                     <td className="px-4 py-4">{org.territory || "-"}</td>
                     <td className="px-4 py-4">
                       <div className="flex justify-end gap-2">
-                        <Button size="icon" variant="outline" onClick={() => openEdit(org)} className="h-9 w-9 rounded-md"><Pencil size={15} /></Button>
+                        <Button size="icon" variant="outline" onClick={() => openEdit(org)} className="h-9 w-9 rounded-md hover:border-[#6637F4]/30 hover:bg-[#6637F4]/10 hover:text-[#6637F4]"><Pencil size={15} /></Button>
                         <Button size="icon" variant="outline" onClick={() => removeOrganization(org)} className="h-9 w-9 rounded-md text-red-600"><Trash2 size={15} /></Button>
                       </div>
                     </td>
@@ -381,7 +381,7 @@ export default function OrganizationsPage() {
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md p-0 sm:max-w-[760px]">
-          <DialogHeader className="border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA] p-5">
+          <DialogHeader className="border-b border-[rgba(15,23,42,0.06)] bg-[#F0EEFF] p-5">
             <DialogTitle>{editing ? "Edit Organization" : "New Organization"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 p-5 md:grid-cols-2">
@@ -464,7 +464,7 @@ export default function OrganizationsPage() {
           </div>
           <div className="flex justify-end gap-3 border-t border-[rgba(15,23,42,0.06)] p-5">
             <Button variant="outline" onClick={() => setModalOpen(false)} className="rounded-md">Cancel</Button>
-            <Button onClick={saveOrganization} disabled={saving} className="rounded-md bg-[#0891B2] text-white hover:bg-[#0891B2]/90">
+            <Button onClick={saveOrganization} disabled={saving} className="rounded-md bg-[#6637F4] text-white hover:bg-[#6637F4]/90">
               {saving ? <Loader2 size={16} className="mr-2 animate-spin" /> : null}
               {editing ? "Update" : "Create"}
             </Button>
@@ -476,14 +476,14 @@ export default function OrganizationsPage() {
         <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md p-0 sm:max-w-[900px]">
           {viewing ? (
             <>
-              <div className="flex items-start justify-between border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA] p-5">
+              <div className="flex items-start justify-between border-b border-[rgba(15,23,42,0.06)] bg-[#F0EEFF] p-5">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-md bg-[#0891B2]/10 font-bold text-[#0891B2]">
+                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-md bg-[#6637F4]/10 font-bold text-[#6637F4]">
                     {viewing.clientLogo ? <img src={String(viewing.clientLogo)} alt="" className="h-full w-full object-cover" /> : viewing.clientName.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-[#0F172A]">{viewing.clientName}</h2>
-                    {viewing.website ? <a href={withProtocol(String(viewing.website))} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-[#0891B2]">{cleanWebsite(String(viewing.website))}<ExternalLink size={13} /></a> : null}
+                    {viewing.website ? <a href={withProtocol(String(viewing.website))} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-[#6637F4]">{cleanWebsite(String(viewing.website))}<ExternalLink size={13} /></a> : null}
                   </div>
                 </div>
                 <Button size="icon" variant="ghost" onClick={() => setViewing(null)}><X size={18} /></Button>
@@ -497,14 +497,14 @@ export default function OrganizationsPage() {
                   <TabsTrigger value="activity">Activity</TabsTrigger>
                 </TabsList>
                 <TabsContent value="details" className="mt-5 grid gap-4 md:grid-cols-2">
-                  <div className="md:col-span-2 rounded-md border border-[#B2F5EA] bg-[#F0FDFA] p-4">
+                  <div className="md:col-span-2 rounded-md border border-[#6637F4]/15 bg-[#F0EEFF] p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-[#0F172A]">Automation Links</p>
-                        <p className="mt-1 text-xs text-[#0F766E]">Accounts are reused from company name and linked to contacts, deals, tasks, proposals, invoices, and subscriptions as the sales flow moves forward.</p>
+                        <p className="mt-1 text-xs text-[#475569]">Accounts are reused from company name and linked to contacts, deals, tasks, proposals, invoices, and subscriptions as the sales flow moves forward.</p>
                       </div>
                       <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                        <span className="rounded-md bg-white px-2.5 py-1 text-[#0F766E]">{contacts.length} Contacts</span>
+                        <span className="rounded-md bg-white px-2.5 py-1 text-[#6637F4]">{contacts.length} Contacts</span>
                         <span className="rounded-md bg-white px-2.5 py-1 text-[#1D4ED8]">{deals.length} Deals</span>
                         <span className="rounded-md bg-white px-2.5 py-1 text-[#6D28D9]">{tasks.length} Tasks</span>
                         <span className="rounded-md bg-white px-2.5 py-1 text-[#B45309]">{String((viewing as any).lifecycleStage || viewing.status || "PROSPECT").replace(/_/g, " ")}</span>
@@ -560,14 +560,14 @@ function Field({ label, value, onChange, type = "text", required = false }: { la
   return (
     <div className="space-y-2">
       <Label>{label} {required ? <span className="text-red-500">*</span> : null}</Label>
-      <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="h-11 rounded-md" />
+      <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus-visible:ring-[#6637F4]/20" />
     </div>
   );
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4">
+    <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 transition-all hover:border-[#6637F4]/20 hover:shadow-sm">
       <p className="text-xs uppercase tracking-wide text-[#64748B]">{label}</p>
       <p className="mt-1 font-semibold text-[#0F172A]">{value}</p>
     </div>
@@ -585,7 +585,7 @@ function LinkedTable({ loading, rows, columns, empty }: { loading: boolean; rows
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={row.id || row.name || index} className="border-t border-[rgba(15,23,42,0.06)]">
+            <tr key={row.id || row.name || index} className="border-t border-[rgba(15,23,42,0.06)] transition-colors hover:bg-[#F0EEFF]">
               {columns.map((column) => <td key={column} className="px-4 py-3">{String(row[column] ?? "-")}</td>)}
             </tr>
           ))}

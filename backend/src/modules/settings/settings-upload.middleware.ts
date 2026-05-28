@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { Request } from 'express';
+import { config } from '../../config';
 
 const MAX_LOGO_SIZE = 2 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml']);
@@ -10,7 +11,7 @@ const ALLOWED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'ima
 const storage = multer.diskStorage({
   destination: (req: Request, _file, cb) => {
     const tenantId = (req as Request & { context?: { tenantId?: string } }).context?.tenantId || 'unknown';
-    const uploadDir = path.join(process.cwd(), 'uploads', tenantId, 'settings');
+    const uploadDir = path.resolve(config.upload.uploadPath, tenantId, 'settings');
     fs.mkdirSync(uploadDir, { recursive: true });
     cb(null, uploadDir);
   },

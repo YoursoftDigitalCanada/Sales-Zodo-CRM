@@ -1177,7 +1177,7 @@ const AppRoutes = () => {
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
             </button>
-            <div className="flex min-w-0 items-center gap-2">
+            <div className="flex min-w-0 items-center">
               {companyLogoUrl ? (
                 <img src={companyLogoUrl} alt={companyName} className="h-8 w-8 rounded-md object-contain" />
               ) : (
@@ -1185,7 +1185,6 @@ const AppRoutes = () => {
                   {companyName.slice(0, 2).toUpperCase()}
                 </div>
               )}
-              <span className="max-w-[180px] truncate text-sm font-bold text-[#0F172A] tracking-tight">{companyName}</span>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => setCommandPaletteOpen(true)} className="p-2 rounded-md hover:bg-[#F1F5F9] text-[#475569] touch-exempt" aria-label="Search">

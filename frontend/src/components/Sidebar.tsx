@@ -955,7 +955,7 @@ export function Sidebar({
                 exit={{ opacity: 0, x: -20 }}
                 className="flex flex-1 items-center"
               >
-                <div className="flex min-w-0 items-center gap-3">
+                <div className="flex min-w-0 items-center">
                   <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC]">
                     {brandLogoUrl ? (
                       <img
@@ -966,10 +966,6 @@ export function Sidebar({
                     ) : (
                       <span className="text-sm font-bold uppercase tracking-[0.14em] text-[#0891B2]">{brandInitials}</span>
                     )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-[13px] font-semibold text-[#0F172A]">{brandName}</p>
-                    <p className="truncate text-[10px] text-[#94A3B8]">CRM</p>
                   </div>
                 </div>
               </motion.div>

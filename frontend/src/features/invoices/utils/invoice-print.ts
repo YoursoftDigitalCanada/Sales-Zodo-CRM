@@ -126,10 +126,9 @@ const renderInvoiceHtml = (invoice: PrintableInvoiceDocument) => {
       .title { font-size: 38px; line-height: 1; margin: 0 0 10px; font-weight: 700; }
       .subtitle { font-size: 16px; color: #475569; margin: 0; }
       .brand-block { text-align: right; min-width: 120px; }
-      .logo-box { width: 88px; height: 88px; border-radius: 16px; border: 1px solid rgba(15, 23, 42, 0.08); background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-left: auto; margin-bottom: 12px; }
+      .logo-box { width: 88px; height: 88px; border-radius: 16px; border: 1px solid rgba(15, 23, 42, 0.08); background: #f8fafc; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-left: auto; }
       .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
       .logo-text { font-size: 28px; font-weight: 700; color: #0f172a; }
-      .brand-name { font-size: 15px; color: #475569; }
       .summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 20px; border-radius: 16px; background: #f8fafc; margin-bottom: 28px; }
       .summary-grid .value { margin-top: 6px; font-size: 16px; font-weight: 600; color: #0f172a; }
       .summary-grid .value.highlight { color: #0891b2; font-size: 22px; font-weight: 700; }
@@ -185,7 +184,6 @@ const renderInvoiceHtml = (invoice: PrintableInvoiceDocument) => {
                   : `<span class="logo-text">${escapeHtml((brandName || "IN").slice(0, 2).toUpperCase())}</span>`
               }
             </div>
-            <div class="brand-name">${escapeHtml(brandName)}</div>
           </div>
         </div>
 

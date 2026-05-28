@@ -737,17 +737,12 @@ export class InvoicesService {
             }
         }
 
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(13);
-        doc.setTextColor(15, 23, 42);
-        doc.text(company.companyName || 'ZODO CRM', companyTextX, 16, { align: 'right' });
-
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(71, 85, 105);
         const companyLines = [company.email, company.phone, company.address].filter(Boolean) as string[];
         companyLines.slice(0, 3).forEach((line, index) => {
-            doc.text(line, companyTextX, 21 + (index * 4.5), { align: 'right' });
+            doc.text(line, companyTextX, 16 + (index * 4.5), { align: 'right' });
         });
 
         doc.setDrawColor(226, 232, 240);

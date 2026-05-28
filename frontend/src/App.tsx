@@ -315,6 +315,33 @@ const AppRoutes = () => {
   const companyLogoUrl = branding?.logoUrl || null;
 
   useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    document.title = `${companyName} | Sales CRM`;
+
+    const faviconHref = companyLogoUrl || "/favicon.png";
+    const faviconType = faviconHref.toLowerCase().includes(".svg")
+      ? "image/svg+xml"
+      : faviconHref.toLowerCase().includes(".webp")
+        ? "image/webp"
+        : faviconHref.toLowerCase().includes(".jpg") || faviconHref.toLowerCase().includes(".jpeg")
+          ? "image/jpeg"
+          : "image/png";
+
+    const existingIcons = Array.from(document.querySelectorAll<HTMLLinkElement>("link[rel~='icon']"));
+    const icon = existingIcons[0] || document.createElement("link");
+    icon.rel = "icon";
+    icon.type = faviconType;
+    icon.href = faviconHref;
+
+    if (!existingIcons.length) {
+      document.head.appendChild(icon);
+    }
+  }, [companyLogoUrl, companyName]);
+
+  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }

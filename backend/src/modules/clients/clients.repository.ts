@@ -5,6 +5,7 @@ import { prisma } from '../../config/database';
 const clientInclude = {
     assignedOwner: { include: { user: { select: { firstName: true, lastName: true } } } },
     contacts: { where: { isPrimaryContact: true }, take: 1, select: { contactName: true, email: true, mobilePhone: true } },
+    invoices: { select: { status: true, total: true } },
     _count: { select: { contacts: true, projects: true, invoices: true, quotes: true, files: true } },
 };
 

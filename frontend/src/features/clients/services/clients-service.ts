@@ -24,6 +24,7 @@ export interface ClientEntity {
   website?: string;
   noOfEmployees?: string;
   annualRevenue?: number;
+  invoiceRevenue?: number;
   exchangeRate?: number;
   industry?: string;
   territory?: string;

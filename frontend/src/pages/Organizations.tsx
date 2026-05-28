@@ -27,6 +27,7 @@ type Organization = ClientEntity & {
   status: string;
   contactsCount?: number;
   projectsCount?: number;
+  invoiceRevenue?: number;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -185,7 +186,7 @@ export default function OrganizationsPage() {
   const stats = useMemo(() => ({
     total: organizations.length,
     active: organizations.filter((org) => org.status === "ACTIVE").length,
-    revenue: organizations.reduce((sum, org) => sum + Number(org.annualRevenue || 0), 0),
+    revenue: organizations.reduce((sum, org) => sum + Number(org.invoiceRevenue || 0), 0),
     contacts: organizations.reduce((sum, org) => sum + Number(org.contactsCount || 0), 0),
   }), [organizations]);
 
@@ -348,7 +349,7 @@ export default function OrganizationsPage() {
           {[
             ["Organizations", stats.total, Building2, "#6637F4"],
             ["Active", stats.active, Users, "#10B981"],
-            ["Annual Revenue", formatCurrency(stats.revenue), Mail, "#F59E0B"],
+            ["Invoice Revenue", formatCurrency(stats.revenue), Mail, "#F59E0B"],
             ["Contacts", stats.contacts, Phone, "#3B82F6"],
           ].map(([label, value, Icon, color]: any, index) => (
             <OrganizationStatCard

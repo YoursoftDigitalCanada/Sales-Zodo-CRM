@@ -153,6 +153,7 @@ export interface ClientResponseDto {
     language: string | null;
 
     // Metadata
+    invoiceRevenue: number;
     contactsCount: number;
     projectsCount: number;
     invoicesCount: number;
@@ -164,6 +165,7 @@ export interface ClientResponseDto {
 
 type ClientWithRelations = Client & {
     assignedOwner?: { id: string; user: { firstName: string; lastName: string } } | null;
+    invoices?: Array<{ status: string; total: unknown }>;
     _count?: { contacts: number; projects: number; invoices: number; quotes: number; files: number };
 };
 
@@ -260,6 +262,9 @@ export function toClientResponseDto(c: ClientWithRelations): ClientResponseDto {
         language: c.language ?? null,
 
         // Metadata
+        invoiceRevenue: (c.invoices || [])
+            .filter((invoice) => invoice.status !== 'CANCELLED')
+            .reduce((sum, invoice) => sum + Number(invoice.total || 0), 0),
         contactsCount: c._count?.contacts || 0,
         projectsCount: c._count?.projects || 0,
         invoicesCount: c._count?.invoices || 0,

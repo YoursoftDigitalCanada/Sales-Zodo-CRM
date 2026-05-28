@@ -1230,7 +1230,7 @@ export class InvoicesService {
             const unitPrice = Number.isFinite(rate) ? rate : quantity > 0 ? amount / quantity : amount;
 
             return {
-                description: this.csvText(row, ['itemDescription', 'item description', 'description', 'item', 'service', 'product'], `Imported invoice item ${index + 1}`),
+                description: this.csvText(row, ['itemDescription', 'item description', 'description', 'item', 'service', 'product'], `Invoice line ${index + 1} - description needs review`),
                 quantity,
                 unitPrice,
                 amount,
@@ -1328,13 +1328,13 @@ export class InvoicesService {
                 const amount = Number(item.amount || 0);
                 const unitPrice = Number(item.unitPrice || (quantity > 0 ? amount / quantity : amount) || 0);
                 return {
-                    description: this.cleanAiString(item.description, 500) || `Imported invoice item ${index + 1}`,
+                    description: this.cleanAiString(item.description, 500) || `Invoice line ${index + 1} - description needs review`,
                     quantity,
                     unitPrice,
                     amount: Number.isFinite(amount) ? amount : quantity * unitPrice,
                 };
             })
-            : [{ description: 'Imported invoice item - review required', quantity: 1, unitPrice: 0, amount: 0 }];
+            : [{ description: 'Invoice line - description needs review', quantity: 1, unitPrice: 0, amount: 0 }];
 
         let invoice = await this.create(tenantId, {
             invoiceNumber,
@@ -1568,6 +1568,56 @@ export class InvoicesService {
         return Number.isNaN(date.getTime()) ? null : date;
     }
 
+    private isImportedPlaceholderDescription(value: string | null | undefined) {
+        return !value || /^imported invoice (?:item|total)(?:\s+\d+)?(?:\s+-\s+review required)?$/i.test(value.trim());
+    }
+
+    private extractLineItemsFromPdfText(text: string, invoiceTotal: number | null) {
+        const lines = text
+            .split('\n')
+            .map((line) => line.replace(/\s+/g, ' ').trim())
+            .filter(Boolean);
+        const headerIndex = lines.findIndex((line) =>
+            /\b(description|item|service|product)\b/i.test(line)
+            && /\b(qty|quantity|hours|units)\b/i.test(line)
+            && /\b(amount|total|rate|price)\b/i.test(line)
+        );
+        if (headerIndex < 0) return [];
+
+        const items: Array<{ description: string; quantity: number; unitPrice: number; amount: number }> = [];
+        const stopPattern = /\b(subtotal|tax|hst|gst|pst|paid|amount due|balance due|grand total|invoice total|terms|notes)\b/i;
+        const money = '(?:CAD|USD|C\\$|\\$)?\\s*([0-9][0-9,]*(?:\\.\\d{2})?)';
+
+        for (const line of lines.slice(headerIndex + 1, headerIndex + 25)) {
+            if (stopPattern.test(line)) break;
+            if (/^(description|item|service|product)\b/i.test(line)) continue;
+
+            const match = line.match(new RegExp(`^(?:\\d+\\s+)?(.+?)\\s+(\\d+(?:\\.\\d+)?)\\s+${money}\\s+${money}$`, 'i'));
+            if (!match) continue;
+
+            const description = match[1]
+                .replace(/\s+/g, ' ')
+                .replace(/^[-#:.\s]+|[-#:.\s]+$/g, '')
+                .trim()
+                .slice(0, 255);
+            const quantity = Number(match[2]) || 1;
+            const unitPrice = this.parsePdfMoney(match[3]) || 0;
+            const amount = this.parsePdfMoney(match[4]) || quantity * unitPrice;
+
+            if (
+                description
+                && !this.isImportedPlaceholderDescription(description)
+                && !/\b(invoice|date|due|subtotal|tax|total|amount|rate|qty|quantity)\b/i.test(description)
+                && amount > 0
+                && (!invoiceTotal || Math.abs(amount - invoiceTotal) <= Math.max(invoiceTotal, 1) * 2)
+            ) {
+                items.push({ description, quantity, unitPrice, amount });
+            }
+        }
+
+        return items;
+    }
+
     private extractCompanyNameFromPdf(text: string) {
         const lines = text
             .split('\n')
@@ -1665,6 +1715,7 @@ export class InvoicesService {
         const clientAddress = this.extractClientAddressFromPdf(normalized);
 
         const amount = total || subtotal || 0;
+        const lineItems = this.extractLineItemsFromPdfText(normalized, amount || null);
         return {
             invoiceNumber: invoiceNumber.replace(/[^\w./-]/g, '-').slice(0, 50),
             issueDate,
@@ -1682,6 +1733,7 @@ export class InvoicesService {
             taxAmount,
             taxRate,
             total: amount,
+            lineItems,
             confidence: {
                 invoiceNumber: Boolean(invoiceNumber),
                 dates: Boolean(issueDate && dueDate),
@@ -1775,8 +1827,9 @@ export class InvoicesService {
                         const amount = this.parsePdfMoney(item?.amount == null ? null : String(item.amount));
                         const quantity = Number(item?.quantity || 1);
                         const unitPrice = this.parsePdfMoney(item?.unitPrice == null ? null : String(item.unitPrice));
+                        const description = this.cleanAiString(item?.description, 255);
                         return {
-                            description: this.cleanAiString(item?.description, 255) || 'Imported invoice item',
+                            description: this.isImportedPlaceholderDescription(description) ? '' : description,
                             quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
                             unitPrice: unitPrice ?? amount ?? total ?? 0,
                             amount: amount ?? ((Number.isFinite(quantity) && quantity > 0 ? quantity : 1) * (unitPrice ?? total ?? 0)),
@@ -1827,6 +1880,19 @@ export class InvoicesService {
         const invoiceNumber = (ai.invoiceNumber || current.invoiceNumber || fallback.invoiceNumber)
             .replace(/[^\w./-]/g, '-')
             .slice(0, 50);
+        const currentLineItems = Array.isArray((current as any).lineItems) ? (current as any).lineItems : [];
+        const aiLineItems = Array.isArray(ai.lineItems) ? ai.lineItems : [];
+        const usableAiLineItems = aiLineItems.filter((item) => !this.isImportedPlaceholderDescription(item.description));
+        const lineItems = usableAiLineItems.length
+            ? usableAiLineItems
+            : currentLineItems.length
+                ? currentLineItems
+                : aiLineItems.length
+                    ? aiLineItems.map((item, index) => ({
+                        ...item,
+                        description: item.description || `Invoice line ${index + 1} - description needs review`,
+                    }))
+                    : undefined;
 
         return {
             ...current,
@@ -1848,7 +1914,7 @@ export class InvoicesService {
             total,
             aiExtracted: true,
             aiConfidence: ai.confidence,
-            lineItems: ai.lineItems && ai.lineItems.length ? ai.lineItems : undefined,
+            lineItems,
             confidence: {
                 invoiceNumber: Boolean(invoiceNumber),
                 dates: Boolean(issueDate && dueDate),
@@ -1879,6 +1945,7 @@ export class InvoicesService {
             taxAmount: null,
             taxRate: null,
             total: 0,
+            lineItems: [],
             confidence: {
                 invoiceNumber: Boolean(invoiceNumber),
                 dates: false,

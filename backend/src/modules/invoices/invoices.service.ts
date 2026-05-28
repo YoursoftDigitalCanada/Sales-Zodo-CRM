@@ -51,6 +51,11 @@ interface AiCsvInvoice {
     companyName?: string | null;
     clientEmail?: string | null;
     clientPhone?: string | null;
+    clientAddress?: string | null;
+    clientCity?: string | null;
+    clientProvince?: string | null;
+    clientPostalCode?: string | null;
+    clientCountry?: string | null;
     issueDate?: string | null;
     dueDate?: string | null;
     currency?: string | null;
@@ -1055,6 +1060,15 @@ export class InvoicesService {
         return ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'INR', 'JPY', 'CNY'].includes(normalized) ? normalized : 'CAD';
     }
 
+    private csvClientAddress(row: CsvInvoiceRow) {
+        const address = this.csvText(row, ['clientAddress', 'companyAddress', 'customerAddress', 'billingAddress', 'billToAddress', 'address', 'streetAddress']);
+        const city = this.csvText(row, ['clientCity', 'companyCity', 'customerCity', 'billingCity', 'city']);
+        const province = this.csvText(row, ['clientProvince', 'clientState', 'companyProvince', 'companyState', 'billingProvince', 'billingState', 'province', 'state']);
+        const postalCode = this.csvText(row, ['clientPostalCode', 'clientZip', 'companyPostalCode', 'companyZip', 'billingPostalCode', 'billingZip', 'postalCode', 'zip']);
+        const country = this.csvText(row, ['clientCountry', 'companyCountry', 'billingCountry', 'country']);
+        return { address, city, province, postalCode, country };
+    }
+
     private csvInvoiceStatus(value: string) {
         const normalized = String(value || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
         const aliases: Record<string, string> = {
@@ -1122,20 +1136,39 @@ export class InvoicesService {
 
         const email = this.csvValidEmail(this.csvText(row, ['clientEmail', 'companyEmail', 'customerEmail', 'billToEmail', 'email']));
         const companyName = this.csvText(row, ['client', 'company', 'organization', 'customer', 'clientBusinessName', 'billTo', 'billToName'], 'Imported Invoice Customer');
+        const address = this.csvClientAddress(row);
+        const clientUpdateData = {
+            ...(address.address ? { streetAddress: address.address, organizationAddress: address.address } : {}),
+            ...(address.city ? { city: address.city } : {}),
+            ...(address.province ? { province: address.province } : {}),
+            ...(address.postalCode ? { postalCode: address.postalCode } : {}),
+            ...(address.country ? { country: address.country } : {}),
+            ...(this.csvText(row, ['taxId', 'gstHstNumber', 'businessTaxId']) ? { gstHstNumber: this.csvText(row, ['taxId', 'gstHstNumber', 'businessTaxId']) } : {}),
+        };
 
         if (email) {
             const existing = await prisma.client.findFirst({
                 where: { tenantId, primaryEmail: email },
                 select: { id: true },
             });
-            if (existing) return existing.id;
+            if (existing) {
+                if (Object.keys(clientUpdateData).length) {
+                    await prisma.client.update({ where: { id: existing.id }, data: clientUpdateData });
+                }
+                return existing.id;
+            }
         }
 
         const existingByName = await prisma.client.findFirst({
             where: { tenantId, companyName: { equals: companyName, mode: 'insensitive' } },
             select: { id: true },
         });
-        if (existingByName) return existingByName.id;
+        if (existingByName) {
+            if (Object.keys(clientUpdateData).length) {
+                await prisma.client.update({ where: { id: existingByName.id }, data: clientUpdateData });
+            }
+            return existingByName.id;
+        }
 
         const created = await prisma.client.create({
             data: {
@@ -1146,6 +1179,7 @@ export class InvoicesService {
                 primaryPhone: this.csvText(row, ['clientPhone', 'companyPhone', 'customerPhone', 'phone'], 'N/A'),
                 currency: this.csvCurrency(this.csvText(row, ['currency'])),
                 leadSource: 'Invoice Import',
+                ...clientUpdateData,
             },
             select: { id: true },
         });
@@ -1230,6 +1264,11 @@ export class InvoicesService {
                                     '    "companyName": string|null,',
                                     '    "clientEmail": string|null,',
                                     '    "clientPhone": string|null,',
+                                    '    "clientAddress": string|null,',
+                                    '    "clientCity": string|null,',
+                                    '    "clientProvince": string|null,',
+                                    '    "clientPostalCode": string|null,',
+                                    '    "clientCountry": string|null,',
                                     '    "issueDate": "YYYY-MM-DD"|null,',
                                     '    "dueDate": "YYYY-MM-DD"|null,',
                                     '    "currency": "CAD"|"USD"|"EUR"|"GBP"|"AUD"|"INR"|"JPY"|"CNY"|null,',
@@ -1271,6 +1310,11 @@ export class InvoicesService {
             client: this.cleanAiString(invoiceData.companyName, 255) || 'Imported Invoice Customer',
             clientemail: this.cleanAiString(invoiceData.clientEmail, 255) || '',
             clientphone: this.cleanAiString(invoiceData.clientPhone, 30) || 'N/A',
+            clientaddress: this.cleanAiString(invoiceData.clientAddress, 255) || '',
+            clientcity: this.cleanAiString(invoiceData.clientCity, 100) || '',
+            clientprovince: this.cleanAiString(invoiceData.clientProvince, 100) || '',
+            clientpostalcode: this.cleanAiString(invoiceData.clientPostalCode, 20) || '',
+            clientcountry: this.cleanAiString(invoiceData.clientCountry, 100) || '',
             currency: this.cleanAiString(invoiceData.currency, 10) || 'CAD',
         };
         const clientId = await this.findOrCreateImportClient(tenantId, row);
@@ -1547,6 +1591,42 @@ export class InvoicesService {
         return (fallback || 'Imported Invoice Customer').slice(0, 180);
     }
 
+    private extractClientAddressFromPdf(text: string) {
+        const lines = text
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .slice(0, 120);
+        const billToIndex = lines.findIndex((line) => /^(bill\s*to|customer|client|sold\s*to|invoice\s*to)\b/i.test(line));
+        const block = billToIndex >= 0 ? lines.slice(billToIndex + 1, billToIndex + 8) : [];
+        const addressLine = block.find((line) =>
+            /\d/.test(line)
+            && !/@/.test(line)
+            && !/\b(invoice|date|due|total|subtotal|tax|phone|tel|email)\b/i.test(line)
+        ) || null;
+        const cityProvincePostal = block.find((line) =>
+            /\b[A-Z]\d[A-Z][ -]?\d[A-Z]\d\b/i.test(line)
+            || /\b[A-Z]{2}\s+\d{5}(?:-\d{4})?\b/.test(line)
+        ) || '';
+        const canadianPostal = cityProvincePostal.match(/\b([A-Z]\d[A-Z][ -]?\d[A-Z]\d)\b/i)?.[1] || null;
+        const usPostal = cityProvincePostal.match(/\b(\d{5}(?:-\d{4})?)\b/)?.[1] || null;
+        const beforePostal = cityProvincePostal
+            .replace(canadianPostal || usPostal || '', '')
+            .replace(/[,]+/g, ' ')
+            .trim();
+        const pieces = beforePostal.split(/\s+/).filter(Boolean);
+        const province = pieces.length > 1 ? pieces[pieces.length - 1] : null;
+        const city = pieces.length > 1 ? pieces.slice(0, -1).join(' ') : beforePostal || null;
+
+        return {
+            address: addressLine,
+            city,
+            province,
+            postalCode: canadianPostal || usPostal,
+            country: /canada/i.test(block.join(' ')) ? 'Canada' : null,
+        };
+    }
+
     private extractInvoiceFieldsFromPdf(fileName: string, text: string) {
         const normalized = this.normalizePdfText(text);
         const compactFileName = path.basename(fileName, path.extname(fileName)).trim();
@@ -1582,6 +1662,7 @@ export class InvoicesService {
             /\b(?:phone|tel|mobile)?\s*[:#-]?\s*(\+?\d[\d\s().-]{7,}\d)\b/i,
         ]);
         const companyName = this.extractCompanyNameFromPdf(normalized);
+        const clientAddress = this.extractClientAddressFromPdf(normalized);
 
         const amount = total || subtotal || 0;
         return {
@@ -1591,6 +1672,11 @@ export class InvoicesService {
             currency,
             clientEmail,
             clientPhone,
+            clientAddress: clientAddress.address,
+            clientCity: clientAddress.city,
+            clientProvince: clientAddress.province,
+            clientPostalCode: clientAddress.postalCode,
+            clientCountry: clientAddress.country,
             companyName,
             subtotal,
             taxAmount,
@@ -1653,6 +1739,11 @@ export class InvoicesService {
                                     '  "companyName": string|null,',
                                     '  "clientEmail": string|null,',
                                     '  "clientPhone": string|null,',
+                                    '  "clientAddress": string|null,',
+                                    '  "clientCity": string|null,',
+                                    '  "clientProvince": string|null,',
+                                    '  "clientPostalCode": string|null,',
+                                    '  "clientCountry": string|null,',
                                     '  "subtotal": number|null,',
                                     '  "taxRate": number|null,',
                                     '  "taxAmount": number|null,',
@@ -1701,6 +1792,11 @@ export class InvoicesService {
                 currency: this.cleanAiString(parsed.currency, 3)?.toUpperCase(),
                 clientEmail: this.cleanAiString(parsed.clientEmail, 255),
                 clientPhone: this.cleanAiString(parsed.clientPhone, 40),
+                clientAddress: this.cleanAiString(parsed.clientAddress, 255),
+                clientCity: this.cleanAiString(parsed.clientCity, 100),
+                clientProvince: this.cleanAiString(parsed.clientProvince, 100),
+                clientPostalCode: this.cleanAiString(parsed.clientPostalCode, 20),
+                clientCountry: this.cleanAiString(parsed.clientCountry, 100),
                 companyName: this.cleanAiString(parsed.companyName, 180),
                 subtotal,
                 taxAmount,
@@ -1740,6 +1836,11 @@ export class InvoicesService {
             currency: ai.currency || current.currency || 'CAD',
             clientEmail: ai.clientEmail || current.clientEmail,
             clientPhone: ai.clientPhone || current.clientPhone,
+            clientAddress: ai.clientAddress || (current as any).clientAddress,
+            clientCity: ai.clientCity || (current as any).clientCity,
+            clientProvince: ai.clientProvince || (current as any).clientProvince,
+            clientPostalCode: ai.clientPostalCode || (current as any).clientPostalCode,
+            clientCountry: ai.clientCountry || (current as any).clientCountry,
             companyName: ai.companyName || current.companyName || fallback.companyName,
             subtotal: ai.subtotal ?? current.subtotal,
             taxAmount: ai.taxAmount ?? current.taxAmount,
@@ -1768,6 +1869,11 @@ export class InvoicesService {
             currency: 'CAD',
             clientEmail: null,
             clientPhone: null,
+            clientAddress: null,
+            clientCity: null,
+            clientProvince: null,
+            clientPostalCode: null,
+            clientCountry: null,
             companyName: 'Imported Invoice Customer',
             subtotal: null,
             taxAmount: null,
@@ -1790,11 +1896,23 @@ export class InvoicesService {
         fields: ReturnType<InvoicesService['extractInvoiceFieldsFromPdf']>,
     ) {
         const email = fields.clientEmail || `invoice-import-${crypto.randomUUID()}@import.local`;
+        const clientUpdateData = {
+            ...((fields as any).clientAddress ? { streetAddress: (fields as any).clientAddress, organizationAddress: (fields as any).clientAddress } : {}),
+            ...((fields as any).clientCity ? { city: (fields as any).clientCity } : {}),
+            ...((fields as any).clientProvince ? { province: (fields as any).clientProvince } : {}),
+            ...((fields as any).clientPostalCode ? { postalCode: (fields as any).clientPostalCode } : {}),
+            ...((fields as any).clientCountry ? { country: (fields as any).clientCountry } : {}),
+        };
         const existing = await prisma.client.findFirst({
             where: { tenantId, primaryEmail: email },
             select: { id: true },
         });
-        if (existing) return existing.id;
+        if (existing) {
+            if (Object.keys(clientUpdateData).length) {
+                await prisma.client.update({ where: { id: existing.id }, data: clientUpdateData });
+            }
+            return existing.id;
+        }
 
         const created = await prisma.client.create({
             data: {
@@ -1808,6 +1926,7 @@ export class InvoicesService {
                 internalNotes: fields.clientEmail
                     ? 'Created from imported invoice PDF.'
                     : 'Created from imported invoice PDF. Email was not detected; replace placeholder import.local email after review.',
+                ...clientUpdateData,
             },
             select: { id: true },
         });
@@ -1874,15 +1993,27 @@ export class InvoicesService {
                     ? this.extractInvoiceFieldsFromPdf(file.originalname, text)
                     : this.fallbackInvoiceFieldsFromPdfFile(file.originalname, reviewReasons[0] || 'PDF needs review');
                 if (!extracted.total || extracted.total <= 0) reviewReasons.push('Could not detect invoice total.');
+                if (!(extracted as any).confidence?.dates) reviewReasons.push('Could not confidently detect invoice date.');
 
                 const shouldUseAi = Boolean(
                     config.ai.openaiApiKey
-                    && (!extracted.total || extracted.total <= 0 || !extracted.clientEmail || extracted.companyName === 'Imported Invoice Customer'),
+                    && (
+                        !extracted.total
+                        || extracted.total <= 0
+                        || !extracted.clientEmail
+                        || !(extracted as any).clientAddress
+                        || !(extracted as any).confidence?.dates
+                        || extracted.companyName === 'Imported Invoice Customer'
+                    ),
                 );
                 const aiFields = shouldUseAi ? await this.extractInvoiceFieldsWithAi(file, text) : null;
                 const finalExtracted = this.mergeAiInvoiceFields(extracted, aiFields, file.originalname);
                 if (aiFields?.total && aiFields.total > 0) {
                     const index = reviewReasons.indexOf('Could not detect invoice total.');
+                    if (index >= 0) reviewReasons.splice(index, 1);
+                }
+                if (aiFields?.issueDate) {
+                    const index = reviewReasons.indexOf('Could not confidently detect invoice date.');
                     if (index >= 0) reviewReasons.splice(index, 1);
                 }
                 if (aiFields) {

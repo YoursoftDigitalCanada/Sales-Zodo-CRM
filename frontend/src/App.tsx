@@ -311,7 +311,7 @@ const AppRoutes = () => {
     [location.pathname],
   );
   const storedTenantName = getStoredTenant()?.name?.trim();
-  const companyName = storedTenantName || branding?.companyName?.trim() || "Sales CRM";
+  const companyName = branding?.companyName?.trim() || storedTenantName || "Sales CRM";
   const companyLogoUrl = branding?.logoUrl || null;
 
   useEffect(() => {

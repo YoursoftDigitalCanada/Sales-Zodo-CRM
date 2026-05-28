@@ -656,7 +656,7 @@ export function Sidebar({
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(() => readStoredOwnerOrAdmin());
   const [runtimeNavigationMeta, setRuntimeNavigationMeta] = useState<SidebarRuntimeMeta>({});
   const storedTenantName = getStoredTenant()?.name?.trim();
-  const brandName = storedTenantName || branding?.companyName?.trim() || "Sales CRM";
+  const brandName = branding?.companyName?.trim() || storedTenantName || "Sales CRM";
   const brandLogoUrl = branding?.logoUrl || null;
   const brandInitials = getBrandInitials(brandName);
 

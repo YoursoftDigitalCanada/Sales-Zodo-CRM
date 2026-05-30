@@ -15,10 +15,11 @@ const invoicePaymentMethodValues = [
 ] as const;
 
 export const InvoiceAddressSchema = z.object({
-  address: z.string().max(255).optional().nullable(),
+  address: z.string().max(500).optional().nullable(),
   city: z.string().max(100).optional().nullable(),
   province: z.string().max(100).optional().nullable(),
   postalCode: z.string().max(20).optional().nullable(),
+  country: z.string().max(100).optional().nullable(),
 });
 
 export const InvoiceItemSchema = z.object({
@@ -44,7 +45,7 @@ export const CanonicalInvoiceItemSchema = z.object({
 });
 
 export const CreateInvoiceSchema = z.object({
-  invoiceNumber: z.string().min(1).max(50),
+  invoiceNumber: z.string().min(1).max(100),
   invoiceDate: dateTimeString.optional(),
   issueDate: dateTimeString.optional(),
   paymentTerms: z.string().max(50).optional().nullable(),
@@ -62,7 +63,7 @@ export const CreateInvoiceSchema = z.object({
     .default([]),
   businessName: z.string().max(255).optional().nullable(),
   businessEmail: z.string().max(255).optional().nullable(),
-  businessPhone: z.string().max(30).optional().nullable(),
+  businessPhone: z.string().max(50).optional().nullable(),
   businessAddress: InvoiceAddressSchema.optional(),
   businessGstHstNumber: z.string().max(50).optional().nullable(),
   clientId: z.string().uuid().optional().nullable(),
@@ -72,7 +73,7 @@ export const CreateInvoiceSchema = z.object({
   projectId: z.string().uuid().optional().nullable(),
   clientBusinessName: z.string().max(255).optional().nullable(),
   clientEmail: z.string().max(255).optional().nullable(),
-  clientPhone: z.string().max(30).optional().nullable(),
+  clientPhone: z.string().max(50).optional().nullable(),
   clientAddress: InvoiceAddressSchema.optional(),
   clientGstHstNumber: z.string().max(50).optional().nullable(),
   discountAmount: z.number().min(0).optional().nullable(),

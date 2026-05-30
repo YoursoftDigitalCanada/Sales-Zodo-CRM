@@ -553,6 +553,7 @@ export default function SettingsPage() {
         phone: company.phone,
         taxId: company.taxId,
         address: company.address,
+        invoiceDefaultFooter: company.invoiceDefaultFooter,
       });
       setCompany(next);
       updateBranding(next);
@@ -1138,6 +1139,19 @@ export default function SettingsPage() {
                           iconClassName="text-[#64748B]"
                         />
                       </Field>
+                      <div className="lg:col-span-2">
+                        <Field
+                          label="Default invoice footer / payment instructions"
+                          hint="Saved per tenant and prefilled on every new invoice. Use this for bank details, e-transfer instructions, late fees, conditions, or any footer note."
+                        >
+                          <textarea
+                            className={`${fieldClass} min-h-[140px] resize-y leading-6`}
+                            value={company.invoiceDefaultFooter || ""}
+                            onChange={(event) => setCompany({ ...company, invoiceDefaultFooter: event.target.value })}
+                            placeholder="Example: Please send e-transfer payments to billing@example.com. Bank transfer details: Transit, institution, and account number. Late payments may be subject to fees."
+                          />
+                        </Field>
+                      </div>
                     </div>
                   </div>
                   <div className="mt-6 flex justify-end">

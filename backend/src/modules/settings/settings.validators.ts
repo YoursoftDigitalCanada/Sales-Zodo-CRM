@@ -50,6 +50,7 @@ export const updateCompanySchema = z.object({
     phone: z.string().max(50).optional().or(z.literal('')),
     taxId: z.string().max(100).optional().or(z.literal('')),
     address: z.string().max(500).optional().or(z.literal('')),
+    invoiceDefaultFooter: z.string().max(5000).optional().or(z.literal('')),
   }),
 });
 

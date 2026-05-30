@@ -159,6 +159,8 @@ const renderInvoiceHtml = (invoice: PrintableInvoiceDocument) => {
       .extra-card { border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 16px; padding: 18px; min-height: 120px; }
       .extra-title { margin: 0 0 12px; font-size: 14px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.08em; }
       .extra-body { color: #475569; font-size: 14px; line-height: 1.6; }
+      .payment-instructions { margin-top: 24px; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 12px; background: #f8fafc; padding: 20px 24px; }
+      .payment-instructions .extra-title { margin-bottom: 10px; }
       @page { size: auto; margin: 12mm; }
       @media print {
         body { padding: 0; }
@@ -250,7 +252,7 @@ const renderInvoiceHtml = (invoice: PrintableInvoiceDocument) => {
         </div>
 
         ${
-          invoice.notes || invoice.terms
+          invoice.notes
             ? `
               <div class="extra-grid">
                 ${
@@ -263,16 +265,16 @@ const renderInvoiceHtml = (invoice: PrintableInvoiceDocument) => {
                     `
                     : ""
                 }
-                ${
-                  invoice.terms
-                    ? `
-                      <div class="extra-card">
-                        <h2 class="extra-title">Terms & Conditions</h2>
-                        <div class="extra-body">${toMultilineHtml(invoice.terms)}</div>
-                      </div>
-                    `
-                    : ""
-                }
+              </div>
+            `
+            : ""
+        }
+        ${
+          invoice.terms
+            ? `
+              <div class="payment-instructions">
+                <h2 class="extra-title">Payment Instructions / Terms</h2>
+                <div class="extra-body">${toMultilineHtml(invoice.terms)}</div>
               </div>
             `
             : ""

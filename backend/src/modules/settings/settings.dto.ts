@@ -32,6 +32,7 @@ export interface CompanyProfileDto {
   phone: string;
   taxId: string;
   address: string;
+  invoiceDefaultFooter: string;
   logoUrl: string | null;
 }
 
@@ -290,6 +291,7 @@ export function toCompanyProfileDto(record: WorkspaceSettingsRecord): CompanyPro
     phone: String(integrations.companyPhone ?? ''),
     taxId: String(integrations.taxId ?? ''),
     address: String(integrations.companyAddress ?? ''),
+    invoiceDefaultFooter: String(integrations.invoiceDefaultFooter ?? ''),
     logoUrl: record.tenant?.logo || null,
   };
 }

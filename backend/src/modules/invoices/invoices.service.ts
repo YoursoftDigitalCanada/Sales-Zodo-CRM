@@ -23,6 +23,7 @@ interface CompanyProfile {
     email?: string;
     phone?: string;
     address?: string;
+    invoiceDefaultFooter?: string;
     logoUrl?: string | null;
 }
 
@@ -192,6 +193,7 @@ export class InvoicesService {
             email: String(integrations.companyEmail ?? '') || undefined,
             phone: String(integrations.companyPhone ?? '') || undefined,
             address: String(integrations.companyAddress ?? '') || undefined,
+            invoiceDefaultFooter: String(integrations.invoiceDefaultFooter ?? '') || undefined,
             logoUrl: settings?.tenant?.logo || null,
         };
     }
@@ -719,6 +721,7 @@ export class InvoicesService {
         const clientName = client?.clientName || 'Client';
         const currency = (invoice as any).currency || 'CAD';
         const company = await this.getCompanyProfile(tenantId);
+        const paymentInstructions = String((invoice as any).terms || company.invoiceDefaultFooter || '').trim();
         const logoDataUrl = await this.loadLogoDataUrl(company.logoUrl);
         const logoFormat = this.getPdfImageFormat(logoDataUrl);
         const companyTextX = logoDataUrl && logoFormat ? pageWidth - margin - 26 : pageWidth - margin;
@@ -863,17 +866,20 @@ export class InvoicesService {
             notesY += 12 + (noteLines.length * 4);
         }
 
-        if ((invoice as any).terms) {
+        if (paymentInstructions) {
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(10);
             doc.setTextColor(15, 23, 42);
-            doc.text('Terms & Conditions', margin, notesY);
+            doc.text('Payment Instructions / Terms', margin, notesY);
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(9);
             doc.setTextColor(71, 85, 105);
-            const termsLines = doc.splitTextToSize(String((invoice as any).terms), pageWidth - (margin * 2));
-            doc.text(termsLines, margin, notesY + 6);
-            notesY += 12 + (termsLines.length * 4);
+            const termsLines = doc.splitTextToSize(paymentInstructions, pageWidth - (margin * 2) - 10);
+            const boxHeight = Math.max(24, 12 + (termsLines.length * 4.5));
+            doc.setFillColor(248, 250, 252);
+            doc.roundedRect(margin, notesY + 4, pageWidth - (margin * 2), boxHeight, 2, 2, 'F');
+            doc.text(termsLines, margin + 5, notesY + 13);
+            notesY += boxHeight + 12;
         }
 
         doc.setDrawColor(226, 232, 240);

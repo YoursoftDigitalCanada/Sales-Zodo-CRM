@@ -280,6 +280,9 @@ const invoiceSchema = z.object({
 
 type InvoiceFormData = z.infer<typeof invoiceSchema>;
 
+const DEFAULT_INVOICE_TERMS =
+  "Payment is due within the specified terms. Late payments may be subject to applicable fees. Please contact us if you have any questions about this invoice.";
+
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
@@ -1189,19 +1192,19 @@ const InvoicePreview = ({
         <p className="text-sm text-slate-200 italic">{numberToWords(totals.total)}</p>
       </div>
 
-      {/* Notes & Terms */}
+      {/* Notes & Payment Instructions */}
       {(data.notes || data.terms) && (
-        <div className="mt-6 grid grid-cols-2 gap-6">
+        <div className="mt-6 space-y-4">
           {data.notes && (
             <div>
               <p className="text-xs text-[#94A3B8] uppercase mb-1">Notes</p>
-              <p className="text-sm text-[#475569]">{data.notes}</p>
+              <p className="whitespace-pre-line text-sm text-[#475569]">{data.notes}</p>
             </div>
           )}
           {data.terms && (
-            <div>
-              <p className="text-xs text-[#94A3B8] uppercase mb-1">Terms & Conditions</p>
-              <p className="text-sm text-[#475569]">{data.terms}</p>
+            <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4">
+              <p className="text-xs text-[#94A3B8] uppercase mb-2">Payment Instructions / Terms</p>
+              <p className="whitespace-pre-line text-sm leading-6 text-[#475569]">{data.terms}</p>
             </div>
           )}
         </div>
@@ -1300,7 +1303,7 @@ const CreateInvoicePage = () => {
         },
       ],
       notes: "",
-      terms: "Payment is due within the specified terms. A deposit may be required before work begins. Late payments may be subject to interest charges of 1.5% per month. Any additional work beyond the original scope will be quoted separately.",
+      terms: DEFAULT_INVOICE_TERMS,
       discount: 0,
       discountType: "fixed",
       sendReminder: true,
@@ -1408,6 +1411,12 @@ const CreateInvoicePage = () => {
     setValue("billedBy.postalCode", parsedAddress.postalCode || currentValues.postalCode || "");
     setValue("billedBy.country", parsedAddress.country || currentValues.country || "Canada");
     setValue("billedBy.gstNumber", companyProfile.taxId || currentValues.gstNumber || "");
+
+    const tenantInvoiceFooter = String(companyProfile.invoiceDefaultFooter || "").trim();
+    const currentTerms = String(getValues("terms") || "").trim();
+    if (tenantInvoiceFooter && (!currentTerms || currentTerms === DEFAULT_INVOICE_TERMS)) {
+      setValue("terms", tenantInvoiceFooter);
+    }
   }, [companyProfile, getValues, isEditMode, setValue]);
 
   useEffect(() => {
@@ -2393,11 +2402,11 @@ const CreateInvoicePage = () => {
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs text-[#94A3B8]">Terms & Conditions</Label>
+                          <Label className="text-xs text-[#94A3B8]">Payment Instructions / Terms</Label>
                           <Textarea
                             {...register("terms")}
-                            placeholder="Payment terms, late fees, etc..."
-                            rows={3}
+                            placeholder="Bank details, e-transfer email, payment conditions, late fees, or other invoice footer text..."
+                            rows={5}
                             className="rounded-md border-[rgba(15,23,42,0.06)] text-sm resize-none"
                           />
                         </div>

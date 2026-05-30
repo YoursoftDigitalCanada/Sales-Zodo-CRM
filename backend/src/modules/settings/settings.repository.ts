@@ -145,6 +145,9 @@ export class SettingsRepository {
       if (data.company.taxId !== undefined) {
         nextIntegrations.taxId = data.company.taxId;
       }
+      if (data.company.invoiceDefaultFooter !== undefined) {
+        nextIntegrations.invoiceDefaultFooter = data.company.invoiceDefaultFooter;
+      }
     }
 
     if (data.security) {

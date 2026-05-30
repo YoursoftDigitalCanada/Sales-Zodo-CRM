@@ -63,6 +63,7 @@ function normalizeBranding(value: Partial<CompanyProfile> | null | undefined): C
     phone: String(value.phone || "").trim(),
     taxId: String(value.taxId || "").trim(),
     address: String(value.address || "").trim(),
+    invoiceDefaultFooter: String(value.invoiceDefaultFooter || "").trim(),
     logoUrl: normalizeLogoUrl(value.logoUrl),
   };
 

@@ -25,6 +25,7 @@ export interface CompanyProfile {
   phone: string;
   taxId: string;
   address: string;
+  invoiceDefaultFooter: string;
   logoUrl: string | null;
 }
 

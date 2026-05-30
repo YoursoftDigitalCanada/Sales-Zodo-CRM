@@ -283,6 +283,8 @@ type InvoiceFormData = z.infer<typeof invoiceSchema>;
 const DEFAULT_INVOICE_TERMS =
   "Payment is due within the specified terms. Late payments may be subject to applicable fees. Please contact us if you have any questions about this invoice.";
 
+type AutoSaveState = "idle" | "waiting" | "saving" | "saved" | "error";
+
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
@@ -391,6 +393,29 @@ const parseCompanyAddress = (value: unknown): ParsedCompanyAddress => {
   };
 };
 
+const getSelectedInvoiceAddress = (details: { formattedAddress?: string | null; addressLine1?: string | null }, fallback?: string) =>
+  readText(details.formattedAddress) || readText(details.addressLine1) || readText(fallback);
+
+const buildInvoiceAddressLines = (party: InvoiceFormData["billedBy"] | InvoiceFormData["billedTo"]) => {
+  const address = readText(party.address);
+  const locality = [party.city, party.province, party.postalCode].map(readText).filter(Boolean).join(", ");
+  const country = readText(party.country);
+  const normalizedAddress = address.toLowerCase();
+  const hasLocalityInAddress = Boolean(locality) && locality.toLowerCase().split(/[,\s]+/).filter(Boolean).every((part) => normalizedAddress.includes(part));
+  const hasCountryInAddress = Boolean(country) && normalizedAddress.includes(country.toLowerCase());
+
+  return [
+    address,
+    locality && !hasLocalityInAddress ? locality : "",
+    country && !hasCountryInAddress ? country : "",
+  ].filter(Boolean);
+};
+
+const renderInvoiceAddressLines = (party: InvoiceFormData["billedBy"] | InvoiceFormData["billedTo"]) =>
+  buildInvoiceAddressLines(party).map((line, index) => (
+    <p key={`${line}-${index}`} className="text-sm text-[#475569]">{line}</p>
+  ));
+
 const getProjectInvoice = (project: ProjectEntity, invoiceId?: string | null) => {
   if (!Array.isArray(project.invoices) || project.invoices.length === 0) return null;
   const invoices = project.invoices as Array<Record<string, unknown>>;
@@ -409,6 +434,58 @@ const findMatchingClient = (clients: Client[], billedTo: InvoiceFormData["billed
     if (email && client.email.trim().toLowerCase() === email) return true;
     return businessName ? client.businessName.trim().toLowerCase() === businessName : false;
   }) || null;
+};
+
+const hasValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+const canAutoSaveInvoiceDraft = (data: InvoiceFormData) =>
+  Boolean(
+    readText(data.invoiceNumber)
+    && readText(data.invoiceDate)
+    && readText(data.dueDate)
+    && readText(data.billedTo.businessName)
+    && hasValidEmail(readText(data.billedTo.email)),
+  );
+
+const normalizeAutoSaveInvoiceData = (data: InvoiceFormData): InvoiceFormData => {
+  const normalizedItems = (data.items || []).map((item) => ({
+    ...item,
+    name: readText(item.name) || "Draft invoice item",
+    description: readText(item.description),
+    quantity: Number(item.quantity) > 0 ? Number(item.quantity) : 1,
+    rate: Number(item.rate) >= 0 ? Number(item.rate) : 0,
+    amount: Number(item.amount) >= 0 ? Number(item.amount) : 0,
+    total: Number(item.total) >= 0 ? Number(item.total) : 0,
+  }));
+
+  return {
+    ...data,
+    billedTo: {
+      ...data.billedTo,
+      businessName: readText(data.billedTo.businessName),
+      email: readText(data.billedTo.email),
+      phone: readText(data.billedTo.phone),
+      address: readText(data.billedTo.address),
+      city: readText(data.billedTo.city),
+      province: readText(data.billedTo.province) || "ON",
+      postalCode: readText(data.billedTo.postalCode),
+      country: readText(data.billedTo.country) || "Canada",
+      gstNumber: readText(data.billedTo.gstNumber),
+    },
+    items: normalizedItems.length > 0 ? normalizedItems : [{
+      id: crypto.randomUUID(),
+      name: "Draft invoice item",
+      description: "",
+      quantity: 1,
+      rate: 0,
+      taxType: "HST",
+      amount: 0,
+      gst: 0,
+      pst: 0,
+      hst: 0,
+      total: 0,
+    }],
+  };
 };
 
 const mapInvoiceItemsToFormItems = (
@@ -681,7 +758,7 @@ const AddressBlock = ({
                 disabled={disabled}
                 className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
                 onSelectAddress={(details) => {
-                  field.onChange(details.addressLine1 || details.formattedAddress || field.value || "");
+                  field.onChange(getSelectedInvoiceAddress(details, field.value));
                   setValue(`${prefix}.city`, details.city || "", { shouldDirty: true });
                   setValue(`${prefix}.province`, getProvinceCode(details.state), { shouldDirty: true });
                   setValue(`${prefix}.postalCode`, details.postalCode || "", { shouldDirty: true });
@@ -1099,8 +1176,7 @@ const InvoicePreview = ({
         <div>
           <p className="text-xs text-[#94A3B8] uppercase mb-2">From</p>
           <p className="font-semibold text-[#0F172A]">{data.billedBy.businessName}</p>
-          <p className="text-sm text-[#475569]">{data.billedBy.address}</p>
-          <p className="text-sm text-[#475569]">{data.billedBy.city}, {data.billedBy.province} {data.billedBy.postalCode}</p>
+          {renderInvoiceAddressLines(data.billedBy)}
           <p className="text-sm text-[#475569]">{data.billedBy.email}</p>
           {data.billedBy.gstNumber && (
             <p className="text-xs text-[#94A3B8] mt-1">GST/HST: {data.billedBy.gstNumber}</p>
@@ -1109,8 +1185,7 @@ const InvoicePreview = ({
         <div>
           <p className="text-xs text-[#94A3B8] uppercase mb-2">Bill To</p>
           <p className="font-semibold text-[#0F172A]">{data.billedTo.businessName}</p>
-          <p className="text-sm text-[#475569]">{data.billedTo.address}</p>
-          <p className="text-sm text-[#475569]">{data.billedTo.city}, {data.billedTo.province} {data.billedTo.postalCode}</p>
+          {renderInvoiceAddressLines(data.billedTo)}
           <p className="text-sm text-[#475569]">{data.billedTo.email}</p>
           {data.billedTo.gstNumber && (
             <p className="text-xs text-[#94A3B8] mt-1">GST/HST: {data.billedTo.gstNumber}</p>
@@ -1247,7 +1322,13 @@ const CreateInvoicePage = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [linkedProjectName, setLinkedProjectName] = useState("");
   const [linkedInvoiceId, setLinkedInvoiceId] = useState<string | null>(requestedInvoiceId);
+  const [autoSaveState, setAutoSaveState] = useState<AutoSaveState>("idle");
+  const [lastAutoSavedAt, setLastAutoSavedAt] = useState<Date | null>(null);
   const selectedClientIdRef = React.useRef<string | null>(null);
+  const autoSaveTimerRef = React.useRef<number | null>(null);
+  const autoSaveInFlightRef = React.useRef(false);
+  const lastAutoSaveSignatureRef = React.useRef("");
+  const linkedInvoiceIdRef = React.useRef<string | null>(requestedInvoiceId);
 
   // Form
   const methods = useForm<InvoiceFormData>({
@@ -1376,6 +1457,10 @@ const CreateInvoicePage = () => {
   }, [items, discount, discountType, taxRates]);
 
   // Effects
+  useEffect(() => {
+    linkedInvoiceIdRef.current = linkedInvoiceId;
+  }, [linkedInvoiceId]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -1730,6 +1815,7 @@ const CreateInvoicePage = () => {
     setValue("billedTo.city", client.city);
     setValue("billedTo.province", client.province);
     setValue("billedTo.postalCode", client.postalCode);
+    setValue("billedTo.country", client.country || "Canada");
     setValue("billedTo.gstNumber", client.gstNumber || "");
     setValue("clientProvince", client.province);
   };
@@ -1752,6 +1838,7 @@ const CreateInvoicePage = () => {
         city: data.billedBy.city || null,
         province: data.billedBy.province || null,
         postalCode: data.billedBy.postalCode || null,
+        country: data.billedBy.country || null,
       },
       businessGstHstNumber: data.billedBy.gstNumber || null,
       clientId,
@@ -1767,6 +1854,7 @@ const CreateInvoicePage = () => {
         city: data.billedTo.city || null,
         province: data.billedTo.province || null,
         postalCode: data.billedTo.postalCode || null,
+        country: data.billedTo.country || null,
       },
       clientGstHstNumber: data.billedTo.gstNumber || null,
       items: data.items.map((item) => ({
@@ -1781,6 +1869,133 @@ const CreateInvoicePage = () => {
       terms: data.terms || null,
     };
   };
+
+  const saveInvoiceDraftSilently = async (rawData: InvoiceFormData) => {
+    if (isProjectReviewMode || isSaving || autoSaveInFlightRef.current || !canAutoSaveInvoiceDraft(rawData)) {
+      if (!canAutoSaveInvoiceDraft(rawData)) {
+        setAutoSaveState("waiting");
+      }
+      return;
+    }
+
+    const data = normalizeAutoSaveInvoiceData(rawData);
+    const currentInvoiceId = linkedInvoiceIdRef.current;
+    const signature = JSON.stringify({
+      linkedInvoiceId: currentInvoiceId,
+      invoiceNumber: data.invoiceNumber,
+      invoiceDate: data.invoiceDate,
+      dueDate: data.dueDate,
+      currency: data.currency,
+      billedBy: data.billedBy,
+      billedTo: data.billedTo,
+      items: data.items,
+      notes: data.notes,
+      terms: data.terms,
+      discount: data.discount,
+      discountType: data.discountType,
+      taxRates,
+    });
+
+    if (signature === lastAutoSaveSignatureRef.current) {
+      return;
+    }
+
+    autoSaveInFlightRef.current = true;
+    setAutoSaveState("saving");
+
+    try {
+      const matchedClient = selectedClientIdRef.current ? null : findMatchingClient(clients, data.billedTo);
+      let resolvedClientId = selectedClientIdRef.current || (matchedClient ? String(matchedClient.id) : null);
+
+      if (!resolvedClientId) {
+        const createdOrganization = await createClient({
+          clientName: data.billedTo.businessName.trim(),
+          companyName: data.billedTo.businessName.trim(),
+          clientType: "BUSINESS",
+          primaryEmail: data.billedTo.email.trim(),
+          primaryPhone: data.billedTo.phone.trim() || "N/A",
+          status: "ACTIVE",
+          lifecycleStage: "PROSPECT",
+          currency: data.currency,
+          streetAddress: data.billedTo.address || null,
+          organizationAddress: data.billedTo.address || null,
+          city: data.billedTo.city || null,
+          province: data.billedTo.province || null,
+          postalCode: data.billedTo.postalCode || null,
+          country: data.billedTo.country || "Canada",
+          gstHstNumber: data.billedTo.gstNumber || null,
+          leadSource: linkedLeadId ? "Invoice from Lead" : "Invoice draft",
+        });
+
+        resolvedClientId = readText(createdOrganization.id);
+        if (resolvedClientId) {
+          setClients((current) => [
+            {
+              id: resolvedClientId,
+              businessName: data.billedTo.businessName.trim(),
+              email: data.billedTo.email.trim(),
+              phone: data.billedTo.phone.trim() || "N/A",
+              address: data.billedTo.address,
+              city: data.billedTo.city,
+              province: data.billedTo.province,
+              postalCode: data.billedTo.postalCode,
+              country: data.billedTo.country || "Canada",
+              gstNumber: data.billedTo.gstNumber,
+            },
+            ...current,
+          ]);
+        }
+      }
+
+      if (!resolvedClientId) {
+        throw new Error("Organization could not be resolved for invoice draft");
+      }
+
+      selectedClientIdRef.current = resolvedClientId;
+      const apiPayload = buildInvoicePayload(data, resolvedClientId);
+      const savedInvoice = currentInvoiceId
+        ? await updateInvoice(currentInvoiceId, apiPayload)
+        : await createInvoice(apiPayload);
+      const savedInvoiceId = readText(savedInvoice?.id) || currentInvoiceId;
+
+      if (savedInvoiceId && !currentInvoiceId) {
+        linkedInvoiceIdRef.current = savedInvoiceId;
+        setLinkedInvoiceId(savedInvoiceId);
+      }
+
+      lastAutoSaveSignatureRef.current = signature;
+      setLastAutoSavedAt(new Date());
+      setAutoSaveState("saved");
+    } catch (error) {
+      console.error("Invoice autosave failed:", error);
+      setAutoSaveState("error");
+    } finally {
+      autoSaveInFlightRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (isProjectReviewMode) {
+      return undefined;
+    }
+
+    const subscription = watch((value) => {
+      if (autoSaveTimerRef.current) {
+        window.clearTimeout(autoSaveTimerRef.current);
+      }
+
+      autoSaveTimerRef.current = window.setTimeout(() => {
+        void saveInvoiceDraftSilently(value as InvoiceFormData);
+      }, 2500);
+    });
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        window.clearTimeout(autoSaveTimerRef.current);
+      }
+      subscription.unsubscribe();
+    };
+  }, [isProjectReviewMode, saveInvoiceDraftSilently, watch]);
 
   const persistInvoice = async (data: InvoiceFormData, options?: { send?: boolean }) => {
     setIsSaving(true);
@@ -1832,10 +2047,11 @@ const CreateInvoicePage = () => {
       selectedClientIdRef.current = resolvedClientId;
 
       const apiPayload = buildInvoicePayload(data, resolvedClientId);
-      const savedInvoice = linkedInvoiceId
-        ? await updateInvoice(linkedInvoiceId, apiPayload)
+      const currentInvoiceId = linkedInvoiceIdRef.current;
+      const savedInvoice = currentInvoiceId
+        ? await updateInvoice(currentInvoiceId, apiPayload)
         : await createInvoice(apiPayload);
-      const savedInvoiceId = readText(savedInvoice?.id) || linkedInvoiceId;
+      const savedInvoiceId = readText(savedInvoice?.id) || currentInvoiceId;
 
       if (options?.send && savedInvoiceId) {
         await sendInvoice(savedInvoiceId, data.billedTo.email || undefined);
@@ -1991,6 +2207,23 @@ const CreateInvoicePage = () => {
             </div>
 
             <div className="flex items-center gap-3">
+              {!isProjectReviewMode && (
+                <div className="hidden items-center gap-2 rounded-md border border-[rgba(15,23,42,0.06)] bg-white/70 px-3 py-2 text-xs text-[#64748B] lg:flex">
+                  {autoSaveState === "saving" ? <Loader2 size={14} className="animate-spin text-[#0891B2]" /> : null}
+                  {autoSaveState === "saved" ? <CheckCircle2 size={14} className="text-emerald-600" /> : null}
+                  {autoSaveState === "error" ? <AlertCircle size={14} className="text-red-500" /> : null}
+                  {autoSaveState === "waiting" || autoSaveState === "idle" ? <Clock size={14} className="text-[#94A3B8]" /> : null}
+                  <span>
+                    {autoSaveState === "saving"
+                      ? "Saving draft..."
+                      : autoSaveState === "saved"
+                        ? `Draft saved${lastAutoSavedAt ? ` ${lastAutoSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`
+                        : autoSaveState === "error"
+                          ? "Autosave failed"
+                          : "Autosaves after customer name and email"}
+                  </span>
+                </div>
+              )}
               {/* Preview Toggle */}
               <motion.button
                 whileHover={{ scale: 1.05 }}

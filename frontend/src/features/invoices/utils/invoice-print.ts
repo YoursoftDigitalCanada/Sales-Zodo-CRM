@@ -75,10 +75,14 @@ const toMultilineHtml = (value?: string) =>
 
 const buildPartyLines = (party: PrintableInvoiceParty) => {
   const locality = [party.city, party.province, party.postalCode].filter(Boolean).join(", ");
+  const address = String(party.address || "");
+  const normalizedAddress = address.toLowerCase();
+  const hasLocalityInAddress = Boolean(locality) && locality.toLowerCase().split(/[,\s]+/).filter(Boolean).every((part) => normalizedAddress.includes(part));
+  const hasCountryInAddress = Boolean(party.country) && normalizedAddress.includes(String(party.country).toLowerCase());
   return [
-    party.address,
-    locality,
-    party.country,
+    address,
+    hasLocalityInAddress ? undefined : locality,
+    hasCountryInAddress ? undefined : party.country,
     party.email,
     party.phone,
     party.gstNumber ? `GST/HST: ${party.gstNumber}` : undefined,

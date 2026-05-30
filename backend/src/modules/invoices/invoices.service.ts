@@ -84,7 +84,13 @@ export class InvoicesService {
     private static readonly MAX_TOTAL_ROOF_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 
     private joinAddress(parts: Array<string | null | undefined>) {
-        return parts.map((part) => String(part || '').trim()).filter(Boolean).join(', ');
+        const cleanParts = parts.map((part) => String(part || '').trim()).filter(Boolean);
+        const firstPart = cleanParts[0]?.toLowerCase() || '';
+        const dedupedParts = cleanParts.filter((part, index) => {
+            if (index === 0) return true;
+            return !firstPart.includes(part.toLowerCase());
+        });
+        return dedupedParts.join(', ');
     }
 
     private formatCurrency(value: number | string, currency = 'CAD') {

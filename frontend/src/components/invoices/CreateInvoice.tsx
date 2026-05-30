@@ -101,7 +101,8 @@ import {
 import { cn } from "@/lib/utils";
 import { createInvoice, downloadInvoicePdf, getInvoiceById, sendInvoice, updateInvoice } from "@/services/invoiceService";
 import { printInvoiceDocument } from "@/features/invoices/utils/invoice-print";
-import { getClients } from "@/features/clients/services/clients-service";
+import { createClient, getClients } from "@/features/clients/services/clients-service";
+import { getLeadById, type LeadEntity } from "@/features/leads";
 import { getProjectById, type ProjectEntity } from "@/features/projects/services/projects-service";
 import { getCompanyProfile, type CompanyProfile } from "@/features/settings/services/settings-service";
 import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
@@ -567,7 +568,7 @@ const AddressBlock = ({
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="rounded-md text-xs" disabled={disabled}>
                 <Search size={12} className="mr-1" />
-                Select Client
+                Select Organization
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80 rounded-md p-2">
@@ -576,7 +577,7 @@ const AddressBlock = ({
                 <Input
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search clients..."
+                  placeholder="Search organizations..."
                   className="h-8 pl-7 text-xs rounded-md"
                 />
               </div>
@@ -602,13 +603,13 @@ const AddressBlock = ({
                   </DropdownMenuItem>
                 ))}
                 {filteredClients.length === 0 && (
-                  <p className="text-xs text-[#475569] text-center py-4">No clients found</p>
+                  <p className="text-xs text-[#475569] text-center py-4">No organizations found</p>
                 )}
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="rounded-md text-[#0891B2]">
                 <PlusCircle size={14} className="mr-2" />
-                Add New Client
+                Add New Organization
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1224,7 +1225,8 @@ const CreateInvoicePage = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { branding: workspaceBranding } = useWorkspaceBranding();
-  const linkedProjectId = searchParams.get("projectId");
+  const linkedProjectId = searchParams.get("dealId") || searchParams.get("projectId");
+  const linkedLeadId = searchParams.get("leadId");
   const linkedContactId = searchParams.get("contactId");
   const linkedQuoteId = searchParams.get("quoteId") || searchParams.get("proposalId");
   const linkedContractId = searchParams.get("contractId");
@@ -1442,7 +1444,7 @@ const CreateInvoicePage = () => {
         if (cancelled) return;
 
         const invoice = getProjectInvoice(project, requestedInvoiceId);
-        const provinceCode = getProvinceCode(project.client?.province || project.jobSiteState);
+        const provinceCode = getProvinceCode(project.client?.province || project.territory);
         const provinceTax = canadianProvinces.find((entry) => entry.code === provinceCode) || canadianProvinces.find((entry) => entry.code === "ON")!;
         const invoiceDateValue = invoice ? toDateInputValue(invoice.issueDate) : new Date().toISOString().split("T")[0];
         const dueDateValue = invoice ? toDateInputValue(invoice.dueDate) : calculateDueDate(invoiceDateValue, 30);
@@ -1476,10 +1478,10 @@ const CreateInvoicePage = () => {
             businessName: readText(project.client?.clientName) || currentValues.billedTo.businessName,
             email: readText(project.client?.primaryEmail) || currentValues.billedTo.email,
             phone: readText(project.client?.primaryPhone) || currentValues.billedTo.phone,
-            address: readText(project.client?.streetAddress) || readText(project.jobSiteAddress) || currentValues.billedTo.address,
-            city: readText(project.client?.city) || readText(project.jobSiteCity) || currentValues.billedTo.city,
+            address: readText(project.client?.streetAddress) || readText(project.location) || currentValues.billedTo.address,
+            city: readText(project.client?.city) || currentValues.billedTo.city,
             province: provinceCode,
-            postalCode: readText(project.client?.postalCode) || readText(project.jobSiteZip) || currentValues.billedTo.postalCode,
+            postalCode: readText(project.client?.postalCode) || currentValues.billedTo.postalCode,
             country: readText(project.client?.country) || currentValues.billedTo.country,
             gstNumber: readText(project.client?.gstHstNumber) || currentValues.billedTo.gstNumber,
           },
@@ -1601,7 +1603,70 @@ const CreateInvoicePage = () => {
     };
   }, [getValues, linkedProjectId, navigate, requestedInvoiceId, reset, toast]);
 
-  // Fetch real clients from API
+  useEffect(() => {
+    if (!linkedLeadId || isEditMode || linkedProjectId) return;
+
+    let cancelled = false;
+    setIsLoadingLinkedInvoice(true);
+
+    getLeadById(linkedLeadId)
+      .then((lead: LeadEntity) => {
+        if (cancelled) return;
+
+        const currentValues = getValues();
+        const firstName = readText(lead.firstName);
+        const lastName = readText(lead.lastName);
+        const personName = [firstName, lastName].filter(Boolean).join(" ");
+        const organizationName = readText(lead.companyName)
+          || readText(lead.organization)
+          || readText(lead.company)
+          || readText(lead.clientName)
+          || personName
+          || currentValues.billedTo.businessName;
+        const provinceCode = getProvinceCode(lead.province || lead.state || currentValues.billedTo.province);
+        const convertedClientId = readText(lead.convertedToClientId || lead.clientId || lead.organizationId);
+
+        if (convertedClientId) {
+          selectedClientIdRef.current = convertedClientId;
+        }
+
+        reset({
+          ...currentValues,
+          billedTo: {
+            businessName: organizationName,
+            email: readText(lead.email) || currentValues.billedTo.email,
+            phone: readText(lead.phone || lead.mobileNo || lead.mobilePhone) || currentValues.billedTo.phone,
+            address: readText(lead.streetAddress || lead.address || lead.location) || currentValues.billedTo.address,
+            city: readText(lead.city) || currentValues.billedTo.city,
+            province: provinceCode,
+            postalCode: readText(lead.postalCode || lead.zip) || currentValues.billedTo.postalCode,
+            country: readText(lead.country) || currentValues.billedTo.country,
+            gstNumber: currentValues.billedTo.gstNumber,
+          },
+          clientProvince: provinceCode,
+          notes: currentValues.notes || (personName ? `Lead contact: ${personName}` : ""),
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to load linked lead:", error);
+        if (!cancelled) {
+          toast({
+            title: "Lead unavailable",
+            description: "The linked lead could not be loaded right now.",
+            variant: "destructive",
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingLinkedInvoice(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getValues, isEditMode, linkedLeadId, linkedProjectId, reset, toast]);
+
+  // Fetch real organizations from API
   useEffect(() => {
     const fetchClients = async () => {
       try {
@@ -1620,7 +1685,7 @@ const CreateInvoicePage = () => {
         }));
         setClients(mapped);
       } catch (err) {
-        console.error("Failed to load clients:", err);
+        console.error("Failed to load organizations:", err);
       }
     };
     fetchClients();
@@ -1712,15 +1777,47 @@ const CreateInvoicePage = () => {
     setIsSaving(true);
     try {
       const matchedClient = selectedClientIdRef.current ? null : findMatchingClient(clients, data.billedTo);
-      const resolvedClientId = selectedClientIdRef.current || (matchedClient ? String(matchedClient.id) : null);
+      let resolvedClientId = selectedClientIdRef.current || (matchedClient ? String(matchedClient.id) : null);
 
       if (!resolvedClientId) {
-        toast({
-          title: "Client required",
-          description: "Select an existing client or create one before saving this invoice.",
-          variant: "destructive",
+        const createdOrganization = await createClient({
+          clientName: data.billedTo.businessName.trim(),
+          companyName: data.billedTo.businessName.trim(),
+          clientType: "BUSINESS",
+          primaryEmail: data.billedTo.email.trim(),
+          primaryPhone: data.billedTo.phone.trim() || "N/A",
+          status: "ACTIVE",
+          lifecycleStage: "PROSPECT",
+          currency: data.currency,
+          streetAddress: data.billedTo.address || null,
+          organizationAddress: data.billedTo.address || null,
+          city: data.billedTo.city || null,
+          province: data.billedTo.province || null,
+          postalCode: data.billedTo.postalCode || null,
+          country: data.billedTo.country || "Canada",
+          gstHstNumber: data.billedTo.gstNumber || null,
+          leadSource: linkedLeadId ? "Invoice from Lead" : "Invoice",
         });
-        return;
+        resolvedClientId = readText(createdOrganization.id);
+        setClients((current) => [
+          {
+            id: resolvedClientId,
+            businessName: data.billedTo.businessName.trim(),
+            email: data.billedTo.email.trim(),
+            phone: data.billedTo.phone.trim() || "N/A",
+            address: data.billedTo.address,
+            city: data.billedTo.city,
+            province: data.billedTo.province,
+            postalCode: data.billedTo.postalCode,
+            country: data.billedTo.country || "Canada",
+            gstNumber: data.billedTo.gstNumber,
+          },
+          ...current,
+        ]);
+      }
+
+      if (!resolvedClientId) {
+        throw new Error("Organization could not be created for this invoice");
       }
 
       selectedClientIdRef.current = resolvedClientId;
@@ -1869,7 +1966,7 @@ const CreateInvoicePage = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => navigate(linkedProjectId ? `/projects/${linkedProjectId}` : "/invoice")}
+                onClick={() => navigate(linkedProjectId ? `/deals/${linkedProjectId}` : "/invoice")}
                 className="p-2 rounded-md hover:bg-white/10 text-[#475569] transition-colors"
               >
                 <ArrowLeft size={20} />
@@ -2238,18 +2335,18 @@ const CreateInvoicePage = () => {
 
                     {/* Billed To */}
                     <SectionCard
-                      title="Client Details"
+                      title="Organization Details"
                       icon={Users}
                       headerAction={!isProjectReviewMode ? (
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate("/clients/add")}
+                          onClick={() => navigate("/organizations")}
                           className="text-[#0891B2] hover:text-[#0891B2]/80 hover:bg-[#0891B2]/5"
                         >
                           <PlusCircle size={14} className="mr-1" />
-                          New Client
+                          New Organization
                         </Button>
                       ) : undefined}
                     >
@@ -2290,7 +2387,7 @@ const CreateInvoicePage = () => {
                           <Label className="text-xs text-[#94A3B8]">Notes to Client</Label>
                           <Textarea
                             {...register("notes")}
-                            placeholder="Add any notes for your client (e.g., project address, material specifications, warranty details, cleanup included)..."
+                            placeholder="Add any notes for your customer, delivery scope, billing context, or special instructions..."
                             rows={3}
                             className="rounded-md border-[rgba(15,23,42,0.06)] text-sm resize-none"
                           />
@@ -2515,7 +2612,7 @@ const CreateInvoicePage = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => navigate(linkedProjectId ? `/projects/${linkedProjectId}` : "/invoice")}
+                      onClick={() => navigate(linkedProjectId ? `/deals/${linkedProjectId}` : "/invoice")}
                       className="flex-1 rounded-md"
                     >
                       Cancel

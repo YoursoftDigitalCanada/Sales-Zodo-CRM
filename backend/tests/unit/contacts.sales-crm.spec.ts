@@ -44,7 +44,7 @@ jest.mock('@contracts/contact', () => ({
 }), { virtual: true });
 
 import { contactsService } from '../../src/modules/contacts/contacts.service';
-import { createContactSchema } from '../../src/modules/contacts/contacts.validators';
+import { createContactSchema, updateContactSchema } from '../../src/modules/contacts/contacts.validators';
 import { toContactResponseDto } from '../../src/modules/contacts/contacts.dto';
 
 function contactRecord(overrides: Record<string, unknown> = {}) {
@@ -139,6 +139,35 @@ describe('Sales CRM contact hardening', () => {
         companyId: '11111111-1111-4111-8111-111111111111',
       },
     }).success).toBe(false);
+  });
+
+  it('normalizes legacy preferred contact method values during validation', () => {
+    const parsedCreate = createContactSchema.safeParse({
+      body: {
+        firstName: 'Ava',
+        lastName: 'Chen',
+        email: 'ava@acme.test',
+        officePhone: '+1 (416) 555-1234',
+        companyId: '11111111-1111-4111-8111-111111111111',
+        preferredContactMethod: 'Phone Call',
+      },
+    });
+
+    expect(parsedCreate.success).toBe(true);
+    if (parsedCreate.success) {
+      expect(parsedCreate.data.body.preferredContactMethod).toBe('Call');
+    }
+
+    const parsedUpdate = updateContactSchema.safeParse({
+      body: {
+        preferredContactMethod: 'Text',
+      },
+    });
+
+    expect(parsedUpdate.success).toBe(true);
+    if (parsedUpdate.success) {
+      expect(parsedUpdate.data.body.preferredContactMethod).toBe('WhatsApp');
+    }
   });
 
   it('creates contacts tenant-scoped and validates organization, deal, and owner links', async () => {

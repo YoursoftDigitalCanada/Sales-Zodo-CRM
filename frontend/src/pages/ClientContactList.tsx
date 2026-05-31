@@ -273,6 +273,12 @@ const toContactTypePayload = (type?: string | null) => {
   return type === "Prospect" ? "LEAD" : "CLIENT";
 };
 
+const toPreferredContactMethod = (method?: string | null) => {
+  if (method === "Phone Call" || method === "Phone") return "Call";
+  if (method === "Text" || method === "SMS") return "WhatsApp";
+  return method || "";
+};
+
 const getEmployeeName = (employee: any) => {
   const user = employee?.user || {};
   return (
@@ -971,7 +977,7 @@ const ContactDialog = ({
         buyingAuthorityScore: contact.buyingAuthorityScore || "",
         secondaryEmail: contact.secondaryEmail || "",
         alternatePhone: contact.alternatePhone || "",
-        preferredContactMethod: contact.preferredContactMethod || "Email",
+        preferredContactMethod: toPreferredContactMethod(contact.preferredContactMethod) || "Email",
         timeZone: contact.timeZone || "",
         tagsText: (contact.tags || []).join(", "),
         assignedToId: contact.assignedToId || "",
@@ -1686,7 +1692,7 @@ const ClientContactListPage = () => {
         buyingAuthorityScore: c.buyingAuthorityScore || "",
         secondaryEmail: c.secondaryEmail || "",
         alternatePhone: c.alternatePhone || "",
-        preferredContactMethod: c.preferredContactMethod || "",
+        preferredContactMethod: toPreferredContactMethod(c.preferredContactMethod),
         timeZone: c.timeZone || "",
         tags: Array.isArray(c.tags) ? c.tags : [],
         assignedToId: c.assignedTo?.id || c.assignedToId || "",
@@ -1797,7 +1803,7 @@ const ClientContactListPage = () => {
         buyingAuthorityScore: data.buyingAuthorityScore || undefined,
         secondaryEmail: data.secondaryEmail ? normalizeEmailAddress(data.secondaryEmail) : undefined,
         alternatePhone: data.alternatePhone?.trim() || undefined,
-        preferredContactMethod: data.preferredContactMethod || undefined,
+        preferredContactMethod: toPreferredContactMethod(data.preferredContactMethod) || undefined,
         timeZone: data.timeZone?.trim() || undefined,
         notes: data.notes?.trim() || undefined,
         tags: data.tags || [],
@@ -1845,7 +1851,7 @@ const ClientContactListPage = () => {
       if (data.buyingAuthorityScore !== undefined) payload.buyingAuthorityScore = data.buyingAuthorityScore || null;
       if (data.secondaryEmail !== undefined) payload.secondaryEmail = data.secondaryEmail ? normalizeEmailAddress(data.secondaryEmail) : null;
       if (data.alternatePhone !== undefined) payload.alternatePhone = data.alternatePhone?.trim() || null;
-      if (data.preferredContactMethod !== undefined) payload.preferredContactMethod = data.preferredContactMethod || null;
+      if (data.preferredContactMethod !== undefined) payload.preferredContactMethod = toPreferredContactMethod(data.preferredContactMethod) || null;
       if (data.timeZone !== undefined) payload.timeZone = data.timeZone?.trim() || null;
       if (data.notes !== undefined) payload.notes = data.notes?.trim() || null;
       if (data.tags !== undefined) payload.tags = data.tags || [];

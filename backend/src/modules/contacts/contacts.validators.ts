@@ -8,6 +8,14 @@ import {
     isValidPersonName,
 } from '@contracts/contact';
 
+const preferredContactMethodSchema = z.preprocess((value) => {
+    if (typeof value !== 'string') return value;
+    const normalized = value.trim();
+    if (normalized === 'Phone Call' || normalized === 'Phone') return 'Call';
+    if (normalized === 'Text' || normalized === 'SMS') return 'WhatsApp';
+    return normalized;
+}, z.enum(['Email', 'Call', 'WhatsApp']).optional().nullable());
+
 // ============================================================================
 // CONTACTS - Add Contact
 // ============================================================================
@@ -33,7 +41,7 @@ export const createContactSchema = z.object({
         buyingAuthorityScore: z.enum(['Low', 'Medium', 'High', '1', '2', '3', '4', '5']).optional().nullable(),
         secondaryEmail: z.string().trim().refine((value) => !value || isValidEmailAddress(value), EMAIL_VALIDATION_MESSAGE).optional().nullable(),
         alternatePhone: z.string().trim().max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
-        preferredContactMethod: z.enum(['Email', 'Call', 'WhatsApp']).optional().nullable(),
+        preferredContactMethod: preferredContactMethodSchema,
         timeZone: z.string().max(100).optional().nullable(),
         notes: z.string().max(5000).optional().nullable(),
         tags: z.array(z.string().max(50)).optional(),
@@ -71,7 +79,7 @@ export const updateContactSchema = z.object({
         buyingAuthorityScore: z.enum(['Low', 'Medium', 'High', '1', '2', '3', '4', '5']).optional().nullable(),
         secondaryEmail: z.string().trim().refine((value) => !value || isValidEmailAddress(value), EMAIL_VALIDATION_MESSAGE).optional().nullable(),
         alternatePhone: z.string().trim().max(30).refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE).optional().nullable(),
-        preferredContactMethod: z.enum(['Email', 'Call', 'WhatsApp']).optional().nullable(),
+        preferredContactMethod: preferredContactMethodSchema,
         timeZone: z.string().max(100).optional().nullable(),
         notes: z.string().max(5000).optional().nullable(),
         tags: z.array(z.string().max(50)).optional(),

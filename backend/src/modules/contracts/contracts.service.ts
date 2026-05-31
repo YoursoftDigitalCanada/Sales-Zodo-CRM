@@ -5,8 +5,9 @@ import { prisma } from '../../config/database';
 import { documentsService } from '../documents/documents.service';
 import { filesService } from '../files/files.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
+import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 import { eventBus } from '../../common/events/event-bus';
-import { BadRequestError, NotFoundError } from '../../common/errors/HttpErrors';
+import { BadRequestError, NotFoundError, ServiceUnavailableError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { invoicesService } from '../invoices/invoices.service';
 import crypto from 'crypto';
@@ -16,6 +17,154 @@ import path from 'path';
 const db = prisma as any;
 
 export class ContractsService {
+    private escapeHtml(value: string | null | undefined) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    private formatCurrency(value: number | string, currency = 'CAD') {
+        const amount = typeof value === 'string' ? Number.parseFloat(value) : value;
+        return new Intl.NumberFormat('en-CA', { style: 'currency', currency }).format(Number.isFinite(amount) ? amount : 0);
+    }
+
+    private async getCompanyProfile(tenantId: string) {
+        const settings = await prisma.tenantSettings.findUnique({
+            where: { tenantId },
+            include: { tenant: { select: { name: true } } },
+        });
+        const integrations = settings?.integrations && typeof settings.integrations === 'object'
+            ? settings.integrations as Record<string, unknown>
+            : {};
+        return {
+            companyName: String(integrations.companyName ?? settings?.tenant?.name ?? 'ZODO CRM'),
+            email: String(integrations.companyEmail ?? '') || undefined,
+            phone: String(integrations.companyPhone ?? '') || undefined,
+        };
+    }
+
+    private isAuthenticationError(errorMessage: string) {
+        const normalized = errorMessage.toLowerCase();
+        return normalized.includes('invalid login')
+            || normalized.includes('authentication failed')
+            || normalized.includes('535')
+            || normalized.includes('username')
+            || normalized.includes('password');
+    }
+
+    private buildContractEmailContent(params: {
+        contract: any;
+        company: { companyName: string; email?: string; phone?: string };
+        recipientName: string;
+    }) {
+        const { contract, company, recipientName } = params;
+        const contractNumber = String(contract.contractNumber || contract.id);
+        const value = this.formatCurrency(Number(contract.value || 0), contract.currency || 'CAD');
+        const startDate = contract.startDate ? new Date(contract.startDate).toLocaleDateString() : '-';
+        const endDate = contract.endDate ? new Date(contract.endDate).toLocaleDateString() : '-';
+        const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#F1F5F9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="max-width:640px;margin:0 auto;padding:40px 20px;">
+  <div style="background:linear-gradient(135deg,#0F766E,#115E59);border-radius:16px 16px 0 0;padding:32px;text-align:center;">
+    <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">${this.escapeHtml(company.companyName || 'ZODO CRM')}</h1>
+    <p style="margin:8px 0 0;color:rgba(255,255,255,0.88);font-size:14px;">Contract Ready</p>
+  </div>
+  <div style="background:#fff;padding:32px;border-radius:0 0 16px 16px;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+    <p style="margin:0 0 8px;font-size:16px;color:#0F172A;">Hi ${this.escapeHtml(recipientName)},</p>
+    <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
+      Your contract is attached as a PDF. Please review it and contact us if you need any changes before signing.
+    </p>
+    <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:20px;margin-bottom:24px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="padding:4px 0;font-size:13px;color:#64748B;">Contract Number</td><td style="padding:4px 0;font-size:13px;color:#0F172A;font-weight:600;text-align:right;">${this.escapeHtml(contractNumber)}</td></tr>
+        <tr><td style="padding:4px 0;font-size:13px;color:#64748B;">Title</td><td style="padding:4px 0;font-size:13px;color:#0F172A;font-weight:600;text-align:right;">${this.escapeHtml(contract.title || 'Sales Contract')}</td></tr>
+        <tr><td style="padding:4px 0;font-size:13px;color:#64748B;">Start Date</td><td style="padding:4px 0;font-size:13px;color:#0F172A;font-weight:600;text-align:right;">${this.escapeHtml(startDate)}</td></tr>
+        <tr><td style="padding:4px 0;font-size:13px;color:#64748B;">End Date</td><td style="padding:4px 0;font-size:13px;color:#0F172A;font-weight:600;text-align:right;">${this.escapeHtml(endDate)}</td></tr>
+        <tr><td style="padding:4px 0;font-size:13px;color:#64748B;">Value</td><td style="padding:4px 0;font-size:18px;color:#0F766E;font-weight:700;text-align:right;">${this.escapeHtml(value)}</td></tr>
+      </table>
+    </div>
+    <p style="margin:0;font-size:13px;color:#64748B;">Thank you,<br>${this.escapeHtml(company.companyName || 'ZODO CRM')}</p>
+  </div>
+</div>
+</body>
+</html>`;
+        const text = [
+            `Hi ${recipientName},`,
+            '',
+            `Your contract ${contractNumber} is attached as a PDF.`,
+            `Title: ${contract.title || 'Sales Contract'}`,
+            `Start date: ${startDate}`,
+            `End date: ${endDate}`,
+            `Value: ${value}`,
+            '',
+            `Thank you,`,
+            company.companyName || 'ZODO CRM',
+        ].join('\n');
+        return { html, text };
+    }
+
+    private emitStatusEvent(contract: any, tenantId: string, status: ContractStatus, overrides: Record<string, unknown> = {}) {
+        if (status === 'SENT') {
+            eventBus.emit('contract.sent', {
+                tenantId,
+                contractId: contract.id,
+                contractNumber: contract.contractNumber,
+                clientId: contract.client?.id,
+                contactId: contract.contactId || undefined,
+                projectId: contract.projectId || undefined,
+                quoteId: contract.quoteId || undefined,
+                recipientEmail: overrides.recipientEmail || contract.contact?.email || contract.client?.primaryEmail || undefined,
+                ownerUserId: contract.createdBy?.userId || undefined,
+                ...overrides,
+            });
+        }
+        if (status === 'ACTIVE') {
+            eventBus.emit('contract.signed', {
+                tenantId,
+                contractId: contract.id,
+                contractNumber: contract.contractNumber,
+                clientId: contract.client?.id,
+                contactId: contract.contactId || undefined,
+                projectId: contract.projectId || undefined,
+                quoteId: contract.quoteId || undefined,
+                signedAt: contract.signedAt || undefined,
+                recipientEmail: contract.contact?.email || contract.client?.primaryEmail || undefined,
+                ownerUserId: contract.createdBy?.userId || undefined,
+            });
+        }
+        if (status === 'CANCELLED') {
+            eventBus.emit('contract.declined', {
+                tenantId,
+                contractId: contract.id,
+                contractNumber: contract.contractNumber,
+                clientId: contract.client?.id,
+                contactId: contract.contactId || undefined,
+                projectId: contract.projectId || undefined,
+                quoteId: contract.quoteId || undefined,
+                ownerUserId: contract.createdBy?.userId || undefined,
+            });
+        }
+        if (status === 'EXPIRED') {
+            eventBus.emit('contract.expired', {
+                tenantId,
+                contractId: contract.id,
+                contractNumber: contract.contractNumber,
+                clientId: contract.client?.id,
+                contactId: contract.contactId || undefined,
+                projectId: contract.projectId || undefined,
+                quoteId: contract.quoteId || undefined,
+                expiredAt: new Date(),
+                ownerUserId: contract.createdBy?.userId || undefined,
+            });
+        }
+    }
+
     private async validateContractLinks(tenantId: string, data: Partial<CreateContractDto | UpdateContractDto>) {
         if (data.clientId) {
             const client = await prisma.client.findFirst({ where: { id: data.clientId, tenantId }, select: { id: true } });
@@ -81,73 +230,57 @@ export class ContractsService {
         return toContractResponseDto(contract);
     }
 
-    async updateStatus(id: string, tenantId: string, status: ContractStatus, actorUserId?: string) {
+    async updateStatus(id: string, tenantId: string, status: ContractStatus, actorUserId?: string, eventOverrides: Record<string, unknown> = {}) {
         const contract = await contractsRepository.updateStatus(id, tenantId, status);
-        if (status === 'SENT') {
-            eventBus.emit('contract.sent', {
-                tenantId,
-                contractId: id,
-                contractNumber: contract.contractNumber,
-                clientId: contract.client?.id,
-                contactId: (contract as any).contactId || undefined,
-                projectId: contract.projectId || undefined,
-                quoteId: contract.quoteId || undefined,
-                recipientEmail: (contract as any).client?.primaryEmail || undefined,
-                ownerUserId: (contract as any).createdBy?.userId || undefined,
-            });
-        }
-        if (status === 'ACTIVE') {
-            eventBus.emit('contract.signed', {
-                tenantId,
-                contractId: id,
-                contractNumber: contract.contractNumber,
-                clientId: contract.client?.id,
-                contactId: (contract as any).contactId || undefined,
-                projectId: contract.projectId || undefined,
-                quoteId: contract.quoteId || undefined,
-                signedAt: contract.signedAt || undefined,
-                recipientEmail: (contract as any).client?.primaryEmail || undefined,
-                ownerUserId: (contract as any).createdBy?.userId || undefined,
-            });
-        }
-        if (status === 'CANCELLED') {
-            eventBus.emit('contract.declined', {
-                tenantId,
-                contractId: id,
-                contractNumber: contract.contractNumber,
-                clientId: contract.client?.id,
-                contactId: (contract as any).contactId || undefined,
-                projectId: contract.projectId || undefined,
-                quoteId: contract.quoteId || undefined,
-                ownerUserId: (contract as any).createdBy?.userId || undefined,
-            });
-        }
-        if (status === 'EXPIRED') {
-            eventBus.emit('contract.expired', {
-                tenantId,
-                contractId: id,
-                contractNumber: contract.contractNumber,
-                clientId: contract.client?.id,
-                contactId: (contract as any).contactId || undefined,
-                projectId: contract.projectId || undefined,
-                quoteId: contract.quoteId || undefined,
-                expiredAt: new Date(),
-                ownerUserId: (contract as any).createdBy?.userId || undefined,
-            });
-        }
+        this.emitStatusEvent(contract, tenantId, status, eventOverrides);
         return toContractResponseDto(contract);
     }
 
     async send(id: string, tenantId: string, actorUserId?: string) {
-        const contract = await this.updateStatus(id, tenantId, 'SENT', actorUserId);
+        const existing = await contractsRepository.findById(id, tenantId);
+        if (!existing) throw new NotFoundError('Contract not found', ErrorCodes.RESOURCE_NOT_FOUND);
+
+        const recipientEmail = String((existing as any).contact?.email || (existing as any).client?.primaryEmail || '').trim();
+        if (!recipientEmail) {
+            throw new BadRequestError('A recipient email is required before sending the contract.', ErrorCodes.INVALID_INPUT);
+        }
+
+        const company = await this.getCompanyProfile(tenantId);
+        const recipientName = (existing as any).contact?.contactName || (existing as any).client?.clientName || 'Customer';
+        const { buffer, fileName } = await this.generatePdf(id, tenantId);
+        const emailContent = this.buildContractEmailContent({ contract: existing, company, recipientName });
+        const delivery = await tenantMailerService.sendTenantEmail({
+            tenantId,
+            preferredUserId: actorUserId,
+            to: recipientEmail,
+            subject: `Contract ${existing.contractNumber} from ${company.companyName}`,
+            html: emailContent.html,
+            text: emailContent.text,
+            relatedEntityType: 'Contract',
+            relatedEntityId: id,
+            attachments: [{ filename: fileName, content: buffer, contentType: 'application/pdf' }],
+        });
+        if (!delivery.sent) {
+            const errorMessage = delivery.error || 'Check the configured SMTP credentials and try again.';
+            if (this.isAuthenticationError(errorMessage)) {
+                throw new BadRequestError(`Contract email delivery failed because the configured SMTP credentials were rejected. ${errorMessage}`, ErrorCodes.INVALID_INPUT);
+            }
+            throw new ServiceUnavailableError(`Contract email delivery failed. ${errorMessage}`);
+        }
+
+        const contract = await this.updateStatus(id, tenantId, 'SENT', actorUserId, {
+            emailAlreadySent: true,
+            recipientEmail,
+        });
         activityLogger.log({
             tenantId,
             entityType: 'Contract',
             entityId: id,
             action: 'STATUS_CHANGE',
             module: 'contracts',
-            description: `Contract "${contract.contractNumber}" sent`,
+            description: `Contract "${contract.contractNumber}" emailed to ${recipientEmail}`,
             userId: actorUserId,
+            metadata: { recipientEmail, senderEmail: delivery.senderEmail },
         });
         return contract;
     }
@@ -367,7 +500,9 @@ export class ContractsService {
 
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + 30);
+        const invoiceNumber = await this.generateInvoiceNumber(tenantId);
         return invoicesService.create(tenantId, {
+            invoiceNumber,
             clientId: (contract as any).clientId,
             contactId: (contract as any).contactId || undefined,
             quoteId: (contract as any).quoteId || undefined,
@@ -382,6 +517,17 @@ export class ContractsService {
             terms: (contract as any).terms || undefined,
             items,
         } as any);
+    }
+
+    private async generateInvoiceNumber(tenantId: string): Promise<string> {
+        const count = await prisma.invoice.count({ where: { tenantId } });
+        let next = count + 1;
+        while (true) {
+            const candidate = `INV-${String(next).padStart(5, '0')}`;
+            const existing = await prisma.invoice.findFirst({ where: { tenantId, invoiceNumber: candidate }, select: { id: true } });
+            if (!existing) return candidate;
+            next += 1;
+        }
     }
 
     async delete(id: string, tenantId: string) {

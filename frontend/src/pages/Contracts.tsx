@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Building2, CalendarClock, CheckCircle2, Download, Eye, FileSignature, FileText, Plus, RefreshCw, Save, Search, Send, UserRound, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -154,11 +154,13 @@ function ContractDetailDialog({
   onClose,
   onDownload,
   onAction,
+  onCreateInvoice,
 }: {
   contract: ContractEntity | null;
   onClose: () => void;
   onDownload: (contract: ContractEntity) => void;
   onAction: (label: string, action: () => Promise<unknown>) => void;
+  onCreateInvoice: (contract: ContractEntity) => void;
 }) {
   if (!contract) return null;
   const docsUrl = `/documents?linkedEntityType=Contract&linkedEntityId=${encodeURIComponent(contract.id)}`;
@@ -218,12 +220,12 @@ function ContractDetailDialog({
         </div>
 
         <DialogFooter className="flex-wrap gap-2">
-          {contract.status === "DRAFT" && <Button onClick={() => onAction("Contract sent", () => sendContract(contract.id))}><Send className="mr-2 h-4 w-4" />Send</Button>}
+          {["DRAFT", "SENT"].includes(contract.status) && <Button onClick={() => onAction(contract.status === "SENT" ? "Contract resent" : "Contract sent", () => sendContract(contract.id))}><Send className="mr-2 h-4 w-4" />{contract.status === "SENT" ? "Resend" : "Send"}</Button>}
           {contract.status === "SENT" && <Button onClick={() => onAction("Contract signed", () => signContract(contract.id))}><CheckCircle2 className="mr-2 h-4 w-4" />Mark Signed</Button>}
           {contract.status === "SENT" && <Button variant="outline" onClick={() => onAction("Contract declined", () => declineContract(contract.id))}><XCircle className="mr-2 h-4 w-4" />Decline</Button>}
           <Button variant="outline" onClick={() => onDownload(contract)}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
           <Button variant="outline" onClick={() => onAction("Contract saved to Documents", () => saveContractDocument(contract.id, contract.status === "ACTIVE" ? "signed" : "sent"))}><Save className="mr-2 h-4 w-4" />Save to Documents</Button>
-          <Button variant="outline" onClick={() => onAction("Invoice created", () => createInvoiceFromContract(contract.id))}><FileText className="mr-2 h-4 w-4" />Create Invoice</Button>
+          <Button variant="outline" onClick={() => onCreateInvoice(contract)}><FileText className="mr-2 h-4 w-4" />Create Invoice</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -231,6 +233,7 @@ function ContractDetailDialog({
 }
 
 export default function ContractsPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [contracts, setContracts] = useState<ContractEntity[]>([]);
   const [clients, setClients] = useState<ClientEntity[]>([]);
@@ -300,11 +303,25 @@ export default function ContractsPage() {
 
   const runAction = async (label: string, action: () => Promise<unknown>) => {
     try {
-      await action();
+      const result = await action();
       toast.success(label);
       await load();
+      return result;
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Action failed");
+      throw error;
+    }
+  };
+
+  const createInvoice = async (contract: ContractEntity) => {
+    try {
+      const invoice = await createInvoiceFromContract(contract.id) as { id?: string; invoiceNumber?: string };
+      toast.success(invoice?.invoiceNumber ? `Invoice ${invoice.invoiceNumber} is ready` : "Invoice is ready");
+      await load();
+      if (invoice?.id) navigate(`/invoice/${invoice.id}/edit`);
+      else navigate(`/invoice?contractId=${encodeURIComponent(contract.id)}`);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not create invoice from contract");
     }
   };
 
@@ -363,12 +380,12 @@ export default function ContractsPage() {
                     <div className="flex flex-wrap justify-end gap-2">
                       <Button size="sm" variant="outline" onClick={() => openContract(contract)}><Eye className="mr-1.5 h-3.5 w-3.5" />Details</Button>
                       <ContractDialog contract={contract} clients={clients} contacts={contacts} onSaved={load} />
-                      {contract.status === "DRAFT" && <Button size="sm" onClick={() => runAction("Contract sent", () => sendContract(contract.id))}><Send className="mr-1.5 h-3.5 w-3.5" />Send</Button>}
+                      {["DRAFT", "SENT"].includes(contract.status) && <Button size="sm" onClick={() => runAction(contract.status === "SENT" ? "Contract resent" : "Contract sent", () => sendContract(contract.id))}><Send className="mr-1.5 h-3.5 w-3.5" />{contract.status === "SENT" ? "Resend" : "Send"}</Button>}
                       {contract.status === "SENT" && <Button size="sm" onClick={() => runAction("Contract signed", () => signContract(contract.id))}><CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />Mark Signed</Button>}
                       {contract.status === "SENT" && <Button size="sm" variant="outline" onClick={() => runAction("Contract declined", () => declineContract(contract.id))}><XCircle className="mr-1.5 h-3.5 w-3.5" />Decline</Button>}
                       <Button size="sm" variant="outline" onClick={() => downloadPdf(contract)}><Download className="mr-1.5 h-3.5 w-3.5" />PDF</Button>
                       <Button size="sm" variant="outline" onClick={() => runAction("Contract saved to Documents", () => saveContractDocument(contract.id, contract.status === "ACTIVE" ? "signed" : "sent"))}><Save className="mr-1.5 h-3.5 w-3.5" />Save</Button>
-                      <Button size="sm" variant="outline" onClick={() => runAction("Invoice created", () => createInvoiceFromContract(contract.id))}><FileText className="mr-1.5 h-3.5 w-3.5" />Invoice</Button>
+                      <Button size="sm" variant="outline" onClick={() => createInvoice(contract)}><FileText className="mr-1.5 h-3.5 w-3.5" />Invoice</Button>
                       <Button size="sm" variant="ghost" onClick={() => window.location.assign(`/documents?linkedEntityType=Contract&linkedEntityId=${encodeURIComponent(contract.id)}`)}>Docs</Button>
                       {contract.projectId && <Button size="sm" variant="ghost" onClick={() => window.location.assign(`/deals?dealId=${encodeURIComponent(contract.projectId || "")}`)}>Deal</Button>}
                     </div>
@@ -380,7 +397,7 @@ export default function ContractsPage() {
           </Table>
         </div>
       </div>
-      <ContractDetailDialog contract={selectedContract} onClose={closeContract} onDownload={downloadPdf} onAction={runAction} />
+      <ContractDetailDialog contract={selectedContract} onClose={closeContract} onDownload={downloadPdf} onAction={runAction} onCreateInvoice={createInvoice} />
     </div>
   );
 }

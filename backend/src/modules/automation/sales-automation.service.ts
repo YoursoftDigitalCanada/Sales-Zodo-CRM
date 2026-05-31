@@ -1075,7 +1075,9 @@ class SalesAutomationService {
       ).catch((error) => {
         logger.warn('[SalesAutomation] Contract PDF document save failed', { tenantId: input.tenantId, contractId: input.contractId || entityId, variant: 'sent', error: (error as Error)?.message || String(error) });
       });
-      await this.sendContractEmail(input.tenantId, input.contractId || entityId, { ...input, contract: contractContext });
+      if (!input.emailAlreadySent) {
+        await this.sendContractEmail(input.tenantId, input.contractId || entityId, { ...input, contract: contractContext });
+      }
       await this.scheduleReminder(input.tenantId, 'Contract', input.contractId || entityId, 'contract.signing.1d', addDays(new Date(), 1), 'EMAIL', { ...input, recipientEmail: input.recipientEmail || contractContext?.client?.primaryEmail || contractContext?.client?.email });
       await this.scheduleReminder(input.tenantId, 'Contract', input.contractId || entityId, 'contract.signing.3d', addDays(new Date(), 3), 'NOTIFICATION', input);
       await this.notifyOwner(input.tenantId, input.ownerUserId || contractContext?.createdBy?.userId, 'Contract sent', `${contractContext?.contractNumber || 'Contract'} was sent.`, `/contracts/${input.contractId || entityId}`, this.idempotencyKey(input.tenantId, triggerType, entityType, entityId, 'owner-notification'), triggerType, entityType, entityId);

@@ -45,8 +45,8 @@ function calculateTotals(
     }, 0);
     const safeTaxRate = taxRate ? Number(taxRate) : 0;
     const taxAmount = safeTaxRate ? (subtotal * safeTaxRate) / 100 : 0;
-    const safeDiscount = discountAmount ? Number(discountAmount) : 0;
-    const total = subtotal + taxAmount - safeDiscount;
+    const safeDiscount = discountAmount ? Math.max(Number(discountAmount), 0) : 0;
+    const total = Math.max(subtotal + taxAmount - safeDiscount, 0);
     return { subtotal, taxAmount, total, amountDue: total };
 }
 

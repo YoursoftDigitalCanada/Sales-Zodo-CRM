@@ -76,7 +76,7 @@ export const CreateInvoiceSchema = z.object({
   clientPhone: z.string().max(50).optional().nullable(),
   clientAddress: InvoiceAddressSchema.optional(),
   clientGstHstNumber: z.string().max(50).optional().nullable(),
-  discountAmount: z.number().min(0).optional().nullable(),
+  discountAmount: z.coerce.number().min(0).optional().nullable(),
   items: z.array(InvoiceItemSchema).min(1),
   notes: z.string().optional().nullable(),
   terms: z.string().optional().nullable(),

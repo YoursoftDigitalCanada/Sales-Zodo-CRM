@@ -1444,8 +1444,10 @@ const CreateInvoicePage = () => {
       const rate = toNumber(item?.rate);
       return sum + quantity * rate;
     }, 0) || 0;
-    const discountAmount = discountType === "percentage" ? (subtotal * discount) / 100 : discount;
-    const taxableAmount = subtotal - discountAmount;
+    const discountValue = Math.max(toNumber(discount), 0);
+    const rawDiscountAmount = discountType === "percentage" ? (subtotal * discountValue) / 100 : discountValue;
+    const discountAmount = Math.min(Math.max(rawDiscountAmount, 0), subtotal);
+    const taxableAmount = Math.max(subtotal - discountAmount, 0);
 
     const gst = taxRates.hst > 0 ? 0 : (taxableAmount * taxRates.gst) / 100;
     const pst = (taxableAmount * taxRates.pst) / 100;

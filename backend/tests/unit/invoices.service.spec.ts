@@ -55,9 +55,12 @@ jest.mock('../../src/modules/communication-logs/communication-log.service', () =
   communicationLogService: { createSafe: jest.fn() },
 }));
 
+jest.mock('zod', () => require('../../node_modules/zod'), { virtual: true });
+
 import { invoicesService } from '../../src/modules/invoices/invoices.service';
 import { eventBus } from '../../src/common/events/event-bus';
 import { bookkeepingService } from '../../src/modules/bookkeeping/bookkeeping.service';
+import { CreateInvoiceSchema } from '../../../packages/contracts/invoice';
 
 const baseInvoice = {
   id: 'invoice-1',
@@ -138,6 +141,22 @@ describe('InvoicesService Sales CRM readiness', () => {
       contactId: 'contact-1',
       contractId: 'contract-1',
     }));
+  });
+
+  it('accepts browser string discount amounts and normalizes them before service use', () => {
+    const parsed = CreateInvoiceSchema.safeParse({
+      invoiceNumber: 'INV-DISCOUNT-1',
+      clientId: '11111111-1111-4111-8111-111111111111',
+      dueDate: '2026-06-24T00:00:00.000Z',
+      currency: 'CAD',
+      discountAmount: '25.50',
+      items: [{ description: 'Implementation', quantity: 1, unitPrice: 1000, amount: 1000 }],
+    });
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.discountAmount).toBe(25.5);
+    }
   });
 
   it('rejects a billing contact that belongs to another company', async () => {

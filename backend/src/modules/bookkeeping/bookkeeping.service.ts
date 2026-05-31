@@ -44,6 +44,25 @@ const DEFAULT_CATEGORIES = [
   ['Other Expense', 'EXPENSE', '#475569'],
 ] as const;
 
+const DEFAULT_CATEGORY_ACCOUNT_NAMES: Record<string, string> = {
+  Sales: 'Sales Revenue',
+  Services: 'Service Revenue',
+  Subscriptions: 'Sales Revenue',
+  'Other Income': 'Sales Revenue',
+  Materials: 'Cost of Goods Sold',
+  Labor: 'Cost of Goods Sold',
+  Software: 'Software',
+  Marketing: 'Marketing',
+  Travel: 'Travel',
+  Meals: 'Meals',
+  'Office Supplies': 'Office Expenses',
+  Rent: 'Rent',
+  Utilities: 'Utilities',
+  Insurance: 'Office Expenses',
+  Taxes: 'Tax Paid',
+  'Other Expense': 'Office Expenses',
+};
+
 function db(): any {
   return prisma as any;
 }
@@ -109,7 +128,7 @@ export class BookkeepingService {
     for (const [name, type, color] of DEFAULT_CATEGORIES) {
       const existing = await db().bookkeepingCategory.findFirst({ where: { tenantId, name } });
       if (!existing) {
-        const account = await db().bookkeepingAccount.findFirst({ where: { tenantId, name: name === 'Subscriptions' ? 'Sales Revenue' : name, type } });
+        const account = await db().bookkeepingAccount.findFirst({ where: { tenantId, name: DEFAULT_CATEGORY_ACCOUNT_NAMES[name] || name } });
         await db().bookkeepingCategory.create({ data: { tenantId, name, type, color, accountId: account?.id, isSystem: true } });
       }
     }
@@ -668,7 +687,7 @@ export class BookkeepingService {
       db().bookkeepingAccount.findMany({ where: { tenantId, isActive: true } }),
       prisma.invoice.count({ where: { tenantId, status: { in: ['SENT', 'OVERDUE', 'PARTIALLY_PAID'] } as any } }),
       prisma.invoice.count({ where: { tenantId, dueDate: { lt: now }, status: { notIn: ['PAID', 'CANCELLED'] } as any } }),
-      prisma.expense.count({ where: { tenantId, status: { in: ['DRAFT', 'PENDING', 'SUBMITTED'] } as any } }),
+      prisma.expense.count({ where: { tenantId, status: { in: ['DRAFT', 'PENDING_APPROVAL'] } as any } }),
       db().bookkeepingTransaction.findMany({ where: { tenantId }, orderBy: { transactionDate: 'desc' }, take: 8 }),
     ]);
     const cashBalance = accounts.filter((a: any) => a.type === 'ASSET' && (a.isBankAccount || ['Cash', 'Bank Account'].includes(a.name))).reduce((sum: number, a: any) => sum + toNumber(a.currentBalance), 0);
@@ -719,12 +738,24 @@ export class BookkeepingService {
 
   async taxSummary(tenantId: string, query: Record<string, any>) {
     const { from, to } = this.dateRange(query);
-    const [invoiceAgg, expenseAgg] = await Promise.all([
-      prisma.invoice.aggregate({ where: { tenantId, issueDate: { gte: from, lte: to } }, _sum: { taxAmount: true, total: true } }),
-      prisma.expense.aggregate({ where: { tenantId, paymentDate: { gte: from, lte: to } }, _sum: { amount: true } }),
+    const [invoiceAgg, expenseAgg, taxExpenseTransactions, taxCategories] = await Promise.all([
+      prisma.invoice.aggregate({ where: { tenantId, issueDate: { gte: from, lte: to }, status: { not: 'CANCELLED' } as any }, _sum: { taxAmount: true, subtotal: true } }),
+      prisma.expense.aggregate({ where: { tenantId, paymentDate: { gte: from, lte: to }, status: { in: ['APPROVED', 'REIMBURSED'] } as any }, _sum: { amount: true } }),
+      this.reportTransactions(tenantId, from, to),
+      db().bookkeepingCategory.findMany({ where: { tenantId, name: 'Taxes', type: 'EXPENSE', isActive: true } }),
     ]);
     const taxCollected = toNumber(invoiceAgg._sum.taxAmount);
-    return { taxCollected: serializeMoney(taxCollected), taxPaid: 0, netTaxEstimate: serializeMoney(taxCollected), taxableSales: serializeMoney(invoiceAgg._sum.total), expenseBase: serializeMoney(expenseAgg._sum.amount) };
+    const taxCategoryIds = new Set<string>(taxCategories.map((category: any) => String(category.id)));
+    const taxPaid = taxExpenseTransactions
+      .filter((tx: any) => tx.type === 'EXPENSE' && tx.categoryId && taxCategoryIds.has(String(tx.categoryId)))
+      .reduce((sum: number, tx: any) => sum + toNumber(tx.amount), 0);
+    return {
+      taxCollected: serializeMoney(taxCollected),
+      taxPaid: serializeMoney(taxPaid),
+      netTaxEstimate: serializeMoney(taxCollected - taxPaid),
+      taxableSales: serializeMoney(invoiceAgg._sum.subtotal),
+      expenseBase: serializeMoney(expenseAgg._sum.amount),
+    };
   }
 
   async balanceSheet(tenantId: string) {
@@ -756,10 +787,11 @@ export class BookkeepingService {
 
   async syncInvoicePayment(tenantId: string, paymentId: string) {
     await this.setupIfEmpty(tenantId);
-    const payment = await db().invoicePayment.findFirst({ where: { id: paymentId, tenantId }, include: { invoice: true } });
+    const payment = await db().invoicePayment.findFirst({ where: { id: paymentId, tenantId }, include: { invoice: { include: { items: true } } } });
     if (!payment) return this.voidSourceTransaction(tenantId, 'INVOICE_PAYMENT', paymentId);
     const account = await this.defaultAccount(tenantId, 'Bank Account');
-    const category = await this.defaultCategory(tenantId, 'Subscriptions', 'INCOME');
+    const category = await this.defaultCategory(tenantId, this.invoiceIncomeCategoryName(payment), 'INCOME')
+      || await this.defaultCategory(tenantId, 'Sales', 'INCOME');
     const existing = await db().bookkeepingTransaction.findFirst({ where: { tenantId, sourceType: 'INVOICE_PAYMENT', sourceId: payment.id } });
     const paymentStatus = String(payment.status || '').toUpperCase();
     const refundAmount = toNumber(payment.refundAmount);
@@ -788,29 +820,36 @@ export class BookkeepingService {
       type: 'INCOME',
       sourceType: 'INVOICE_PAYMENT',
       sourceId: payment.id,
-      description: `Invoice payment ${payment.paymentNumber || payment.reference || payment.id}`,
+      description: `Invoice payment ${payment.invoice?.invoiceNumber || payment.paymentNumber || payment.reference || payment.id}`,
       amount: toNumber(payment.amount),
       currency: payment.invoice?.currency || 'CAD',
       transactionDate: payment.paymentDate,
       paymentMethod: payment.paymentMethod,
       reference: payment.reference || payment.paymentNumber || null,
-      clientId: payment.clientId,
-      projectId: payment.projectId,
+      clientId: payment.clientId || payment.invoice?.clientId || null,
+      projectId: payment.projectId || payment.invoice?.projectId || null,
       invoiceId: payment.invoiceId,
       status: 'POSTED',
-      metadata: withSyncStatus({ paymentId: payment.id, paymentStatus: payment.status || 'SUCCESSFUL' }, 'synced'),
+      metadata: withSyncStatus({
+        paymentId: payment.id,
+        paymentStatus: payment.status || 'SUCCESSFUL',
+        invoiceNumber: payment.invoice?.invoiceNumber || null,
+        proposalId: payment.invoice?.quoteId || null,
+        contractId: payment.invoice?.contractId || null,
+      }, 'synced'),
       skipSourceIdempotency: true,
     };
   }
 
   async createInvoicePaymentReversal(tenantId: string, paymentId: string, amount: number, reason = 'REFUNDED', actorUserId?: string) {
     await this.setupIfEmpty(tenantId);
-    const payment = await db().invoicePayment.findFirst({ where: { id: paymentId, tenantId }, include: { invoice: true } });
+    const payment = await db().invoicePayment.findFirst({ where: { id: paymentId, tenantId }, include: { invoice: { include: { items: true } } } });
     if (!payment) throw new NotFoundError('Invoice payment not found', ErrorCodes.RESOURCE_NOT_FOUND);
     const original = await db().bookkeepingTransaction.findFirst({ where: { tenantId, sourceType: 'INVOICE_PAYMENT', sourceId: payment.id } });
     if (!original) {
       const account = await this.defaultAccount(tenantId, 'Bank Account');
-      const category = await this.defaultCategory(tenantId, 'Subscriptions', 'INCOME');
+      const category = await this.defaultCategory(tenantId, this.invoiceIncomeCategoryName(payment), 'INCOME')
+        || await this.defaultCategory(tenantId, 'Sales', 'INCOME');
       const created = await this.createTransaction(tenantId, this.invoicePaymentTransactionData(payment, account, category), actorUserId);
       return this.createPaymentReversalTransaction(tenantId, created, amount, reason, actorUserId);
     }
@@ -836,7 +875,7 @@ export class BookkeepingService {
       type: 'EXPENSE',
       sourceType: 'EXPENSE',
       sourceId: expense.id,
-      description: expense.title,
+      description: expense.description || expense.title,
       amount: toNumber(expense.amount),
       currency: expense.currency || 'CAD',
       transactionDate: expense.paymentDate,
@@ -844,7 +883,14 @@ export class BookkeepingService {
       reference: expense.receiptNumber || null,
       expenseId: expense.id,
       status: shouldVoid ? 'VOID' : posted ? 'POSTED' : 'PENDING',
-      metadata: withSyncStatus({ expenseId: expense.id, expenseStatus: expense.status || null }, shouldVoid ? 'voided' : posted ? 'synced' : 'needs_review'),
+      metadata: withSyncStatus({
+        expenseId: expense.id,
+        expenseStatus: expense.status || null,
+        expenseTitle: expense.title,
+        vendor: expense.vendor || null,
+        receiptNumber: expense.receiptNumber || null,
+        isReimbursable: Boolean(expense.isReimbursable),
+      }, shouldVoid ? 'voided' : posted ? 'synced' : 'needs_review'),
       skipSourceIdempotency: true,
     };
     if (existing) {
@@ -894,10 +940,22 @@ export class BookkeepingService {
     if (normalized.includes('meal')) return 'Meals';
     if (normalized.includes('rent')) return 'Rent';
     if (normalized.includes('util')) return 'Utilities';
-    if (normalized.includes('tax')) return 'Taxes';
+    if (normalized.includes('insurance')) return 'Insurance';
+    if (normalized.includes('office')) return 'Office Supplies';
     if (normalized.includes('labor')) return 'Labor';
+    if (normalized.includes('salar')) return 'Labor';
     if (normalized.includes('material')) return 'Materials';
     return 'Other Expense';
+  }
+
+  private invoiceIncomeCategoryName(payment: Record<string, any>) {
+    if (payment.subscriptionId) return 'Subscriptions';
+    const descriptions = Array.isArray(payment.invoice?.items)
+      ? payment.invoice.items.map((item: any) => String(item.description || '')).join(' ').toLowerCase()
+      : '';
+    if (descriptions.includes('subscription') || descriptions.includes('monthly') || descriptions.includes('recurring')) return 'Subscriptions';
+    if (descriptions.includes('service') || descriptions.includes('consult') || descriptions.includes('support') || descriptions.includes('implementation')) return 'Services';
+    return 'Sales';
   }
 
   private dateRange(query: Record<string, any>) {
@@ -955,11 +1013,11 @@ export class BookkeepingService {
 
   private async topCustomersByIncome(tenantId: string, from: Date, to: Date) {
     const rows = await this.reportTransactions(tenantId, from, to);
-    const clientIds = rows.filter((tx: any) => tx.type === 'INCOME' && tx.clientId).map((tx: any) => tx.clientId);
+    const clientIds = rows.filter((tx: any) => this.incomeImpact(tx) !== 0 && tx.clientId).map((tx: any) => tx.clientId);
     const clients = await prisma.client.findMany({ where: { tenantId, id: { in: clientIds } }, select: { id: true, clientName: true, companyName: true } });
     const names = new Map<string, string>(clients.map((client: any) => [String(client.id), String(client.companyName || client.clientName || 'Unknown')]));
     const map = new Map<string, number>();
-    rows.filter((tx: any) => tx.type === 'INCOME' && tx.clientId).forEach((tx: any) => map.set(names.get(tx.clientId) || 'Unknown', (map.get(names.get(tx.clientId) || 'Unknown') || 0) + toNumber(tx.amount)));
+    rows.filter((tx: any) => this.incomeImpact(tx) !== 0 && tx.clientId).forEach((tx: any) => map.set(names.get(tx.clientId) || 'Unknown', (map.get(names.get(tx.clientId) || 'Unknown') || 0) + this.incomeImpact(tx)));
     return Array.from(map.entries()).map(([name, total]) => ({ name, total: serializeMoney(total) })).sort((a, b) => b.total - a.total).slice(0, 5);
   }
 

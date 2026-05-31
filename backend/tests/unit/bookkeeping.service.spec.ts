@@ -92,6 +92,43 @@ describe('BookkeepingService', () => {
     expect(mockDb.bookkeepingCategory.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ tenantId: 'tenant-1', name: 'Subscriptions', type: 'INCOME' }),
     }));
+    expect(mockDb.bookkeepingAccount.findFirst).toHaveBeenCalledWith({
+      where: { tenantId: 'tenant-1', name: 'Service Revenue' },
+    });
+    expect(mockDb.bookkeepingAccount.findFirst).toHaveBeenCalledWith({
+      where: { tenantId: 'tenant-1', name: 'Office Expenses' },
+    });
+  });
+
+  it('hydrates payment ledger data from the linked invoice automatically', () => {
+    const data = (bookkeepingService as any).invoicePaymentTransactionData({
+      id: 'payment-1',
+      amount: 250,
+      status: 'SUCCESSFUL',
+      paymentDate: new Date('2026-05-22T00:00:00.000Z'),
+      invoiceId: 'invoice-1',
+      invoice: {
+        invoiceNumber: 'INV-100',
+        currency: 'CAD',
+        clientId: 'client-from-invoice',
+        projectId: 'deal-from-invoice',
+        quoteId: 'proposal-1',
+        contractId: 'contract-1',
+      },
+    }, { id: 'account-1' }, { id: 'category-1' });
+
+    expect(data).toEqual(expect.objectContaining({
+      description: 'Invoice payment INV-100',
+      clientId: 'client-from-invoice',
+      projectId: 'deal-from-invoice',
+      invoiceId: 'invoice-1',
+      metadata: expect.objectContaining({
+        syncStatus: 'synced',
+        invoiceNumber: 'INV-100',
+        proposalId: 'proposal-1',
+        contractId: 'contract-1',
+      }),
+    }));
   });
 
   it('creates a posted income transaction and increases the selected account balance', async () => {
@@ -285,6 +322,29 @@ describe('BookkeepingService', () => {
       where: expect.objectContaining({ tenantId: 'tenant-1' }),
     }));
     expect(csv).toContain('BT-1');
+  });
+
+  it('derives tax summary from non-cancelled invoices and posted tax-category expenses', async () => {
+    mockDb.invoice.aggregate.mockResolvedValue({ _sum: { taxAmount: 130, subtotal: 1000 } });
+    mockDb.expense.aggregate.mockResolvedValue({ _sum: { amount: 400 } });
+    mockDb.bookkeepingCategory.findMany.mockResolvedValue([{ id: 'tax-category', name: 'Taxes', type: 'EXPENSE' }]);
+    mockDb.bookkeepingTransaction.findMany.mockResolvedValue([
+      { type: 'EXPENSE', categoryId: 'tax-category', amount: 45, status: 'POSTED', transactionDate: new Date('2026-05-22T00:00:00.000Z') },
+      { type: 'EXPENSE', categoryId: 'other-category', amount: 25, status: 'POSTED', transactionDate: new Date('2026-05-22T00:00:00.000Z') },
+    ]);
+
+    const report = await bookkeepingService.taxSummary('tenant-1', { dateFrom: '2026-05-01', dateTo: '2026-05-31' });
+
+    expect(mockDb.invoice.aggregate).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ tenantId: 'tenant-1', status: { not: 'CANCELLED' } }),
+    }));
+    expect(report).toEqual(expect.objectContaining({
+      taxCollected: 130,
+      taxPaid: 45,
+      netTaxEstimate: 85,
+      taxableSales: 1000,
+      expenseBase: 400,
+    }));
   });
 
   it('failed payment voids the source bookkeeping transaction when unreconciled', async () => {
@@ -557,6 +617,6 @@ describe('BookkeepingService', () => {
     mockDb.invoicePayment.findFirst.mockResolvedValue(null);
 
     await expect(bookkeepingService.createInvoicePaymentReversal('tenant-1', 'payment-other', 50)).rejects.toThrow('Invoice payment not found');
-    expect(mockDb.invoicePayment.findFirst).toHaveBeenCalledWith({ where: { id: 'payment-other', tenantId: 'tenant-1' }, include: { invoice: true } });
+    expect(mockDb.invoicePayment.findFirst).toHaveBeenCalledWith({ where: { id: 'payment-other', tenantId: 'tenant-1' }, include: { invoice: { include: { items: true } } } });
   });
 });

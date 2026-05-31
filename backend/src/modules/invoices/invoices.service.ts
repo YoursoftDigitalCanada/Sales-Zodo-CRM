@@ -608,8 +608,10 @@ export class InvoicesService {
         recipientName: string;
         supportingAttachmentCount: number;
         logoCid?: string | null;
+        personalMessage?: string | null;
     }) {
         const { invoice, company, recipientName, supportingAttachmentCount, logoCid } = params;
+        const personalMessage = String(params.personalMessage || '').trim();
         const invoiceNumber = String(invoice.invoiceNumber || invoice.id);
         const issueDate = new Date(invoice.issueDate).toLocaleDateString();
         const dueDate = new Date(invoice.dueDate).toLocaleDateString();
@@ -634,6 +636,12 @@ export class InvoicesService {
         const logoHtml = logoCid
             ? `<img src="cid:${logoCid}" alt="${this.escapeHtml(company.companyName || 'Company')} logo" style="display:block;margin:0 auto 14px;max-width:150px;max-height:64px;width:auto;height:auto;border:0;outline:none;text-decoration:none;" />`
             : '';
+        const personalMessageHtml = personalMessage
+            ? `<div style="margin:0 0 24px;background:#F8FAFC;border-left:4px solid #0F766E;border-radius:10px;padding:14px 16px;">
+                <p style="margin:0 0 6px;font-size:12px;color:#64748B;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Message</p>
+                <p style="margin:0;font-size:14px;color:#0F172A;line-height:1.6;white-space:pre-line;">${this.escapeHtml(personalMessage)}</p>
+              </div>`
+            : '';
 
         const html = `
 <!DOCTYPE html>
@@ -651,6 +659,7 @@ export class InvoicesService {
     <p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.6;">
       Your invoice is attached as a PDF. Please review the summary below and contact us if you need anything clarified.
     </p>
+    ${personalMessageHtml}
     <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:20px;margin-bottom:24px;">
       <table style="width:100%;border-collapse:collapse;">
         <tr>
@@ -699,6 +708,7 @@ export class InvoicesService {
             `Hi ${recipientName},`,
             '',
             `Your invoice ${invoiceNumber} is attached as a PDF.`,
+            personalMessage ? `Message: ${personalMessage}` : '',
             `Invoice date: ${issueDate}`,
             `Due date: ${dueDate}`,
             `Amount due: ${amountDue}`,
@@ -2486,7 +2496,7 @@ export class InvoicesService {
         await invoicesRepository.delete(id, tenantId);
     }
 
-    async sendInvoice(id: string, tenantId: string, recipientEmail?: string, actorUserId?: string) {
+    async sendInvoice(id: string, tenantId: string, recipientEmail?: string, personalMessage?: string, actorUserId?: string) {
         const existing = await invoicesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
         const invoiceForSend = await prisma.invoice.findFirst({
@@ -2544,6 +2554,7 @@ export class InvoicesService {
         if (!targetEmail) {
             throw new BadRequestError('A recipient email is required before sending the invoice', ErrorCodes.INVALID_INPUT);
         }
+        const sanitizedPersonalMessage = String(personalMessage || '').trim().slice(0, 5000);
 
         const company = await this.getCompanyProfile(tenantId);
         const recipientName = invoiceForSend.client?.clientName
@@ -2568,6 +2579,7 @@ export class InvoicesService {
             recipientName,
             supportingAttachmentCount: 0,
             logoCid: logoAttachment?.cid || null,
+            personalMessage: sanitizedPersonalMessage,
         });
         const delivery = await sender.send({
             to: targetEmail,

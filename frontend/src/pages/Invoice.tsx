@@ -1742,14 +1742,14 @@ const InvoicePage = () => {
     }
   };
 
-  const handleSendInvoice = async (invoiceId: string, email: string, _message: string) => {
+  const handleSendInvoice = async (invoiceId: string, email: string, message: string) => {
     if (!canSendInvoices) {
       showPermissionDenied("You no longer have permission to send invoices.");
       return;
     }
 
     try {
-      const updated = await sendInvoice(invoiceId, email || undefined);
+      const updated = await sendInvoice(invoiceId, email || undefined, message || undefined);
       const normalized = normalizeInvoice(updated);
       setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? normalized : inv)));
       toast({

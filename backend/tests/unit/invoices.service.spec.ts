@@ -159,6 +159,20 @@ describe('InvoicesService Sales CRM readiness', () => {
     }
   });
 
+  it('includes a personal message in invoice email HTML and text content', () => {
+    const content = (invoicesService as any).buildInvoiceEmailContent({
+      invoice: baseInvoice,
+      company: { companyName: 'Acme CRM' },
+      recipientName: 'Buyer',
+      supportingAttachmentCount: 0,
+      personalMessage: 'Please review before Friday.\nThanks!',
+    });
+
+    expect(content.html).toContain('Please review before Friday.');
+    expect(content.html).toContain('Thanks!');
+    expect(content.text).toContain('Message: Please review before Friday.\nThanks!');
+  });
+
   it('rejects a billing contact that belongs to another company', async () => {
     mockDb.contact.findFirst.mockResolvedValue({ id: 'contact-1', companyId: 'client-other' });
 

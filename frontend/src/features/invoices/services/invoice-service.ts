@@ -82,8 +82,11 @@ export async function updateInvoice(id: number | string, data: UpdateInvoiceDto)
   return extractApiData<InvoiceEntity>(response.data);
 }
 
-export async function sendInvoice(id: number | string, recipientEmail?: string) {
-  const response = await api.post(`/invoices/${id}/send`, { recipientEmail });
+export async function sendInvoice(id: number | string, recipientEmail?: string, personalMessage?: string) {
+  const response = await api.post(`/invoices/${id}/send`, {
+    recipientEmail,
+    personalMessage: personalMessage?.trim() || undefined,
+  });
   return extractApiData<InvoiceEntity>(response.data);
 }
 

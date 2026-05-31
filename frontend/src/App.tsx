@@ -1227,7 +1227,7 @@ const AppRoutes = () => {
             mobileOpen={mobileOpen}
             setMobileOpen={setMobileOpen}
           />
-          <div className="min-w-0 flex-1 overflow-x-hidden main-content pt-14 md:pt-0">
+          <div className="main-content min-w-0 flex-1 overflow-x-hidden overflow-y-auto pt-14 md:max-h-screen md:pt-0">
             {routesContent}
           </div>
           <MobileBottomNav />

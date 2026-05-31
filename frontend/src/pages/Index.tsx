@@ -1041,7 +1041,7 @@ const Index = () => {
         label: "View Pipeline",
         description: "Work the deals closest to revenue",
         icon: Target,
-        path: "/pipeline",
+        path: "/leads/pipeline",
         variant: "outline",
       });
     }
@@ -1259,7 +1259,7 @@ const Index = () => {
       : dashboardAccess.canViewInvoices
         ? "/invoice"
         : dashboardAccess.canViewQuotes
-          ? "/quotes"
+          ? "/proposals"
           : "/notifications";
 
   const hasAnyDashboardModuleAccess =
@@ -1414,7 +1414,7 @@ const Index = () => {
     const recentDeals = recentRevenueRecords.slice(0, 5);
 
     return (
-      <div className={cn("page-enter text-[#172033]", isMobile ? "space-y-4 p-3" : "h-[calc(100vh-48px)] overflow-hidden p-4")}>
+      <div className={cn("page-enter text-[#172033]", isMobile ? "space-y-4 p-3" : "min-h-[calc(100vh-48px)] space-y-4 overflow-visible p-4 pb-16")}>
         <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-[22px] font-semibold tracking-tight text-[#111827]">{getGreeting()}, {user ? user.firstName : "there"}</h1>
@@ -1436,16 +1436,16 @@ const Index = () => {
 
         <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {[
-          { label: "New Leads", value: newLeadCount.toLocaleString(), detail: "vs previous 7 days", icon: Target, tone: "text-[#22A06B]", bg: "bg-[#E7F7EF]", trend: kpiTrends.newLeads },
-          { label: "Open Deals", value: openPipelineLeads.length.toLocaleString(), detail: "Current snapshot", icon: Briefcase, tone: "text-[#7C3AED]", bg: "bg-[#F1EAFF]" },
-          { label: "Revenue", value: formatMoney(closedWonRevenue || salesForecast), detail: "paid vs previous 7 days", icon: DollarSign, tone: "text-[#159A62]", bg: "bg-[#E7F7EF]", trend: kpiTrends.revenue },
-          { label: "Won Deals", value: wonLeads.length.toLocaleString(), detail: "vs previous 7 days", icon: FileText, tone: "text-[#F97316]", bg: "bg-[#FFF1E8]", trend: kpiTrends.wonDeals },
-          { label: "Tasks Due", value: pendingTasksCount.toLocaleString(), detail: "Current snapshot", icon: Clock, tone: "text-[#2F80ED]", bg: "bg-[#EAF3FF]" },
+          { label: "New Leads", value: newLeadCount.toLocaleString(), detail: "vs previous 7 days", icon: Target, tone: "text-[#22A06B]", bg: "bg-[#E7F7EF]", trend: kpiTrends.newLeads, path: "/leads" },
+          { label: "Open Deals", value: openPipelineLeads.length.toLocaleString(), detail: "Current snapshot", icon: Briefcase, tone: "text-[#7C3AED]", bg: "bg-[#F1EAFF]", path: "/deals" },
+          { label: "Revenue", value: formatMoney(closedWonRevenue || salesForecast), detail: "paid vs previous 7 days", icon: DollarSign, tone: "text-[#159A62]", bg: "bg-[#E7F7EF]", trend: kpiTrends.revenue, path: "/invoice" },
+          { label: "Won Deals", value: wonLeads.length.toLocaleString(), detail: "vs previous 7 days", icon: FileText, tone: "text-[#F97316]", bg: "bg-[#FFF1E8]", trend: kpiTrends.wonDeals, path: "/deals" },
+          { label: "Tasks Due", value: pendingTasksCount.toLocaleString(), detail: "Current snapshot", icon: Clock, tone: "text-[#2F80ED]", bg: "bg-[#EAF3FF]", path: "/tasks" },
         ].map((card, index) => (
           <motion.button
             key={card.label}
             type="button"
-            onClick={() => navigate(card.label.includes("Lead") ? "/leads" : card.label.includes("Deal") ? "/deals" : "/forecast")}
+            onClick={() => navigate(card.path)}
             whileHover={{ y: -2 }}
               className={`${compactCard} min-h-[96px] p-4 text-left transition-shadow hover:shadow-md`}
           >
@@ -2418,7 +2418,7 @@ const Index = () => {
                             {[...draftEstimates, ...sentEstimates].slice(0, 4).map((estimate) => (
                               <button
                                 key={estimate.id}
-                                onClick={() => navigate("/quotes")}
+                                onClick={() => navigate("/proposals")}
                                 className="w-full px-4 py-4 text-left transition-colors hover:bg-[#F7F7FB]"
                               >
                                 <div className="flex items-start justify-between gap-3">
@@ -2913,7 +2913,7 @@ const Index = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => navigate("/quotes")}
+                                  onClick={() => navigate("/proposals")}
                                 >
                                   <Sparkles />
                                   <span>Send proposal?</span>
@@ -2933,7 +2933,7 @@ const Index = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => navigate("/quotes")}
+                                onClick={() => navigate("/proposals")}
                               >
                                 <FileText />
                                 <span>Send Proposal</span>

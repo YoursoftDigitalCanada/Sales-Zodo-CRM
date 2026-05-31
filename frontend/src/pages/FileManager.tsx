@@ -154,6 +154,8 @@ interface FileItem {
   name: string;
   type: "folder" | "file";
   fileType?: string;
+  extension?: string | null;
+  mimeType?: string;
   size: number;
   sizeFormatted: string;
   modified: string;
@@ -468,7 +470,15 @@ const storageInfo: StorageInfo = {
 // ============================================
 
 const getFileIcon = (fileType?: string): LucideIcon => {
-  switch (fileType) {
+  const type = String(fileType || '').toLowerCase();
+  if (type === 'application/pdf') return FileText;
+  if (type.startsWith('image/')) return FileImage;
+  if (type.startsWith('video/')) return FileVideo;
+  if (type.startsWith('audio/')) return FileAudio;
+  if (type.includes('spreadsheet') || type.includes('excel')) return FileSpreadsheet;
+  if (type.includes('word') || type.includes('document')) return FileText;
+
+  switch (type) {
     case "pdf":
     case "document":
     case "doc":
@@ -505,7 +515,15 @@ const getFileIcon = (fileType?: string): LucideIcon => {
 };
 
 const getFileTypeColor = (fileType?: string): string => {
-  switch (fileType) {
+  const type = String(fileType || '').toLowerCase();
+  if (type === 'application/pdf') return "#EF4444";
+  if (type.startsWith('image/')) return "#8B5CF6";
+  if (type.startsWith('video/')) return "#EC4899";
+  if (type.startsWith('audio/')) return "#F97316";
+  if (type.includes('spreadsheet') || type.includes('excel')) return "#22C55E";
+  if (type.includes('word') || type.includes('document')) return "#3B82F6";
+
+  switch (type) {
     case "pdf":
       return "#EF4444";
     case "document":
@@ -536,6 +554,20 @@ const formatBytes = (bytes: number): string => {
   const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
+
+const getFileTypeLabel = (file: Pick<FileItem, "fileType" | "extension" | "mimeType">) => {
+  const extension = String(file.extension || "").replace(".", "").trim();
+  if (extension) return extension.toUpperCase();
+
+  const mimeType = String(file.mimeType || file.fileType || "").toLowerCase();
+  if (mimeType === "application/pdf") return "PDF";
+  if (mimeType.startsWith("image/")) return mimeType.replace("image/", "").toUpperCase();
+  if (mimeType.startsWith("video/")) return mimeType.replace("video/", "").toUpperCase();
+  if (mimeType.startsWith("audio/")) return mimeType.replace("audio/", "").toUpperCase();
+  if (mimeType.startsWith("text/")) return mimeType.replace("text/", "").toUpperCase();
+
+  return String(file.fileType || "FILE").replace(".", "").toUpperCase();
 };
 
 const getRelativeTime = (date: Date): string => {
@@ -961,7 +993,7 @@ const FileCard = ({
             </h3>
             {file.starred && <Star size={14} className="text-[#D97706] fill-[#FBBF24]" />}
           </div>
-          <p className="text-sm text-[#94A3B8]">{file.fileType?.toUpperCase()} • {file.sizeFormatted}</p>
+          <p className="text-sm text-[#94A3B8]">{getFileTypeLabel(file)} • {file.sizeFormatted}</p>
         </div>
 
         <div className="text-sm text-[#475569]">{file.modified}</div>
@@ -1129,7 +1161,7 @@ const FileCard = ({
             className="px-2 py-1 rounded-md text-xs font-semibold text-[#0F172A]"
             style={{ backgroundColor: iconColor }}
           >
-            {file.fileType?.toUpperCase()}
+            {getFileTypeLabel(file)}
           </span>
         </div>
       </div>
@@ -1519,7 +1551,7 @@ const FilePreviewDialog = ({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
-  const previewType = file ? getPreviewType({ extension: file.fileType, fileType: file.fileType }) : 'unknown';
+  const previewType = file ? getPreviewType({ extension: file.extension || file.fileType, mimeType: file.mimeType, fileType: file.fileType }) : 'unknown';
 
   useEffect(() => {
     if (!file || !isOpen) return;
@@ -1678,7 +1710,7 @@ const FilePreviewDialog = ({
             </div>
             <div className="min-w-0">
               <h3 className="font-semibold text-[#0F172A] truncate">{file.name}</h3>
-              <p className="text-xs text-[#94A3B8]">{file.fileType?.toUpperCase()} • {file.sizeFormatted} • {file.modified}</p>
+              <p className="text-xs text-[#94A3B8]">{getFileTypeLabel(file)} • {file.sizeFormatted} • {file.modified}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -1794,7 +1826,9 @@ const FileManagerPage = () => {
     id: f.id,
     name: f.name,
     type: "file",
-    fileType: f.extension?.replace('.', '') || f.mimeType.split('/')[0] || 'file',
+    fileType: f.extension?.replace('.', '') || f.mimeType || 'file',
+    extension: f.extension,
+    mimeType: f.mimeType,
     size: f.size,
     sizeFormatted: formatBytes(f.size),
     modified: getRelativeTime(new Date(f.updatedAt)),
@@ -2239,7 +2273,7 @@ const FileManagerPage = () => {
   };
 
   const handleOpenFile = (file: FileItem) => {
-    if (isPreviewable({ extension: file.fileType, fileType: file.fileType })) {
+    if (isPreviewable({ extension: file.extension || file.fileType, mimeType: file.mimeType, fileType: file.fileType })) {
       setPreviewFile(file);
       setShowPreview(true);
     } else {

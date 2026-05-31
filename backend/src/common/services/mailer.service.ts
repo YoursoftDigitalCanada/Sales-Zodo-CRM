@@ -84,7 +84,7 @@ class MailerService {
             html: string;
             text?: string;
             replyTo?: string;
-            attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
+            attachments?: Array<{ filename: string; content: Buffer; contentType?: string; cid?: string; contentDisposition?: 'attachment' | 'inline' }>;
         }
     ): Promise<boolean> {
         const result = await this.sendMailWithConfigDetailed(smtpConfig, opts);
@@ -101,7 +101,7 @@ class MailerService {
             html: string;
             text?: string;
             replyTo?: string;
-            attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
+            attachments?: Array<{ filename: string; content: Buffer; contentType?: string; cid?: string; contentDisposition?: 'attachment' | 'inline' }>;
         }
     ): Promise<{ sent: boolean; error?: string; messageId?: string }> {
         if (!nodemailer) {
@@ -149,6 +149,8 @@ class MailerService {
                     filename: a.filename,
                     content: a.content,
                     contentType: a.contentType || 'application/pdf',
+                    cid: a.cid,
+                    contentDisposition: a.contentDisposition,
                 })),
             });
             console.log('📧 Email sent:', info.messageId, '→', opts.to);
@@ -235,7 +237,7 @@ class MailerService {
         html: string;
         text?: string;
         replyTo?: string;
-        attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
+        attachments?: Array<{ filename: string; content: Buffer; contentType?: string; cid?: string; contentDisposition?: 'attachment' | 'inline' }>;
         fromName?: string;
         fromEmail?: string;
     }): Promise<boolean> {
@@ -251,7 +253,7 @@ class MailerService {
         html: string;
         text?: string;
         replyTo?: string;
-        attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
+        attachments?: Array<{ filename: string; content: Buffer; contentType?: string; cid?: string; contentDisposition?: 'attachment' | 'inline' }>;
         fromName?: string;
         fromEmail?: string;
     }): Promise<{ sent: boolean; error?: string }> {

@@ -31,6 +31,8 @@ interface InvoiceEmailAttachment {
     filename: string;
     content: Buffer;
     contentType?: string;
+    cid?: string;
+    contentDisposition?: 'attachment' | 'inline';
 }
 
 interface InvoiceRoofAttachmentCandidate {
@@ -230,6 +232,40 @@ export class InvoicesService {
         try {
             const file = await fs.readFile(absolutePath);
             return `data:${mimeType};base64,${file.toString('base64')}`;
+        } catch {
+            return null;
+        }
+    }
+
+    private async loadLogoEmailAttachment(logoUrl: string | null | undefined): Promise<InvoiceEmailAttachment | null> {
+        const value = String(logoUrl || '').trim();
+        if (!value || /^https?:\/\//i.test(value) || value.startsWith('data:image/')) {
+            return null;
+        }
+
+        const relativePath = value.startsWith('/uploads/')
+            ? value.replace(/^\/uploads\/?/, '')
+            : value.replace(/^\/+/, '');
+        const absolutePath = path.resolve(config.upload.uploadPath, relativePath);
+        const extension = path.extname(absolutePath).toLowerCase();
+        const contentType = extension === '.png'
+            ? 'image/png'
+            : extension === '.jpg' || extension === '.jpeg'
+                ? 'image/jpeg'
+                : extension === '.webp'
+                    ? 'image/webp'
+                    : null;
+        if (!contentType) return null;
+
+        try {
+            const content = await fs.readFile(absolutePath);
+            return {
+                filename: `company-logo${extension}`,
+                content,
+                contentType,
+                cid: 'tenant-company-logo',
+                contentDisposition: 'inline',
+            };
         } catch {
             return null;
         }
@@ -571,8 +607,9 @@ export class InvoicesService {
         company: CompanyProfile;
         recipientName: string;
         supportingAttachmentCount: number;
+        logoCid?: string | null;
     }) {
-        const { invoice, company, recipientName, supportingAttachmentCount } = params;
+        const { invoice, company, recipientName, supportingAttachmentCount, logoCid } = params;
         const invoiceNumber = String(invoice.invoiceNumber || invoice.id);
         const issueDate = new Date(invoice.issueDate).toLocaleDateString();
         const dueDate = new Date(invoice.dueDate).toLocaleDateString();
@@ -594,6 +631,9 @@ export class InvoicesService {
                 ${supportingAttachmentCount} supporting attachment${supportingAttachmentCount === 1 ? '' : 's'} ${supportingAttachmentCount === 1 ? 'is' : 'are'} included with this invoice for reference.
               </p>`
             : '';
+        const logoHtml = logoCid
+            ? `<img src="cid:${logoCid}" alt="${this.escapeHtml(company.companyName || 'Company')} logo" style="display:block;margin:0 auto 14px;max-width:150px;max-height:64px;width:auto;height:auto;border:0;outline:none;text-decoration:none;" />`
+            : '';
 
         const html = `
 <!DOCTYPE html>
@@ -602,6 +642,7 @@ export class InvoicesService {
 <body style="margin:0;padding:0;background:#F1F5F9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <div style="max-width:640px;margin:0 auto;padding:40px 20px;">
   <div style="background:linear-gradient(135deg,#0F766E,#115E59);border-radius:16px 16px 0 0;padding:32px;text-align:center;">
+    ${logoHtml}
     <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">${this.escapeHtml(company.companyName || 'ZODO CRM')}</h1>
     <p style="margin:8px 0 0;color:rgba(255,255,255,0.88);font-size:14px;">Invoice Ready</p>
   </div>
@@ -2510,6 +2551,7 @@ export class InvoicesService {
             || 'Customer';
         const sender = await this.resolveInvoiceSender(tenantId, actorUserId);
         const { buffer, fileName } = await this.generatePdf(id, tenantId);
+        const logoAttachment = await this.loadLogoEmailAttachment(company.logoUrl);
         const emailAttachments: InvoiceEmailAttachment[] = [
             {
                 filename: fileName,
@@ -2517,11 +2559,15 @@ export class InvoicesService {
                 contentType: 'application/pdf',
             },
         ];
+        if (logoAttachment) {
+            emailAttachments.push(logoAttachment);
+        }
         const emailContent = this.buildInvoiceEmailContent({
             invoice: invoiceForSend,
             company,
             recipientName,
             supportingAttachmentCount: 0,
+            logoCid: logoAttachment?.cid || null,
         });
         const delivery = await sender.send({
             to: targetEmail,

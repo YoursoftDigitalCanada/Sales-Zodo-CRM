@@ -10,6 +10,8 @@ export interface TenantEmailAttachment {
   filename: string;
   content: Buffer;
   contentType?: string;
+  cid?: string;
+  contentDisposition?: 'attachment' | 'inline';
 }
 
 export interface TenantEmailOptions {

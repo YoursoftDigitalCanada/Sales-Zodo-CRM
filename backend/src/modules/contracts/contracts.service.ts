@@ -2,6 +2,7 @@ import { ContractStatus } from '@prisma/client';
 import { contractsRepository } from './contracts.repository';
 import { CreateContractDto, UpdateContractDto, ContractQueryDto, toContractResponseDto } from './contracts.dto';
 import { prisma } from '../../config/database';
+import { config } from '../../config';
 import { documentsService } from '../documents/documents.service';
 import { filesService } from '../files/files.service';
 import { activityLogger } from '../../common/services/activity-logger.service';
@@ -34,7 +35,7 @@ export class ContractsService {
     private async getCompanyProfile(tenantId: string) {
         const settings = await prisma.tenantSettings.findUnique({
             where: { tenantId },
-            include: { tenant: { select: { name: true } } },
+            include: { tenant: { select: { name: true, logo: true } } },
         });
         const integrations = settings?.integrations && typeof settings.integrations === 'object'
             ? settings.integrations as Record<string, unknown>
@@ -43,7 +44,41 @@ export class ContractsService {
             companyName: String(integrations.companyName ?? settings?.tenant?.name ?? 'ZODO CRM'),
             email: String(integrations.companyEmail ?? '') || undefined,
             phone: String(integrations.companyPhone ?? '') || undefined,
+            logoUrl: settings?.tenant?.logo || null,
         };
+    }
+
+    private async loadLogoEmailAttachment(logoUrl: string | null | undefined) {
+        const value = String(logoUrl || '').trim();
+        if (!value || /^https?:\/\//i.test(value) || value.startsWith('data:image/')) {
+            return null;
+        }
+
+        const relativePath = value.startsWith('/uploads/')
+            ? value.replace(/^\/uploads\/?/, '')
+            : value.replace(/^\/+/, '');
+        const absolutePath = path.resolve(config.upload.uploadPath, relativePath);
+        const extension = path.extname(absolutePath).toLowerCase();
+        const contentType = extension === '.png'
+            ? 'image/png'
+            : extension === '.jpg' || extension === '.jpeg'
+                ? 'image/jpeg'
+                : extension === '.webp'
+                    ? 'image/webp'
+                    : null;
+        if (!contentType) return null;
+
+        try {
+            return {
+                filename: `company-logo${extension}`,
+                content: await fs.readFile(absolutePath),
+                contentType,
+                cid: 'tenant-company-logo',
+                contentDisposition: 'inline' as const,
+            };
+        } catch {
+            return null;
+        }
     }
 
     private isAuthenticationError(errorMessage: string) {
@@ -59,12 +94,16 @@ export class ContractsService {
         contract: any;
         company: { companyName: string; email?: string; phone?: string };
         recipientName: string;
+        logoCid?: string | null;
     }) {
-        const { contract, company, recipientName } = params;
+        const { contract, company, recipientName, logoCid } = params;
         const contractNumber = String(contract.contractNumber || contract.id);
         const value = this.formatCurrency(Number(contract.value || 0), contract.currency || 'CAD');
         const startDate = contract.startDate ? new Date(contract.startDate).toLocaleDateString() : '-';
         const endDate = contract.endDate ? new Date(contract.endDate).toLocaleDateString() : '-';
+        const logoHtml = logoCid
+            ? `<img src="cid:${logoCid}" alt="${this.escapeHtml(company.companyName || 'Company')} logo" style="display:block;margin:0 auto 14px;max-width:150px;max-height:64px;width:auto;height:auto;border:0;outline:none;text-decoration:none;" />`
+            : '';
         const html = `
 <!DOCTYPE html>
 <html>
@@ -72,6 +111,7 @@ export class ContractsService {
 <body style="margin:0;padding:0;background:#F1F5F9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <div style="max-width:640px;margin:0 auto;padding:40px 20px;">
   <div style="background:linear-gradient(135deg,#0F766E,#115E59);border-radius:16px 16px 0 0;padding:32px;text-align:center;">
+    ${logoHtml}
     <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">${this.escapeHtml(company.companyName || 'ZODO CRM')}</h1>
     <p style="margin:8px 0 0;color:rgba(255,255,255,0.88);font-size:14px;">Contract Ready</p>
   </div>
@@ -248,7 +288,12 @@ export class ContractsService {
         const company = await this.getCompanyProfile(tenantId);
         const recipientName = (existing as any).contact?.contactName || (existing as any).client?.clientName || 'Customer';
         const { buffer, fileName } = await this.generatePdf(id, tenantId);
-        const emailContent = this.buildContractEmailContent({ contract: existing, company, recipientName });
+        const logoAttachment = await this.loadLogoEmailAttachment(company.logoUrl);
+        const emailContent = this.buildContractEmailContent({ contract: existing, company, recipientName, logoCid: logoAttachment?.cid || null });
+        const attachments = [
+            { filename: fileName, content: buffer, contentType: 'application/pdf' },
+            ...(logoAttachment ? [logoAttachment] : []),
+        ];
         const delivery = await tenantMailerService.sendTenantEmail({
             tenantId,
             preferredUserId: actorUserId,
@@ -258,7 +303,7 @@ export class ContractsService {
             text: emailContent.text,
             relatedEntityType: 'Contract',
             relatedEntityId: id,
-            attachments: [{ filename: fileName, content: buffer, contentType: 'application/pdf' }],
+            attachments,
         });
         if (!delivery.sent) {
             const errorMessage = delivery.error || 'Check the configured SMTP credentials and try again.';

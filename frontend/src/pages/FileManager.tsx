@@ -135,7 +135,6 @@ import {
   permanentDeleteFile as apiPermanentDeleteFile,
   permanentDeleteFolder as apiPermanentDeleteFolder,
   createShareLink as apiCreateShareLink,
-  isPreviewable,
   getPreviewType,
   getPreviewUrl,
   fetchFileBlob,
@@ -1553,6 +1552,11 @@ const FilePreviewDialog = ({
 
   const previewType = file ? getPreviewType({ extension: file.extension || file.fileType, mimeType: file.mimeType, fileType: file.fileType }) : 'unknown';
 
+  const openBlobInNewTab = () => {
+    if (!blobUrl) return;
+    window.open(blobUrl, "_blank", "noopener,noreferrer");
+  };
+
   useEffect(() => {
     if (!file || !isOpen) return;
 
@@ -1670,10 +1674,15 @@ const FilePreviewDialog = ({
           <div className="flex flex-col items-center justify-center py-16 gap-4">
             <FileText size={64} className="text-[#94A3B8]" />
             <p className="text-[#475569] text-center">Office file preview is not available in the browser.</p>
-            <p className="text-[#94A3B8] text-sm">Click download to view this file.</p>
-            <Button onClick={onDownload} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
-              <Download size={16} className="mr-2" /> Download File
-            </Button>
+            <p className="text-[#94A3B8] text-sm">Open it in a new tab or download it to view with your desktop app.</p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button onClick={openBlobInNewTab} disabled={!blobUrl} variant="outline" className="rounded-md">
+                <ExternalLink size={16} className="mr-2" /> Open File
+              </Button>
+              <Button onClick={onDownload} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
+                <Download size={16} className="mr-2" /> Download File
+              </Button>
+            </div>
           </div>
         );
       case 'text':
@@ -1686,10 +1695,16 @@ const FilePreviewDialog = ({
         return (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
             <FileText size={64} className="text-[#94A3B8]" />
-            <p className="text-[#475569]">Preview not available for this file type</p>
-            <Button onClick={onDownload} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
-              <Download size={16} className="mr-2" /> Download File
-            </Button>
+            <p className="text-[#475569]">This file type cannot be previewed directly in the CRM.</p>
+            <p className="text-[#94A3B8] text-sm">You can still open it in a new browser tab or download it.</p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button onClick={openBlobInNewTab} disabled={!blobUrl} variant="outline" className="rounded-md">
+                <ExternalLink size={16} className="mr-2" /> Open File
+              </Button>
+              <Button onClick={onDownload} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
+                <Download size={16} className="mr-2" /> Download File
+              </Button>
+            </div>
           </div>
         );
     }
@@ -1714,6 +1729,15 @@ const FilePreviewDialog = ({
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openBlobInNewTab}
+              disabled={!blobUrl || previewLoading}
+              className="rounded-md border-[rgba(15,23,42,0.06)] hover:border-[#22D3EE]"
+            >
+              <ExternalLink size={14} className="mr-1" /> Open
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -2273,12 +2297,8 @@ const FileManagerPage = () => {
   };
 
   const handleOpenFile = (file: FileItem) => {
-    if (isPreviewable({ extension: file.extension || file.fileType, mimeType: file.mimeType, fileType: file.fileType })) {
-      setPreviewFile(file);
-      setShowPreview(true);
-    } else {
-      handleDownload(file);
-    }
+    setPreviewFile(file);
+    setShowPreview(true);
   };
 
   const storageUsed = storage?.totalUsed || 0;

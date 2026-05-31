@@ -69,8 +69,8 @@ export async function deleteContract(id: string): Promise<void> {
   await api.delete(`/contracts/${id}`);
 }
 
-export async function sendContract(id: string): Promise<ContractEntity> {
-  const response = await api.post(`/contracts/${id}/send`);
+export async function sendContract(id: string, recipientEmail?: string): Promise<ContractEntity> {
+  const response = await api.post(`/contracts/${id}/send`, recipientEmail ? { recipientEmail } : {});
   return response.data?.data || response.data;
 }
 

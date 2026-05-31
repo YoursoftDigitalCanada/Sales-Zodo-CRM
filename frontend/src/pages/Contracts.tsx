@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Building2, CalendarClock, CheckCircle2, Download, Eye, FileSignature, FileText, Plus, RefreshCw, Save, Search, Send, UserRound, XCircle } from "lucide-react";
+import { AlertCircle, Building2, CalendarClock, CheckCircle2, Download, Eye, FileSignature, FileText, Loader2, Mail, Plus, RefreshCw, Save, Search, Send, UserRound, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -155,12 +155,14 @@ function ContractDetailDialog({
   onDownload,
   onAction,
   onCreateInvoice,
+  onSend,
 }: {
   contract: ContractEntity | null;
   onClose: () => void;
   onDownload: (contract: ContractEntity) => void;
   onAction: (label: string, action: () => Promise<unknown>) => void;
   onCreateInvoice: (contract: ContractEntity) => void;
+  onSend: (contract: ContractEntity) => void;
 }) {
   if (!contract) return null;
   const docsUrl = `/documents?linkedEntityType=Contract&linkedEntityId=${encodeURIComponent(contract.id)}`;
@@ -220,12 +222,100 @@ function ContractDetailDialog({
         </div>
 
         <DialogFooter className="flex-wrap gap-2">
-          {["DRAFT", "SENT"].includes(contract.status) && <Button onClick={() => onAction(contract.status === "SENT" ? "Contract resent" : "Contract sent", () => sendContract(contract.id))}><Send className="mr-2 h-4 w-4" />{contract.status === "SENT" ? "Resend" : "Send"}</Button>}
+          {["DRAFT", "SENT"].includes(contract.status) && <Button onClick={() => onSend(contract)}><Send className="mr-2 h-4 w-4" />{contract.status === "SENT" ? "Resend" : "Send"}</Button>}
           {contract.status === "SENT" && <Button onClick={() => onAction("Contract signed", () => signContract(contract.id))}><CheckCircle2 className="mr-2 h-4 w-4" />Mark Signed</Button>}
           {contract.status === "SENT" && <Button variant="outline" onClick={() => onAction("Contract declined", () => declineContract(contract.id))}><XCircle className="mr-2 h-4 w-4" />Decline</Button>}
           <Button variant="outline" onClick={() => onDownload(contract)}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
           <Button variant="outline" onClick={() => onAction("Contract saved to Documents", () => saveContractDocument(contract.id, contract.status === "ACTIVE" ? "signed" : "sent"))}><Save className="mr-2 h-4 w-4" />Save to Documents</Button>
           <Button variant="outline" onClick={() => onCreateInvoice(contract)}><FileText className="mr-2 h-4 w-4" />Create Invoice</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SendContractDialog({
+  contract,
+  onClose,
+  onSent,
+}: {
+  contract: ContractEntity | null;
+  onClose: () => void;
+  onSent: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    if (!contract) return;
+    setEmail(contract.contact?.email || "");
+  }, [contract]);
+
+  const handleSend = async () => {
+    if (!contract || !email.trim()) return;
+    setIsSending(true);
+    try {
+      await sendContract(contract.id, email.trim());
+      toast.success(`Contract emailed to ${email.trim()}`);
+      onSent();
+      onClose();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not send contract email");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <Dialog open={Boolean(contract)} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-[450px] p-0 rounded-md overflow-hidden">
+        <div className="p-6 border-b border-[rgba(15,23,42,0.06)] bg-[#F0FDFA]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-[#0F172A]">Send Contract</DialogTitle>
+            <DialogDescription className="text-[#64748B]">
+              Send {contract?.contractNumber || "this contract"} with a PDF attachment.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+        <div className="p-6 space-y-5">
+          <div className="p-4 bg-[#F8FAFC] rounded-md flex items-center gap-4">
+            <div className="w-12 h-12 rounded-md bg-[#0891B2]/10 flex items-center justify-center">
+              <FileSignature size={24} className="text-[#0891B2]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-[#0F172A] truncate">{contract?.contractNumber}</p>
+              <p className="text-sm text-[#64748B] truncate">{contract?.client?.clientName || contract?.title}</p>
+            </div>
+            <p className="text-base font-bold text-[#0891B2]">{money(contract?.value, contract?.currency)}</p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[#475569]">
+              Recipient Email <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+              <Input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="client@example.com"
+                className="h-11 pl-10 rounded-md border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20"
+              />
+            </div>
+          </div>
+          <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-md">
+            <AlertCircle size={18} className="text-blue-500 mt-0.5" />
+            <p className="text-xs text-blue-700">
+              The contract PDF will be attached. Change the email here if the saved contact email is not the mailbox you want to test.
+            </p>
+          </div>
+        </div>
+        <DialogFooter className="p-6 pt-0 gap-3">
+          <Button variant="outline" onClick={onClose} className="rounded-md">Cancel</Button>
+          <Button onClick={handleSend} disabled={isSending || !email.trim()} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
+            {isSending ? <Loader2 size={16} className="animate-spin mr-2" /> : <Send size={16} className="mr-2" />}
+            Send Contract
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -239,6 +329,7 @@ export default function ContractsPage() {
   const [clients, setClients] = useState<ClientEntity[]>([]);
   const [contacts, setContacts] = useState<ContractContactEntity[]>([]);
   const [selectedContract, setSelectedContract] = useState<ContractEntity | null>(null);
+  const [contractToSend, setContractToSend] = useState<ContractEntity | null>(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -380,7 +471,7 @@ export default function ContractsPage() {
                     <div className="flex flex-wrap justify-end gap-2">
                       <Button size="sm" variant="outline" onClick={() => openContract(contract)}><Eye className="mr-1.5 h-3.5 w-3.5" />Details</Button>
                       <ContractDialog contract={contract} clients={clients} contacts={contacts} onSaved={load} />
-                      {["DRAFT", "SENT"].includes(contract.status) && <Button size="sm" onClick={() => runAction(contract.status === "SENT" ? "Contract resent" : "Contract sent", () => sendContract(contract.id))}><Send className="mr-1.5 h-3.5 w-3.5" />{contract.status === "SENT" ? "Resend" : "Send"}</Button>}
+                      {["DRAFT", "SENT"].includes(contract.status) && <Button size="sm" onClick={() => setContractToSend(contract)}><Send className="mr-1.5 h-3.5 w-3.5" />{contract.status === "SENT" ? "Resend" : "Send"}</Button>}
                       {contract.status === "SENT" && <Button size="sm" onClick={() => runAction("Contract signed", () => signContract(contract.id))}><CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />Mark Signed</Button>}
                       {contract.status === "SENT" && <Button size="sm" variant="outline" onClick={() => runAction("Contract declined", () => declineContract(contract.id))}><XCircle className="mr-1.5 h-3.5 w-3.5" />Decline</Button>}
                       <Button size="sm" variant="outline" onClick={() => downloadPdf(contract)}><Download className="mr-1.5 h-3.5 w-3.5" />PDF</Button>
@@ -397,7 +488,8 @@ export default function ContractsPage() {
           </Table>
         </div>
       </div>
-      <ContractDetailDialog contract={selectedContract} onClose={closeContract} onDownload={downloadPdf} onAction={runAction} onCreateInvoice={createInvoice} />
+      <ContractDetailDialog contract={selectedContract} onClose={closeContract} onDownload={downloadPdf} onAction={runAction} onCreateInvoice={createInvoice} onSend={setContractToSend} />
+      <SendContractDialog contract={contractToSend} onClose={() => setContractToSend(null)} onSent={load} />
     </div>
   );
 }

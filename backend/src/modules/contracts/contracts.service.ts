@@ -276,11 +276,11 @@ export class ContractsService {
         return toContractResponseDto(contract);
     }
 
-    async send(id: string, tenantId: string, actorUserId?: string) {
+    async send(id: string, tenantId: string, actorUserId?: string, recipientEmailOverride?: string) {
         const existing = await contractsRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Contract not found', ErrorCodes.RESOURCE_NOT_FOUND);
 
-        const recipientEmail = String((existing as any).contact?.email || (existing as any).client?.primaryEmail || '').trim();
+        const recipientEmail = String(recipientEmailOverride || (existing as any).contact?.email || (existing as any).client?.primaryEmail || '').trim();
         if (!recipientEmail) {
             throw new BadRequestError('A recipient email is required before sending the contract.', ErrorCodes.INVALID_INPUT);
         }

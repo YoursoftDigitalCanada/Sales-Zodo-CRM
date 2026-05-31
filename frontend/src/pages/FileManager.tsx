@@ -484,8 +484,19 @@ const getFileIcon = (fileType?: string): LucideIcon => {
       return FileText;
     case "image":
     case "jpg":
+    case "jpeg":
+    case "jfif":
     case "png":
     case "gif":
+    case "webp":
+    case "avif":
+    case "svg":
+    case "bmp":
+    case "ico":
+    case "heic":
+    case "heif":
+    case "tif":
+    case "tiff":
       return FileImage;
     case "video":
     case "mp4":
@@ -1549,6 +1560,7 @@ const FilePreviewDialog = ({
   const [textContent, setTextContent] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [imagePreviewError, setImagePreviewError] = useState(false);
 
   const previewType = file ? getPreviewType({ extension: file.extension || file.fileType, mimeType: file.mimeType, fileType: file.fileType }) : 'unknown';
 
@@ -1563,6 +1575,7 @@ const FilePreviewDialog = ({
     let cancelled = false;
     setPreviewLoading(true);
     setPreviewError(null);
+    setImagePreviewError(false);
     setBlobUrl(null);
     setTextContent(null);
 
@@ -1627,13 +1640,27 @@ const FilePreviewDialog = ({
 
     switch (previewType) {
       case 'image':
-        return blobUrl ? (
+        return blobUrl && !imagePreviewError ? (
           <div className="flex items-center justify-center bg-black/5 rounded-lg p-4 min-h-[400px]">
             <img
               src={blobUrl}
               alt={file.name}
+              onError={() => setImagePreviewError(true)}
               className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
             />
+          </div>
+        ) : blobUrl ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <FileImage size={64} className="text-[#94A3B8]" />
+            <p className="text-[#475569] text-center">This image format is not supported by your browser preview.</p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button onClick={openBlobInNewTab} variant="outline" className="rounded-md">
+                <ExternalLink size={16} className="mr-2" /> Open Image
+              </Button>
+              <Button onClick={onDownload} className="bg-[#0891B2] hover:bg-[#0891B2]/90 text-white rounded-md">
+                <Download size={16} className="mr-2" /> Download Image
+              </Button>
+            </div>
           </div>
         ) : null;
       case 'video':

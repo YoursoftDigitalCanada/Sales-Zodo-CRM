@@ -213,7 +213,7 @@ export function getPreviewUrl(id: string): string {
 
 // File types that can be previewed in-browser
 const PREVIEWABLE_EXTENSIONS = new Set([
-    'pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp',
+    'pdf', 'jpg', 'jpeg', 'jfif', 'png', 'gif', 'webp', 'avif', 'svg', 'bmp', 'ico', 'heic', 'heif', 'tif', 'tiff',
     'mp4', 'webm', 'ogg', 'mov',
     'mp3', 'wav', 'aac',
     'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
@@ -222,7 +222,8 @@ const PREVIEWABLE_EXTENSIONS = new Set([
 
 const PREVIEWABLE_MIMES = new Set([
     'application/pdf',
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/svg+xml', 'image/bmp',
+    'image/x-icon', 'image/vnd.microsoft.icon', 'image/heic', 'image/heif', 'image/tiff',
     'video/mp4', 'video/webm', 'video/ogg',
     'audio/mpeg', 'audio/wav', 'audio/aac', 'audio/ogg',
     'text/plain', 'text/csv', 'text/html',
@@ -243,7 +244,7 @@ export function getPreviewType(file: { extension?: string | null; mimeType?: str
     const ext = (file.extension || file.fileType || '').replace('.', '').toLowerCase();
     const mime = file.mimeType || '';
     
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext) || mime.startsWith('image/')) return 'image';
+    if (['jpg', 'jpeg', 'jfif', 'png', 'gif', 'webp', 'avif', 'svg', 'bmp', 'ico', 'heic', 'heif', 'tif', 'tiff'].includes(ext) || mime.startsWith('image/')) return 'image';
     if (['mp4', 'webm', 'ogg', 'mov'].includes(ext) || mime.startsWith('video/')) return 'video';
     if (['mp3', 'wav', 'aac'].includes(ext) || mime.startsWith('audio/')) return 'audio';
     if (ext === 'pdf' || mime === 'application/pdf') return 'pdf';

@@ -110,8 +110,12 @@ export class InvoicesRepository {
             ...((query as any).quoteId && { quoteId: (query as any).quoteId }),
             ...((query as any).projectId && { projectId: (query as any).projectId }),
             ...((query as any).contractId && { contractId: (query as any).contractId }),
-            ...(startDate && { issueDate: { gte: new Date(startDate) } }),
-            ...(endDate && { issueDate: { lte: new Date(endDate) } }),
+            ...((startDate || endDate) && {
+                issueDate: {
+                    ...(startDate && { gte: new Date(startDate) }),
+                    ...(endDate && { lte: new Date(endDate) }),
+                },
+            }),
             ...(search && {
                 OR: [
                     { invoiceNumber: { contains: search, mode: 'insensitive' as const } },

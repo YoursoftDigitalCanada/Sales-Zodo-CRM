@@ -219,6 +219,17 @@ const dateFilterOptions = [
   { value: "year", label: "This Year" },
 ];
 
+const sortOptions = [
+  { value: "date-desc", label: "Newest First" },
+  { value: "date-asc", label: "Oldest First" },
+  { value: "due-date-asc", label: "Due Date: Soonest" },
+  { value: "amount-desc", label: "Amount: High to Low" },
+  { value: "amount-asc", label: "Amount: Low to High" },
+  { value: "number-asc", label: "Invoice Number: A-Z" },
+] as const;
+
+type InvoiceSort = (typeof sortOptions)[number]["value"];
+
 const mobileStatusTabs = [
   { value: "all", label: "All" },
   { value: "draft", label: "Draft" },
@@ -323,6 +334,73 @@ const isOverdue = (dueDate?: string, status?: string) => {
     return false;
   }
   return new Date(dueDate) < new Date();
+};
+
+const getInvoiceDateRange = (filterDate: string) => {
+  if (filterDate === "all") return {};
+
+  const now = new Date();
+  let startDate: Date;
+  let endDate: Date;
+
+  if (filterDate.startsWith("year:")) {
+    const year = Number(filterDate.slice(5));
+    if (!Number.isInteger(year)) return {};
+    startDate = new Date(year, 0, 1);
+    endDate = new Date(year, 11, 31, 23, 59, 59, 999);
+  } else {
+    switch (filterDate) {
+      case "today":
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        break;
+      case "week":
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case "month":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        break;
+      case "quarter": {
+        const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+        startDate = new Date(now.getFullYear(), quarterStartMonth, 1);
+        endDate = new Date(now.getFullYear(), quarterStartMonth + 3, 0, 23, 59, 59, 999);
+        break;
+      }
+      case "year":
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        break;
+      default:
+        return {};
+    }
+  }
+
+  return {
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  };
+};
+
+const compareInvoices = (sortBy: InvoiceSort) => (first: Invoice, second: Invoice) => {
+  switch (sortBy) {
+    case "date-asc":
+      return new Date(first.invoiceDate).getTime() - new Date(second.invoiceDate).getTime();
+    case "due-date-asc":
+      return new Date(first.dueDate || "9999-12-31").getTime() - new Date(second.dueDate || "9999-12-31").getTime();
+    case "amount-desc":
+      return (second.total || 0) - (first.total || 0);
+    case "amount-asc":
+      return (first.total || 0) - (second.total || 0);
+    case "number-asc":
+      return first.invoiceNumber.localeCompare(second.invoiceNumber, undefined, { numeric: true });
+    case "date-desc":
+    default:
+      return new Date(second.invoiceDate).getTime() - new Date(first.invoiceDate).getTime();
+  }
 };
 
 const normalizeInvoice = (inv: any): Invoice => {
@@ -1612,6 +1690,7 @@ const InvoicePage = () => {
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("all");
+  const [sortBy, setSortBy] = useState<InvoiceSort>("date-desc");
   const [mobileStatusTab, setMobileStatusTab] = useState<(typeof mobileStatusTabs)[number]["value"]>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -1649,8 +1728,15 @@ const InvoicePage = () => {
   const loadInvoices = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getInvoices();
-      setInvoices((data || []).map(normalizeInvoice));
+      const allInvoices: any[] = [];
+      let page = 1;
+      let pageData: any[] = [];
+      do {
+        pageData = await getInvoices({ page, limit: 100, sortBy: "issueDate", sortOrder: "desc" });
+        allInvoices.push(...pageData);
+        page += 1;
+      } while (pageData.length === 100);
+      setInvoices(allInvoices.map(normalizeInvoice));
     } catch (err) {
       console.error("Failed to load invoices:", err);
       toast({
@@ -1685,7 +1771,7 @@ const InvoicePage = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterDate, filterStatus, mobileStatusTab, searchTerm]);
+  }, [filterDate, filterStatus, mobileStatusTab, searchTerm, sortBy]);
 
   const handleDeleteInvoice = async () => {
     if (!canDeleteInvoices) {
@@ -1890,38 +1976,30 @@ const InvoicePage = () => {
 
     // Date Filter
     if (filterDate !== "all") {
-      const now = new Date();
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const startOfWeek = new Date(startOfDay);
-      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const startOfQuarter = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-      const startOfYear = new Date(now.getFullYear(), 0, 1);
-
+      const range = getInvoiceDateRange(filterDate);
       result = result.filter((inv) => {
         const invDate = new Date(inv.invoiceDate);
-        switch (filterDate) {
-          case "today":
-            return invDate >= startOfDay;
-          case "week":
-            return invDate >= startOfWeek;
-          case "month":
-            return invDate >= startOfMonth;
-          case "quarter":
-            return invDate >= startOfQuarter;
-          case "year":
-            return invDate >= startOfYear;
-          default:
-            return true;
-        }
+        return (!range.startDate || invDate >= new Date(range.startDate))
+          && (!range.endDate || invDate <= new Date(range.endDate));
       });
     }
 
-    // Sort by date (newest first)
-    result.sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime());
+    result.sort(compareInvoices(sortBy));
 
     return result;
-  }, [filterDate, filterStatus, invoices, isMobile, mobileStatusTab, searchTerm]);
+  }, [filterDate, filterStatus, invoices, isMobile, mobileStatusTab, searchTerm, sortBy]);
+
+  const yearFilterOptions = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years = new Set<number>([currentYear]);
+    invoices.forEach((invoice) => {
+      const year = new Date(invoice.invoiceDate).getFullYear();
+      if (Number.isInteger(year)) years.add(year);
+    });
+    return [...years]
+      .sort((first, second) => second - first)
+      .map((year) => ({ value: `year:${year}`, label: `${year}` }));
+  }, [invoices]);
 
   // Pagination
   const totalPages = Math.ceil(filteredInvoices.length / pageSize);
@@ -2035,8 +2113,9 @@ const InvoicePage = () => {
       await exportInvoicesCsv({
         search: searchTerm || undefined,
         status: activeStatusFilter !== "all" ? (exportStatusMap[activeStatusFilter] as any) : undefined,
-        sortBy: "issueDate",
-        sortOrder: "desc",
+        ...getInvoiceDateRange(filterDate),
+        sortBy: sortBy === "number-asc" ? "invoiceNumber" : sortBy.startsWith("amount") ? "total" : sortBy === "due-date-asc" ? "dueDate" : "issueDate",
+        sortOrder: sortBy.endsWith("-asc") ? "asc" : "desc",
       });
       toast({
         title: "Exported",
@@ -2508,11 +2587,31 @@ const InvoicePage = () => {
                             {opt.label}
                           </SelectItem>
                         ))}
+                        {yearFilterOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value} className="rounded-md">
+                            Year {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Sort */}
+                    <Select value={sortBy} onValueChange={(value) => setSortBy(value as InvoiceSort)}>
+                      <SelectTrigger className="h-11 w-[190px] rounded-md border-[rgba(15,23,42,0.06)]">
+                        <ArrowUpDown size={15} className="mr-2 text-[#64748B]" />
+                        <SelectValue placeholder="Sort invoices" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {sortOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value} className="rounded-md">
+                            {opt.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
 
                     {/* Clear Filters */}
-                    {(filterStatus !== "all" || filterDate !== "all" || searchTerm) && (
+                    {(filterStatus !== "all" || filterDate !== "all" || sortBy !== "date-desc" || searchTerm) && (
                       <motion.button
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -2520,6 +2619,7 @@ const InvoicePage = () => {
                           setSearchTerm("");
                           setFilterStatus("all");
                           setFilterDate("all");
+                          setSortBy("date-desc");
                         }}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm text-[#94A3B8] hover:text-[#0891B2] hover:bg-[#0891B2]/5 transition-colors"
                       >
@@ -3141,6 +3241,27 @@ const InvoicePage = () => {
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
                     {dateFilterOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                    {yearFilterOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        Year {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#475569]">Sort invoices</label>
+                <Select value={sortBy} onValueChange={(value) => setSortBy(value as InvoiceSort)}>
+                  <SelectTrigger className="h-11 rounded-xl border-[rgba(15,23,42,0.06)]">
+                    <SelectValue placeholder="Sort invoices" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {sortOptions.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
                         {opt.label}
                       </SelectItem>

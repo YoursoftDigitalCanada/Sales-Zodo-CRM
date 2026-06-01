@@ -255,7 +255,7 @@ const navigationItems: NavigationItem[] = [
 
   { title: "Sales", isHeader: true },
   {
-    title: "Pipeline",
+    title: "Task Pipeline",
     icon: FolderKanban,
     path: "/pipeline",
     featureId: "kanban",

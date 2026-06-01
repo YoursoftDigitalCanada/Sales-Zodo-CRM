@@ -140,10 +140,10 @@ const priorityColors = {
 };
 
 const defaultColumns: KanbanColumn[] = [
-  { id: "todo", title: "New Lead", tasks: [], color: "teal", icon: Circle },
-  { id: "in-progress", title: "Qualified", tasks: [], color: "gold", icon: Timer },
-  { id: "review", title: "Proposal Sent", tasks: [], color: "purple", icon: AlertCircle },
-  { id: "done", title: "Won / Lost", tasks: [], color: "green", icon: CheckCircle2 },
+  { id: "todo", title: "To Do", tasks: [], color: "teal", icon: Circle },
+  { id: "in-progress", title: "In Progress", tasks: [], color: "gold", icon: Timer },
+  { id: "review", title: "In Review", tasks: [], color: "purple", icon: AlertCircle },
+  { id: "done", title: "Completed", tasks: [], color: "green", icon: CheckCircle2 },
 ];
 
 const statusToColumnId: Record<string, string> = {
@@ -1099,7 +1099,7 @@ const KanbanPage: React.FC = () => {
             <div className="w-16 h-16 rounded-md bg-[#0891B2]/10 flex items-center justify-center mx-auto mb-4">
               <Loader2 className="w-8 h-8 text-[#0891B2] animate-spin" />
             </div>
-            <p className="text-[#94A3B8] font-medium">Loading Deals Pipeline...</p>
+            <p className="text-[#94A3B8] font-medium">Loading Task Pipeline...</p>
           </motion.div>
         </main>
       </div>
@@ -1215,13 +1215,9 @@ const KanbanPage: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-3xl bg-[#F1F5F9] p-8"
+            className="rounded-md border border-[#E2E8F0] bg-[#F1F5F9] p-6"
           >
-            {/* Background Decorations */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#0891B2]/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#D97706]/10 rounded-full blur-3xl" />
-
-            <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
@@ -1231,16 +1227,16 @@ const KanbanPage: React.FC = () => {
                 >
                   <Sparkles size={20} className="text-[#D97706]" />
                   <span className="text-[#D97706] text-sm font-medium">
-                    Sales Pipeline
+                    Task Management
                   </span>
                 </motion.div>
                 <h1 className="text-3xl lg:text-4xl font-bold text-[#0F172A] mb-2">
-                  Deals <span className="text-[#0891B2]">Pipeline</span>
+                  Task <span className="text-[#0891B2]">Pipeline</span>
                 </h1>
                 <p className="text-[#475569] text-lg max-w-xl">
-                  Move opportunities through the sales cycle. You have{" "}
+                  Organize follow-ups and team work by status. You have{" "}
                   <span className="text-[#0891B2] font-semibold">
-                    {totalTasks} deals
+                    {totalTasks} {totalTasks === 1 ? "task" : "tasks"}
                   </span>{" "}
                   across all columns.
                 </p>

@@ -247,7 +247,7 @@ const resolveCreateRoute = (pathname: string): {
   if (pathname.startsWith("/quotes") || pathname.startsWith("/proposals")) return { path: "/proposals?action=create", permissionModule: "quotes", action: "create" };
   if (pathname.startsWith("/invoice")) return { path: "/invoice/create", permissionModule: "invoices", action: "create" };
   if (pathname.startsWith("/client-list")) return { path: "/client-list/add", permissionModule: "clients", action: "create" };
-  if (pathname.startsWith("/projects") || pathname.startsWith("/kanban") || pathname.startsWith("/deals") || pathname.startsWith("/pipeline")) return { path: "/deals?create=1", permissionModule: "projects", action: "create" };
+  if (pathname.startsWith("/projects") || pathname.startsWith("/deals")) return { path: "/deals?create=1", permissionModule: "projects", action: "create" };
   if (pathname.startsWith("/inspections")) return { path: "/leads", permissionModule: "leads", action: "create" };
   return null;
 };

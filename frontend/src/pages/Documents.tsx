@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -22,11 +22,11 @@ import type { FolderResponse } from "@/features/files/services/files-service";
 import {
   createDocumentFolder,
   deleteDocument,
+  downloadDocument,
+  fetchDocumentPreviewBlob,
   getDocumentCategories,
-  getDocumentDownloadUrl,
   getDocumentFolders,
   getDocumentShareUrl,
-  getDocumentPreviewUrl,
   getDocuments,
   revokeDocumentShare,
   shareDocument,
@@ -107,15 +107,6 @@ function formatDate(value?: string | null) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
 }
 
-function openDownload(doc: BusinessDocument) {
-  const anchor = document.createElement("a");
-  anchor.href = getDocumentDownloadUrl(doc.id);
-  anchor.download = doc.originalName || doc.name;
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-}
-
 function detectDocumentType(file: File | null) {
   if (!file) return "document";
   const name = file.name.toLowerCase();
@@ -144,10 +135,55 @@ export default function DocumentsPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [folderOpen, setFolderOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<BusinessDocument | null>(null);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [editDoc, setEditDoc] = useState<BusinessDocument | null>(null);
   const [linkDoc, setLinkDoc] = useState<BusinessDocument | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [uploadFileValue, setUploadFileValue] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (!previewDoc) {
+      setPreviewBlobUrl(null);
+      setPreviewError(null);
+      return;
+    }
+
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setPreviewLoading(true);
+    setPreviewError(null);
+
+    fetchDocumentPreviewBlob(previewDoc.id)
+      .then((url) => {
+        objectUrl = url;
+        if (!cancelled) setPreviewBlobUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewError("Could not load this document preview. Download the file to open it locally.");
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) window.URL.revokeObjectURL(objectUrl);
+    };
+  }, [previewDoc?.id]);
+
+  const openDownload = async (doc: BusinessDocument) => {
+    try {
+      await downloadDocument(doc.id, doc.originalName || doc.name);
+    } catch {
+      toast({
+        title: "Download failed",
+        description: "Could not download this document. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadForm, setUploadForm] = useState({ description: "", categoryId: "", documentType: "document", folderId: "", visibleToClient: false, requiresSignature: false, expiresAt: "" });
   const [folderForm, setFolderForm] = useState({ name: "", parentId: "" });
@@ -558,7 +594,9 @@ export default function DocumentsPage() {
       <Dialog open={Boolean(previewDoc)} onOpenChange={(open) => !open && setPreviewDoc(null)}>
         <DialogContent className="sm:max-w-5xl">
           <DialogHeader><DialogTitle>{previewDoc?.name}</DialogTitle><DialogDescription>{previewDoc?.category?.name || "Document"} · {previewDoc ? formatFileSize(previewDoc.size) : ""}{previewDoc?.expiresAt ? ` · Expires ${formatDate(previewDoc.expiresAt)}` : ""}</DialogDescription></DialogHeader>
-          {previewDoc ? <iframe title={previewDoc.name} src={getDocumentPreviewUrl(previewDoc.id)} className="h-[70vh] w-full rounded-md border bg-white" /> : null}
+          {previewLoading ? <div className="flex h-[70vh] items-center justify-center text-sm text-[#64748B]">Loading preview...</div> : null}
+          {previewError ? <div className="flex h-[70vh] items-center justify-center px-8 text-center text-sm text-[#64748B]">{previewError}</div> : null}
+          {previewDoc && previewBlobUrl && !previewLoading && !previewError ? <iframe title={previewDoc.name} src={previewBlobUrl} className="h-[70vh] w-full rounded-md border bg-white" /> : null}
           <DialogFooter><Button variant="outline" onClick={() => previewDoc && openDownload(previewDoc)}><Download size={16} className="mr-2" />Download</Button></DialogFooter>
         </DialogContent>
       </Dialog>

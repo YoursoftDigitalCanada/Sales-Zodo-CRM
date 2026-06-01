@@ -51,8 +51,8 @@ import {
 } from "@/features/bookkeeping";
 import {
   createDocumentCategory,
+  fetchDocumentPreviewBlob,
   getDocumentCategories,
-  getDocumentPreviewUrl,
   linkDocument,
   uploadDocument,
 } from "@/features/documents/services/documents-service";
@@ -85,6 +85,21 @@ async function ensureReceiptsCategoryId() {
   if (existing) return existing.id;
   const created = await createDocumentCategory({ name: "Receipts", color: "#059669" });
   return created.id;
+}
+
+async function openReceiptPreview(fileId: string) {
+  try {
+    const url = await fetchDocumentPreviewBlob(fileId);
+    const previewWindow = window.open(url, "_blank", "noopener,noreferrer");
+    if (!previewWindow) {
+      window.URL.revokeObjectURL(url);
+      toast.error("Your browser blocked the receipt preview window.");
+      return;
+    }
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+  } catch {
+    toast.error("Could not open this receipt preview.");
+  }
 }
 
 function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -508,7 +523,7 @@ function TransactionTable({
             <TableCell>
               <div className="flex items-center gap-1">
                 {tx.fileId ? (
-                  <Button variant="ghost" size="sm" onClick={() => window.open(getDocumentPreviewUrl(tx.fileId), "_blank", "noopener,noreferrer")}>
+                  <Button variant="ghost" size="sm" onClick={() => void openReceiptPreview(tx.fileId!)}>
                     <Eye className="mr-1 h-3.5 w-3.5" />Open
                   </Button>
                 ) : null}

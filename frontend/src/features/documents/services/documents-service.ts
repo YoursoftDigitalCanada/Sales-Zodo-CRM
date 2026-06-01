@@ -129,6 +129,25 @@ export function getDocumentDownloadUrl(id: string): string {
   return `${api.defaults.baseURL}/documents/${id}/download`;
 }
 
+export async function fetchDocumentPreviewBlob(id: string): Promise<string> {
+  const res = await api.get(`/documents/${id}/preview`, { responseType: "blob" });
+  const blob = new Blob([res.data], { type: res.headers["content-type"] || "application/octet-stream" });
+  return window.URL.createObjectURL(blob);
+}
+
+export async function downloadDocument(id: string, fileName: string): Promise<void> {
+  const res = await api.get(`/documents/${id}/download`, { responseType: "blob" });
+  const blob = new Blob([res.data], { type: res.headers["content-type"] || "application/octet-stream" });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 export function getDocumentShareUrl(shareLink: string): string {
   return `${api.defaults.baseURL}/public/files/${shareLink}/download`;
 }

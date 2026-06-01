@@ -8,10 +8,16 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { getEmailConfigStatus, sendEmail as apiSendEmail } from "@/features/emails/services/emails-service";
-import { AlertTriangle, Bold, Italic, Link2, List, ListOrdered, Loader2, Mail, Paperclip, Send, Settings, Smile, Underline, X } from "lucide-react";
+import { generateEmail } from "@/features/sales-ai";
+import { AlertTriangle, Bold, Italic, Link2, List, ListOrdered, Loader2, Mail, Paperclip, Send, Settings, Smile, Sparkles, Underline, X } from "lucide-react";
 
 function plainTextToHtml(value: string) {
   return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
     .split("\n")
     .map((line) => (line ? line : "<br/>"))
     .join("<br/>");
@@ -67,6 +73,8 @@ export function ComposeEmailSheet({
   const [showCc, setShowCc] = useState(false);
   const [showBcc, setShowBcc] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationGoal, setGenerationGoal] = useState("");
   const [isEditorFocused, setIsEditorFocused] = useState(false);
   const [mailboxStatus, setMailboxStatus] = useState<{
     smtpConfigured: boolean;
@@ -89,6 +97,7 @@ export function ComposeEmailSheet({
     setBcc("");
     setSubject(defaultSubject || (defaultRecipientName ? `Regarding ${defaultRecipientName}` : ""));
     setBodyHtml("");
+    setGenerationGoal("");
     setAttachments(initialAttachments || []);
     setShowCc(false);
     setShowBcc(false);
@@ -145,6 +154,38 @@ export function ComposeEmailSheet({
     document.execCommand(command, false, value);
     syncEditorState();
   }, [syncEditorState]);
+
+  const handleGenerateEmail = async () => {
+    setIsGenerating(true);
+    try {
+      const generated = await generateEmail({
+        leadId: leadId != null ? String(leadId) : undefined,
+        clientId: clientId != null ? String(clientId) : undefined,
+        templateType: "sales follow-up",
+        tone: "Professional",
+        goal: generationGoal.trim() || "Write a personalized follow-up based on the current CRM record and move the conversation to the best next step.",
+      });
+      const nextSubject = String(generated?.subject || "").trim();
+      const nextBody = String(generated?.body || "").trim();
+      const nextBodyHtml = plainTextToHtml(nextBody);
+
+      setSubject(nextSubject);
+      setBodyHtml(nextBodyHtml);
+      if (editorRef.current) editorRef.current.innerHTML = nextBodyHtml;
+      toast({
+        title: "Email generated",
+        description: "Subject and message are ready. You can edit them before sending.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Could not generate email",
+        description: err?.response?.data?.message || err?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleSend = async () => {
     if (mailboxStatus && !mailboxStatus.smtpConfigured) {
@@ -393,6 +434,36 @@ export function ComposeEmailSheet({
             />
           </div>
 
+          <div className="rounded-xl border border-[#CCFBF1] bg-[#F0FDFA] p-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex-1">
+                <Label htmlFor="email-generation-goal" className="text-sm text-[#0F766E]">What do you need?</Label>
+                <Input
+                  id="email-generation-goal"
+                  value={generationGoal}
+                  onChange={(event) => setGenerationGoal(event.target.value)}
+                  placeholder="Example: follow up after our call and ask for a meeting"
+                  className="mt-1.5 h-10 border-[#99F6E4] bg-white"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !isGenerating) void handleGenerateEmail();
+                  }}
+                />
+              </div>
+              <Button
+                type="button"
+                onClick={() => void handleGenerateEmail()}
+                disabled={isGenerating}
+                className="gap-2 bg-[#0F766E] text-white hover:bg-[#115E59] sm:self-end"
+              >
+                {isGenerating ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                {isGenerating ? "Generating..." : "Generate Email"}
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-[#0F766E]">
+              Uses the linked CRM record to write the subject, greeting, and message automatically.
+            </p>
+          </div>
+
           <div className="space-y-3 pt-1">
             <div className="flex items-center justify-between">
               <Label className="text-sm text-[#64748B]">Message</Label>
@@ -535,6 +606,7 @@ export function ComposeEmailSheet({
               onClick={handleSend}
               disabled={
                 isSending ||
+                isGenerating ||
                 prefillInProgress ||
                 (!isCheckingMailbox && Boolean(mailboxStatus) && !mailboxStatus.smtpConfigured)
               }

@@ -65,7 +65,7 @@ export class SalesAIService {
     if (!message) throw new BadRequestError('Message is required', ErrorCodes.VALIDATION_FAILED);
     const crm = await this.queryCRM(tenantId, { query: message }, userId);
     const llm = await llmAdapterService.generate({
-      systemPrompt: `You are the Sales AI Assistant for Zodo. Help sales reps sell Roofer CRM software to roofing companies. Use only the supplied tenant-scoped CRM facts. Use sales terms: leads, accounts, contacts, deals, proposals, subscriptions.`,
+      systemPrompt: `You are the Sales AI Assistant for Zodo. Help sales reps manage business relationships and move opportunities forward. Use only the supplied tenant-scoped CRM facts. Use general sales terms: leads, companies, contacts, deals, proposals, contracts, invoices, and subscriptions.`,
       userMessage: message,
       contextSummary: JSON.stringify(crm.summary).slice(0, 6000),
       maxTokens: 700,
@@ -113,7 +113,7 @@ export class SalesAIService {
     if (!lead.email || !lead.phone) { score -= 8; reasons.push('Missing email or phone lowers reachability.'); }
     score = Math.max(0, Math.min(100, score));
     const temperature = score >= 75 ? 'HOT' : score >= 45 ? 'WARM' : 'COLD';
-    const recommendedNextAction = score >= 75 ? 'Call today and book a Roofer CRM demo.' : score >= 45 ? 'Send a personalized follow-up and qualify budget/timeline.' : 'Run a light nurture sequence and gather missing qualification data.';
+    const recommendedNextAction = score >= 75 ? 'Call today and book the next sales conversation.' : score >= 45 ? 'Send a personalized follow-up and qualify budget/timeline.' : 'Run a light nurture sequence and gather missing qualification data.';
 
     const result = { score, temperature, reasons, recommendedNextAction, engagement: { tasks, emails, calls, meetings }, aiAvailable: llmAdapterService.isAvailable() };
     if (data.confirmUpdate === true || data.autoUpdate === true) {
@@ -128,8 +128,8 @@ export class SalesAIService {
     const templateType = data.templateType || data.type || 'follow-up';
     const tone = data.tone || 'Professional';
     const goal = data.goal || 'Move the sales conversation to the next step.';
-    const fallbackSubject = `${templateType} for ${context.accountName || context.contactName || 'Roofer CRM'}`;
-    const prompt = `Write a ${tone} ${templateType} email. Goal: ${goal}. Product: Roofer CRM software. Include a clear CTA.`;
+    const fallbackSubject = `${templateType} for ${context.accountName || context.contactName || 'your team'}`;
+    const prompt = `Write a ${tone} ${templateType} email for a general Sales CRM workflow. Goal: ${goal}. Use only the supplied CRM context. Do not invent product names, services, pricing, or facts. Include a clear CTA.`;
     const llm = await llmAdapterService.generate({
       systemPrompt: llmAdapterService.getSystemPrompt('email'),
       userMessage: prompt,
@@ -180,7 +180,7 @@ export class SalesAIService {
     const stuckReason = daysSinceActivity >= 7 ? `No activity for ${daysSinceActivity} days.` : !deal.nextStep ? 'No next step is recorded.' : 'Deal is moving normally.';
     const nextBestAction = riskLevel === 'High' ? 'Call the decision maker and send a direct recap with a demo/proposal decision deadline.' : riskLevel === 'Medium' ? 'Create a follow-up task and send a value-based email.' : 'Continue the planned next step.';
     const suggestedEmail = await this.generateEmail(tenantId, { ...data, templateType: deal.dealStatus === 'Proposal Sent' ? 'proposal follow-up' : 'demo follow-up', tone: 'Professional', goal: nextBestAction }, userId).catch(() => null);
-    const result = { riskLevel, stuckReason, nextBestAction, suggestedEmail: suggestedEmail?.body || this.fallbackEmail('follow-up', 'Professional', { accountName: deal.client?.clientName, dealName: deal.name }), callScript: `Hi, this is ${data.repName || 'the Zodo team'}. I wanted to reconnect on ${deal.name} and confirm the next step for Roofer CRM.`, lastActivityAt: lastActivity?.createdAt || null, openTasks: openTasks.length, proposalStatus: deal.quote?.status || null, aiAvailable: llmAdapterService.isAvailable() };
+    const result = { riskLevel, stuckReason, nextBestAction, suggestedEmail: suggestedEmail?.body || this.fallbackEmail('follow-up', 'Professional', { accountName: deal.client?.clientName, dealName: deal.name }), callScript: `Hi, this is ${data.repName || 'the Zodo team'}. I wanted to reconnect on ${deal.name} and confirm the best next step.`, lastActivityAt: lastActivity?.createdAt || null, openTasks: openTasks.length, proposalStatus: deal.quote?.status || null, aiAvailable: llmAdapterService.isAvailable() };
     if (data.confirmUpdate === true) {
       await prisma.project.update({ where: { id: deal.id }, data: { customFields: { ...((deal.customFields as any) || {}), aiDealInsight: result } as any } });
       await this.log(tenantId, 'Project', deal.id, 'AI deal insight generated', userId, result);
@@ -277,7 +277,7 @@ export class SalesAIService {
     const name = context.contactName || 'there';
     const account = context.accountName || 'your team';
     const subject = `${type} for ${account}`;
-    return `Subject: ${subject}\n\nHi ${name},\n\nI wanted to follow up on Roofer CRM and how it can help ${account} track leads, deals, proposals, subscriptions, and sales activity in one place.\n\nWould you be open to a quick conversation this week to confirm fit and next steps?\n\nBest,\nZodo Sales`;
+    return `Subject: ${subject}\n\nHi ${name},\n\nI wanted to follow up with ${account} and make sure we keep the conversation moving in the right direction.\n\nWould you be open to a quick conversation this week to confirm your priorities and the best next step?\n\nBest,\nZodo Sales`;
   }
 
   private target(data: Record<string, any>) {

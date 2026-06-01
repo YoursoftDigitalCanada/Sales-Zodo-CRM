@@ -41,7 +41,10 @@ export function AiRecordPicker({
   optional = false,
 }: AiRecordPickerProps) {
   const [open, setOpen] = useState(false);
-  const selected = options.find((option) => option.id === value);
+  const uniqueOptions = Array.from(
+    new Map(options.map((option) => [option.id, option])).values()
+  );
+  const selected = uniqueOptions.find((option) => option.id === value);
   const choose = (nextValue: string) => {
     onChange(nextValue);
     setOpen(false);
@@ -71,7 +74,7 @@ export function AiRecordPicker({
                     No linked record
                   </CommandItem>
                 ) : null}
-                {options.map((option) => (
+                {uniqueOptions.map((option) => (
                   <CommandItem key={option.id} value={`${option.label} ${option.detail || ""}`} onSelect={() => choose(option.id)}>
                     <Check className={cn("mr-2 h-4 w-4", value === option.id ? "opacity-100" : "opacity-0")} />
                     <span className="min-w-0">

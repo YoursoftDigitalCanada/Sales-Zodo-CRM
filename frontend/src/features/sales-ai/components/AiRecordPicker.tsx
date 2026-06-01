@@ -19,6 +19,39 @@ export type AiRecordOption = {
   detail?: string;
 };
 
+const normalize = (value?: string) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+function cleanOption(option: AiRecordOption): AiRecordOption {
+  const label = option.label.trim();
+  const seen = new Set([normalize(label)]);
+  const detail = String(option.detail || "")
+    .split(" · ")
+    .map((part) => part.trim())
+    .filter((part) => {
+      const key = normalize(part);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .join(" · ");
+  return { ...option, label, detail: detail || undefined };
+}
+
+function dedupeOptions(options: AiRecordOption[]) {
+  const ids = new Set<string>();
+  const visibleRows = new Set<string>();
+  return options.reduce<AiRecordOption[]>((result, rawOption) => {
+    const option = cleanOption(rawOption);
+    const id = normalize(option.id);
+    const visibleRow = `${normalize(option.label)}|${normalize(option.detail)}`;
+    if (ids.has(id) || visibleRows.has(visibleRow)) return result;
+    ids.add(id);
+    visibleRows.add(visibleRow);
+    result.push(option);
+    return result;
+  }, []);
+}
+
 type AiRecordPickerProps = {
   label: string;
   value: string;
@@ -41,9 +74,7 @@ export function AiRecordPicker({
   optional = false,
 }: AiRecordPickerProps) {
   const [open, setOpen] = useState(false);
-  const uniqueOptions = Array.from(
-    new Map(options.map((option) => [option.id, option])).values()
-  );
+  const uniqueOptions = dedupeOptions(options);
   const selected = uniqueOptions.find((option) => option.id === value);
   const choose = (nextValue: string) => {
     onChange(nextValue);

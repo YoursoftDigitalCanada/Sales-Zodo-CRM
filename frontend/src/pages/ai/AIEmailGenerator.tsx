@@ -1,17 +1,45 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Mail, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { generateEmail } from "@/features/sales-ai";
+import { AiRecordPicker, type AiRecordOption } from "@/features/sales-ai/components/AiRecordPicker";
+import { getClients } from "@/features/clients/services/clients-service";
+import { getLeads } from "@/features/leads/services/leads-service";
+import { getProjects } from "@/features/projects/services/projects-service";
+import { generateEmail, getAIContacts } from "@/features/sales-ai";
+
+const text = (...values: unknown[]) => values.map((value) => String(value || "").trim()).filter(Boolean).join(" ");
+const option = (id: unknown, label: string, detail?: string): AiRecordOption | null => id ? { id: String(id), label, detail } : null;
+const compact = (items: Array<AiRecordOption | null>) => items.filter(Boolean) as AiRecordOption[];
 
 export default function AIEmailGeneratorPage() {
   const [form, setForm] = useState({ templateType: "cold outreach", tone: "Professional", goal: "Book a Sales CRM demo", leadId: "", dealId: "", contactId: "", clientId: "" });
   const [result, setResult] = useState<any>(null);
-  const mutation = useMutation({ mutationFn: () => generateEmail({ ...form, storeDraft: true }), onSuccess: setResult });
+  const leadsQuery = useQuery({ queryKey: ["ai-records", "leads"], queryFn: () => getLeads({ limit: 200 }) });
+  const dealsQuery = useQuery({ queryKey: ["ai-records", "deals"], queryFn: () => getProjects({ limit: 200, sortBy: "updatedAt", sortOrder: "desc" }) });
+  const contactsQuery = useQuery({ queryKey: ["ai-records", "contacts"], queryFn: getAIContacts });
+  const clientsQuery = useQuery({ queryKey: ["ai-records", "clients"], queryFn: getClients });
+  const leadOptions = compact((leadsQuery.data || []).map((lead: any) => option(lead.id, text(lead.firstName, lead.lastName) || lead.fullName || lead.email || "Lead", text(lead.email, lead.organization || lead.companyName))));
+  const dealOptions = compact((dealsQuery.data || []).map((deal: any) => option(deal.id, deal.organization || deal.name || "Deal", text(deal.client?.clientName, deal.dealStatus))));
+  const contactOptions = compact((contactsQuery.data || []).map((contact: any) => option(contact.id, contact.contactName || text(contact.firstName, contact.lastName) || contact.email || "Contact", text(contact.email, contact.company?.clientName || contact.companyName))));
+  const clientOptions = compact((clientsQuery.data || []).map((client: any) => option(client.id || client.Id, client.clientName || client.ClientName || client.name || client.Name || "Organization", client.primaryEmail || client.email)));
+  const mutation = useMutation({
+    mutationFn: () => generateEmail({
+      templateType: form.templateType,
+      tone: form.tone,
+      goal: form.goal,
+      storeDraft: true,
+      ...(form.leadId ? { leadId: form.leadId } : {}),
+      ...(form.dealId ? { dealId: form.dealId } : {}),
+      ...(form.contactId ? { contactId: form.contactId } : {}),
+      ...(form.clientId ? { clientId: form.clientId } : {}),
+    }),
+    onSuccess: setResult,
+  });
   const set = (key: string, value: string) => setForm((current) => ({ ...current, [key]: value }));
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -23,7 +51,12 @@ export default function AIEmailGeneratorPage() {
             <div className="space-y-2"><Label>Tone</Label><Select value={form.tone} onValueChange={(v) => set("tone", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Professional", "Friendly", "Direct"].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select></div>
           </div>
           <div className="space-y-2"><Label>Goal</Label><Input value={form.goal} onChange={(e) => set("goal", e.target.value)} /></div>
-          <div className="grid gap-3 sm:grid-cols-2"><Input placeholder="Lead ID" value={form.leadId} onChange={(e) => set("leadId", e.target.value)} /><Input placeholder="Deal ID" value={form.dealId} onChange={(e) => set("dealId", e.target.value)} /><Input placeholder="Contact ID" value={form.contactId} onChange={(e) => set("contactId", e.target.value)} /><Input placeholder="Account ID" value={form.clientId} onChange={(e) => set("clientId", e.target.value)} /></div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <AiRecordPicker label="Lead" optional value={form.leadId} options={leadOptions} onChange={(value) => set("leadId", value)} placeholder="Choose a lead" searchPlaceholder="Search lead name or email..." loading={leadsQuery.isLoading} />
+            <AiRecordPicker label="Deal" optional value={form.dealId} options={dealOptions} onChange={(value) => set("dealId", value)} placeholder="Choose a deal" searchPlaceholder="Search deals..." loading={dealsQuery.isLoading} />
+            <AiRecordPicker label="Contact" optional value={form.contactId} options={contactOptions} onChange={(value) => set("contactId", value)} placeholder="Choose a contact" searchPlaceholder="Search contact name or email..." loading={contactsQuery.isLoading} />
+            <AiRecordPicker label="Organization" optional value={form.clientId} options={clientOptions} onChange={(value) => set("clientId", value)} placeholder="Choose an organization" searchPlaceholder="Search organizations..." loading={clientsQuery.isLoading} />
+          </div>
           <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="gap-2 bg-[#0891B2] hover:bg-[#0E7490]"><Wand2 size={16} />Generate Email</Button>
         </section>
         <section className="rounded-lg border border-[#E2E8F0] bg-white p-5">

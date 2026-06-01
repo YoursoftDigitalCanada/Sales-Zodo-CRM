@@ -1,4 +1,5 @@
 import api from "@/lib/axios";
+import { extractApiArray } from "@/types/api";
 
 const unwrap = (response: any) => response.data?.data || response.data;
 
@@ -28,4 +29,9 @@ export async function summarizeActivity(payload: Record<string, unknown>) {
 
 export async function getFollowUpSuggestions(payload: Record<string, unknown>) {
   return unwrap(await api.post("/ai/follow-up-suggestions", payload));
+}
+
+export async function getAIContacts(): Promise<Array<Record<string, unknown>>> {
+  const response = await api.get("/contacts", { params: { limit: 200 } });
+  return extractApiArray<Record<string, unknown>>(response.data);
 }

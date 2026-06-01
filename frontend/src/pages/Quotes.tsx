@@ -32,6 +32,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { WorkspaceHero } from "@/components/crm/WorkspaceUi";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import {
   ListCardSkeleton,
@@ -1369,20 +1370,9 @@ const QuotesPage = () => {
               You&apos;re offline. Showing the latest loaded proposals until the connection comes back.
             </motion.div>
           )}
-          {/* Header */}
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className={cn("mb-6 flex items-center justify-between gap-4", isMobile && "flex-wrap items-start")}>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#0891B2]/10">
-                  <FileStack size={20} className="text-[#0891B2]" />
-                </div>
-                <div className="min-w-0">
-                  <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Proposals</h1>
-                  <p className="text-sm text-[#94A3B8] break-words">{stats.totalCount} proposals · Pipeline value {formatCurrency(stats.totalValue)}</p>
-                </div>
-              </div>
-            </div>
-            <div className={cn("flex items-center gap-3", isMobile && "ml-auto shrink-0")}>
+          <div className="mb-6">
+            <WorkspaceHero eyebrow="Sales Documents" title="Customer" accent="Proposals" description={`${stats.totalCount} proposals connected to your sales pipeline with ${formatCurrency(stats.totalValue)} in active value.`} icon={FileStack} actions={
+            <>
               <Button variant="outline" size="sm" className="rounded-md border-[rgba(15,23,42,0.06)]" onClick={() => fetchQuotes()} disabled={loading}>
                 <RefreshCw size={16} className={`mr-2 ${loading ? "animate-spin" : ""}`} />Refresh
               </Button>
@@ -1401,8 +1391,9 @@ const QuotesPage = () => {
                   </Button>
                 </>
               )}
-            </div>
-          </motion.div>
+            </>
+            } />
+          </div>
 
           {/* AI Insights Strip */}
           <AnimatePresence>

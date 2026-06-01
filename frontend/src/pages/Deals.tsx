@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
+import { WorkspaceHero, WorkspaceMetric } from "@/components/crm/WorkspaceUi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -866,7 +867,7 @@ export default function DealsPage() {
       <div
         draggable
         onDragStart={(event) => event.dataTransfer.setData("text/plain", deal.id)}
-        className="rounded-lg border border-[#E2E8F0] bg-white p-3 shadow-sm transition hover:border-[#0F766E]/40"
+        className="rounded-md border border-[#E2E8F0] bg-white p-3 shadow-sm transition hover:border-[#0891B2]/40"
       >
         <div className="flex items-start justify-between gap-2">
           <button onClick={() => setDetailDeal(deal)} className="min-w-0 text-left">
@@ -888,34 +889,20 @@ export default function DealsPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      <div className="border-b border-[#E2E8F0] bg-white">
-        <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <div>
-            <h1 className="text-2xl font-semibold text-[#0F172A]">Deals Pipeline</h1>
-            <p className="text-sm text-[#64748B]">Manage sales opportunities from qualification to revenue with linked account, contact, proposal, and billing context.</p>
-          </div>
-          <Button onClick={() => openCreate()} className="gap-2 bg-[#0F766E] hover:bg-[#115E59]"><Plus size={16} />Create Deal</Button>
-        </div>
-      </div>
-
-      <main className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-[1500px] space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+        <WorkspaceHero eyebrow="Sales Pipeline" title="Deals" accent="Pipeline" description="Manage opportunities from qualification to revenue with linked account, contact, proposal, and billing context." icon={Target} actions={<Button onClick={() => openCreate()} className="gap-2 bg-[#0891B2] hover:bg-[#0E7490]"><Plus size={16} />Create Deal</Button>} />
         <div className="mb-5 grid gap-3 md:grid-cols-4">
           {[
-            { label: "Total Deals", value: totals.total, icon: Target },
-            { label: "Open Deals", value: totals.open, icon: Clock },
-            { label: "Won Deals", value: totals.won, icon: CheckCircle2 },
-            { label: "Pipeline Value", value: money(totals.value), icon: CircleDollarSign },
-          ].map((item) => (
-            <div key={item.label} className="rounded-lg border border-[#E2E8F0] bg-white p-4">
-              <div className="flex items-center justify-between">
-                <div><p className="text-sm text-[#64748B]">{item.label}</p><p className="mt-1 text-xl font-semibold text-[#0F172A]">{item.value}</p></div>
-                <item.icon size={20} className="text-[#0F766E]" />
-              </div>
-            </div>
+            { label: "Total Deals", value: totals.total, icon: Target, tone: "cyan" as const },
+            { label: "Open Deals", value: totals.open, icon: Clock, tone: "blue" as const },
+            { label: "Won Deals", value: totals.won, icon: CheckCircle2, tone: "green" as const },
+            { label: "Pipeline Value", value: money(totals.value), icon: CircleDollarSign, tone: "amber" as const },
+          ].map((item, index) => (
+            <WorkspaceMetric key={item.label} title={item.label} value={item.value} icon={item.icon} tone={item.tone} delay={index * 0.04} />
           ))}
         </div>
 
-        <div className="mb-4 rounded-lg border border-[#E2E8F0] bg-white p-4">
+        <div className="mb-4 rounded-md border border-[#E2E8F0] bg-white p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative w-full lg:max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />

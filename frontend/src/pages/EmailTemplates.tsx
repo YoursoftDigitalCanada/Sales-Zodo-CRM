@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { WorkspaceHero, WorkspaceMetric } from "@/components/crm/WorkspaceUi";
 import { createEmailTemplate, getEmailTemplates, updateEmailTemplate } from "@/features/engagement/services/engagement-service";
-import { Mail, Pencil, Plus } from "lucide-react";
+import { CheckCircle2, LayoutTemplate, Mail, Pencil, Plus, Tags } from "lucide-react";
 
 const categories = ["Cold Outreach", "Demo Follow-up", "Proposal Follow-up", "Renewal", "Re-engagement"];
 const variables = ["contactName", "companyName", "repName", "proposalLink", "planName"];
@@ -47,27 +48,31 @@ export default function EmailTemplatesPage() {
     setForm(template || emptyTemplate);
     setOpen(true);
   };
+  const templates = templatesQuery.data || [];
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      <div className="border-b border-[#E2E8F0] bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
-          <div><h1 className="text-2xl font-semibold text-[#0F172A]">Email Templates</h1><p className="text-sm text-[#64748B]">Reusable sales emails with variables for outreach, demos, proposals, renewals, and re-engagement.</p></div>
-          <Button onClick={() => edit()} className="gap-2 bg-[#0F766E] hover:bg-[#115E59]"><Plus size={16} />New Template</Button>
+      <main className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+        <WorkspaceHero eyebrow="Sales Engagement" title="Email" accent="Templates" description="Keep outreach, proposal follow-ups, renewals, and re-engagement messages consistent across the team." icon={Mail} actions={<Button onClick={() => edit()} className="gap-2 bg-[#0891B2] hover:bg-[#0E7490]"><Plus size={16} />New Template</Button>} />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <WorkspaceMetric title="Total Templates" value={templates.length} icon={LayoutTemplate} />
+          <WorkspaceMetric title="Active" value={templates.filter((item) => item.isActive).length} icon={CheckCircle2} tone="green" delay={0.04} />
+          <WorkspaceMetric title="Categories" value={new Set(templates.map((item) => item.category)).size} icon={Tags} tone="blue" delay={0.08} />
+          <WorkspaceMetric title="Variables" value={variables.length} icon={Mail} tone="amber" delay={0.12} />
         </div>
-      </div>
-      <main className="mx-auto grid max-w-7xl gap-4 px-4 py-6 sm:px-6 md:grid-cols-2 lg:px-8">
-        {(templatesQuery.data || []).map((template) => (
-          <div key={template.id} className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+        <div className="grid gap-4 md:grid-cols-2">
+        {templates.map((template) => (
+          <div key={template.id} className="rounded-md border border-[#E2E8F0] bg-white p-5">
             <div className="flex items-start justify-between gap-3">
               <div><h2 className="font-semibold text-[#0F172A]">{template.templateName}</h2><p className="mt-1 text-sm text-[#64748B]">{template.subject}</p></div>
               <Button variant="ghost" size="icon" onClick={() => edit(template)}><Pencil size={16} /></Button>
             </div>
             <div className="mt-3 flex gap-2"><Badge variant="outline">{template.category}</Badge><Badge variant="outline">{template.isActive ? "Active" : "Inactive"}</Badge></div>
-            <div className="mt-4 rounded-lg bg-[#F8FAFC] p-3 text-sm text-[#475569] whitespace-pre-wrap">{preview(template.body).slice(0, 260)}</div>
+            <div className="mt-4 rounded-md bg-[#F8FAFC] p-3 text-sm text-[#475569] whitespace-pre-wrap">{preview(template.body).slice(0, 260)}</div>
           </div>
         ))}
-        {!templatesQuery.data?.length && <div className="rounded-lg border border-dashed border-[#CBD5E1] bg-white p-8 text-center text-sm text-[#64748B] md:col-span-2"><Mail className="mx-auto mb-3 text-[#0F766E]" />Create your first reusable sales email template.</div>}
+        {!templates.length && <div className="rounded-md border border-dashed border-[#CBD5E1] bg-white p-8 text-center text-sm text-[#64748B] md:col-span-2"><Mail className="mx-auto mb-3 text-[#0891B2]" />Create your first reusable sales email template.</div>}
+        </div>
       </main>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
@@ -79,7 +84,7 @@ export default function EmailTemplatesPage() {
             <div className="space-y-2 md:col-span-2"><Label>Body</Label><Textarea rows={10} value={form.body} onChange={(e) => setForm((c: any) => ({ ...c, body: e.target.value }))} placeholder="Hi {{contactName}}, ..." /></div>
             <div className="md:col-span-2 rounded-lg bg-[#F8FAFC] p-3 text-sm text-[#475569]"><p className="font-medium text-[#0F172A]">Preview</p><p className="mt-2 whitespace-pre-wrap">{preview(form.body)}</p></div>
           </div>
-          <DialogFooter><Button onClick={() => saveMutation.mutate()} className="bg-[#0F766E] hover:bg-[#115E59]">Save Template</Button></DialogFooter>
+          <DialogFooter><Button onClick={() => saveMutation.mutate()} className="bg-[#0891B2] hover:bg-[#0E7490]">Save Template</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { WorkspaceHero, WorkspaceMetric } from "@/components/crm/WorkspaceUi";
 import { createSequence, getSequences, stopSequence, updateSequence } from "@/features/engagement/services/engagement-service";
-import { GitBranch, Pause, Plus } from "lucide-react";
+import { CheckCircle2, GitBranch, Layers3, Pause, Plus, TimerReset } from "lucide-react";
 
 const emptySequence = { sequenceName: "", targetType: "Lead", status: "DRAFT", stopCondition: "reply received", steps: [{ type: "email", title: "Send intro email", delayDays: 0 }] };
 
@@ -32,28 +33,30 @@ export default function SequencesPage() {
 
   useEffect(() => { if (!open) setForm(emptySequence); }, [open]);
   const setStep = (index: number, key: string, value: any) => setForm((current: any) => ({ ...current, steps: current.steps.map((step: any, i: number) => i === index ? { ...step, [key]: value } : step) }));
+  const sequences = sequencesQuery.data || [];
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      <div className="border-b border-[#E2E8F0] bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
-          <div><h1 className="text-2xl font-semibold text-[#0F172A]">Sequences</h1><p className="text-sm text-[#64748B]">Automated follow-up workflows with email, task, call, and wait steps.</p></div>
-          <Button onClick={() => setOpen(true)} className="gap-2 bg-[#0F766E] hover:bg-[#115E59]"><Plus size={16} />New Sequence</Button>
+      <main className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+        <WorkspaceHero eyebrow="Sales Engagement" title="Follow-up" accent="Sequences" description="Build repeatable outreach workflows with email, task, call, and wait steps." icon={GitBranch} actions={<Button onClick={() => setOpen(true)} className="gap-2 bg-[#0891B2] hover:bg-[#0E7490]"><Plus size={16} />New Sequence</Button>} />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <WorkspaceMetric title="Total Sequences" value={sequences.length} icon={GitBranch} />
+          <WorkspaceMetric title="Active" value={sequences.filter((item) => item.status === "ACTIVE").length} icon={CheckCircle2} tone="green" delay={0.04} />
+          <WorkspaceMetric title="Paused" value={sequences.filter((item) => item.status === "PAUSED").length} icon={Pause} tone="amber" delay={0.08} />
+          <WorkspaceMetric title="Workflow Steps" value={sequences.reduce((sum, item) => sum + (item.steps?.length || 0), 0)} icon={Layers3} tone="blue" delay={0.12} />
         </div>
-      </div>
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="grid gap-4 md:grid-cols-2">
-          {(sequencesQuery.data || []).map((sequence) => (
-            <div key={sequence.id} className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+          {sequences.map((sequence) => (
+            <div key={sequence.id} className="rounded-md border border-[#E2E8F0] bg-white p-5">
               <div className="flex items-start justify-between gap-3">
                 <div><h2 className="font-semibold text-[#0F172A]">{sequence.sequenceName}</h2><p className="mt-1 text-sm text-[#64748B]">{sequence.targetType} · Stop when {sequence.stopCondition}</p></div>
                 <Badge variant="outline">{sequence.status}</Badge>
               </div>
-              <div className="mt-4 space-y-2">{(sequence.steps || []).map((step: any, index: number) => <div key={index} className="rounded-lg bg-[#F8FAFC] px-3 py-2 text-sm text-[#475569]">{index + 1}. {step.type} · {step.title || step.subject || "Step"} {step.delayDays ? `· wait ${step.delayDays}d` : ""}</div>)}</div>
+              <div className="mt-4 space-y-2">{(sequence.steps || []).map((step: any, index: number) => <div key={index} className="rounded-md bg-[#F8FAFC] px-3 py-2 text-sm text-[#475569]">{index + 1}. {step.type} · {step.title || step.subject || "Step"} {step.delayDays ? `· wait ${step.delayDays}d` : ""}</div>)}</div>
               <div className="mt-4 flex gap-2"><Button variant="outline" size="sm" onClick={() => { setForm(sequence); setOpen(true); }}>Edit</Button><Button variant="outline" size="sm" onClick={() => actionMutation.mutate({ id: sequence.id })}><Pause size={14} /></Button></div>
             </div>
           ))}
-          {!sequencesQuery.data?.length && <div className="rounded-lg border border-dashed border-[#CBD5E1] bg-white p-8 text-center text-sm text-[#64748B] md:col-span-2"><GitBranch className="mx-auto mb-3 text-[#0F766E]" />Create a sequence to automate your sales follow-up.</div>}
+          {!sequences.length && <div className="rounded-md border border-dashed border-[#CBD5E1] bg-white p-8 text-center text-sm text-[#64748B] md:col-span-2"><TimerReset className="mx-auto mb-3 text-[#0891B2]" />Create a sequence to automate your sales follow-up.</div>}
         </div>
       </main>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -75,7 +78,7 @@ export default function SequencesPage() {
               ))}
             </div>
           </div>
-          <DialogFooter><Button onClick={() => saveMutation.mutate()} className="bg-[#0F766E] hover:bg-[#115E59]">Save Sequence</Button></DialogFooter>
+          <DialogFooter><Button onClick={() => saveMutation.mutate()} className="bg-[#0891B2] hover:bg-[#0E7490]">Save Sequence</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

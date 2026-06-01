@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircle, Building2, CalendarClock, CheckCircle2, Download, Eye, FileSignature, FileText, Loader2, Mail, Plus, RefreshCw, Save, Search, Send, UserRound, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { WorkspaceHero, WorkspaceMetric } from "@/components/crm/WorkspaceUi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -433,23 +434,16 @@ export default function ContractsPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-sm font-medium text-[#0891B2]"><FileSignature className="h-4 w-4" /> Sales Documents</div>
-            <h1 className="text-2xl font-semibold text-[#0F172A]">Contracts</h1>
-            <p className="text-sm text-[#64748B]">Send, sign, store, and invoice Sales CRM contracts.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+        <WorkspaceHero eyebrow="Sales Documents" title="Customer" accent="Contracts" description="Send, sign, store, and invoice Sales CRM contracts from one connected workspace." icon={FileSignature} actions={<>
             <Button variant="outline" onClick={load} disabled={loading}><RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />Refresh</Button>
             <ContractDialog clients={clients} contacts={contacts} onSaved={load} />
-          </div>
-        </div>
+          </>} />
 
         <div className="grid gap-3 sm:grid-cols-4">
-          <div className="rounded-md border bg-white p-4"><p className="text-xs text-[#64748B]">Total Contracts</p><p className="text-2xl font-semibold">{contracts.length}</p></div>
-          <div className="rounded-md border bg-white p-4"><p className="text-xs text-[#64748B]">Sent</p><p className="text-2xl font-semibold">{contracts.filter((c) => c.status === "SENT").length}</p></div>
-          <div className="rounded-md border bg-white p-4"><p className="text-xs text-[#64748B]">Signed</p><p className="text-2xl font-semibold">{contracts.filter((c) => c.status === "ACTIVE").length}</p></div>
-          <div className="rounded-md border bg-white p-4"><p className="text-xs text-[#64748B]">Pipeline Value</p><p className="text-2xl font-semibold">{money(contracts.reduce((sum, c) => sum + Number(c.value || 0), 0))}</p></div>
+          <WorkspaceMetric title="Total Contracts" value={contracts.length} icon={FileSignature} />
+          <WorkspaceMetric title="Sent" value={contracts.filter((c) => c.status === "SENT").length} icon={Send} tone="blue" delay={0.04} />
+          <WorkspaceMetric title="Signed" value={contracts.filter((c) => c.status === "ACTIVE").length} icon={CheckCircle2} tone="green" delay={0.08} />
+          <WorkspaceMetric title="Pipeline Value" value={money(contracts.reduce((sum, c) => sum + Number(c.value || 0), 0))} icon={FileText} tone="amber" delay={0.12} />
         </div>
 
         <div className="rounded-md border bg-white">

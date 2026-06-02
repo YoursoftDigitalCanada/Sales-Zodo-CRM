@@ -257,6 +257,7 @@ const PUBLIC_SITE_PATHS = new Set([
   "/",
   "/login",
   "/signin",
+  "/reset-password",
   "/signup",
   "/onboarding",
   "/product",

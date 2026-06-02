@@ -36,8 +36,66 @@ function groupByModule(permissions: ApiPermission[]): Record<string, ApiPermissi
 const MODULE_COLORS: Record<string, string> = {
     leads: "#0891B2", clients: "#16A34A", projects: "#7C3AED", invoices: "#D97706",
     employees: "#DC2626", roles: "#0891B2", calendar: "#16A34A", tasks: "#7C3AED",
-    emails: "#D97706", analytics: "#0891B2", settings: "#94A3B8", expenses: "#DC2626",
+    emails: "#D97706", analytics: "#0891B2", settings: "#94A3B8", bookkeeping: "#16A34A",
 };
+
+const SALES_CRM_PERMISSION_MODULES = [
+    "dashboard",
+    "leads",
+    "lead-sources",
+    "contacts",
+    "clients",
+    "projects",
+    "quotes",
+    "contracts",
+    "invoices",
+    "bookkeeping",
+    "tasks",
+    "calendar",
+    "emails",
+    "files",
+    "folders",
+    "automation",
+    "analytics",
+    "notifications",
+    "tags",
+    "employees",
+    "users",
+    "roles",
+    "settings",
+    "audit",
+    "support",
+] as const;
+
+const MODULE_LABELS: Record<string, string> = {
+    dashboard: "Dashboard",
+    leads: "Leads",
+    "lead-sources": "Lead Sources",
+    contacts: "Contacts",
+    clients: "Organizations",
+    projects: "Deals",
+    quotes: "Proposals",
+    contracts: "Contracts",
+    invoices: "Invoices & Payments",
+    bookkeeping: "Bookkeeping",
+    tasks: "Tasks & Activities",
+    calendar: "Calendar",
+    emails: "Email & Mail",
+    files: "Documents",
+    folders: "Document Folders",
+    automation: "Automation",
+    analytics: "Sales Analytics",
+    notifications: "Notifications",
+    tags: "Tags",
+    employees: "Team Members",
+    users: "User Accounts",
+    roles: "Roles & Permissions",
+    settings: "Settings",
+    audit: "Audit Log",
+    support: "Support",
+};
+
+const CRUD_ACTIONS = ["view", "create", "update", "delete"] as const;
 
 const ROLE_COLORS: Record<string, string> = {
     Owner: "#DC2626", Admin: "#D97706", Manager: "#0891B2", Staff: "#16A34A", Viewer: "#94A3B8",
@@ -130,7 +188,9 @@ export default function RolesPage() {
         }
         try {
             // Create with default view permissions
-            const viewPermIds = allPermissions.filter((p) => p.action === "view").map((p) => p.id);
+            const viewPermIds = allPermissions
+                .filter((p) => SALES_CRM_PERMISSION_MODULES.includes(p.module as typeof SALES_CRM_PERMISSION_MODULES[number]) && p.action === "view")
+                .map((p) => p.id);
             await createRole({ name: newRoleName.trim(), description: newRoleDesc.trim() || undefined, permissionIds: viewPermIds });
             setNewRoleName("");
             setNewRoleDesc("");
@@ -231,7 +291,11 @@ export default function RolesPage() {
     // ============================================
 
     const moduleGroups = groupByModule(allPermissions);
-    const moduleNames = Object.keys(moduleGroups).sort();
+    const moduleNames = SALES_CRM_PERMISSION_MODULES.filter((moduleName) => Boolean(moduleGroups[moduleName]));
+    const visiblePermissionCount = moduleNames.reduce(
+        (total, moduleName) => total + CRUD_ACTIONS.filter((action) => (editedPerms[moduleName] || []).includes(action)).length,
+        0,
+    );
     const currentMatrixRole = roles.find((r) => r.id === matrixRole);
 
     const filteredEmployees = employees.filter((e) => {
@@ -415,20 +479,21 @@ export default function RolesPage() {
                                             <div className="space-y-3 p-4">
                                                 {moduleNames.map((mod) => {
                                                     const perms = editedPerms[mod] || [];
-                                                    const actions = ["view", "create", "update", "delete"];
                                                     return (
                                                         <div key={mod} className="rounded-2xl border border-[rgba(15,23,42,0.06)] p-4">
                                                             <div className="mb-3 flex items-center gap-2">
                                                                 <div className="h-2 w-2 rounded-full" style={{ backgroundColor: MODULE_COLORS[mod] || "#94A3B8" }} />
-                                                                <span className="font-medium capitalize text-[#0F172A]">{mod.replace(/-/g, " ")}</span>
+                                                                <span className="font-medium text-[#0F172A]">{MODULE_LABELS[mod] || mod.replace(/-/g, " ")}</span>
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-2">
-                                                                {actions.map((action) => (
+                                                                {CRUD_ACTIONS.map((action) => (
                                                                     <button
                                                                         key={action}
+                                                                        disabled={!moduleGroups[mod]?.some((permission) => permission.action === action)}
                                                                         onClick={() => handleTogglePermission(mod, action)}
                                                                         className={cn(
                                                                             "flex items-center justify-between rounded-xl border px-3 py-2 text-xs font-medium capitalize",
+                                                                            !moduleGroups[mod]?.some((permission) => permission.action === action) && "cursor-not-allowed opacity-40",
                                                                             perms.includes(action)
                                                                                 ? "border-[#0891B2]/20 bg-[#0891B2] text-white"
                                                                                 : "border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] text-[#475569]"
@@ -458,21 +523,22 @@ export default function RolesPage() {
                                                     <tbody>
                                                         {moduleNames.map((mod) => {
                                                             const perms = editedPerms[mod] || [];
-                                                            const actions = ["view", "create", "update", "delete"];
                                                             return (
                                                                 <tr key={mod} className="border-b border-[rgba(15,23,42,0.04)] hover:bg-[#F8FAFC]">
                                                                     <td className="py-3 px-4">
                                                                         <div className="flex items-center gap-2">
                                                                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: MODULE_COLORS[mod] || "#94A3B8" }} />
-                                                                            <span className="font-medium text-[#0F172A] capitalize">{mod.replace(/-/g, " ")}</span>
+                                                                            <span className="font-medium text-[#0F172A]">{MODULE_LABELS[mod] || mod.replace(/-/g, " ")}</span>
                                                                         </div>
                                                                     </td>
-                                                                    {actions.map((action) => (
+                                                                    {CRUD_ACTIONS.map((action) => (
                                                                         <td key={action} className="py-3 px-4 text-center">
                                                                             <button
+                                                                                disabled={!moduleGroups[mod]?.some((permission) => permission.action === action)}
                                                                                 onClick={() => handleTogglePermission(mod, action)}
                                                                                 className={cn(
                                                                                     "w-7 h-7 rounded-lg flex items-center justify-center transition-all",
+                                                                                    !moduleGroups[mod]?.some((permission) => permission.action === action) && "cursor-not-allowed opacity-40",
                                                                                     perms.includes(action)
                                                                                         ? "bg-[#0891B2] text-white"
                                                                                         : "bg-[#F1F5F9] text-[#CBD5E1] hover:bg-[#E2E8F0]"
@@ -491,11 +557,11 @@ export default function RolesPage() {
                                         )}
                                         <div className="px-4 py-3 bg-[#F8FAFC] border-t border-[rgba(15,23,42,0.06)] flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
                                             <span className="text-[#94A3B8]">
-                                                <strong className="text-[#0F172A]">{Object.values(editedPerms).reduce((s, a) => s + a.length, 0)}</strong> permissions active across <strong className="text-[#0F172A]">{moduleNames.length}</strong> modules
+                                                <strong className="text-[#0F172A]">{visiblePermissionCount}</strong> permissions active across <strong className="text-[#0F172A]">{moduleNames.length}</strong> Sales CRM modules
                                             </span>
                                             {currentMatrixRole.isSystemRole && (
                                                 <span className="flex items-center gap-1 text-[#D97706]">
-                                                    <Info size={12} /> System role — changes apply globally
+                                                    <Info size={12} /> Default role — review changes carefully
                                                 </span>
                                             )}
                                         </div>

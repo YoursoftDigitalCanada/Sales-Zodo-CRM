@@ -53,7 +53,7 @@ export class PermissionsController {
 
     async getRolePermissions(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const permissions = await permissionsService.getRolePermissions(req.params.roleId);
+            const permissions = await permissionsService.getRolePermissions(req.params.roleId, req.context.tenantId);
             sendSuccess(res, permissions);
         } catch (error) {
             next(error);
@@ -63,7 +63,7 @@ export class PermissionsController {
     async assignPermissions(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { permissionIds } = req.body;
-            const permissions = await permissionsService.assignPermissionsToRole(req.params.roleId, permissionIds);
+            const permissions = await permissionsService.assignPermissionsToRole(req.params.roleId, req.context.tenantId, permissionIds);
             sendSuccess(res, permissions, 'Permissions assigned successfully');
         } catch (error) {
             next(error);

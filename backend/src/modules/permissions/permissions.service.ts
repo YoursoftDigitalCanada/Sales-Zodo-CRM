@@ -18,12 +18,15 @@ export class PermissionsService {
         return permissionsRepository.getAllModules();
     }
 
-    async getRolePermissions(roleId: string) {
-        const permissions = await permissionsRepository.findRolePermissions(roleId);
+    async getRolePermissions(roleId: string, tenantId: string) {
+        const permissions = await permissionsRepository.findRolePermissions(roleId, tenantId);
+        if (!permissions) {
+            throw new NotFoundError('Role not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        }
         return permissions.map(toPermissionResponseDto);
     }
 
-    async assignPermissionsToRole(roleId: string, permissionIds: string[]) {
+    async assignPermissionsToRole(roleId: string, tenantId: string, permissionIds: string[]) {
         // Validate all permission IDs exist
         if (permissionIds.length > 0) {
             const found = await permissionsRepository.findByIds(permissionIds);
@@ -32,7 +35,10 @@ export class PermissionsService {
             }
         }
 
-        const permissions = await permissionsRepository.syncRolePermissions(roleId, permissionIds);
+        const permissions = await permissionsRepository.syncRolePermissions(roleId, tenantId, permissionIds);
+        if (!permissions) {
+            throw new NotFoundError('Role not found', ErrorCodes.RESOURCE_NOT_FOUND);
+        }
         return permissions.map(toPermissionResponseDto);
     }
 }

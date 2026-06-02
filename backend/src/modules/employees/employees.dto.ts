@@ -131,7 +131,7 @@ export function buildEmployeeProfileData(input: {
 
 export interface CreateEmployeeDto {
     userId: string;
-    roleId: string;
+    roleId?: string;
     employeeNumber?: string;
     department?: string | null;
     position?: string | null;

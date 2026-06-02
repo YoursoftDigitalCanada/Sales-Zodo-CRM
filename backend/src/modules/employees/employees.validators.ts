@@ -30,6 +30,7 @@ const emergencyContactSchema = z.object({
 export const createEmployeeSchema = z.object({
     body: z.object({
         userId: z.string().uuid(),
+        roleId: z.string().uuid().optional(),
         employeeCode: z.string().max(50).optional(),
         employeeNumber: z.string().max(50).optional(),
         department: z.string().max(100).optional().nullable(),

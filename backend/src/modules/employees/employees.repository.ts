@@ -34,6 +34,10 @@ const employeeInclude = {
 
 export class EmployeesRepository {
     async create(tenantId: string, data: CreateEmployeeDto) {
+        if (!data.roleId) {
+            throw new Error('Role is required to create an employee');
+        }
+
         return prisma.employee.create({
             data: {
                 tenantId,
@@ -95,7 +99,7 @@ export class EmployeesRepository {
                 ...(data.roleId !== undefined
                     ? {
                         role: {
-                            connect: { id: data.roleId },
+                            connect: { id_tenantId: { id: data.roleId, tenantId } },
                         },
                     }
                     : {}),

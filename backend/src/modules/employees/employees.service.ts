@@ -470,7 +470,25 @@ function mapLeaveStatusToDto(value: string): LeaveRequestDto['status'] {
 
 export class EmployeesService {
     async create(tenantId: string, data: CreateEmployeeDto) {
-        const emp = await employeesRepository.create(tenantId, data);
+        const role = data.roleId
+            ? await prisma.role.findFirst({ where: { id: data.roleId, tenantId }, select: { id: true } })
+            : await prisma.role.findFirst({
+                where: {
+                    tenantId,
+                    OR: [
+                        { isDefault: true },
+                        { name: { equals: 'Staff', mode: 'insensitive' } },
+                    ],
+                },
+                orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+                select: { id: true },
+        });
+
+        if (!role) {
+            throw new NotFoundError('Role not found for this tenant', ErrorCodes.RESOURCE_NOT_FOUND);
+        }
+
+        const emp = await employeesRepository.create(tenantId, { ...data, roleId: role.id });
         const dto = toEmployeeResponseDto(emp);
         const employeeName = `${emp.user.firstName} ${emp.user.lastName}`.trim();
 
@@ -791,6 +809,17 @@ export class EmployeesService {
     async update(id: string, tenantId: string, data: UpdateEmployeeDto) {
         const existing = await employeesRepository.findById(id, tenantId);
         if (!existing) throw new NotFoundError('Employee not found', ErrorCodes.EMPLOYEE_NOT_FOUND);
+
+        if (data.roleId) {
+            const role = await prisma.role.findFirst({
+                where: { id: data.roleId, tenantId },
+                select: { id: true },
+            });
+
+            if (!role) {
+                throw new NotFoundError('Role not found for this tenant', ErrorCodes.RESOURCE_NOT_FOUND);
+            }
+        }
 
         if (data.email && data.email.toLowerCase() !== existing.user.email.toLowerCase()) {
             const matchingUser = await prisma.user.findUnique({

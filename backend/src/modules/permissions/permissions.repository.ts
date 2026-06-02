@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../config/database';
 
 export class PermissionsRepository {
     async findAll() {
@@ -22,30 +20,42 @@ export class PermissionsRepository {
         });
     }
 
-    async findRolePermissions(roleId: string) {
-        const rolePermissions = await prisma.rolePermission.findMany({
-            where: { roleId },
-            include: { permission: true },
+    async findRolePermissions(roleId: string, tenantId: string) {
+        const role = await prisma.role.findFirst({
+            where: { id: roleId, tenantId },
+            include: {
+                permissions: {
+                    include: { permission: true },
+                },
+            },
         });
-        return rolePermissions.map(rp => rp.permission);
+        return role?.permissions.map((rp) => rp.permission) || null;
     }
 
-    async syncRolePermissions(roleId: string, permissionIds: string[]) {
-        // Delete existing role permissions
-        await prisma.rolePermission.deleteMany({ where: { roleId } });
+    async syncRolePermissions(roleId: string, tenantId: string, permissionIds: string[]) {
+        const role = await prisma.role.findFirst({
+            where: { id: roleId, tenantId },
+            select: { id: true },
+        });
 
-        // Create new role permissions
-        if (permissionIds.length > 0) {
-            await prisma.rolePermission.createMany({
-                data: permissionIds.map(permissionId => ({
-                    roleId,
-                    permissionId,
-                })),
-            });
+        if (!role) {
+            return null;
         }
 
-        // Return updated permissions
-        return this.findRolePermissions(roleId);
+        await prisma.$transaction(async (tx) => {
+            await tx.rolePermission.deleteMany({ where: { roleId } });
+
+            if (permissionIds.length > 0) {
+                await tx.rolePermission.createMany({
+                    data: permissionIds.map((permissionId) => ({
+                        roleId,
+                        permissionId,
+                    })),
+                });
+            }
+        });
+
+        return this.findRolePermissions(roleId, tenantId);
     }
 
     async getAllModules() {

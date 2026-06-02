@@ -358,6 +358,23 @@ function splitFullName(fullName: string): { firstName: string; lastName: string 
   };
 }
 
+function getApiErrorMessage(error: any, fallback: string): string {
+  const responseData = error?.response?.data;
+  const validationErrors = responseData?.details?.errors;
+
+  if (validationErrors && typeof validationErrors === "object") {
+    const firstValidationMessage = Object.values(validationErrors)
+      .flatMap((messages) => Array.isArray(messages) ? messages : [messages])
+      .find((message) => typeof message === "string" && message.trim());
+
+    if (typeof firstValidationMessage === "string") {
+      return firstValidationMessage;
+    }
+  }
+
+  return responseData?.message || error?.message || fallback;
+}
+
 function parseDevice(userAgent?: string): string {
   const agent = (userAgent || "").toLowerCase();
   if (!agent) {
@@ -910,6 +927,8 @@ const UserFormDialog = ({
     try {
       await onSubmit(formData);
       onClose();
+    } catch {
+      // The parent displays the API error. Keep the form open so the user can fix it.
     } finally {
       setSaving(false);
     }
@@ -2520,9 +2539,10 @@ export default function UsersPage() {
       console.error("Failed to save user", error);
       toast({
         title: "Save Failed",
-        description: "The user could not be saved.",
+        description: getApiErrorMessage(error, "The user could not be saved."),
         variant: "destructive",
       });
+      throw error;
     }
   };
 

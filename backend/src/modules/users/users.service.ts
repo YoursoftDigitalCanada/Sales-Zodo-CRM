@@ -82,6 +82,8 @@ export class UsersService {
         phone: data.phone || null,
         password: temporaryPassword,
         roleId: role.id,
+        department: data.department || null,
+        position: data.position || null,
       },
       tenantId
     );

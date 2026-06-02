@@ -64,9 +64,9 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<EmailTemplateKey, EmailTemplateDefi
     name: 'Team Invitation',
     subject: 'You are invited to join {{workspaceName}}',
     bodyHtml:
-      '<p>Hello {{firstName}},</p><p>You have been invited to join <strong>{{workspaceName}}</strong> as a {{roleName}}.</p><p>Temporary password: <strong>{{temporaryPassword}}</strong></p><p>Please sign in and update your password right away.</p>',
+      '<p>Hello {{firstName}},</p><p>You have been invited to join <strong>{{workspaceName}}</strong> as a {{roleName}}.</p><p><a href="{{setPasswordLink}}">Set your password and start using the CRM</a></p><p>This secure link expires in one hour.</p>',
     bodyText:
-      'Hello {{firstName}},\n\nYou have been invited to join {{workspaceName}} as a {{roleName}}.\nTemporary password: {{temporaryPassword}}\nPlease sign in and update your password right away.',
+      'Hello {{firstName}},\n\nYou have been invited to join {{workspaceName}} as a {{roleName}}.\nSet your password and start using the CRM: {{setPasswordLink}}\n\nThis secure link expires in one hour.',
   },
   WELCOME: {
     id: 'WELCOME',

@@ -13,6 +13,13 @@ export interface TokenPayload {
 
 export interface DecodedToken extends JwtPayload, TokenPayload { }
 
+export interface PasswordResetTokenPayload extends JwtPayload {
+  userId: string;
+  email: string;
+  passwordChangedAt: string | null;
+  type: 'password-reset';
+}
+
 export function generateAccessToken(payload: Omit<TokenPayload, 'type'>): string {
   const tokenPayload: TokenPayload = { ...payload, type: 'access' };
 
@@ -43,6 +50,26 @@ export function verifyAccessToken(token: string): DecodedToken {
 
 export function verifyRefreshToken(token: string): DecodedToken {
   return jwt.verify(token, config.jwt.refreshSecret) as DecodedToken;
+}
+
+export function generatePasswordResetToken(payload: Omit<PasswordResetTokenPayload, 'type'>): string {
+  return jwt.sign(
+    { ...payload, type: 'password-reset' },
+    config.jwt.accessSecret,
+    {
+      expiresIn: '1h',
+      issuer: config.app.name,
+      subject: payload.userId,
+    },
+  );
+}
+
+export function verifyPasswordResetToken(token: string): PasswordResetTokenPayload {
+  const decoded = jwt.verify(token, config.jwt.accessSecret) as PasswordResetTokenPayload;
+  if (decoded.type !== 'password-reset') {
+    throw new Error('Invalid password reset token');
+  }
+  return decoded;
 }
 
 export function decodeToken(token: string): DecodedToken | null {

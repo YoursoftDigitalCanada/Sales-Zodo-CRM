@@ -3,6 +3,8 @@ import { UserStatus } from '@prisma/client';
 import { BadRequestError, NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { tenantMailerService } from '../../common/services/tenant-mailer.service';
+import { generatePasswordResetToken } from '../../common/utils/jwt';
+import { config } from '../../config';
 import { DEFAULT_EMAIL_TEMPLATES } from '../settings/settings.constants';
 import { settingsManager } from '../settings/settings.manager';
 import { settingsRepository } from '../settings/settings.repository';
@@ -28,6 +30,45 @@ function interpolateTemplate(template: string, variables: Record<string, string>
 export class UsersService {
   private createTemporaryPassword(): string {
     return `Temp-${crypto.randomBytes(6).toString('hex')}!`;
+  }
+
+  private async sendInviteSetPasswordEmail(args: {
+    tenantId: string;
+    user: { id: string; email: string; firstName: string; passwordChangedAt: Date | null };
+    roleName: string;
+  }): Promise<boolean> {
+    const settings = await settingsRepository.ensure(args.tenantId);
+    const inviteTemplate = DEFAULT_EMAIL_TEMPLATES.TEAM_INVITE;
+    const workspaceName = settings.tenant?.name || 'Your workspace';
+    const setPasswordToken = generatePasswordResetToken({
+      userId: args.user.id,
+      email: args.user.email,
+      passwordChangedAt: args.user.passwordChangedAt?.toISOString() || null,
+    });
+    const setPasswordLink = `${config.frontend.url.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(setPasswordToken)}`;
+    const delivery = await tenantMailerService.sendSignupEmail({
+      to: args.user.email,
+      subject: interpolateTemplate(inviteTemplate.subject, {
+        workspaceName,
+        firstName: args.user.firstName,
+        roleName: args.roleName,
+        setPasswordLink,
+      }),
+      html: interpolateTemplate(inviteTemplate.bodyHtml, {
+        workspaceName,
+        firstName: args.user.firstName,
+        roleName: args.roleName,
+        setPasswordLink,
+      }),
+      text: interpolateTemplate(inviteTemplate.bodyText, {
+        workspaceName,
+        firstName: args.user.firstName,
+        roleName: args.roleName,
+        setPasswordLink,
+      }),
+    });
+
+    return delivery.sent;
   }
 
   async create(data: CreateUserDto, tenantId: string): Promise<UserResponseDto> {
@@ -58,12 +99,26 @@ export class UsersService {
   }
 
   async invite(data: InviteUserDto, tenantId: string): Promise<InviteUserResponseDto> {
-    await settingsManager.assertUsageWithinPlan(tenantId, 'users');
-
     const existing = await usersRepository.findByEmail(data.email);
     if (existing) {
-      throw new BadRequestError('Email already exists', ErrorCodes.USER_EMAIL_TAKEN);
+      const workspaceUser = await usersRepository.findById(existing.id, tenantId);
+      if (!workspaceUser) {
+        throw new BadRequestError('Email already exists', ErrorCodes.USER_EMAIL_TAKEN);
+      }
+
+      const inviteEmailSent = await this.sendInviteSetPasswordEmail({
+        tenantId,
+        user: workspaceUser,
+        roleName: workspaceUser.employees[0]?.role?.name || 'Team Member',
+      });
+
+      return {
+        user: toUserResponseDto(workspaceUser),
+        inviteEmailSent,
+      };
     }
+
+    await settingsManager.assertUsageWithinPlan(tenantId, 'users');
 
     const role = await usersRepository.findRoleById(data.roleId, tenantId);
     if (!role) {
@@ -88,35 +143,14 @@ export class UsersService {
       tenantId
     );
 
-    const settings = await settingsRepository.ensure(tenantId);
     let inviteEmailSent = false;
 
     try {
-      const inviteTemplate = DEFAULT_EMAIL_TEMPLATES.TEAM_INVITE;
-      const workspaceName = settings.tenant?.name || 'Your workspace';
-      const delivery = await tenantMailerService.sendTenantEmail({
+      inviteEmailSent = await this.sendInviteSetPasswordEmail({
         tenantId,
-        to: data.email,
-        subject: interpolateTemplate(inviteTemplate.subject, {
-          workspaceName,
-          firstName,
-          roleName: role.name,
-          temporaryPassword,
-        }),
-        html: interpolateTemplate(inviteTemplate.bodyHtml, {
-          workspaceName,
-          firstName,
-          roleName: role.name,
-          temporaryPassword,
-        }),
-        text: interpolateTemplate(inviteTemplate.bodyText, {
-          workspaceName,
-          firstName,
-          roleName: role.name,
-          temporaryPassword,
-        }),
+        user,
+        roleName: role.name,
       });
-      inviteEmailSent = delivery.sent;
     } catch {
       inviteEmailSent = false;
     }

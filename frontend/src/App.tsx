@@ -92,6 +92,7 @@ import AddClientPage from "./pages/AddClient";
 import LetterBoxPage from "./pages/LetterBoxPage";
 import FileManagerPage from "./pages/FileManager";
 import LoginPage from "./pages/Login";
+import ResetPasswordPage from "./pages/ResetPassword";
 import SignupPage from "./pages/Signup";
 // DRAFT — re-enable next year
 // import BookingPagesPage from "@/pages/BookingPages";
@@ -652,6 +653,7 @@ const AppRoutes = () => {
         <Route path="/compare/leap" element={publicRoofingRoute(<CompareLeapPage />)} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signin" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/quote/:token" element={<PublicQuoteView />} />
         <Route path="/proposal/sign/:token" element={<PublicQuoteView />} />

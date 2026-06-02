@@ -2,7 +2,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { authRepository } from './auth.repository';
 import {
   generateAccessToken,
+  generatePasswordResetToken,
   generateRefreshToken,
+  verifyPasswordResetToken,
   verifyRefreshToken,
   getTokenExpiry,
 } from '../../common/utils/jwt';
@@ -39,6 +41,7 @@ import {
 } from './signup-access';
 import { signupOtpService } from './signup-otp.service';
 import { authManager } from './auth.manager';
+import { tenantMailerService } from '../../common/services/tenant-mailer.service';
 
 export class AuthService {
   async sendSignupOtp(input: SignupOtpSendInput): Promise<{
@@ -795,34 +798,61 @@ export class AuthService {
       return;
     }
 
-    // Generate reset token and send email
-    // This would typically involve:
-    // 1. Generating a secure reset token
-    // 2. Storing it in the database with expiry
-    // 3. Sending email with reset link
+    const resetToken = generatePasswordResetToken({
+      userId: user.id,
+      email: user.email,
+      passwordChangedAt: user.passwordChangedAt?.toISOString() || null,
+    });
+    const resetLink = `${config.frontend.url.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(resetToken)}`;
+    const delivery = await tenantMailerService.sendSignupEmail({
+      to: user.email,
+      subject: 'Reset your ZODO CRM password',
+      html: `<p>Hello ${user.firstName || 'there'},</p><p>Use the secure link below to set a new password for your ZODO CRM account.</p><p><a href="${resetLink}">Reset your password</a></p><p>This link expires in one hour. If you did not request this change, you can ignore this email.</p>`,
+      text: `Hello ${user.firstName || 'there'},\n\nReset your ZODO CRM password using this secure link:\n${resetLink}\n\nThis link expires in one hour. If you did not request this change, you can ignore this email.`,
+    });
 
-    // For now, just log the request
-    logger.info('Password reset requested', { userId: user.id, email });
-
-    // TODO: Implement email sending
-    // const resetToken = generateResetToken();
-    // await sendPasswordResetEmail(user.email, resetToken);
+    logger.info('Password reset requested', { userId: user.id, email, sent: delivery.sent });
   }
 
   /**
    * Reset password using reset token
    */
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    // This would typically involve:
-    // 1. Verifying the reset token
-    // 2. Checking if token is expired
-    // 3. Updating the password
-    // 4. Invalidating the reset token
-    // 5. Revoking all refresh tokens
+    let payload;
+    try {
+      payload = verifyPasswordResetToken(token);
+    } catch {
+      throw new BadRequestError('This password reset link is invalid or has expired');
+    }
 
-    // For now, this is a stub
-    logger.info('Password reset attempted', { token: token.substring(0, 10) + '...' });
-    throw new BadRequestError('Password reset not implemented');
+    const user = await authRepository.findUserById(payload.userId);
+    if (
+      !user
+      || user.email.toLowerCase() !== payload.email.toLowerCase()
+      || (user.passwordChangedAt?.toISOString() || null) !== payload.passwordChangedAt
+    ) {
+      throw new BadRequestError('This password reset link is invalid or has already been used');
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash,
+          passwordChangedAt: new Date(),
+          emailVerified: true,
+          emailVerifiedAt: user.emailVerifiedAt || new Date(),
+          status: 'ACTIVE',
+        },
+      }),
+      prisma.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date(), revokedReason: 'PASSWORD_RESET' },
+      }),
+    ]);
+
+    logger.info('Password reset completed', { userId: user.id, email: user.email });
   }
 
   /**

@@ -214,6 +214,10 @@ export async function requestUserPasswordReset(email: string): Promise<void> {
     await api.post("/auth/forgot-password", { email });
 }
 
+export async function resetUserPassword(token: string, password: string): Promise<void> {
+    await api.post("/auth/reset-password", { token, password });
+}
+
 export async function deleteUser(id: string | number): Promise<void> {
     await api.delete(`/users/${id}`);
 }

@@ -10,83 +10,58 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install SSH password client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y sshpass
-
-      - name: Deploy via SSH
+      - name: Trigger VPS deploy webhook
         env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
+          DEPLOY_WEBHOOK_URL: ${{ secrets.SALES_DEPLOY_WEBHOOK_URL }}
+          DEPLOY_WEBHOOK_TOKEN: ${{ secrets.SALES_DEPLOY_WEBHOOK_TOKEN }}
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+          GITHUB_REF_VALUE: ${{ github.ref }}
         run: |
-          VPS_HOST="${VPS_HOST:-82.197.94.229}"
-          VPS_USER="${VPS_USER:-root}"
-          VPS_PORT="${VPS_PORT:-22}"
+          set -euo pipefail
 
-          if [ -z "$VPS_PASSWORD" ]; then
-            echo "::error::Missing required VPS_PASSWORD repository secret"
+          DEPLOY_WEBHOOK_URL="${DEPLOY_WEBHOOK_URL:-https://salesapi.zodo.ca/__deploy/sales-crm}"
+
+          if [ -z "${DEPLOY_WEBHOOK_TOKEN:-}" ]; then
+            echo "::error::Missing required SALES_DEPLOY_WEBHOOK_TOKEN repository secret"
             exit 1
           fi
 
-          SSH_OPTS=(
-            -p "$VPS_PORT"
-            -o ConnectTimeout=30
-            -o ServerAliveInterval=15
-            -o ServerAliveCountMax=4
-            -o StrictHostKeyChecking=no
-            -o UserKnownHostsFile=/dev/null
-            -o PreferredAuthentications=password
-            -o PubkeyAuthentication=no
-          )
+          payload="$(node -e 'const payload = { sha: process.env.GITHUB_SHA_VALUE, ref: process.env.GITHUB_REF_VALUE, runId: process.env.GITHUB_RUN_ID }; process.stdout.write(JSON.stringify(payload));')"
 
-          for attempt in 1 2 3 4 5; do
-            echo "SSH deploy attempt ${attempt}/5..."
-            if sshpass -p "$VPS_PASSWORD" ssh "${SSH_OPTS[@]}" "$VPS_USER@$VPS_HOST" <<'DEPLOY_SCRIPT'
-            set -e
-            echo "Pulling latest code..."
-            cd /var/www/sales-zodo-crm
+          echo "Triggering Sales CRM deploy webhook..."
+          response="$(curl -fsS -X POST "$DEPLOY_WEBHOOK_URL" \
+            -H "Authorization: Bearer $DEPLOY_WEBHOOK_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "$payload")"
 
-            # Reset any local changes from previous deploys.
-            git fetch origin main
-            git reset --hard origin/main
+          echo "$response"
+          deploy_run_id="$(node -e 'const input = process.argv[1]; const data = JSON.parse(input); process.stdout.write(data.run?.id || "");' "$response")"
 
-            echo "Installing backend dependencies..."
-            cd /var/www/sales-zodo-crm/backend
-            rm -rf node_modules
-            npm ci --include=dev
+          if [ -z "$deploy_run_id" ]; then
+            echo "::error::Deploy webhook did not return a run id"
+            exit 1
+          fi
 
-            echo "Building backend..."
-            npx prisma generate
-            npx prisma migrate deploy
-            npm run build
+          status_url="${DEPLOY_WEBHOOK_URL%/deploy}/status"
 
-            echo "Installing frontend dependencies..."
-            cd /var/www/sales-zodo-crm/frontend
-            rm -rf node_modules
-            npm ci
+          for attempt in $(seq 1 90); do
+            sleep 10
+            status_response="$(curl -fsS "$status_url" -H "Authorization: Bearer $DEPLOY_WEBHOOK_TOKEN")"
+            status="$(node -e 'const input = process.argv[1]; const id = process.argv[2]; const data = JSON.parse(input); const run = data.run || {}; if (run.id !== id) process.stdout.write("unknown"); else process.stdout.write(run.status || "unknown");' "$status_response" "$deploy_run_id")"
 
-            echo "Building frontend..."
-            npx vite build
+            echo "Deploy status: $status"
 
-            echo "Restarting backend..."
-            pm2 restart sales-zodo-crm-api
-            pm2 save
-
-            echo "Deployment complete!"
-          DEPLOY_SCRIPT
-            then
+            if [ "$status" = "success" ]; then
+              echo "Sales CRM deploy completed successfully."
               exit 0
             fi
 
-            if [ "$attempt" -eq 5 ]; then
-              echo "::error::SSH deploy failed after 5 attempts"
-              exit 255
+            if [ "$status" = "failed" ]; then
+              echo "$status_response"
+              echo "::error::Sales CRM deploy failed on VPS"
+              exit 1
             fi
-
-            sleep_seconds=$((attempt * 20))
-            echo "SSH attempt failed. Retrying in ${sleep_seconds}s..."
-            sleep "$sleep_seconds"
           done
+
+          echo "::error::Timed out waiting for Sales CRM deploy to finish"
+          exit 1

@@ -15,6 +15,23 @@ const money = z.coerce.number().finite();
 const positiveMoney = z.coerce.number().finite().positive();
 const dateString = z.string().datetime().or(z.string().min(8));
 const jsonObject = z.record(z.any()).default({});
+const optionalText = (max: number) =>
+  z.preprocess(
+    (value) => {
+      if (typeof value !== 'string') return value;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    },
+    z.string().max(max).optional().nullable()
+  );
+const optionalEmail = z.preprocess(
+  (value) => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  },
+  z.string().email('Enter a valid email address').optional().nullable()
+);
 
 export const idSchema = z.object({ params: z.object({ id: uuid }) });
 
@@ -75,13 +92,13 @@ export const updateCategorySchema = z.object({ body: createCategorySchema.shape.
 
 export const createVendorSchema = z.object({
   body: z.object({
-    name: z.string().min(1).max(180),
-    email: z.string().email().optional().nullable(),
-    phone: z.string().max(40).optional().nullable(),
-    website: z.string().max(255).optional().nullable(),
-    address: z.string().max(500).optional().nullable(),
-    taxId: z.string().max(80).optional().nullable(),
-    notes: z.string().max(2000).optional().nullable(),
+    name: z.string().trim().min(1, 'Name is required').max(180),
+    email: optionalEmail,
+    phone: optionalText(40),
+    website: optionalText(255),
+    address: optionalText(500),
+    taxId: optionalText(80),
+    notes: optionalText(2000),
   }),
 });
 

@@ -119,6 +119,44 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   return <div className="space-y-1.5"><Label className="text-xs text-slate-600">{label}</Label>{children}</div>;
 }
 
+function apiErrorMessage(error: any, fallback: string) {
+  const details = error?.response?.data?.details?.errors || error?.response?.data?.errors;
+  if (details && typeof details === "object") {
+    const first = Object.entries(details)[0];
+    if (first) {
+      const [field, messages] = first;
+      const message = Array.isArray(messages) ? messages[0] : String(messages);
+      return `${field.replace(/^body\./, "")}: ${message}`;
+    }
+  }
+  return error?.response?.data?.message || fallback;
+}
+
+function cleanOptionalText(value: unknown) {
+  if (typeof value !== "string") return value ?? null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function normalizeWebsite(value: unknown) {
+  const cleaned = cleanOptionalText(value);
+  if (typeof cleaned !== "string") return cleaned;
+  if (/^https?:\/\//i.test(cleaned)) return cleaned;
+  return `https://${cleaned}`;
+}
+
+function normalizeVendorPayload(data: BookkeepingRecord) {
+  return {
+    name: String(data.name || "").trim(),
+    email: cleanOptionalText(data.email),
+    phone: cleanOptionalText(data.phone),
+    website: normalizeWebsite(data.website),
+    taxId: cleanOptionalText(data.taxId),
+    address: cleanOptionalText(data.address),
+    notes: cleanOptionalText(data.notes),
+  };
+}
+
 function TransactionDialog({ accounts, categories, vendors, onSaved }: { accounts: BookkeepingRecord[]; categories: BookkeepingRecord[]; vendors: BookkeepingRecord[]; onSaved: () => void }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -209,7 +247,7 @@ function SimpleCreateDialog({ title, fields, onSubmit, trigger }: { title: strin
       setForm({});
       toast.success(`${title} saved`);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || `Failed to save ${title.toLowerCase()}`);
+      toast.error(apiErrorMessage(error, `Failed to save ${title.toLowerCase()}`));
     } finally {
       setSaving(false);
     }
@@ -451,7 +489,7 @@ export default function BookkeepingPage() {
             <Panel>
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-base font-semibold">Vendors</h2>
-                <SimpleCreateDialog title="Vendor" trigger={<Button><Plus className="mr-2 h-4 w-4" />Vendor</Button>} fields={[{ key: "name", label: "Name" }, { key: "email", label: "Email" }, { key: "phone", label: "Phone" }, { key: "website", label: "Website" }, { key: "taxId", label: "Tax ID" }]} onSubmit={async (data) => { await createVendor(data); reload(); }} />
+                <SimpleCreateDialog title="Vendor" trigger={<Button><Plus className="mr-2 h-4 w-4" />Vendor</Button>} fields={[{ key: "name", label: "Name" }, { key: "email", label: "Email", type: "email" }, { key: "phone", label: "Phone", type: "tel" }, { key: "website", label: "Website", type: "url" }, { key: "taxId", label: "Tax ID" }]} onSubmit={async (data) => { await createVendor(normalizeVendorPayload(data)); reload(); }} />
               </div>
               <DataTable columns={["Name", "Email", "Phone", "Tax ID", "Status", "Actions"]} rows={vendors.map((v) => ({ Name: v.name, Email: v.email || "-", Phone: v.phone || "-", "Tax ID": v.taxId || "-", Status: v.isActive ? "Active" : "Inactive", Actions: v.isActive ? <Button variant="ghost" size="sm" onClick={async () => { await deleteVendor(v.id); toast.success("Vendor deactivated"); reload(); }}>Deactivate</Button> : "-" }))} />
             </Panel>

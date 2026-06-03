@@ -1,5 +1,6 @@
 import { prisma } from '../../config/database';
 import { PERMISSION_DEFINITIONS } from '../constants/permissions';
+import { PERMISSION_ALIASES } from '../constants/permission-aliases';
 import { ROLE_DEFINITIONS, SYSTEM_ROLES } from '../constants/roles';
 import { logger } from '../utils/logger';
 
@@ -9,6 +10,9 @@ interface PermissionBackfillRule {
 }
 
 const BACKFILL_RULES: Record<string, PermissionBackfillRule> = {
+  ...Object.fromEntries(
+    Object.entries(PERMISSION_ALIASES).map(([targetCode, copyFrom]) => [targetCode, { copyFrom }])
+  ),
   'tenants.create': { copyFrom: ['tenants.view'] },
   'tenants.delete': { copyFrom: ['tenants.update'] },
   'roof-estimator.update': { copyFrom: ['roof-estimator.create'] },

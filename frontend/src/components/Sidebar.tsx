@@ -10,6 +10,7 @@ import { getTicketStats } from "@/services/supportTicketsService";
 import { getLeaveRequests, getMyLeaveRequests } from "@/features/users/services/users-service";
 import { getLeads, type LeadEntity } from "@/features/leads/services/leads-service";
 import { getConversations } from "@/features/chat";
+import { hasPermissionWithAliases } from "@/lib/permission-aliases";
 import {
   getEnabledFeatures,
   subscribeEnabledFeatures,
@@ -259,35 +260,35 @@ const navigationItems: NavigationItem[] = [
     icon: FolderKanban,
     path: "/pipeline",
     featureId: "kanban",
-    permissionModule: "projects",
+    permissionModule: "task_pipeline",
   },
   {
     title: "Meetings",
     icon: CalendarCheck,
     path: "/meetings",
     featureId: "calendar",
-    permissionModule: "calendar",
+    permissionModule: "meetings",
   },
   {
     title: "Calls",
     icon: Phone,
     path: "/calls",
     featureId: "tasks",
-    permissionModule: "tasks",
+    permissionModule: "calls",
   },
   {
     title: "Sequences",
     icon: GitBranch,
     path: "/sequences",
     featureId: "letterbox",
-    permissionModule: "emails",
+    permissionModule: "sequences",
   },
   {
     title: "Email Templates",
     icon: Mail,
     path: "/email-templates",
     featureId: "letterbox",
-    permissionModule: "emails",
+    permissionModule: "email_templates",
   },
 
   { title: "Finance", isHeader: true },
@@ -317,7 +318,7 @@ const navigationItems: NavigationItem[] = [
     icon: Wallet,
     path: "/payments",
     featureId: "finance",
-    permissionModule: "invoices",
+    permissionModule: "payments",
   },
   {
     title: "Bookkeeping",
@@ -331,14 +332,14 @@ const navigationItems: NavigationItem[] = [
     icon: CreditCard,
     path: "/subscriptions",
     featureId: "finance",
-    permissionModule: "invoices",
+    permissionModule: "subscriptions",
   },
   {
     title: "Pricing Plans",
     icon: BadgeDollarSign,
     path: "/pricing-plans",
     featureId: "finance",
-    permissionModule: "invoices",
+    permissionModule: "pricing_plans",
   },
 
   { title: "Communication", isHeader: true },
@@ -377,25 +378,28 @@ const navigationItems: NavigationItem[] = [
     icon: Sparkles,
     path: "/ai/sales-assistant",
     featureId: "aiAssistant",
+    permissionModule: "sales_assistant",
   },
   {
     title: "Email Generator",
     icon: Zap,
     path: "/ai/email-generator",
     featureId: "letterbox",
-    permissionModule: "emails",
+    permissionModule: "email_generator",
   },
   {
     title: "Lead Scoring",
     icon: Award,
     path: "/ai/lead-scoring",
     featureId: "aiAssistant",
+    permissionModule: "lead_scoring",
   },
   {
     title: "Deal Insights",
     icon: PieChart,
     path: "/ai/deal-insights",
     featureId: "aiAssistant",
+    permissionModule: "deal_insights",
   },
 
   { title: "Team", isHeader: true },
@@ -420,21 +424,21 @@ const navigationItems: NavigationItem[] = [
     icon: BarChart3,
     path: "/reports",
     featureId: "reports",
-    permissionModule: "analytics",
+    permissionModule: "reports",
   },
   {
     title: "Forecast",
     icon: TrendingUp,
     path: "/forecast",
     featureId: "analytics",
-    permissionModule: "analytics",
+    permissionModule: "forecast",
   },
   {
     title: "Website Analytics",
     icon: Globe,
     path: "/website-analytics",
     featureId: "analytics",
-    permissionModule: "analytics",
+    permissionModule: "website_analytics",
     isNew: true,
   },
 
@@ -491,7 +495,7 @@ const hasModulePermission = (
     return permissionModule.some((module) => hasModulePermission(module, userPermissions));
   }
   if (!userPermissions) return false;
-  return userPermissions.includes(`${permissionModule}.view`);
+  return hasPermissionWithAliases(userPermissions, `${permissionModule}.view`);
 };
 
 const filterNavigationItems = (

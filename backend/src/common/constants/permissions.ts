@@ -66,6 +66,12 @@ export const PERMISSIONS = {
   TASKS_DELETE: 'tasks.delete',
   TASKS_ASSIGN: 'tasks.assign',
 
+  // Task Pipeline
+  TASK_PIPELINE_VIEW: 'task_pipeline.view',
+  TASK_PIPELINE_CREATE: 'task_pipeline.create',
+  TASK_PIPELINE_UPDATE: 'task_pipeline.update',
+  TASK_PIPELINE_DELETE: 'task_pipeline.delete',
+
   // Projects
   PROJECTS_VIEW: 'projects.view',
   PROJECTS_CREATE: 'projects.create',
@@ -78,6 +84,18 @@ export const PERMISSIONS = {
   CALENDAR_CREATE: 'calendar.create',
   CALENDAR_UPDATE: 'calendar.update',
   CALENDAR_DELETE: 'calendar.delete',
+
+  // Meetings
+  MEETINGS_VIEW: 'meetings.view',
+  MEETINGS_CREATE: 'meetings.create',
+  MEETINGS_UPDATE: 'meetings.update',
+  MEETINGS_DELETE: 'meetings.delete',
+
+  // Calls
+  CALLS_VIEW: 'calls.view',
+  CALLS_CREATE: 'calls.create',
+  CALLS_UPDATE: 'calls.update',
+  CALLS_DELETE: 'calls.delete',
 
   // Files
   FILES_VIEW: 'files.view',
@@ -99,6 +117,12 @@ export const PERMISSIONS = {
   INVOICES_DELETE: 'invoices.delete',
   INVOICES_SEND: 'invoices.send',
   INVOICES_MARK_PAID: 'invoices.mark-paid',
+
+  // Payments
+  PAYMENTS_VIEW: 'payments.view',
+  PAYMENTS_CREATE: 'payments.create',
+  PAYMENTS_UPDATE: 'payments.update',
+  PAYMENTS_DELETE: 'payments.delete',
 
   // Quotes / Proposals
   QUOTES_VIEW: 'quotes.view',
@@ -170,6 +194,18 @@ export const PERMISSIONS = {
   EMAILS_SEND: 'emails.send',
   EMAILS_DELETE: 'emails.delete',
 
+  // Email Templates
+  EMAIL_TEMPLATES_VIEW: 'email_templates.view',
+  EMAIL_TEMPLATES_CREATE: 'email_templates.create',
+  EMAIL_TEMPLATES_UPDATE: 'email_templates.update',
+  EMAIL_TEMPLATES_DELETE: 'email_templates.delete',
+
+  // Sequences
+  SEQUENCES_VIEW: 'sequences.view',
+  SEQUENCES_CREATE: 'sequences.create',
+  SEQUENCES_UPDATE: 'sequences.update',
+  SEQUENCES_DELETE: 'sequences.delete',
+
   // Chat
   CHAT_VIEW: 'chat.view',
   CHAT_CREATE: 'chat.create',
@@ -178,6 +214,29 @@ export const PERMISSIONS = {
   // Analytics
   ANALYTICS_VIEW: 'analytics.view',
   ANALYTICS_EXPORT: 'analytics.export',
+
+  // Sales analytics features
+  REPORTS_VIEW: 'reports.view',
+  REPORTS_EXPORT: 'reports.export',
+  FORECAST_VIEW: 'forecast.view',
+  LEAD_SCORING_VIEW: 'lead_scoring.view',
+  DEAL_INSIGHTS_VIEW: 'deal_insights.view',
+  WEBSITE_ANALYTICS_VIEW: 'website_analytics.view',
+  WEBSITE_ANALYTICS_CREATE: 'website_analytics.create',
+  WEBSITE_ANALYTICS_UPDATE: 'website_analytics.update',
+  WEBSITE_ANALYTICS_DELETE: 'website_analytics.delete',
+  SALES_ASSISTANT_VIEW: 'sales_assistant.view',
+  EMAIL_GENERATOR_VIEW: 'email_generator.view',
+
+  // Finance feature controls
+  SUBSCRIPTIONS_VIEW: 'subscriptions.view',
+  SUBSCRIPTIONS_CREATE: 'subscriptions.create',
+  SUBSCRIPTIONS_UPDATE: 'subscriptions.update',
+  SUBSCRIPTIONS_DELETE: 'subscriptions.delete',
+  PRICING_PLANS_VIEW: 'pricing_plans.view',
+  PRICING_PLANS_CREATE: 'pricing_plans.create',
+  PRICING_PLANS_UPDATE: 'pricing_plans.update',
+  PRICING_PLANS_DELETE: 'pricing_plans.delete',
 
   // Users
   USERS_VIEW: 'users.view',
@@ -317,6 +376,12 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { code: PERMISSIONS.TASKS_DELETE, name: 'Delete Tasks', description: 'Remove tasks', module: 'tasks', action: 'delete' },
   { code: PERMISSIONS.TASKS_ASSIGN, name: 'Assign Tasks', description: 'Assign tasks to employees', module: 'tasks', action: 'assign' },
 
+  // Task Pipeline
+  { code: PERMISSIONS.TASK_PIPELINE_VIEW, name: 'View Task Pipeline', description: 'View the task pipeline board', module: 'task_pipeline', action: 'view' },
+  { code: PERMISSIONS.TASK_PIPELINE_CREATE, name: 'Create Pipeline Tasks', description: 'Create tasks from the pipeline board', module: 'task_pipeline', action: 'create' },
+  { code: PERMISSIONS.TASK_PIPELINE_UPDATE, name: 'Update Task Pipeline', description: 'Move or update tasks on the pipeline board', module: 'task_pipeline', action: 'update' },
+  { code: PERMISSIONS.TASK_PIPELINE_DELETE, name: 'Delete Pipeline Tasks', description: 'Remove tasks from the pipeline board', module: 'task_pipeline', action: 'delete' },
+
   // Deals
   { code: PERMISSIONS.PROJECTS_VIEW, name: 'View Deals', description: 'View deal listings', module: 'projects', action: 'view' },
   { code: PERMISSIONS.PROJECTS_CREATE, name: 'Create Deals', description: 'Create new deals', module: 'projects', action: 'create' },
@@ -329,6 +394,18 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { code: PERMISSIONS.CALENDAR_CREATE, name: 'Create Events', description: 'Create calendar events', module: 'calendar', action: 'create' },
   { code: PERMISSIONS.CALENDAR_UPDATE, name: 'Update Events', description: 'Edit calendar events', module: 'calendar', action: 'update' },
   { code: PERMISSIONS.CALENDAR_DELETE, name: 'Delete Events', description: 'Remove calendar events', module: 'calendar', action: 'delete' },
+
+  // Meetings
+  { code: PERMISSIONS.MEETINGS_VIEW, name: 'View Meetings', description: 'View meetings independently from calendar access', module: 'meetings', action: 'view' },
+  { code: PERMISSIONS.MEETINGS_CREATE, name: 'Create Meetings', description: 'Schedule new meetings', module: 'meetings', action: 'create' },
+  { code: PERMISSIONS.MEETINGS_UPDATE, name: 'Update Meetings', description: 'Edit or complete meetings', module: 'meetings', action: 'update' },
+  { code: PERMISSIONS.MEETINGS_DELETE, name: 'Delete Meetings', description: 'Cancel or remove meetings', module: 'meetings', action: 'delete' },
+
+  // Calls
+  { code: PERMISSIONS.CALLS_VIEW, name: 'View Calls', description: 'View call logs', module: 'calls', action: 'view' },
+  { code: PERMISSIONS.CALLS_CREATE, name: 'Create Calls', description: 'Log new calls', module: 'calls', action: 'create' },
+  { code: PERMISSIONS.CALLS_UPDATE, name: 'Update Calls', description: 'Edit call logs', module: 'calls', action: 'update' },
+  { code: PERMISSIONS.CALLS_DELETE, name: 'Delete Calls', description: 'Remove call logs', module: 'calls', action: 'delete' },
 
   // Files
   { code: PERMISSIONS.FILES_VIEW, name: 'View Files', description: 'View files', module: 'files', action: 'view' },
@@ -350,6 +427,12 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { code: PERMISSIONS.INVOICES_DELETE, name: 'Delete Invoices', description: 'Remove invoices', module: 'invoices', action: 'delete' },
   { code: PERMISSIONS.INVOICES_SEND, name: 'Send Invoices', description: 'Send invoices to clients', module: 'invoices', action: 'send' },
   { code: PERMISSIONS.INVOICES_MARK_PAID, name: 'Mark Invoices Paid', description: 'Mark invoices as paid', module: 'invoices', action: 'mark-paid' },
+
+  // Payments
+  { code: PERMISSIONS.PAYMENTS_VIEW, name: 'View Payments', description: 'View payment records and status', module: 'payments', action: 'view' },
+  { code: PERMISSIONS.PAYMENTS_CREATE, name: 'Create Payments', description: 'Record payments and refunds', module: 'payments', action: 'create' },
+  { code: PERMISSIONS.PAYMENTS_UPDATE, name: 'Update Payments', description: 'Update payment records', module: 'payments', action: 'update' },
+  { code: PERMISSIONS.PAYMENTS_DELETE, name: 'Delete Payments', description: 'Void or remove payment records', module: 'payments', action: 'delete' },
 
   // Proposals
   { code: PERMISSIONS.QUOTES_VIEW, name: 'View Proposals', description: 'View proposals', module: 'quotes', action: 'view' },
@@ -421,6 +504,18 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { code: PERMISSIONS.EMAILS_SEND, name: 'Send Emails', description: 'Send emails', module: 'emails', action: 'send' },
   { code: PERMISSIONS.EMAILS_DELETE, name: 'Delete Emails', description: 'Remove emails', module: 'emails', action: 'delete' },
 
+  // Email Templates
+  { code: PERMISSIONS.EMAIL_TEMPLATES_VIEW, name: 'View Email Templates', description: 'View reusable email templates', module: 'email_templates', action: 'view' },
+  { code: PERMISSIONS.EMAIL_TEMPLATES_CREATE, name: 'Create Email Templates', description: 'Create reusable email templates', module: 'email_templates', action: 'create' },
+  { code: PERMISSIONS.EMAIL_TEMPLATES_UPDATE, name: 'Update Email Templates', description: 'Edit reusable email templates', module: 'email_templates', action: 'update' },
+  { code: PERMISSIONS.EMAIL_TEMPLATES_DELETE, name: 'Delete Email Templates', description: 'Remove reusable email templates', module: 'email_templates', action: 'delete' },
+
+  // Sequences
+  { code: PERMISSIONS.SEQUENCES_VIEW, name: 'View Sequences', description: 'View sales outreach sequences', module: 'sequences', action: 'view' },
+  { code: PERMISSIONS.SEQUENCES_CREATE, name: 'Create Sequences', description: 'Create sales outreach sequences', module: 'sequences', action: 'create' },
+  { code: PERMISSIONS.SEQUENCES_UPDATE, name: 'Update Sequences', description: 'Edit or start/stop sales outreach sequences', module: 'sequences', action: 'update' },
+  { code: PERMISSIONS.SEQUENCES_DELETE, name: 'Delete Sequences', description: 'Remove sales outreach sequences', module: 'sequences', action: 'delete' },
+
   // Chat
   { code: PERMISSIONS.CHAT_VIEW, name: 'View Chat', description: 'Access chat', module: 'chat', action: 'view' },
   { code: PERMISSIONS.CHAT_CREATE, name: 'Create Chat Rooms', description: 'Create chat rooms', module: 'chat', action: 'create' },
@@ -429,6 +524,29 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   // Analytics
   { code: PERMISSIONS.ANALYTICS_VIEW, name: 'View Analytics', description: 'Access analytics dashboard', module: 'analytics', action: 'view' },
   { code: PERMISSIONS.ANALYTICS_EXPORT, name: 'Export Analytics', description: 'Export analytics data', module: 'analytics', action: 'export' },
+
+  // Sales analytics features
+  { code: PERMISSIONS.REPORTS_VIEW, name: 'View Reports', description: 'View CRM reports', module: 'reports', action: 'view' },
+  { code: PERMISSIONS.REPORTS_EXPORT, name: 'Export Reports', description: 'Export CRM reports', module: 'reports', action: 'export' },
+  { code: PERMISSIONS.FORECAST_VIEW, name: 'View Forecast', description: 'View sales forecast', module: 'forecast', action: 'view' },
+  { code: PERMISSIONS.LEAD_SCORING_VIEW, name: 'View Lead Scoring', description: 'Use AI lead scoring', module: 'lead_scoring', action: 'view' },
+  { code: PERMISSIONS.DEAL_INSIGHTS_VIEW, name: 'View Deal Insights', description: 'Use AI deal insights', module: 'deal_insights', action: 'view' },
+  { code: PERMISSIONS.WEBSITE_ANALYTICS_VIEW, name: 'View Website Analytics', description: 'View website analytics dashboards', module: 'website_analytics', action: 'view' },
+  { code: PERMISSIONS.WEBSITE_ANALYTICS_CREATE, name: 'Create Website Analytics', description: 'Create analytics sites, funnels, and integrations', module: 'website_analytics', action: 'create' },
+  { code: PERMISSIONS.WEBSITE_ANALYTICS_UPDATE, name: 'Update Website Analytics', description: 'Update analytics sites, funnels, privacy settings, and insights', module: 'website_analytics', action: 'update' },
+  { code: PERMISSIONS.WEBSITE_ANALYTICS_DELETE, name: 'Delete Website Analytics', description: 'Delete or deactivate analytics records', module: 'website_analytics', action: 'delete' },
+  { code: PERMISSIONS.SALES_ASSISTANT_VIEW, name: 'View Sales Assistant', description: 'Use the AI sales assistant', module: 'sales_assistant', action: 'view' },
+  { code: PERMISSIONS.EMAIL_GENERATOR_VIEW, name: 'View Email Generator', description: 'Use the AI email generator', module: 'email_generator', action: 'view' },
+
+  // Finance feature controls
+  { code: PERMISSIONS.SUBSCRIPTIONS_VIEW, name: 'View Subscriptions', description: 'View subscription billing', module: 'subscriptions', action: 'view' },
+  { code: PERMISSIONS.SUBSCRIPTIONS_CREATE, name: 'Create Subscriptions', description: 'Create subscription billing records', module: 'subscriptions', action: 'create' },
+  { code: PERMISSIONS.SUBSCRIPTIONS_UPDATE, name: 'Update Subscriptions', description: 'Update, pause, cancel, or reactivate subscriptions', module: 'subscriptions', action: 'update' },
+  { code: PERMISSIONS.SUBSCRIPTIONS_DELETE, name: 'Delete Subscriptions', description: 'Remove subscription billing records', module: 'subscriptions', action: 'delete' },
+  { code: PERMISSIONS.PRICING_PLANS_VIEW, name: 'View Pricing Plans', description: 'View pricing plans', module: 'pricing_plans', action: 'view' },
+  { code: PERMISSIONS.PRICING_PLANS_CREATE, name: 'Create Pricing Plans', description: 'Create pricing plans', module: 'pricing_plans', action: 'create' },
+  { code: PERMISSIONS.PRICING_PLANS_UPDATE, name: 'Update Pricing Plans', description: 'Update pricing plans', module: 'pricing_plans', action: 'update' },
+  { code: PERMISSIONS.PRICING_PLANS_DELETE, name: 'Delete Pricing Plans', description: 'Remove pricing plans', module: 'pricing_plans', action: 'delete' },
 
   // Users
   { code: PERMISSIONS.USERS_VIEW, name: 'View Users', description: 'View user list', module: 'users', action: 'view' },

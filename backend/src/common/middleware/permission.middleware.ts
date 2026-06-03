@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ForbiddenError } from '../errors/HttpErrors';
 import { ErrorCodes } from '../errors/errorCodes';
 import { logger } from '../utils/logger';
+import { hasPermissionWithAliases } from '../constants/permission-aliases';
 
 function isOwnerOrAdmin(req: Request): boolean {
   const roleName = req.employee?.role?.name;
@@ -21,7 +22,7 @@ export function requirePermission(permissionCode: string) {
     try {
       const permissions = req.permissions || [];
 
-      if (!permissions.includes(permissionCode) && !isOwnerOrAdmin(req)) {
+      if (!hasPermissionWithAliases(permissions, permissionCode) && !isOwnerOrAdmin(req)) {
         logger.warn('Permission denied', {
           userId: req.user?.userId,
           required: permissionCode,
@@ -54,7 +55,7 @@ export function requireAnyPermission(permissionCodes: string[]) {
       const permissions = req.permissions || [];
 
       const hasPermission = isOwnerOrAdmin(req) || permissionCodes.some((code) =>
-        permissions.includes(code)
+        hasPermissionWithAliases(permissions, code)
       );
 
       if (!hasPermission) {
@@ -90,12 +91,12 @@ export function requireAllPermissions(permissionCodes: string[]) {
       const permissions = req.permissions || [];
 
       const hasAllPermissions = isOwnerOrAdmin(req) || permissionCodes.every((code) =>
-        permissions.includes(code)
+        hasPermissionWithAliases(permissions, code)
       );
 
       if (!hasAllPermissions) {
         const missing = permissionCodes.filter(
-          (code) => !permissions.includes(code)
+          (code) => !hasPermissionWithAliases(permissions, code)
         );
 
         logger.warn('Permission denied (all)', {
@@ -203,7 +204,7 @@ export function hasPermission(
   permissions: string[],
   permissionCode: string
 ): boolean {
-  return permissions.includes(permissionCode);
+  return hasPermissionWithAliases(permissions, permissionCode);
 }
 
 /**
@@ -224,7 +225,7 @@ export function requireOwnershipOrPermission(
       const employeeId = req.user?.employeeId;
 
       // Check if user has the permission
-      if (permissions.includes(permissionCode)) {
+      if (hasPermissionWithAliases(permissions, permissionCode)) {
         return next();
       }
 

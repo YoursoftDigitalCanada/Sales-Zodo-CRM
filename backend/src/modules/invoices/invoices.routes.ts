@@ -21,8 +21,8 @@ router.get('/:id/pdf', requirePermission(PERMISSIONS.INVOICES_VIEW), validate(in
 router.post('/:id/save-document', requirePermission(PERMISSIONS.INVOICES_UPDATE), validate(invoiceIdSchema), invoicesController.saveDocument.bind(invoicesController));
 router.put('/:id', requirePermission(PERMISSIONS.INVOICES_UPDATE), validate(invoiceIdSchema), validate(updateInvoiceSchema), invoicesController.update.bind(invoicesController));
 router.post('/:id/send', requirePermission(PERMISSIONS.INVOICES_UPDATE), validate(invoiceIdSchema), invoicesController.send.bind(invoicesController));
-router.post('/:id/payments', requirePermission(PERMISSIONS.INVOICES_MARK_PAID), validate(invoiceIdSchema), validate(recordInvoicePaymentSchema), invoicesController.recordPayment.bind(invoicesController));
-router.patch('/:id/payments/:paymentId/status', requirePermission(PERMISSIONS.INVOICES_MARK_PAID), validate(updateInvoicePaymentStatusSchema), invoicesController.updatePaymentStatus.bind(invoicesController));
+router.post('/:id/payments', requirePermission(PERMISSIONS.PAYMENTS_CREATE), validate(invoiceIdSchema), validate(recordInvoicePaymentSchema), invoicesController.recordPayment.bind(invoicesController));
+router.patch('/:id/payments/:paymentId/status', requirePermission(PERMISSIONS.PAYMENTS_UPDATE), validate(updateInvoicePaymentStatusSchema), invoicesController.updatePaymentStatus.bind(invoicesController));
 router.patch('/:id/paid', requirePermission(PERMISSIONS.INVOICES_MARK_PAID), validate(invoiceIdSchema), invoicesController.markAsPaid.bind(invoicesController));
 router.delete('/:id', requirePermission(PERMISSIONS.INVOICES_DELETE), validate(invoiceIdSchema), invoicesController.delete.bind(invoicesController));
 

@@ -1,4 +1,5 @@
 import { PERMISSIONS } from './permissions';
+import { hasPermissionWithAliases } from './permission-aliases';
 
 /**
  * Sidebar module definitions
@@ -311,7 +312,7 @@ export function getModulesForPermissions(permissions: string[]): string[] {
   function checkModule(module: SidebarModule): boolean {
     // Check if user has any of the required permissions
     const hasAccess = module.requiredPermissions.some((p) =>
-      permissions.includes(p)
+      hasPermissionWithAliases(permissions, p)
     );
 
     if (hasAccess) {
@@ -339,7 +340,7 @@ export function getSidebarForPermissions(permissions: string[]): SidebarModule[]
   function filterModule(module: SidebarModule): SidebarModule | null {
     // Check if user has any of the required permissions
     const hasAccess = module.requiredPermissions.some((p) =>
-      permissions.includes(p)
+      hasPermissionWithAliases(permissions, p)
     );
 
     if (!hasAccess) {
@@ -483,5 +484,5 @@ export function getModulePermissions(moduleId: string): string[] {
  */
 export function canAccessModule(moduleId: string, permissions: string[]): boolean {
   const modulePerms = getModulePermissions(moduleId);
-  return modulePerms.some((p) => permissions.includes(p));
+  return modulePerms.some((p) => hasPermissionWithAliases(permissions, p));
 }

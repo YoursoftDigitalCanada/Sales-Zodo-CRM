@@ -5,6 +5,7 @@ import {
   isStoredEmployeeAdmin,
 } from "@/features/auth/lib/auth-storage";
 import { FeatureId, getEnabledFeatures } from "@/lib/enabled-features";
+import { hasPermissionWithAliases } from "@/lib/permission-aliases";
 
 export type PermissionAction = "view" | "create" | "update" | "delete" | string;
 
@@ -20,15 +21,23 @@ const DASHBOARD_ROUTE_CANDIDATES: Array<{
   { path: "/contracts", featureId: "finance", permissionModule: "contracts" },
   { path: "/tasks", featureId: "tasks", permissionModule: "tasks" },
   { path: "/calendar", featureId: "calendar", permissionModule: "calendar" },
+  { path: "/meetings", featureId: "calendar", permissionModule: "meetings" },
+  { path: "/calls", featureId: "tasks", permissionModule: "calls" },
   { path: "/invoice", featureId: "finance", permissionModule: "invoices" },
+  { path: "/payments", featureId: "finance", permissionModule: "payments" },
+  { path: "/bookkeeping", featureId: "finance", permissionModule: "bookkeeping" },
   { path: "/letterbox", featureId: "letterbox", permissionModule: "emails" },
+  { path: "/sequences", featureId: "letterbox", permissionModule: "sequences" },
+  { path: "/email-templates", featureId: "letterbox", permissionModule: "email_templates" },
   { path: "/support/tickets", featureId: "support", permissionModule: "support" },
   { path: "/files", featureId: "files", permissionModule: "files" },
   { path: "/employees/attendance", featureId: "team" },
   { path: "/chats", featureId: "chat", permissionModule: "chat" },
   { path: "/roof-estimator", featureId: "roofEstimator", permissionModule: "roof-estimator" },
   { path: "/analytics", featureId: "analytics", permissionModule: "analytics" },
-  { path: "/reports", featureId: "reports", permissionModule: "analytics" },
+  { path: "/reports", featureId: "reports", permissionModule: "reports" },
+  { path: "/forecast", featureId: "analytics", permissionModule: "forecast" },
+  { path: "/website-analytics", featureId: "analytics", permissionModule: "website_analytics" },
 ];
 
 export function getStoredPermissions(): string[] | null {
@@ -85,7 +94,7 @@ export function hasPermissionCode(
     return false;
   }
 
-  return permissions.includes(permissionCode);
+  return hasPermissionWithAliases(permissions, permissionCode);
 }
 
 export function hasAnyPermissionCode(

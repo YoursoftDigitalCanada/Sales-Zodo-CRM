@@ -10,31 +10,31 @@ router.use(loadEmployee);
 
 router.get(
   '/sales-summary',
-  requirePermission(PERMISSIONS.ANALYTICS_VIEW),
+  requirePermission(PERMISSIONS.REPORTS_VIEW),
   reportsController.getSalesSummary.bind(reportsController),
 );
 
 router.get(
   '/sales-rep-performance',
-  requirePermission(PERMISSIONS.ANALYTICS_VIEW),
+  requirePermission(PERMISSIONS.REPORTS_VIEW),
   reportsController.getSalesRepPerformance.bind(reportsController),
 );
 
 router.get(
   '/revenue-over-time',
-  requirePermission(PERMISSIONS.ANALYTICS_VIEW),
+  requirePermission(PERMISSIONS.REPORTS_VIEW),
   reportsController.getRevenueOverTime.bind(reportsController),
 );
 
 router.get(
   '/sales-reps',
-  requirePermission(PERMISSIONS.ANALYTICS_VIEW),
+  requirePermission(PERMISSIONS.REPORTS_VIEW),
   reportsController.getSalesReps.bind(reportsController),
 );
 
 router.get(
   '/export-csv',
-  requirePermission(PERMISSIONS.ANALYTICS_EXPORT),
+  requirePermission(PERMISSIONS.REPORTS_EXPORT),
   reportsController.exportCsv.bind(reportsController),
 );
 

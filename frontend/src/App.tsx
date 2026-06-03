@@ -681,12 +681,12 @@ const AppRoutes = () => {
 
         {/* ========== LEAD ROUTES ========== */}
         <Route path="/deals" element={<AccessGuard featureId="projects" permissionModule="projects" action="view"><DealsPage /></AccessGuard>} />
-        <Route path="/pipeline" element={<AccessGuard featureId="kanban" permissionModule="projects" action="view"><KanbanPage /></AccessGuard>} />
-        <Route path="/meetings" element={<AccessGuard featureId="calendar" permissionModule="calendar" action="view"><CalendarPage /></AccessGuard>} />
+        <Route path="/pipeline" element={<AccessGuard featureId="kanban" permissionModule="task_pipeline" action="view"><KanbanPage /></AccessGuard>} />
+        <Route path="/meetings" element={<AccessGuard featureId="calendar" permissionModule="meetings" action="view"><CalendarPage /></AccessGuard>} />
         <Route path="/proposals" element={<AccessGuard featureId="finance" permissionModule="quotes" action="view"><QuotesPage /></AccessGuard>} />
-        <Route path="/subscriptions" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><SubscriptionsPage /></AccessGuard>} />
-        <Route path="/pricing-plans" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><PricingPlansPage /></AccessGuard>} />
-        <Route path="/payments" element={<AccessGuard featureId="finance" permissionModule="invoices" action="view"><PaymentsPage /></AccessGuard>} />
+        <Route path="/subscriptions" element={<AccessGuard featureId="finance" permissionModule="subscriptions" action="view"><SubscriptionsPage /></AccessGuard>} />
+        <Route path="/pricing-plans" element={<AccessGuard featureId="finance" permissionModule="pricing_plans" action="view"><PricingPlansPage /></AccessGuard>} />
+        <Route path="/payments" element={<AccessGuard featureId="finance" permissionModule="payments" action="view"><PaymentsPage /></AccessGuard>} />
         <Route path="/expenses" element={<Navigate to="/bookkeeping" replace />} />
         <Route path="/expenses/:id" element={<Navigate to="/bookkeeping" replace />} />
         <Route path="/bookkeeping" element={<AccessGuard featureId="finance" permissionModule="bookkeeping" action="view"><BookkeepingPage /></AccessGuard>} />
@@ -694,19 +694,19 @@ const AppRoutes = () => {
         <Route path="/accounts" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><OrganizationsPage /></AccessGuard>} />
         <Route path="/organizations" element={<AccessGuard featureId="clients" permissionModule="clients" action="view"><OrganizationsPage /></AccessGuard>} />
         <Route path="/notes" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><NotesPage /></AccessGuard>} />
-        <Route path="/calls" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><CallsPage /></AccessGuard>} />
-        <Route path="/call-logs" element={<AccessGuard featureId="tasks" permissionModule="tasks" action="view"><CallsPage /></AccessGuard>} />
-        <Route path="/sequences" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><SequencesPage /></AccessGuard>} />
-        <Route path="/email-templates" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><EmailTemplatesPage /></AccessGuard>} />
+        <Route path="/calls" element={<AccessGuard featureId="tasks" permissionModule="calls" action="view"><CallsPage /></AccessGuard>} />
+        <Route path="/call-logs" element={<AccessGuard featureId="tasks" permissionModule="calls" action="view"><CallsPage /></AccessGuard>} />
+        <Route path="/sequences" element={<AccessGuard featureId="letterbox" permissionModule="sequences" action="view"><SequencesPage /></AccessGuard>} />
+        <Route path="/email-templates" element={<AccessGuard featureId="letterbox" permissionModule="email_templates" action="view"><EmailTemplatesPage /></AccessGuard>} />
         <Route path="/data-import" element={<AccessGuard permissionModule="settings" action="view"><DataImportPage /></AccessGuard>} />
         <Route path="/mail" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><LetterBoxPage /></AccessGuard>} />
         <Route path="/letterbox" element={<Navigate to="/mail" replace />} />
-        <Route path="/ai/sales-assistant" element={<AccessGuard featureId="aiAssistant"><AISalesAssistantPage /></AccessGuard>} />
-        <Route path="/ai/email-generator" element={<AccessGuard featureId="letterbox" anyOf={EMAIL_ROUTE_PERMISSIONS}><AIEmailGeneratorPage /></AccessGuard>} />
-        <Route path="/ai/lead-scoring" element={<AccessGuard featureId="aiAssistant" permissionModule="leads" action="view"><AILeadScoringPage /></AccessGuard>} />
-        <Route path="/ai/deal-insights" element={<AccessGuard featureId="aiAssistant" permissionModule="projects" action="view"><AIDealInsightsPage /></AccessGuard>} />
-        <Route path="/forecast" element={<AccessGuard featureId="analytics" permissionModule="analytics" action="view"><AnalyticsPage /></AccessGuard>} />
-        <Route path="/website-analytics" element={<AccessGuard featureId="analytics" permissionModule="analytics" action="view"><WebsiteAnalyticsPage /></AccessGuard>} />
+        <Route path="/ai/sales-assistant" element={<AccessGuard featureId="aiAssistant" permissionModule="sales_assistant" action="view"><AISalesAssistantPage /></AccessGuard>} />
+        <Route path="/ai/email-generator" element={<AccessGuard featureId="letterbox" permissionModule="email_generator" action="view"><AIEmailGeneratorPage /></AccessGuard>} />
+        <Route path="/ai/lead-scoring" element={<AccessGuard featureId="aiAssistant" permissionModule="lead_scoring" action="view"><AILeadScoringPage /></AccessGuard>} />
+        <Route path="/ai/deal-insights" element={<AccessGuard featureId="aiAssistant" permissionModule="deal_insights" action="view"><AIDealInsightsPage /></AccessGuard>} />
+        <Route path="/forecast" element={<AccessGuard featureId="analytics" permissionModule="forecast" action="view"><AnalyticsPage /></AccessGuard>} />
+        <Route path="/website-analytics" element={<AccessGuard featureId="analytics" permissionModule="website_analytics" action="view"><WebsiteAnalyticsPage /></AccessGuard>} />
         <Route
           path="/leads"
           element={
@@ -1063,7 +1063,7 @@ const AppRoutes = () => {
         />
 
         {/* ========== SETTINGS ROUTES ========== */}
-        <Route path="/reports" element={<AccessGuard featureId="reports" permissionModule="analytics" action="view"><ReportsPage /></AccessGuard>} />
+        <Route path="/reports" element={<AccessGuard featureId="reports" permissionModule="reports" action="view"><ReportsPage /></AccessGuard>} />
         <Route path="/settings" element={<AccessGuard anyOf={SETTINGS_ROUTE_PERMISSIONS}><SettingsPage /></AccessGuard>} />
         <Route path="/settings/profile" element={<Navigate to="/profile" replace />} />
         <Route path="/settings/general" element={<AccessGuard anyOf={SETTINGS_ROUTE_PERMISSIONS}><SettingsPage /></AccessGuard>} />
@@ -1148,7 +1148,7 @@ const AppRoutes = () => {
         <Route
           path="/reports/sales"
           element={
-            <AccessGuard featureId="reports" permissionModule="analytics" action="view">
+            <AccessGuard featureId="reports" permissionModule="reports" action="view">
               <ReportsPage />
             </AccessGuard>
           }
@@ -1156,7 +1156,7 @@ const AppRoutes = () => {
         <Route
           path="/reports/revenue"
           element={
-            <AccessGuard featureId="reports" permissionModule="analytics" action="view">
+            <AccessGuard featureId="reports" permissionModule="reports" action="view">
               <ReportsPage />
             </AccessGuard>
           }
@@ -1164,7 +1164,7 @@ const AppRoutes = () => {
         <Route
           path="/reports/expenses"
           element={
-            <AccessGuard featureId="reports" permissionModule="analytics" action="view">
+            <AccessGuard featureId="reports" permissionModule="reports" action="view">
               <ReportsPage />
             </AccessGuard>
           }
@@ -1172,7 +1172,7 @@ const AppRoutes = () => {
         <Route
           path="/reports/custom"
           element={
-            <AccessGuard featureId="reports" permissionModule="analytics" action="view">
+            <AccessGuard featureId="reports" permissionModule="reports" action="view">
               <ReportsPage />
             </AccessGuard>
           }

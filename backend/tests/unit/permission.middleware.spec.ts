@@ -120,4 +120,39 @@ describe('permission.middleware', () => {
       message: expect.stringContaining('files.create'),
     });
   });
+
+  it('allows feature permissions through backward-compatible aliases', async () => {
+    const middleware = requirePermission('meetings.view');
+    const next = jest.fn();
+
+    await middleware(
+      {
+        permissions: ['calendar.view'],
+        employee: { role: { name: 'Sales' } },
+        user: { userId: 'user-3' },
+      } as any,
+      {} as any,
+      next
+    );
+
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  it('uses aliases for any/all permission checks', async () => {
+    const anyMiddleware = requireAnyPermission(['payments.view', 'reports.view']);
+    const allMiddleware = requireAllPermissions(['payments.view', 'reports.view']);
+    const anyNext = jest.fn();
+    const allNext = jest.fn();
+    const req = {
+      permissions: ['invoices.view', 'analytics.view'],
+      employee: { role: { name: 'Sales' } },
+      user: { userId: 'user-4' },
+    } as any;
+
+    await anyMiddleware(req, {} as any, anyNext);
+    await allMiddleware(req, {} as any, allNext);
+
+    expect(anyNext).toHaveBeenCalledWith();
+    expect(allNext).toHaveBeenCalledWith();
+  });
 });

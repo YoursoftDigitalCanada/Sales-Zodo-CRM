@@ -3,6 +3,7 @@ name: Deploy to VPS
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -30,13 +31,20 @@ jobs:
             exit 1
           fi
 
-          sshpass -p "$VPS_PASSWORD" ssh \
-            -p "$VPS_PORT" \
-            -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            -o PreferredAuthentications=password \
-            -o PubkeyAuthentication=no \
-            "$VPS_USER@$VPS_HOST" <<'DEPLOY_SCRIPT'
+          SSH_OPTS=(
+            -p "$VPS_PORT"
+            -o ConnectTimeout=30
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=4
+            -o StrictHostKeyChecking=no
+            -o UserKnownHostsFile=/dev/null
+            -o PreferredAuthentications=password
+            -o PubkeyAuthentication=no
+          )
+
+          for attempt in 1 2 3 4 5; do
+            echo "SSH deploy attempt ${attempt}/5..."
+            if sshpass -p "$VPS_PASSWORD" ssh "${SSH_OPTS[@]}" "$VPS_USER@$VPS_HOST" <<'DEPLOY_SCRIPT'
             set -e
             echo "Pulling latest code..."
             cd /var/www/sales-zodo-crm
@@ -65,6 +73,20 @@ jobs:
 
             echo "Restarting backend..."
             pm2 restart sales-zodo-crm-api
+            pm2 save
 
             echo "Deployment complete!"
-          DEPLOY_SCRIPT
+DEPLOY_SCRIPT
+            then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 5 ]; then
+              echo "::error::SSH deploy failed after 5 attempts"
+              exit 255
+            fi
+
+            sleep_seconds=$((attempt * 20))
+            echo "SSH attempt failed. Retrying in ${sleep_seconds}s..."
+            sleep "$sleep_seconds"
+          done

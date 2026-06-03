@@ -37,63 +37,57 @@ const MODULE_COLORS: Record<string, string> = {
     leads: "#0891B2", clients: "#16A34A", projects: "#7C3AED", invoices: "#D97706",
     employees: "#DC2626", roles: "#0891B2", calendar: "#16A34A", tasks: "#7C3AED",
     emails: "#D97706", analytics: "#0891B2", settings: "#94A3B8", bookkeeping: "#16A34A",
+    dashboard: "#0891B2", quotes: "#7C3AED", contracts: "#D97706", files: "#16A34A",
+    folders: "#16A34A", automation: "#7C3AED", notifications: "#D97706", support: "#64748B",
+    chat: "#0891B2", audit: "#64748B", tags: "#94A3B8", tenants: "#DC2626",
 };
 
-const SALES_CRM_PERMISSION_MODULES = [
-    "dashboard",
-    "leads",
-    "lead-sources",
-    "contacts",
-    "clients",
-    "projects",
-    "quotes",
-    "contracts",
-    "invoices",
-    "bookkeeping",
-    "tasks",
-    "calendar",
-    "emails",
-    "files",
-    "folders",
-    "automation",
-    "analytics",
-    "notifications",
-    "tags",
-    "employees",
-    "users",
-    "roles",
-    "settings",
-    "audit",
-    "support",
-] as const;
-
-const MODULE_LABELS: Record<string, string> = {
-    dashboard: "Dashboard",
-    leads: "Leads",
-    "lead-sources": "Lead Sources",
-    contacts: "Contacts",
-    clients: "Organizations",
-    projects: "Deals",
-    quotes: "Proposals",
-    contracts: "Contracts",
-    invoices: "Invoices & Payments",
-    bookkeeping: "Bookkeeping",
-    tasks: "Tasks & Activities",
-    calendar: "Calendar",
-    emails: "Email & Mail",
-    files: "Documents",
-    folders: "Document Folders",
-    automation: "Automation",
-    analytics: "Sales Analytics",
-    notifications: "Notifications",
-    tags: "Tags",
-    employees: "Team Members",
-    users: "User Accounts",
-    roles: "Roles & Permissions",
-    settings: "Settings",
-    audit: "Audit Log",
-    support: "Support",
+type PermissionMatrixRow = {
+    id: string;
+    label: string;
+    modules: string[];
 };
+
+const SALES_CRM_PERMISSION_ROWS: PermissionMatrixRow[] = [
+    { id: "dashboard", label: "Dashboard", modules: ["dashboard"] },
+    { id: "calendar", label: "Calendar", modules: ["calendar"] },
+    { id: "tasks", label: "Tasks", modules: ["tasks"] },
+    { id: "leads", label: "Leads", modules: ["leads", "lead-sources", "tags"] },
+    { id: "organizations", label: "Organizations", modules: ["clients"] },
+    { id: "contacts", label: "Contacts", modules: ["contacts"] },
+    { id: "deals", label: "Deals", modules: ["projects"] },
+    { id: "task-pipeline", label: "Task Pipeline", modules: ["tasks"] },
+    { id: "meetings", label: "Meetings", modules: ["calendar"] },
+    { id: "calls", label: "Calls", modules: ["calendar"] },
+    { id: "sequences", label: "Sequences", modules: ["automation", "emails"] },
+    { id: "email-templates", label: "Email Templates", modules: ["emails"] },
+    { id: "proposals", label: "Proposals", modules: ["quotes"] },
+    { id: "contracts", label: "Contracts", modules: ["contracts"] },
+    { id: "invoices", label: "Invoices", modules: ["invoices"] },
+    { id: "payments", label: "Payments", modules: ["invoices", "bookkeeping"] },
+    { id: "bookkeeping", label: "Bookkeeping", modules: ["bookkeeping"] },
+    { id: "subscriptions", label: "Subscriptions", modules: ["tenants"] },
+    { id: "pricing-plans", label: "Pricing Plans", modules: ["settings", "tenants"] },
+    { id: "mail", label: "Mail", modules: ["emails"] },
+    { id: "chats", label: "Chats", modules: ["chat"] },
+    { id: "notifications", label: "Notifications", modules: ["notifications"] },
+    { id: "documents", label: "Documents", modules: ["files", "folders"] },
+    { id: "sales-assistant", label: "Sales Assistant", modules: ["analytics", "automation"] },
+    { id: "email-generator", label: "Email Generator", modules: ["emails", "automation"] },
+    { id: "lead-scoring", label: "Lead Scoring", modules: ["leads", "analytics"] },
+    { id: "deal-insights", label: "Deal Insights", modules: ["projects", "analytics"] },
+    { id: "users", label: "Users", modules: ["users", "employees"] },
+    { id: "roles", label: "Roles", modules: ["roles"] },
+    { id: "reports", label: "Reports", modules: ["analytics", "bookkeeping"] },
+    { id: "forecast", label: "Forecast", modules: ["analytics", "projects"] },
+    { id: "website-analytics", label: "Website Analytics", modules: ["analytics"] },
+    { id: "settings", label: "Settings", modules: ["settings"] },
+    { id: "integrations", label: "Integrations", modules: ["settings"] },
+    { id: "automation", label: "Automation", modules: ["automation"] },
+    { id: "help-center", label: "Help Center", modules: ["support"] },
+];
+
+const SALES_CRM_PERMISSION_MODULES = Array.from(new Set(SALES_CRM_PERMISSION_ROWS.flatMap((row) => row.modules)));
 
 const CRUD_ACTIONS = ["view", "create", "update", "delete"] as const;
 
@@ -112,6 +106,28 @@ function buildPermMap(role: ApiRole, allPerms: ApiPermission[]): Record<string, 
         }
     }
     return result;
+}
+
+function getRowPermissions(row: PermissionMatrixRow, moduleGroups: Record<string, ApiPermission[]>): ApiPermission[] {
+    return row.modules.flatMap((moduleName) => moduleGroups[moduleName] || []);
+}
+
+function getPrimaryModule(row: PermissionMatrixRow, moduleGroups: Record<string, ApiPermission[]>): string {
+    return row.modules.find((moduleName) => Boolean(moduleGroups[moduleName])) || row.modules[0] || row.id;
+}
+
+function rowSupportsAction(row: PermissionMatrixRow, action: string, moduleGroups: Record<string, ApiPermission[]>): boolean {
+    return getRowPermissions(row, moduleGroups).some((permission) => permission.action === action);
+}
+
+function rowHasAction(row: PermissionMatrixRow, action: string, editedPerms: Record<string, string[]>, moduleGroups: Record<string, ApiPermission[]>): boolean {
+    const actionPermissions = getRowPermissions(row, moduleGroups).filter((permission) => permission.action === action);
+    if (actionPermissions.length === 0) return false;
+    return actionPermissions.every((permission) => (editedPerms[permission.module] || []).includes(action));
+}
+
+function getVisibleRows(moduleGroups: Record<string, ApiPermission[]>): PermissionMatrixRow[] {
+    return SALES_CRM_PERMISSION_ROWS.filter((row) => row.modules.some((moduleName) => Boolean(moduleGroups[moduleName])));
 }
 
 // ============================================
@@ -189,7 +205,7 @@ export default function RolesPage() {
         try {
             // Create with default view permissions
             const viewPermIds = allPermissions
-                .filter((p) => SALES_CRM_PERMISSION_MODULES.includes(p.module as typeof SALES_CRM_PERMISSION_MODULES[number]) && p.action === "view")
+                .filter((p) => SALES_CRM_PERMISSION_MODULES.includes(p.module) && p.action === "view")
                 .map((p) => p.id);
             await createRole({ name: newRoleName.trim(), description: newRoleDesc.trim() || undefined, permissionIds: viewPermIds });
             setNewRoleName("");
@@ -227,14 +243,22 @@ export default function RolesPage() {
         }
     };
 
-    const handleTogglePermission = (moduleId: string, action: string) => {
+    const handleToggleRowPermission = (row: PermissionMatrixRow, action: string) => {
+        const permissions = getRowPermissions(row, moduleGroups).filter((permission) => permission.action === action);
+        if (permissions.length === 0) return;
+
         setEditedPerms((prev) => {
-            const current = prev[moduleId] || [];
-            const has = current.includes(action);
-            return {
-                ...prev,
-                [moduleId]: has ? current.filter((a) => a !== action) : [...current, action],
-            };
+            const shouldRemove = permissions.every((permission) => (prev[permission.module] || []).includes(action));
+            const next = { ...prev };
+
+            for (const permission of permissions) {
+                const current = next[permission.module] || [];
+                next[permission.module] = shouldRemove
+                    ? current.filter((item) => item !== action)
+                    : Array.from(new Set([...current, action]));
+            }
+
+            return next;
         });
     };
 
@@ -291,9 +315,9 @@ export default function RolesPage() {
     // ============================================
 
     const moduleGroups = groupByModule(allPermissions);
-    const moduleNames = SALES_CRM_PERMISSION_MODULES.filter((moduleName) => Boolean(moduleGroups[moduleName]));
-    const visiblePermissionCount = moduleNames.reduce(
-        (total, moduleName) => total + CRUD_ACTIONS.filter((action) => (editedPerms[moduleName] || []).includes(action)).length,
+    const permissionRows = getVisibleRows(moduleGroups);
+    const visiblePermissionCount = permissionRows.reduce(
+        (total, row) => total + CRUD_ACTIONS.filter((action) => rowHasAction(row, action, editedPerms, moduleGroups)).length,
         0,
     );
     const currentMatrixRole = roles.find((r) => r.id === matrixRole);
@@ -477,32 +501,36 @@ export default function RolesPage() {
                                     <div className="bg-white rounded-lg card-shadow overflow-hidden">
                                         {isMobile ? (
                                             <div className="space-y-3 p-4">
-                                                {moduleNames.map((mod) => {
-                                                    const perms = editedPerms[mod] || [];
+                                                {permissionRows.map((row) => {
+                                                    const primaryModule = getPrimaryModule(row, moduleGroups);
                                                     return (
-                                                        <div key={mod} className="rounded-2xl border border-[rgba(15,23,42,0.06)] p-4">
+                                                        <div key={row.id} className="rounded-2xl border border-[rgba(15,23,42,0.06)] p-4">
                                                             <div className="mb-3 flex items-center gap-2">
-                                                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: MODULE_COLORS[mod] || "#94A3B8" }} />
-                                                                <span className="font-medium text-[#0F172A]">{MODULE_LABELS[mod] || mod.replace(/-/g, " ")}</span>
+                                                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: MODULE_COLORS[primaryModule] || "#94A3B8" }} />
+                                                                <span className="font-medium text-[#0F172A]">{row.label}</span>
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-2">
-                                                                {CRUD_ACTIONS.map((action) => (
-                                                                    <button
+                                                                {CRUD_ACTIONS.map((action) => {
+                                                                    const isSupported = rowSupportsAction(row, action, moduleGroups);
+                                                                    const isEnabled = rowHasAction(row, action, editedPerms, moduleGroups);
+                                                                    return (
+                                                                        <button
                                                                         key={action}
-                                                                        disabled={!moduleGroups[mod]?.some((permission) => permission.action === action)}
-                                                                        onClick={() => handleTogglePermission(mod, action)}
+                                                                        disabled={!isSupported}
+                                                                        onClick={() => handleToggleRowPermission(row, action)}
                                                                         className={cn(
                                                                             "flex items-center justify-between rounded-xl border px-3 py-2 text-xs font-medium capitalize",
-                                                                            !moduleGroups[mod]?.some((permission) => permission.action === action) && "cursor-not-allowed opacity-40",
-                                                                            perms.includes(action)
+                                                                            !isSupported && "cursor-not-allowed opacity-40",
+                                                                            isEnabled
                                                                                 ? "border-[#0891B2]/20 bg-[#0891B2] text-white"
                                                                                 : "border-[rgba(15,23,42,0.08)] bg-[#F8FAFC] text-[#475569]"
                                                                         )}
                                                                     >
                                                                         <span>{action === "update" ? "edit" : action}</span>
-                                                                        {perms.includes(action) ? <Check size={13} /> : <X size={13} />}
+                                                                        {isEnabled ? <Check size={13} /> : <X size={13} />}
                                                                     </button>
-                                                                ))}
+                                                                    );
+                                                                })}
                                                             </div>
                                                         </div>
                                                     );
@@ -521,33 +549,37 @@ export default function RolesPage() {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {moduleNames.map((mod) => {
-                                                            const perms = editedPerms[mod] || [];
+                                                        {permissionRows.map((row) => {
+                                                            const primaryModule = getPrimaryModule(row, moduleGroups);
                                                             return (
-                                                                <tr key={mod} className="border-b border-[rgba(15,23,42,0.04)] hover:bg-[#F8FAFC]">
+                                                                <tr key={row.id} className="border-b border-[rgba(15,23,42,0.04)] hover:bg-[#F8FAFC]">
                                                                     <td className="py-3 px-4">
                                                                         <div className="flex items-center gap-2">
-                                                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: MODULE_COLORS[mod] || "#94A3B8" }} />
-                                                                            <span className="font-medium text-[#0F172A]">{MODULE_LABELS[mod] || mod.replace(/-/g, " ")}</span>
+                                                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: MODULE_COLORS[primaryModule] || "#94A3B8" }} />
+                                                                            <span className="font-medium text-[#0F172A]">{row.label}</span>
                                                                         </div>
                                                                     </td>
-                                                                    {CRUD_ACTIONS.map((action) => (
-                                                                        <td key={action} className="py-3 px-4 text-center">
-                                                                            <button
-                                                                                disabled={!moduleGroups[mod]?.some((permission) => permission.action === action)}
-                                                                                onClick={() => handleTogglePermission(mod, action)}
+                                                                    {CRUD_ACTIONS.map((action) => {
+                                                                        const isSupported = rowSupportsAction(row, action, moduleGroups);
+                                                                        const isEnabled = rowHasAction(row, action, editedPerms, moduleGroups);
+                                                                        return (
+                                                                            <td key={action} className="py-3 px-4 text-center">
+                                                                                <button
+                                                                                disabled={!isSupported}
+                                                                                onClick={() => handleToggleRowPermission(row, action)}
                                                                                 className={cn(
                                                                                     "w-7 h-7 rounded-lg flex items-center justify-center transition-all",
-                                                                                    !moduleGroups[mod]?.some((permission) => permission.action === action) && "cursor-not-allowed opacity-40",
-                                                                                    perms.includes(action)
+                                                                                    !isSupported && "cursor-not-allowed opacity-40",
+                                                                                    isEnabled
                                                                                         ? "bg-[#0891B2] text-white"
                                                                                         : "bg-[#F1F5F9] text-[#CBD5E1] hover:bg-[#E2E8F0]"
                                                                                 )}
                                                                             >
-                                                                                {perms.includes(action) ? <Check size={14} /> : <X size={14} />}
+                                                                                {isEnabled ? <Check size={14} /> : <X size={14} />}
                                                                             </button>
-                                                                        </td>
-                                                                    ))}
+                                                                            </td>
+                                                                        );
+                                                                    })}
                                                                 </tr>
                                                             );
                                                         })}
@@ -557,7 +589,7 @@ export default function RolesPage() {
                                         )}
                                         <div className="px-4 py-3 bg-[#F8FAFC] border-t border-[rgba(15,23,42,0.06)] flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
                                             <span className="text-[#94A3B8]">
-                                                <strong className="text-[#0F172A]">{visiblePermissionCount}</strong> permissions active across <strong className="text-[#0F172A]">{moduleNames.length}</strong> Sales CRM modules
+                                                <strong className="text-[#0F172A]">{visiblePermissionCount}</strong> permissions active across <strong className="text-[#0F172A]">{permissionRows.length}</strong> Sales CRM modules
                                             </span>
                                             {currentMatrixRole.isSystemRole && (
                                                 <span className="flex items-center gap-1 text-[#D97706]">

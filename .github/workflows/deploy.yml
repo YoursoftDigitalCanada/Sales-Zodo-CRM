@@ -76,7 +76,7 @@ jobs:
             pm2 save
 
             echo "Deployment complete!"
-DEPLOY_SCRIPT
+          DEPLOY_SCRIPT
             then
               exit 0
             fi

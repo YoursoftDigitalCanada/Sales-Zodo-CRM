@@ -26,6 +26,15 @@ export const PERMISSIONS = {
   LEAD_SOURCES_UPDATE: 'lead-sources.update',
   LEAD_SOURCES_DELETE: 'lead-sources.delete',
 
+  // Form Builder
+  FORMS_VIEW: 'forms.view',
+  FORMS_CREATE: 'forms.create',
+  FORMS_UPDATE: 'forms.update',
+  FORMS_DELETE: 'forms.delete',
+  FORMS_PUBLISH: 'forms.publish',
+  FORMS_SUBMISSIONS_VIEW: 'forms.submissions.view',
+  FORMS_ANALYTICS_VIEW: 'forms.analytics.view',
+
   // Tags
   TAGS_VIEW: 'tags.view',
   TAGS_CREATE: 'tags.create',
@@ -335,6 +344,15 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { code: PERMISSIONS.LEAD_SOURCES_CREATE, name: 'Create Lead Sources', description: 'Create lead sources', module: 'lead-sources', action: 'create' },
   { code: PERMISSIONS.LEAD_SOURCES_UPDATE, name: 'Update Lead Sources', description: 'Edit lead sources', module: 'lead-sources', action: 'update' },
   { code: PERMISSIONS.LEAD_SOURCES_DELETE, name: 'Delete Lead Sources', description: 'Remove lead sources', module: 'lead-sources', action: 'delete' },
+
+  // Form Builder
+  { code: PERMISSIONS.FORMS_VIEW, name: 'View Forms', description: 'View lead capture forms', module: 'forms', action: 'view' },
+  { code: PERMISSIONS.FORMS_CREATE, name: 'Create Forms', description: 'Create lead capture forms', module: 'forms', action: 'create' },
+  { code: PERMISSIONS.FORMS_UPDATE, name: 'Update Forms', description: 'Edit lead capture forms', module: 'forms', action: 'update' },
+  { code: PERMISSIONS.FORMS_DELETE, name: 'Delete Forms', description: 'Delete lead capture forms and submissions', module: 'forms', action: 'delete' },
+  { code: PERMISSIONS.FORMS_PUBLISH, name: 'Publish Forms', description: 'Publish lead capture forms', module: 'forms', action: 'publish' },
+  { code: PERMISSIONS.FORMS_SUBMISSIONS_VIEW, name: 'View Form Submissions', description: 'View form submissions', module: 'forms', action: 'submissions.view' },
+  { code: PERMISSIONS.FORMS_ANALYTICS_VIEW, name: 'View Form Analytics', description: 'View form analytics', module: 'forms', action: 'analytics.view' },
 
   // Tags
   { code: PERMISSIONS.TAGS_VIEW, name: 'View Tags', description: 'View tags', module: 'tags', action: 'view' },

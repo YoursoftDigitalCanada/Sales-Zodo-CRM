@@ -29,6 +29,7 @@ export const ROUTE_MODULE_MAP: Record<string, readonly string[]> = {
     // CRM
     'leads': ['leads'],
     'lead-sources': ['leads'],        // sub-feature of leads
+    'forms': ['leads'],               // lead capture form builder
     'pipeline': ['leads'],
     'clients': ['clients'],
     'contacts': ['clients'],      // sub-feature of clients

@@ -11,6 +11,8 @@ import authRoutes from '../modules/auth/auth.routes';
 import leadsRoutes from '../modules/leads/leads.routes';
 import leadSourcesRoutes from '../modules/lead-sources/lead-sources.routes';
 import leadSourceWebhooksRoutes from '../modules/lead-sources/lead-source-webhooks.routes';
+import formsRoutes from '../modules/forms/forms.routes';
+import formsPublicRoutes from '../modules/forms/forms.public-routes';
 import inspectionsRoutes from '../modules/inspections/inspections.routes';
 import tagsRoutes from '../modules/tags/tags.routes';
 import notificationsRoutes from '../modules/notifications/notifications.routes';
@@ -125,6 +127,7 @@ export function registerRoutes(app: Application): void {
   apiRouter.use('/public', (req, _res, next) => requestContextStore.run(req, next));
   apiRouter.use('/public', quotesPublicRoutes);
   apiRouter.use('/public', proposalsPublicRoutes);
+  apiRouter.use('/public/forms', formsPublicRoutes);
   apiRouter.use('/public/website-analytics', websiteAnalyticsPublicRoutes);
   apiRouter.get('/public/files/:shareLink/download', filesController.downloadByShareLink.bind(filesController));
   apiRouter.use('/webhooks/leads', leadSourceWebhooksRoutes);
@@ -163,6 +166,7 @@ export function registerRoutes(app: Application): void {
   protectedRouter.use('/leads', leadsRoutes);
   protectedRouter.use('/inspections', inspectionsRoutes);
   protectedRouter.use('/lead-sources', leadSourcesRoutes);
+  protectedRouter.use('/forms', formsRoutes);
 
   // CRM - Clients & Contacts
   protectedRouter.use('/clients', clientsRoutes);
@@ -273,6 +277,7 @@ export function registerRoutes(app: Application): void {
         auth: `${apiPrefix}/auth`,
         leads: `${apiPrefix}/leads`,
         leadSources: `${apiPrefix}/lead-sources`,
+        forms: `${apiPrefix}/forms`,
         // CRM
         clients: `${apiPrefix}/clients`,
         contacts: `${apiPrefix}/contacts`,

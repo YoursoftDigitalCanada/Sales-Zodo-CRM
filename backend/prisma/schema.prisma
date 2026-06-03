@@ -75,6 +75,7 @@ enum LeadLifecycleStage {
 enum LeadSourceType {
   COLD_CALL
   EMAIL_CAMPAIGN
+  FORM_BUILDER
   GOOGLE_ADS
   REFERRAL
   SOCIAL_MEDIA
@@ -109,6 +110,27 @@ enum LeadSourceStatus {
   INACTIVE
   PAUSED
   ARCHIVED
+}
+
+enum FormBuilderFormStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum FormBuilderDuplicateHandling {
+  CREATE_NEW
+  UPDATE_EXISTING
+  IGNORE
+  FLAG_DUPLICATE
+}
+
+enum FormBuilderSubmissionStatus {
+  RECEIVED
+  LEAD_CREATED
+  DUPLICATE
+  FAILED
+  DELETED
 }
 
 enum ClientLifecycleStage {
@@ -785,6 +807,8 @@ model Tenant {
   bookkeepingJournalLines BookkeepingJournalLine[]
   bookkeepingReconciliations BookkeepingReconciliation[]
   bookkeepingRecurringRules BookkeepingRecurringRule[]
+  formBuilderForms FormBuilderForm[]
+  formBuilderSubmissions FormBuilderSubmission[]
 
   @@index([status])
   @@index([slug])
@@ -914,6 +938,7 @@ model Employee {
   jobCompletions        JobCompletion[]
   createdProposals      Proposal[]       @relation("ProposalCreatedBy")
   userAccesses          UserAccess[]
+  createdForms          FormBuilderForm[] @relation("FormBuilderFormCreatedBy")
 
   @@unique([tenantId, userId])
   @@unique([tenantId, employeeNumber])
@@ -1104,6 +1129,7 @@ model LeadSource {
   credentials     LeadSourceCredential[]
   webhooks        LeadSourceWebhook[]
   logs            LeadSourceLog[]
+  forms           FormBuilderForm[]
 
   @@unique([tenantId, name])
   @@unique([tenantId, slug])
@@ -1179,6 +1205,80 @@ model LeadSourceLog {
   @@index([leadSourceId, createdAt(sort: Desc)])
   @@index([eventType])
   @@index([status])
+}
+
+model FormBuilderForm {
+  id                  String                         @id @default(uuid())
+  tenantId            String
+  tenant              Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadSourceId        String?
+  leadSource          LeadSource?                    @relation(fields: [leadSourceId], references: [id], onDelete: SetNull)
+  name                String
+  description         String?
+  status              FormBuilderFormStatus          @default(DRAFT)
+  thankYouMessage     String                         @default("Thanks for your submission. We will be in touch soon.")
+  redirectUrl         String?
+  slug                String
+  publicId            String                         @unique
+  fields              Json                           @default("[]")
+  settings            Json                           @default("{}")
+  spamProtection      Json                           @default("{}")
+  notificationEmails  Json                           @default("[]")
+  assignmentRules     Json                           @default("{}")
+  duplicateHandling   FormBuilderDuplicateHandling   @default(FLAG_DUPLICATE)
+  submissionLimit     Int?
+  viewCount           Int                            @default(0)
+  submissionCount     Int                            @default(0)
+  conversionRate      Decimal                        @default(0) @db.Decimal(8, 4)
+  createdById         String?
+  createdBy           Employee?                      @relation("FormBuilderFormCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt           DateTime                       @default(now())
+  updatedAt           DateTime                       @updatedAt
+  archivedAt          DateTime?
+  deletedAt           DateTime?
+
+  submissions         FormBuilderSubmission[]
+
+  @@unique([tenantId, slug])
+  @@unique([id, tenantId])
+  @@index([tenantId])
+  @@index([leadSourceId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([publicId])
+  @@index([deletedAt])
+}
+
+model FormBuilderSubmission {
+  id              String                       @id @default(uuid())
+  tenantId        String
+  tenant          Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  formId          String
+  form            FormBuilderForm              @relation(fields: [formId], references: [id], onDelete: Cascade)
+  leadId          String?
+  lead            Lead?                        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  status          FormBuilderSubmissionStatus  @default(RECEIVED)
+  submittedData   Json                         @default("{}")
+  mappedLeadData  Json                         @default("{}")
+  unmappedData    Json                         @default("{}")
+  tracking        Json                         @default("{}")
+  spamScore       Decimal?                     @db.Decimal(5, 2)
+  spamVerdict     String?
+  ipAddressHash   String?
+  userAgent       String?
+  referrerUrl     String?
+  landingPageUrl  String?
+  submittedAt     DateTime                     @default(now())
+  createdAt       DateTime                     @default(now())
+  deletedAt       DateTime?
+
+  @@index([tenantId])
+  @@index([formId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([formId, submittedAt])
+  @@index([leadId])
+  @@index([deletedAt])
 }
 
 model Lead {
@@ -1358,6 +1458,7 @@ model Lead {
   insuranceClaims   LeadInsuranceClaim[]
   roofEstimates     RoofEstimate[]
   proposals         Proposal[]
+  formSubmissions   FormBuilderSubmission[]
 
   @@index([tenantId])
   @@index([status])

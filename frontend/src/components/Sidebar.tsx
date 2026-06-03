@@ -240,6 +240,13 @@ const navigationItems: NavigationItem[] = [
     permissionModule: "lead-sources",
   },
   {
+    title: "Forms",
+    icon: FileText,
+    path: "/leads/sources/forms",
+    featureId: "leads",
+    permissionModule: "forms",
+  },
+  {
     title: "Organizations",
     icon: Building2,
     path: "/organizations",

@@ -36,6 +36,14 @@ export const PERMISSION_ALIASES: Record<string, string[]> = {
   "lead_scoring.view": ["leads.view", "analytics.view"],
   "deal_insights.view": ["projects.view", "analytics.view"],
 
+  "forms.view": ["lead-sources.view", "leads.view"],
+  "forms.create": ["lead-sources.create", "leads.create"],
+  "forms.update": ["lead-sources.update", "leads.update"],
+  "forms.delete": ["lead-sources.delete", "leads.delete"],
+  "forms.publish": ["lead-sources.update", "leads.update"],
+  "forms.submissions.view": ["lead-sources.view", "leads.view"],
+  "forms.analytics.view": ["lead-sources.view", "analytics.view"],
+
   "website_analytics.view": ["analytics.view"],
   "website_analytics.create": ["analytics.export"],
   "website_analytics.update": ["analytics.export"],

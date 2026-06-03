@@ -214,6 +214,7 @@ export class LeadSourcesRepository {
     return [
       { type: 'COLD_CALL', name: 'Cold Call', category: 'MANUAL', icon: 'Phone', color: '#6366F1', description: 'Track leads from cold calling campaigns', method: 'Manual entry' },
       { type: 'EMAIL_CAMPAIGN', name: 'Email Campaign', category: 'DIGITAL', icon: 'Mail', color: '#EC4899', description: 'Leads from email marketing campaigns', method: 'Email parser / Manual' },
+      { type: 'FORM_BUILDER', name: 'Form Builder', category: 'DIGITAL', icon: 'FileText', color: '#6637F4', description: 'Create hosted or embedded lead capture forms without code', method: 'Hosted form / Embed' },
       { type: 'GOOGLE_ADS', name: 'Google Ads', category: 'DIGITAL', icon: 'Chrome', color: '#4285F4', description: 'Import leads from Google Ads lead forms', method: 'API / Webhook' },
       { type: 'REFERRAL', name: 'Referral', category: 'MANUAL', icon: 'UserPlus', color: '#10B981', description: 'Customer referrals and partner leads', method: 'Manual entry' },
       { type: 'SOCIAL_MEDIA', name: 'Social Media', category: 'DIGITAL', icon: 'Share2', color: '#3B82F6', description: 'Leads from Facebook, Instagram, Meta Ads', method: 'Meta API / Webhook' },

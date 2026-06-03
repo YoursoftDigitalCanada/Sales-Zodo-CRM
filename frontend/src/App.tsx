@@ -76,6 +76,8 @@ import LeadDetailPage from "./pages/Leads/LeadDetailPage";
 import ClientGroupPage from "./pages/ClientGroups";
 import LeadSources from "./pages/LeadSources/LeadSources";
 import LeadSourceDetail from "./pages/LeadSources/LeadSourceDetail";
+import FormBuilderPage from "./pages/Forms/FormBuilderPage";
+import PublicFormPage from "./pages/Forms/PublicFormPage";
 import CalendarPage from "./pages/Calendar";
 import CRMPage from "./pages/CRMPage";
 import ClientDetailPage from "./pages/ClientDetail";
@@ -659,6 +661,7 @@ const AppRoutes = () => {
         <Route path="/quote/:token" element={<PublicQuoteView />} />
         <Route path="/proposal/sign/:token" element={<PublicQuoteView />} />
         <Route path="/estimate/sign/:token" element={publicRoofingRoute(<PublicQuoteView />)} />
+        <Route path="/forms/:publicId" element={<PublicFormPage />} />
         <Route path="/shared-recording/:token" element={<SharedRecordingPage />} />
 
         {/* ========== DASHBOARD ========== */}
@@ -731,6 +734,12 @@ const AppRoutes = () => {
             </AccessGuard>
           }
         />
+        <Route path="/leads/sources/forms" element={<AccessGuard featureId="leads" permissionModule="forms" action="view"><FormBuilderPage /></AccessGuard>} />
+        <Route path="/leads/sources/forms/new" element={<AccessGuard featureId="leads" permissionModule="forms" action="create"><FormBuilderPage /></AccessGuard>} />
+        <Route path="/leads/sources/forms/:id" element={<AccessGuard featureId="leads" permissionModule="forms" action="view"><FormBuilderPage /></AccessGuard>} />
+        <Route path="/leads/sources/forms/:id/edit" element={<AccessGuard featureId="leads" permissionModule="forms" action="update"><FormBuilderPage /></AccessGuard>} />
+        <Route path="/leads/sources/forms/:id/submissions" element={<AccessGuard featureId="leads" permissionModule="forms" action="view"><FormBuilderPage /></AccessGuard>} />
+        <Route path="/leads/sources/forms/:id/analytics" element={<AccessGuard featureId="leads" permissionModule="forms" action="view"><FormBuilderPage /></AccessGuard>} />
         <Route
           path="/lead-sources/:id"
           element={

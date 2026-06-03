@@ -56,7 +56,7 @@ const SALES_CRM_PERMISSION_ROWS: PermissionMatrixRow[] = [
     { id: "dashboard", label: "Dashboard", modules: ["dashboard"] },
     { id: "calendar", label: "Calendar", modules: ["calendar"] },
     { id: "tasks", label: "Tasks", modules: ["tasks"] },
-    { id: "leads", label: "Leads", modules: ["leads", "lead-sources", "tags"] },
+    { id: "leads", label: "Leads", modules: ["leads", "lead-sources", "forms", "tags"] },
     { id: "organizations", label: "Organizations", modules: ["clients"] },
     { id: "contacts", label: "Contacts", modules: ["contacts"] },
     { id: "deals", label: "Deals", modules: ["projects"] },

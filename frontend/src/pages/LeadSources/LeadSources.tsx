@@ -76,6 +76,7 @@ import {
     Zap,
     Activity,
     Filter,
+    FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -555,6 +556,15 @@ const LeadSourcesPage = () => {
                             <span className="crm-toolbar-breadcrumb-current">Lead Sources</span>
                         </div>
                         <div className="crm-toolbar-actions">
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => navigate("/leads/sources/forms")}
+                                className="crm-toolbar-button"
+                            >
+                                <FileText size={16} />
+                                Forms
+                            </motion.button>
                             <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}

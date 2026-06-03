@@ -3,7 +3,7 @@ import { z } from 'zod';
 // ── Enums (must match Prisma) ──────────────────────────────────────
 const sourceTypeEnum = z.enum([
   'COLD_CALL', 'EMAIL_CAMPAIGN', 'GOOGLE_ADS', 'REFERRAL',
-  'SOCIAL_MEDIA', 'TRADE_SHOW', 'WALK_IN', 'WEBSITE',
+  'FORM_BUILDER', 'SOCIAL_MEDIA', 'TRADE_SHOW', 'WALK_IN', 'WEBSITE',
 ]);
 const categoryEnum = z.enum(['DIGITAL', 'MANUAL']);
 const integrationStatusEnum = z.enum(['DISCONNECTED', 'CONNECTING', 'CONNECTED', 'ERROR', 'EXPIRED']);

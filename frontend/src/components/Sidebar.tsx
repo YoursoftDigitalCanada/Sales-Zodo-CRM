@@ -233,6 +233,13 @@ const navigationItems: NavigationItem[] = [
     permissionModule: "leads",
   },
   {
+    title: "Lead Sources",
+    icon: Megaphone,
+    path: "/leads/sources",
+    featureId: "leads",
+    permissionModule: "lead-sources",
+  },
+  {
     title: "Organizations",
     icon: Building2,
     path: "/organizations",

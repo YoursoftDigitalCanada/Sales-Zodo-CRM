@@ -35,9 +35,10 @@ export default function ResetPasswordPage() {
 
     setIsSubmitting(true);
     try {
-      await resetUserPassword(token, password);
+      const result = await resetUserPassword(token, password);
       toast({ title: "Password saved", description: "Your account is ready. Sign in to start using the CRM." });
-      navigate("/login", { replace: true });
+      const loginPath = result.email ? `/login?email=${encodeURIComponent(result.email)}` : "/login";
+      navigate(loginPath, { replace: true });
     } catch (error: any) {
       toast({
         title: "Password setup failed",

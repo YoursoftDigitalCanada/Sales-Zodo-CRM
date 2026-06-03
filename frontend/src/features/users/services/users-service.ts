@@ -38,6 +38,10 @@ export interface InviteWorkspaceUserResponse {
     inviteEmailSent: boolean;
 }
 
+export interface ResetUserPasswordResponse {
+    email: string;
+}
+
 export interface DepartmentEntity {
     id: string;
     name: string;
@@ -214,8 +218,9 @@ export async function requestUserPasswordReset(email: string): Promise<void> {
     await api.post("/auth/forgot-password", { email });
 }
 
-export async function resetUserPassword(token: string, password: string): Promise<void> {
-    await api.post("/auth/reset-password", { token, password });
+export async function resetUserPassword(token: string, password: string): Promise<ResetUserPasswordResponse> {
+    const response = await api.post("/auth/reset-password", { token, password });
+    return extractApiData<ResetUserPasswordResponse>(response.data);
 }
 
 export async function deleteUser(id: string | number): Promise<void> {

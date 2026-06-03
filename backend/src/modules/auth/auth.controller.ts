@@ -235,9 +235,9 @@ export class AuthController {
     try {
       const { token, password } = req.body;
 
-      await authService.resetPassword(token, password);
+      const result = await authService.resetPassword(token, password);
 
-      sendSuccess(res, null, 'Password reset successfully');
+      sendSuccess(res, result, 'Password reset successfully');
     } catch (error) {
       next(error);
     }

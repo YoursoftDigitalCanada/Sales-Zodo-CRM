@@ -817,7 +817,7 @@ export class AuthService {
   /**
    * Reset password using reset token
    */
-  async resetPassword(token: string, newPassword: string): Promise<void> {
+  async resetPassword(token: string, newPassword: string): Promise<{ email: string }> {
     let payload;
     try {
       payload = verifyPasswordResetToken(token);
@@ -846,6 +846,13 @@ export class AuthService {
           status: 'ACTIVE',
         },
       }),
+      prisma.employee.updateMany({
+        where: { userId: user.id },
+        data: {
+          isActive: true,
+          employmentStatus: 'active',
+        },
+      }),
       prisma.refreshToken.updateMany({
         where: { userId: user.id, revokedAt: null },
         data: { revokedAt: new Date(), revokedReason: 'PASSWORD_RESET' },
@@ -853,6 +860,7 @@ export class AuthService {
     ]);
 
     logger.info('Password reset completed', { userId: user.id, email: user.email });
+    return { email: user.email };
   }
 
   /**

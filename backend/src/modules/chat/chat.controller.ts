@@ -1,13 +1,35 @@
 import { NextFunction, Request, Response } from 'express';
 import { chatService } from './chat.service';
 import { sendCreated, sendNoContent, sendSuccess } from '../../common/utils/responseFormatter';
+import { UnauthorizedError } from '../../common/errors/HttpErrors';
+import { ErrorCodes } from '../../common/errors/errorCodes';
+
+function currentEmployeeId(req: Request): string {
+    const employeeId = req.employee?.id || req.user?.employeeId;
+    if (!employeeId) {
+        throw new UnauthorizedError('Employee chat profile not found', ErrorCodes.EMPLOYEE_NOT_FOUND);
+    }
+    return employeeId;
+}
 
 export class ChatController {
+    async getDirectory(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const directory = await chatService.getDirectory(
+                req.context.tenantId,
+                currentEmployeeId(req),
+            );
+            sendSuccess(res, directory);
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async createConversation(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const conversation = await chatService.createConversation(
                 req.context.tenantId,
-                req.user!.employeeId!,
+                currentEmployeeId(req),
                 req.body,
             );
             sendCreated(res, conversation, 'Conversation created');
@@ -20,7 +42,7 @@ export class ChatController {
         try {
             const result = await chatService.getConversations(
                 req.context.tenantId,
-                req.user!.employeeId!,
+                currentEmployeeId(req),
                 req.query as any,
             );
             sendSuccess(res, result.data, undefined, 200, result.meta);
@@ -34,7 +56,7 @@ export class ChatController {
             const conversation = await chatService.getConversation(
                 req.params.id,
                 req.context.tenantId,
-                req.user!.employeeId!,
+                currentEmployeeId(req),
             );
             sendSuccess(res, conversation);
         } catch (error) {
@@ -47,7 +69,7 @@ export class ChatController {
             const message = await chatService.sendMessage(
                 req.params.id,
                 req.context.tenantId,
-                req.user!.employeeId!,
+                currentEmployeeId(req),
                 req.body,
             );
             sendCreated(res, message, 'Message sent');
@@ -61,7 +83,7 @@ export class ChatController {
             const result = await chatService.getMessages(
                 req.params.id,
                 req.context.tenantId,
-                req.user!.employeeId!,
+                currentEmployeeId(req),
                 req.query as any,
             );
             sendSuccess(res, result.data, undefined, 200, result.meta);
@@ -75,7 +97,7 @@ export class ChatController {
             const conversation = await chatService.updateConversationSettings(
                 req.params.id,
                 req.context.tenantId,
-                req.user!.employeeId!,
+                currentEmployeeId(req),
                 req.body,
             );
             sendSuccess(res, conversation, 'Conversation updated');
@@ -89,7 +111,7 @@ export class ChatController {
             await chatService.deleteConversation(
                 req.params.id,
                 req.context.tenantId,
-                req.user!.employeeId!,
+                currentEmployeeId(req),
             );
             sendNoContent(res);
         } catch (error) {
@@ -103,7 +125,7 @@ export class ChatController {
                 req.params.id,
                 req.params.messageId,
                 req.context.tenantId,
-                req.user!.employeeId!,
+                currentEmployeeId(req),
                 req.body,
             );
             sendSuccess(res, message, 'Message updated');
@@ -118,7 +140,7 @@ export class ChatController {
                 req.params.id,
                 req.params.messageId,
                 req.context.tenantId,
-                req.user!.employeeId!,
+                currentEmployeeId(req),
             );
             sendNoContent(res);
         } catch (error) {

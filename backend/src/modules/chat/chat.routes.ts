@@ -21,6 +21,12 @@ router.use(authenticate);
 router.use(loadEmployee);
 
 router.get(
+    '/directory',
+    requirePermission(PERMISSIONS.CHAT_VIEW),
+    chatController.getDirectory.bind(chatController),
+);
+
+router.get(
     '/conversations',
     requirePermission(PERMISSIONS.CHAT_VIEW),
     validate(conversationQuerySchema),

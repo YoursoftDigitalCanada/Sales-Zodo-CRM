@@ -121,6 +121,46 @@ function resolveParticipantName(participant: ParticipantWithEmployee | null | un
 }
 
 export class ChatRepository {
+    listDirectory(tenantId: string, currentEmployeeId: string) {
+        return prisma.employee.findMany({
+            where: {
+                tenantId,
+                isActive: true,
+                id: { not: currentEmployeeId },
+                user: {
+                    email: {
+                        not: '',
+                    },
+                },
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        avatar: true,
+                        phone: true,
+                        lastLoginAt: true,
+                    },
+                },
+                role: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
+            },
+            orderBy: [
+                { user: { firstName: 'asc' } },
+                { user: { lastName: 'asc' } },
+                { user: { email: 'asc' } },
+            ],
+            take: 500,
+        });
+    }
+
     private async ensureTenantEmployees(tenantId: string, employeeIds: string[]) {
         const uniqueEmployeeIds = Array.from(new Set(employeeIds));
         const employees = await prisma.employee.findMany({

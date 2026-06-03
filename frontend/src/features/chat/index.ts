@@ -1,4 +1,5 @@
 export {
+    getChatDirectory,
     getConversations,
     getConversationById,
     createConversation,

@@ -75,6 +75,11 @@ export interface UpdateConversationSettingsPayload {
     isArchived?: boolean;
 }
 
+export async function getChatDirectory(): Promise<any[]> {
+    const response = await api.get("/chat/directory");
+    return extractApiArray<any>(response.data);
+}
+
 export async function getConversations(params?: Record<string, unknown>): Promise<ConversationEntity[]> {
     const response = await api.get("/chat/conversations", { params });
     return extractApiArray<ConversationEntity>(response.data);

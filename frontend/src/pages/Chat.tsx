@@ -17,6 +17,7 @@ import {
   createConversation as createConversationApi,
   deleteConversation as deleteConversationApi,
   deleteMessage as deleteMessageApi,
+  getChatDirectory,
   getConversationById,
   getConversations,
   getMessages,
@@ -29,7 +30,6 @@ import {
   type MessageEntity,
 } from "@/features/chat";
 import {
-  getEmployees,
   getMyEmployeeProfile,
   type EmployeeProfileEntity,
 } from "@/features/users/services/users-service";
@@ -275,7 +275,7 @@ export default function ChatPage() {
   const loadDirectory = useCallback(async () => {
     const [profile, employees] = await Promise.all([
       getMyEmployeeProfile(),
-      getEmployees({ limit: 200 }),
+      getChatDirectory(),
     ]);
 
     const me = toChatUserFromEmployee(profile);
@@ -334,8 +334,8 @@ export default function ChatPage() {
     let mounted = true;
     setLoading(true);
     loadDirectory()
-      .catch(() => {
-        toast.error("Failed to load your employee chat directory.");
+      .catch((error) => {
+        toast.error(getApiErrorMessage(error, "Failed to load your employee chat directory."));
       })
       .finally(() => {
         if (mounted) setLoading(false);

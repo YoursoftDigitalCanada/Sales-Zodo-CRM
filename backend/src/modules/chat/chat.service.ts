@@ -13,6 +13,10 @@ import { NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 
 export class ChatService {
+    async getDirectory(tenantId: string, employeeId: string) {
+        return chatRepository.listDirectory(tenantId, employeeId);
+    }
+
     async createConversation(tenantId: string, employeeId: string, data: CreateConversationDto) {
         const conversation = await chatRepository.createConversation(tenantId, data, employeeId);
         return toConversationResponseDto(conversation, employeeId);

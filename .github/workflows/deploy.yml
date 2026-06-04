@@ -29,10 +29,24 @@ jobs:
           payload="$(node -e 'const payload = { sha: process.env.GITHUB_SHA_VALUE, ref: process.env.GITHUB_REF_VALUE, runId: process.env.GITHUB_RUN_ID }; process.stdout.write(JSON.stringify(payload));')"
 
           echo "Triggering Sales CRM deploy webhook..."
-          response="$(curl -fsS -X POST "$DEPLOY_WEBHOOK_URL" \
-            -H "Authorization: Bearer $DEPLOY_WEBHOOK_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data "$payload")"
+          response=""
+          for attempt in $(seq 1 6); do
+            if response="$(curl -fsS --connect-timeout 20 --max-time 240 --retry 2 --retry-delay 5 --retry-all-errors -X POST "$DEPLOY_WEBHOOK_URL" \
+              -H "Authorization: Bearer $DEPLOY_WEBHOOK_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data "$payload")"; then
+              break
+            fi
+
+            if [ "$attempt" = "6" ]; then
+              echo "::error::Failed to reach Sales CRM deploy webhook after $attempt attempts"
+              exit 1
+            fi
+
+            sleep_seconds=$((attempt * 30))
+            echo "Deploy webhook request failed. Retrying in ${sleep_seconds}s..."
+            sleep "$sleep_seconds"
+          done
 
           echo "$response"
           deploy_run_id="$(node -e 'const input = process.argv[1]; const data = JSON.parse(input); process.stdout.write(data.run?.id || "");' "$response")"

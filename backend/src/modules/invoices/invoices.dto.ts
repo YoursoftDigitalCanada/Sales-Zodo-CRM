@@ -48,6 +48,19 @@ export interface InvoiceResponseDto {
     sentAt: Date | null;
     viewedAt: Date | null;
     currency: Currency;
+    paymentTerms: string | null;
+    taxProvince: string | null;
+    taxRates: unknown;
+    businessName: string | null;
+    businessEmail: string | null;
+    businessPhone: string | null;
+    businessAddress: unknown;
+    businessGstHstNumber: string | null;
+    clientBusinessName: string | null;
+    clientEmail: string | null;
+    clientPhone: string | null;
+    clientAddress: unknown;
+    clientGstHstNumber: string | null;
     subtotal: number;
     taxRate: number | null;
     taxAmount: number;
@@ -146,6 +159,19 @@ export function toInvoiceResponseDto(inv: InvoiceWithRelations): InvoiceResponse
         sentAt: inv.sentAt,
         viewedAt: inv.viewedAt,
         currency: inv.currency,
+        paymentTerms: (inv as any).paymentTerms ?? null,
+        taxProvince: (inv as any).taxProvince ?? null,
+        taxRates: (inv as any).taxRates ?? null,
+        businessName: (inv as any).businessName ?? null,
+        businessEmail: (inv as any).businessEmail ?? null,
+        businessPhone: (inv as any).businessPhone ?? null,
+        businessAddress: (inv as any).businessAddress ?? null,
+        businessGstHstNumber: (inv as any).businessGstHstNumber ?? null,
+        clientBusinessName: (inv as any).clientBusinessName ?? null,
+        clientEmail: (inv as any).clientEmail ?? null,
+        clientPhone: (inv as any).clientPhone ?? null,
+        clientAddress: (inv as any).clientAddress ?? null,
+        clientGstHstNumber: (inv as any).clientGstHstNumber ?? null,
         subtotal: Number(inv.subtotal),
         taxRate: inv.taxRate ? Number(inv.taxRate) : null,
         taxAmount: Number(inv.taxAmount),

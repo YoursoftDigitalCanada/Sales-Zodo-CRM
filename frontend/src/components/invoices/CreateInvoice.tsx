@@ -1329,6 +1329,7 @@ const CreateInvoicePage = () => {
   const autoSaveInFlightRef = React.useRef(false);
   const lastAutoSaveSignatureRef = React.useRef("");
   const linkedInvoiceIdRef = React.useRef<string | null>(requestedInvoiceId);
+  const isHydratingInvoiceRef = React.useRef(false);
 
   // Form
   const methods = useForm<InvoiceFormData>({
@@ -1625,26 +1626,42 @@ const CreateInvoicePage = () => {
         const currentValues = getValues();
         const client = invoice?.client && typeof invoice.client === "object" ? invoice.client : null;
         const businessAddress = invoice?.businessAddress && typeof invoice.businessAddress === "object" ? invoice.businessAddress : null;
+        const clientAddress = invoice?.clientAddress && typeof invoice.clientAddress === "object" ? invoice.clientAddress : null;
         const invoiceDateValue = toDateInputValue(invoice?.issueDate || invoice?.invoiceDate);
         const dueDateValue = toDateInputValue(invoice?.dueDate);
-        const provinceCode = getProvinceCode(client?.province || currentValues.billedTo.province);
+        const provinceCode = getProvinceCode(invoice?.taxProvince || clientAddress?.province || client?.province || currentValues.billedTo.province);
         const provinceTax = canadianProvinces.find((entry) => entry.code === provinceCode) || canadianProvinces.find((entry) => entry.code === "ON")!;
+        const savedTaxRows = Array.isArray(invoice?.taxRates) ? invoice.taxRates : null;
+        const savedTaxRateByName = (pattern: RegExp) => {
+          const match = savedTaxRows?.find((row: any) => pattern.test(readText(row?.name)));
+          return match ? toNumber(match.rate) : 0;
+        };
+        const savedGstRate = savedTaxRows ? savedTaxRateByName(/gst/i) : provinceTax.gst;
+        const savedPstRate = savedTaxRows ? savedTaxRateByName(/pst|qst/i) : provinceTax.pst;
+        const savedHstRate = savedTaxRows ? savedTaxRateByName(/hst/i) : provinceTax.hst;
         const reviewItems = mapInvoiceItemsToFormItems(
           Array.isArray(invoice?.items) ? invoice.items : [],
-          { gst: provinceTax.gst, pst: provinceTax.pst, hst: provinceTax.hst },
+          { gst: savedHstRate > 0 ? 0 : savedGstRate, pst: savedHstRate > 0 ? 0 : savedPstRate, hst: savedHstRate },
         );
 
         selectedClientIdRef.current = readText(client?.id) || null;
         setLinkedInvoiceId(readText(invoice?.id) || requestedInvoiceId);
 
+        isHydratingInvoiceRef.current = true;
         reset({
           ...currentValues,
           invoiceNumber: readText(invoice?.invoiceNumber) || currentValues.invoiceNumber,
           invoiceDate: invoiceDateValue,
           dueDate: dueDateValue,
-          paymentTerms: inferPaymentTerms(invoiceDateValue, dueDateValue),
+          paymentTerms: readText(invoice?.paymentTerms) || inferPaymentTerms(invoiceDateValue, dueDateValue),
           currency: readText(invoice?.currency) || currentValues.currency,
           clientProvince: provinceCode,
+          gstEnabled: savedHstRate > 0 ? false : savedGstRate > 0,
+          gstRate: savedHstRate > 0 ? 0 : savedGstRate,
+          pstEnabled: savedHstRate > 0 ? false : savedPstRate > 0,
+          pstRate: savedHstRate > 0 ? 0 : savedPstRate,
+          hstEnabled: savedHstRate > 0,
+          hstRate: savedHstRate,
           billedBy: {
             businessName: readText(invoice?.businessName) || currentValues.billedBy.businessName,
             email: readText(invoice?.businessEmail) || currentValues.billedBy.email,
@@ -1657,15 +1674,15 @@ const CreateInvoicePage = () => {
             gstNumber: readText(invoice?.businessGstHstNumber) || currentValues.billedBy.gstNumber,
           },
           billedTo: {
-            businessName: readText(client?.clientName || client?.companyName) || currentValues.billedTo.businessName,
-            email: readText(client?.primaryEmail) || currentValues.billedTo.email,
-            phone: readText(client?.primaryPhone) || currentValues.billedTo.phone,
-            address: readText(client?.streetAddress) || currentValues.billedTo.address,
-            city: readText(client?.city) || currentValues.billedTo.city,
-            province: provinceCode,
-            postalCode: readText(client?.postalCode) || currentValues.billedTo.postalCode,
-            country: readText(client?.country) || currentValues.billedTo.country,
-            gstNumber: currentValues.billedTo.gstNumber,
+            businessName: readText(invoice?.clientBusinessName || client?.clientName || client?.companyName) || currentValues.billedTo.businessName,
+            email: readText(invoice?.clientEmail || client?.primaryEmail) || currentValues.billedTo.email,
+            phone: readText(invoice?.clientPhone || client?.primaryPhone) || currentValues.billedTo.phone,
+            address: readText(clientAddress?.address || client?.streetAddress) || currentValues.billedTo.address,
+            city: readText(clientAddress?.city || client?.city) || currentValues.billedTo.city,
+            province: getProvinceCode(clientAddress?.province || client?.province || provinceCode),
+            postalCode: readText(clientAddress?.postalCode || client?.postalCode) || currentValues.billedTo.postalCode,
+            country: readText(clientAddress?.country || client?.country) || currentValues.billedTo.country,
+            gstNumber: readText(invoice?.clientGstHstNumber) || currentValues.billedTo.gstNumber,
           },
           items: reviewItems.length > 0 ? reviewItems : currentValues.items,
           notes: readText(invoice?.notes) || currentValues.notes || "",
@@ -1676,6 +1693,9 @@ const CreateInvoicePage = () => {
           isRecurring: false,
           recurringFrequency: currentValues.recurringFrequency || "monthly",
         });
+        window.setTimeout(() => {
+          isHydratingInvoiceRef.current = false;
+        }, 0);
       })
       .catch((error) => {
         console.error("Failed to load invoice:", error);
@@ -1796,6 +1816,7 @@ const CreateInvoicePage = () => {
   }, [paymentTerms, invoiceDate, setValue]);
 
   useEffect(() => {
+    if (isHydratingInvoiceRef.current) return;
     const province = canadianProvinces.find((p) => p.code === clientProvince);
     if (!province) return;
 
@@ -1824,14 +1845,21 @@ const CreateInvoicePage = () => {
 
   const buildInvoicePayload = (data: InvoiceFormData, clientId: string) => {
     const effectiveTaxRate = taxRates.hst > 0 ? taxRates.hst : taxRates.gst + taxRates.pst;
+    const appliedTaxRates = [
+      ...(taxRates.gst > 0 ? [{ name: "GST", rate: taxRates.gst }] : []),
+      ...(taxRates.pst > 0 ? [{ name: data.clientProvince === "QC" ? "QST" : "PST", rate: taxRates.pst }] : []),
+      ...(taxRates.hst > 0 ? [{ name: "HST", rate: taxRates.hst }] : []),
+    ];
     return {
       invoiceNumber: data.invoiceNumber,
       invoiceDate: new Date(data.invoiceDate).toISOString(),
       dueDate: new Date(data.dueDate).toISOString(),
       currency: data.currency,
+      taxProvince: data.clientProvince,
       taxRate: effectiveTaxRate,
+      taxRates: appliedTaxRates,
       discountAmount: totals.discount,
-      paymentTerms: data.paymentTerms,
+      paymentTerms: inferPaymentTerms(data.invoiceDate, data.dueDate),
       businessName: data.billedBy.businessName,
       businessEmail: data.billedBy.email || null,
       businessPhone: data.billedBy.phone || null,

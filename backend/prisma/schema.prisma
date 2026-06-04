@@ -3601,6 +3601,21 @@ model Invoice {
   
   // Currency
   currency          Currency        @default(USD)
+
+  // Billing snapshot
+  paymentTerms      String?
+  taxProvince       String?
+  taxRates          Json?
+  businessName      String?
+  businessEmail     String?
+  businessPhone     String?
+  businessAddress   Json?
+  businessGstHstNumber String?
+  clientBusinessName String?
+  clientEmail       String?
+  clientPhone       String?
+  clientAddress     Json?
+  clientGstHstNumber String?
   
   // Amounts
   subtotal          Decimal         @db.Decimal(15, 2)

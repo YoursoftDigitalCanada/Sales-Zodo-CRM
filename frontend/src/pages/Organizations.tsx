@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
+import AddressAutocompleteInput from "@/components/address/AddressAutocompleteInput";
 import api from "@/lib/axios";
 import {
   createClient,
@@ -486,7 +487,14 @@ export default function OrganizationsPage() {
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Address</Label>
-              <Textarea value={form.organizationAddress} onChange={(event) => setForm({ ...form, organizationAddress: event.target.value })} className="min-h-[90px] rounded-md" />
+              <AddressAutocompleteInput
+                value={form.organizationAddress}
+                onValueChange={(value) => setForm({ ...form, organizationAddress: value })}
+                onSelectAddress={(details) => setForm({ ...form, organizationAddress: details.formattedAddress || details.addressLine1 || form.organizationAddress })}
+                className="h-11 rounded-md border-[rgba(15,23,42,0.08)] focus-visible:ring-[#0891B2]/20"
+                iconClassName="text-[#64748B]"
+                placeholder="Start typing an address..."
+              />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Notes</Label>

@@ -44,10 +44,30 @@ function calculateTotals(
         return sum + amt;
     }, 0);
     const safeTaxRate = taxRate ? Number(taxRate) : 0;
-    const taxAmount = safeTaxRate ? (subtotal * safeTaxRate) / 100 : 0;
     const safeDiscount = discountAmount ? Math.max(Number(discountAmount), 0) : 0;
-    const total = Math.max(subtotal + taxAmount - safeDiscount, 0);
+    const discount = Math.min(safeDiscount, subtotal);
+    const taxableAmount = Math.max(subtotal - discount, 0);
+    const taxAmount = safeTaxRate ? (taxableAmount * safeTaxRate) / 100 : 0;
+    const total = Math.max(taxableAmount + taxAmount, 0);
     return { subtotal, taxAmount, total, amountDue: total };
+}
+
+function invoiceSnapshotData(data: Record<string, any>) {
+    return {
+        ...(data.paymentTerms !== undefined && { paymentTerms: data.paymentTerms }),
+        ...(data.taxProvince !== undefined && { taxProvince: data.taxProvince }),
+        ...(data.taxRates !== undefined && { taxRates: data.taxRates as Prisma.InputJsonValue }),
+        ...(data.businessName !== undefined && { businessName: data.businessName }),
+        ...(data.businessEmail !== undefined && { businessEmail: data.businessEmail }),
+        ...(data.businessPhone !== undefined && { businessPhone: data.businessPhone }),
+        ...(data.businessAddress !== undefined && { businessAddress: data.businessAddress as Prisma.InputJsonValue }),
+        ...(data.businessGstHstNumber !== undefined && { businessGstHstNumber: data.businessGstHstNumber }),
+        ...(data.clientBusinessName !== undefined && { clientBusinessName: data.clientBusinessName }),
+        ...(data.clientEmail !== undefined && { clientEmail: data.clientEmail }),
+        ...(data.clientPhone !== undefined && { clientPhone: data.clientPhone }),
+        ...(data.clientAddress !== undefined && { clientAddress: data.clientAddress as Prisma.InputJsonValue }),
+        ...(data.clientGstHstNumber !== undefined && { clientGstHstNumber: data.clientGstHstNumber }),
+    };
 }
 
 export class InvoicesRepository {
@@ -69,6 +89,7 @@ export class InvoicesRepository {
                 dueDate: new Date(data.dueDate),
                 currency: data.currency || 'USD',
                 status: 'DRAFT',
+                ...invoiceSnapshotData(data as any),
                 taxRate: data.taxRate,
                 notes: data.notes,
                 terms: data.terms,
@@ -170,6 +191,7 @@ export class InvoicesRepository {
                 ...((data as any).viewedAt !== undefined && { viewedAt: new Date((data as any).viewedAt) }),
                 ...(data.currency !== undefined && { currency: data.currency }),
                 ...(data.status !== undefined && { status: data.status }),
+                ...invoiceSnapshotData(data as any),
                 ...(data.taxRate !== undefined && { taxRate: data.taxRate }),
                 ...(data.clientId !== undefined && { clientId: data.clientId }),
                 ...((data as any).contactId !== undefined && { contactId: (data as any).contactId }),

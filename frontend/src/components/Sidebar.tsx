@@ -19,6 +19,7 @@ import {
 import { useWorkspaceBranding } from "@/features/settings/context/workspace-branding";
 import {
   LayoutDashboard,
+  Calculator,
   Users,
   FolderKanban,
   FileText,
@@ -76,6 +77,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { AUTH_ACCESS_UPDATED_EVENT, AUTH_STORAGE_KEYS, getStoredTenant } from "@/features/auth/lib/auth-storage";
+import { useCalculatorStore } from "@/features/calculator/calculator-store";
 
 // ============================================
 // TYPES
@@ -673,6 +675,7 @@ export function Sidebar({
   const [userPermissions, setUserPermissions] = useState<string[] | null>(() => readStoredPermissions());
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(() => readStoredOwnerOrAdmin());
   const [runtimeNavigationMeta, setRuntimeNavigationMeta] = useState<SidebarRuntimeMeta>({});
+  const openCalculator = useCalculatorStore((state) => state.openCalculator);
   const storedTenantName = getStoredTenant()?.name?.trim();
   const brandName = branding?.companyName?.trim() || storedTenantName || "Sales CRM";
   const brandLogoUrl = branding?.logoUrl || null;
@@ -1008,23 +1011,37 @@ export function Sidebar({
             )}
           </AnimatePresence>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              if (isMobile) {
-                closeMobileDrawer();
-                return;
-              }
-              setCollapsed(!collapsed);
-            }}
-            className={cn(
-              "p-1.5 rounded-md hover:bg-[#F1F5F9]/20 text-[#475569] hover:text-[#159A62] transition-all",
-              collapsed && "mx-auto"
-            )}
-          >
-            {collapsed ? <Menu size={17} /> : <X size={17} />}
-          </motion.button>
+          <div className={cn("flex items-center gap-1", collapsed && "mx-auto")}>
+            {!collapsed ? (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => openCalculator()}
+                className="p-1.5 rounded-md text-[#475569] transition-all hover:bg-[#F1F5F9]/20 hover:text-[#0891B2]"
+                title="Open calculator (Alt+C)"
+                aria-label="Open calculator"
+              >
+                <Calculator size={17} />
+              </motion.button>
+            ) : null}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                if (isMobile) {
+                  closeMobileDrawer();
+                  return;
+                }
+                setCollapsed(!collapsed);
+              }}
+              className={cn(
+                "p-1.5 rounded-md hover:bg-[#F1F5F9]/20 text-[#475569] hover:text-[#159A62] transition-all",
+                collapsed && "mx-auto"
+              )}
+            >
+              {collapsed ? <Menu size={17} /> : <X size={17} />}
+            </motion.button>
+          </div>
         </div>
 
         {/* Navigation */}

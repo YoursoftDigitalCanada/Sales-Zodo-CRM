@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Calendar,
+  Calculator,
   CheckSquare,
   FileStack,
   FolderKanban,
@@ -52,6 +53,7 @@ interface GlobalCommandPaletteProps {
   onImport: () => void;
   onOpenHelp: () => void;
   onOpenAi: () => void;
+  onOpenCalculator: () => void;
   onToggleSidebar: () => void;
 }
 
@@ -63,6 +65,7 @@ export function GlobalCommandPalette({
   onImport,
   onOpenHelp,
   onOpenAi,
+  onOpenCalculator,
   onToggleSidebar,
 }: GlobalCommandPaletteProps) {
   const navigate = useNavigate();
@@ -211,6 +214,15 @@ export function GlobalCommandPalette({
         action: onOpenAi,
       },
       {
+        id: "action-calculator",
+        label: "Open Calculator",
+        icon: Calculator,
+        section: "Actions",
+        shortcut: "Alt+C",
+        keywords: ["calculator commission discount tax quote emi margin"],
+        action: onOpenCalculator,
+      },
+      {
         id: "action-sidebar",
         label: "Toggle Sidebar",
         icon: PanelLeft,
@@ -220,7 +232,7 @@ export function GlobalCommandPalette({
         action: onToggleSidebar,
       },
     ],
-    [navigate, onCreate, onExport, onImport, onOpenAi, onOpenHelp, onToggleSidebar]
+    [navigate, onCreate, onExport, onImport, onOpenAi, onOpenCalculator, onOpenHelp, onToggleSidebar]
   );
 
   const grouped = useMemo(() => {

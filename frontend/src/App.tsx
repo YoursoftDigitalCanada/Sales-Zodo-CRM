@@ -6,11 +6,14 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GlobalAiFloatingButton } from "@/components/ai/GlobalAiFloatingButton";
 import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
+import { GlobalFloatingCalculator } from "@/features/calculator/GlobalFloatingCalculator";
+import { useCalculatorStore } from "@/features/calculator/calculator-store";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { SessionTakeoverGuard } from "@/components/SessionTakeoverGuard";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { ThemeProvider, useTheme } from "next-themes";
+import { Calculator } from "lucide-react";
 import { CopilotContextProvider } from "@/contexts/CopilotContext";
 import { Sidebar, SidebarSuppressionContext } from "@/components/Sidebar";
 import { getAccessToken, getStoredTenant, updateStoredAccessContext } from "@/features/auth/lib/auth-storage";
@@ -305,6 +308,7 @@ const AppRoutes = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const openCalculator = useCalculatorStore((state) => state.openCalculator);
   const { branding } = useWorkspaceBranding();
   const onboardingLocked =
     Boolean(getAccessToken()) &&
@@ -1229,6 +1233,9 @@ const AppRoutes = () => {
               <button onClick={() => setCommandPaletteOpen(true)} className="p-2 rounded-md hover:bg-[#F1F5F9] text-[#475569] touch-exempt" aria-label="Search">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
               </button>
+              <button onClick={() => openCalculator()} className="p-2 rounded-md hover:bg-[#F1F5F9] text-[#475569] touch-exempt" aria-label="Open calculator">
+                <Calculator size={18} />
+              </button>
             </div>
           </div>
 
@@ -1255,10 +1262,12 @@ const AppRoutes = () => {
         onImport={() => void handleImportShortcut()}
         onOpenHelp={handleOpenHelp}
         onOpenAi={handleOpenAiAssistant}
+        onOpenCalculator={() => openCalculator()}
         onToggleSidebar={toggleAppSidebar}
       />
       <SessionTakeoverGuard />
       <GlobalAiFloatingButton />
+      <GlobalFloatingCalculator />
     </>
   );
 };

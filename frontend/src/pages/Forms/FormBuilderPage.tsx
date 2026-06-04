@@ -43,6 +43,34 @@ const CRM_MAPPINGS = [
   ["potentialValue", "Potential Value"],
 ];
 
+const CHOICE_FIELD_TYPES = ["dropdown", "radio", "checkbox_group", "multi_select"] as const;
+
+function isChoiceField(type: FormBuilderField["type"]) {
+  return (CHOICE_FIELD_TYPES as readonly string[]).includes(type);
+}
+
+function defaultOptions(type: FormBuilderField["type"], currentOptions?: FormBuilderField["options"]) {
+  if (!isChoiceField(type)) return [];
+  return currentOptions?.length
+    ? currentOptions
+    : [
+        { id: crypto.randomUUID(), label: "Option 1", value: "option_1" },
+        { id: crypto.randomUUID(), label: "Option 2", value: "option_2" },
+      ];
+}
+
+function labelsToOptions(value: string) {
+  return value
+    .split("\n")
+    .map((label) => label.trim())
+    .filter(Boolean)
+    .map((label, index) => ({
+      id: crypto.randomUUID(),
+      label,
+      value: label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || `option_${index + 1}`,
+    }));
+}
+
 const defaultField = (type: FormBuilderField["type"] = "text", index = 0): FormBuilderField => ({
   id: crypto.randomUUID(),
   type,
@@ -50,9 +78,7 @@ const defaultField = (type: FormBuilderField["type"] = "text", index = 0): FormB
   internalName: `field_${Date.now()}`,
   required: false,
   width: "FULL",
-  options: ["dropdown", "radio", "checkbox_group", "multi_select"].includes(type)
-    ? [{ id: crypto.randomUUID(), label: "Option 1", value: "option_1" }]
-    : [],
+  options: defaultOptions(type),
   order: index,
 });
 
@@ -152,6 +178,14 @@ export default function FormBuilderPage() {
       ...current,
       fields: current.fields.map((field) => field.id === fieldId ? { ...field, ...patch } : field),
     } : current);
+  }
+
+  function updateFieldType(field: FormBuilderField, type: FormBuilderField["type"]) {
+    updateField(field.id, {
+      type,
+      options: defaultOptions(type, field.options),
+      crmMapping: isChoiceField(type) && field.crmMapping === "potentialValue" ? null : field.crmMapping,
+    });
   }
 
   function addField(type: FormBuilderField["type"]) {
@@ -358,11 +392,29 @@ export default function FormBuilderPage() {
             {selectedField ? (
               <div className="space-y-3">
                 <div className="space-y-2"><Label>Label</Label><Input value={selectedField.label} onChange={(e) => updateField(selectedField.id, { label: e.target.value })} /></div>
+                <div className="space-y-2">
+                  <Label>Field type</Label>
+                  <Select value={selectedField.type} onValueChange={(value: FormBuilderField["type"]) => updateFieldType(selectedField, value)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{FIELD_TYPES.map((type) => <SelectItem key={type} value={type}>{type.replaceAll("_", " ")}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2"><Label>Internal name</Label><Input value={selectedField.internalName} onChange={(e) => updateField(selectedField.id, { internalName: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Placeholder</Label><Input value={selectedField.placeholder || ""} onChange={(e) => updateField(selectedField.id, { placeholder: e.target.value })} /></div>
                 <div className="space-y-2"><Label>CRM mapping</Label><Select value={selectedField.crmMapping || "none"} onValueChange={(value: any) => updateField(selectedField.id, { crmMapping: value === "none" ? null : value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{CRM_MAPPINGS.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div>
                 <label className="flex items-center gap-2 text-sm"><Checkbox checked={Boolean(selectedField.required)} onCheckedChange={(checked) => updateField(selectedField.id, { required: Boolean(checked) })} />Required</label>
-                {selectedField.options?.length ? <Textarea value={selectedField.options.map((option) => option.label).join("\n")} onChange={(e) => updateField(selectedField.id, { options: e.target.value.split("\n").filter(Boolean).map((label) => ({ label, value: label.toLowerCase().replace(/\s+/g, "_") })) })} placeholder="One option per line" /> : null}
+                {isChoiceField(selectedField.type) ? (
+                  <div className="space-y-2">
+                    <Label>Choices</Label>
+                    <Textarea
+                      value={(selectedField.options || []).map((option) => option.label).join("\n")}
+                      onChange={(e) => updateField(selectedField.id, { options: labelsToOptions(e.target.value) })}
+                      placeholder="One option per line"
+                      rows={5}
+                    />
+                    <p className="text-xs text-[#64748B]">Add one choice per line. Example: Technology, Retail, Healthcare.</p>
+                  </div>
+                ) : null}
                 <Button variant="destructive" onClick={() => updateLocal({ fields: form.fields.filter((field) => field.id !== selectedField.id) })}><Trash2 className="mr-2 h-4 w-4" />Delete field</Button>
               </div>
             ) : <p className="text-sm text-[#64748B]">Select a field to edit it.</p>}
@@ -407,5 +459,47 @@ function CodeCopy({ value, onCopy }: { value: string; onCopy: (value: string) =>
 }
 
 function Preview({ form }: { form: FormBuilderForm }) {
-  return <div className="rounded-2xl border bg-white p-5"><h2 className="mb-4 font-semibold">Live Preview</h2><div className="mx-auto max-w-2xl rounded-2xl border bg-[#F8FAFC] p-5"><h3 className="text-xl font-bold">{form.name}</h3>{form.description && <p className="mt-1 text-sm text-[#64748B]">{form.description}</p>}<div className="mt-5 grid gap-3 sm:grid-cols-2">{form.fields.map((field) => <div key={field.id} className={field.width === "HALF" ? "" : "sm:col-span-2"}>{field.type === "section_heading" ? <h4 className="font-semibold">{field.label}</h4> : field.type === "divider" ? <hr /> : <><Label>{field.label}{field.required && <span className="text-red-500"> *</span>}</Label>{field.type === "textarea" ? <Textarea placeholder={field.placeholder || ""} /> : <Input placeholder={field.placeholder || ""} type={field.type === "phone" ? "tel" : field.type} />}{field.helpText && <p className="mt-1 text-xs text-[#64748B]">{field.helpText}</p>}</>}</div>)}</div><Button className="mt-5 rounded-xl bg-[#6637F4] text-white">Submit</Button></div></div>;
+  return (
+    <div className="rounded-2xl border bg-white p-5">
+      <h2 className="mb-4 font-semibold">Live Preview</h2>
+      <div className="mx-auto max-w-2xl rounded-2xl border bg-[#F8FAFC] p-5">
+        <h3 className="text-xl font-bold">{form.name}</h3>
+        {form.description && <p className="mt-1 text-sm text-[#64748B]">{form.description}</p>}
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {form.fields.map((field) => <PreviewField key={field.id} field={field} />)}
+        </div>
+        <Button className="mt-5 rounded-xl bg-[#6637F4] text-white">Submit</Button>
+      </div>
+    </div>
+  );
+}
+
+function PreviewField({ field }: { field: FormBuilderField }) {
+  const className = field.width === "HALF" ? "" : "sm:col-span-2";
+  if (field.type === "section_heading") return <h4 className={`${className} font-semibold`}>{field.label}</h4>;
+  if (field.type === "divider") return <hr className={className} />;
+  if (field.type === "hidden") return null;
+
+  return (
+    <div className={className}>
+      <Label>{field.label}{field.required && <span className="text-red-500"> *</span>}</Label>
+      {field.type === "textarea" ? (
+        <Textarea placeholder={field.placeholder || ""} />
+      ) : ["dropdown", "radio"].includes(field.type) ? (
+        <Select>
+          <SelectTrigger><SelectValue placeholder={field.placeholder || "Select an option"} /></SelectTrigger>
+          <SelectContent>{(field.options || []).map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+        </Select>
+      ) : ["checkbox_group", "multi_select"].includes(field.type) ? (
+        <div className="mt-2 space-y-2 rounded-xl border bg-white p-3">
+          {(field.options || []).map((option) => (
+            <label key={option.value} className="flex items-center gap-2 text-sm"><Checkbox />{option.label}</label>
+          ))}
+        </div>
+      ) : (
+        <Input placeholder={field.placeholder || ""} type={field.type === "phone" ? "tel" : field.type === "address" ? "text" : field.type} />
+      )}
+      {field.helpText && <p className="mt-1 text-xs text-[#64748B]">{field.helpText}</p>}
+    </div>
+  );
 }

@@ -157,6 +157,9 @@ interface Invoice {
   status: string;
   subtotal?: number;
   tax?: number;
+  taxRate?: number;
+  taxRates?: Array<{ name?: string; rate?: number }>;
+  taxProvince?: string;
   discount?: number;
   total: number;
   amountPaid?: number;
@@ -254,6 +257,7 @@ const paymentMethodMap: Record<string, "CASH" | "CREDIT_CARD" | "CHECK" | "BANK_
   card: "CREDIT_CARD",
   cheque: "CHECK",
   bank_transfer: "BANK_TRANSFER",
+  e_transfer: "E_TRANSFER",
   upi: "E_TRANSFER",
 };
 
@@ -416,6 +420,9 @@ const normalizeInvoice = (inv: any): Invoice => {
     status: backendStatusToUi[rawStatus] || rawStatus,
     subtotal: Number(inv?.subtotal) || 0,
     tax: Number(inv?.taxAmount) || 0,
+    taxRate: Number(inv?.taxRate) || 0,
+    taxRates: Array.isArray(inv?.taxRates) ? inv.taxRates : [],
+    taxProvince: inv?.taxProvince || "",
     discount: Number(inv?.discountAmount) || 0,
     total: Number(inv?.total) || 0,
     amountPaid: Number(inv?.amountPaid) || 0,
@@ -1226,9 +1233,9 @@ const RecordPaymentDialog = ({
 
   const paymentMethods = [
     { value: "bank_transfer", label: "Bank Transfer", icon: Building2 },
+    { value: "e_transfer", label: "Interac e-Transfer", icon: Wallet },
     { value: "cash", label: "Cash", icon: BanknoteIcon },
     { value: "card", label: "Credit/Debit Card", icon: CreditCard },
-    { value: "upi", label: "UPI", icon: Wallet },
     { value: "cheque", label: "Cheque", icon: FileText },
   ];
 
@@ -2025,6 +2032,134 @@ const InvoicePage = () => {
     return { total, paid, pending, overdue, overdueCount, count: invoices.length };
   }, [invoices]);
 
+  const invoiceAnalytics = useMemo(() => {
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weeklyCollected = Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(weekStart);
+      day.setDate(weekStart.getDate() + index);
+      return { label: day.toLocaleDateString("en-CA", { weekday: "narrow" }), total: 0 };
+    });
+
+    const taxTotals = { GST: 0, PST: 0, QST: 0, HST: 0, Other: 0 };
+    const paymentTotals: Record<string, number> = {};
+    let currentMonthCollected = 0;
+    let previousMonthCollected = 0;
+
+    invoices.forEach((invoice) => {
+      const invoiceTax = Math.max(Number(invoice.tax || 0), 0);
+      if (invoiceTax > 0) {
+        const rows = Array.isArray(invoice.taxRates) ? invoice.taxRates.filter((row) => Number(row?.rate) > 0) : [];
+        const totalRate = rows.reduce((sum, row) => sum + Number(row.rate || 0), 0);
+
+        if (rows.length && totalRate > 0) {
+          rows.forEach((row) => {
+            const label = String(row.name || "").toUpperCase();
+            const key = label.includes("HST")
+              ? "HST"
+              : label.includes("QST")
+                ? "QST"
+                : label.includes("PST")
+                  ? "PST"
+                  : label.includes("GST")
+                    ? "GST"
+                    : "Other";
+            taxTotals[key] += invoiceTax * (Number(row.rate || 0) / totalRate);
+          });
+        } else if (invoice.taxRate === 13 || invoice.taxRate === 15) {
+          taxTotals.HST += invoiceTax;
+        } else if (invoice.taxRate === 12) {
+          taxTotals.GST += invoiceTax * (5 / 12);
+          taxTotals.PST += invoiceTax * (7 / 12);
+        } else if (invoice.taxRate === 11) {
+          taxTotals.GST += invoiceTax * (5 / 11);
+          taxTotals.PST += invoiceTax * (6 / 11);
+        } else if (invoice.taxRate === 14.975) {
+          taxTotals.GST += invoiceTax * (5 / 14.975);
+          taxTotals.QST += invoiceTax * (9.975 / 14.975);
+        } else if (invoice.taxRate === 5) {
+          taxTotals.GST += invoiceTax;
+        } else {
+          taxTotals.Other += invoiceTax;
+        }
+      }
+
+      (invoice.payments || []).forEach((payment) => {
+        const status = String(payment.status || "SUCCESSFUL").toUpperCase();
+        if (["FAILED", "VOID", "VOIDED", "CANCELLED"].includes(status)) return;
+
+        const netAmount = Math.max((Number(payment.amount) || 0) - (Number(payment.refundAmount) || 0), 0);
+        if (netAmount <= 0) return;
+
+        const paidAt = new Date(payment.paymentDate || invoice.paidAt || invoice.createdAt || "");
+        if (!Number.isNaN(paidAt.getTime())) {
+          if (paidAt >= currentMonthStart && paidAt < nextMonthStart) {
+            currentMonthCollected += netAmount;
+          }
+          if (paidAt >= previousMonthStart && paidAt < currentMonthStart) {
+            previousMonthCollected += netAmount;
+          }
+          if (paidAt >= weekStart) {
+            const dayIndex = Math.floor((paidAt.getTime() - weekStart.getTime()) / 86400000);
+            if (dayIndex >= 0 && dayIndex < 7) {
+              weeklyCollected[dayIndex].total += netAmount;
+            }
+          }
+        }
+
+        const methodKey = String(payment.paymentMethod || "OTHER").toUpperCase();
+        paymentTotals[methodKey] = (paymentTotals[methodKey] || 0) + netAmount;
+      });
+    });
+
+    const monthTrend = previousMonthCollected > 0
+      ? ((currentMonthCollected - previousMonthCollected) / previousMonthCollected) * 100
+      : currentMonthCollected > 0
+        ? 100
+        : 0;
+    const maxWeekly = Math.max(...weeklyCollected.map((entry) => entry.total), 0);
+    const methodTotal = Object.values(paymentTotals).reduce((sum, value) => sum + value, 0);
+    const methodLabels: Record<string, string> = {
+      BANK_TRANSFER: "Bank Transfer",
+      E_TRANSFER: "Interac e-Transfer",
+      CREDIT_CARD: "Credit/Debit Card",
+      DEBIT_CARD: "Debit Card",
+      CASH: "Cash",
+      CHECK: "Cheque",
+      CHEQUE: "Cheque",
+      STRIPE: "Stripe",
+      PAYPAL: "PayPal",
+      OTHER: "Other",
+    };
+    const methodColors = ["bg-[#0891B2]", "bg-[#D97706]", "bg-purple-500", "bg-green-500", "bg-slate-400", "bg-blue-500"];
+    const paymentMethods = Object.entries(paymentTotals)
+      .map(([method, amount], index) => ({
+        method: methodLabels[method] || method.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase()),
+        amount,
+        percentage: methodTotal > 0 ? Math.round((amount / methodTotal) * 100) : 0,
+        color: methodColors[index % methodColors.length],
+      }))
+      .sort((first, second) => second.amount - first.amount);
+
+    return {
+      currentMonthCollected,
+      previousMonthCollected,
+      monthTrend,
+      weeklyCollected: weeklyCollected.map((entry) => ({
+        ...entry,
+        height: maxWeekly > 0 ? Math.max(8, Math.round((entry.total / maxWeekly) * 100)) : 4,
+      })),
+      taxTotals,
+      paymentMethods,
+    };
+  }, [invoices]);
+
   // ============================================
   // HANDLERS
   // ============================================
@@ -2327,7 +2462,7 @@ const InvoicePage = () => {
               subtitle="Received payments"
               icon={CheckCircle2}
               color="green"
-              trend={{ value: 12, positive: true }}
+              trend={invoiceAnalytics.monthTrend !== 0 ? { value: Math.round(Math.abs(invoiceAnalytics.monthTrend)), positive: invoiceAnalytics.monthTrend >= 0 } : undefined}
               delay={0.1}
             />
             </div>
@@ -2985,21 +3120,31 @@ const InvoicePage = () => {
                 </div>
 
                 <div className="text-center py-4">
-                  <p className="text-3xl font-bold text-[#0F172A]">{formatCurrency(stats.paid)}</p>
+                  <p className="text-3xl font-bold text-[#0F172A]">{formatCurrency(invoiceAnalytics.currentMonthCollected)}</p>
                   <p className="text-sm text-[#94A3B8] mt-1">Collected</p>
                   <div className="flex items-center justify-center gap-1 mt-2">
-                    <TrendingUp size={14} className="text-green-500" />
-                    <span className="text-xs font-semibold text-green-600">+12% from last month</span>
+                    {invoiceAnalytics.monthTrend >= 0 ? (
+                      <TrendingUp size={14} className="text-green-500" />
+                    ) : (
+                      <TrendingDown size={14} className="text-red-500" />
+                    )}
+                    <span className={cn("text-xs font-semibold", invoiceAnalytics.monthTrend >= 0 ? "text-green-600" : "text-red-600")}>
+                      {invoiceAnalytics.previousMonthCollected > 0
+                        ? `${invoiceAnalytics.monthTrend >= 0 ? "+" : "-"}${Math.abs(invoiceAnalytics.monthTrend).toFixed(0)}% from last month`
+                        : invoiceAnalytics.currentMonthCollected > 0
+                          ? "New collections this month"
+                          : "No collections this month"}
+                    </span>
                   </div>
                 </div>
 
                 {/* Mini Bar Chart */}
                 <div className="flex items-end justify-between h-20 mt-4 gap-1">
-                  {[40, 65, 45, 80, 55, 90, 75].map((height, index) => (
+                  {invoiceAnalytics.weeklyCollected.map((entry, index) => (
                     <motion.div
                       key={index}
                       initial={{ height: 0 }}
-                      animate={{ height: `${height}%` }}
+                      animate={{ height: `${entry.height}%` }}
                       transition={{ delay: 0.5 + index * 0.1 }}
                       className={cn(
                         "flex-1 rounded-t-lg",
@@ -3009,10 +3154,37 @@ const InvoicePage = () => {
                   ))}
                 </div>
                 <div className="flex justify-between mt-2">
-                  {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
+                  {invoiceAnalytics.weeklyCollected.map((entry, index) => (
                     <span key={index} className="text-[10px] text-[#475569] flex-1 text-center">
-                      {day}
+                      {entry.label}
                     </span>
+                  ))}
+                </div>
+              </motion.div>
+
+              {/* Canadian Tax Summary */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45 }}
+                className="bg-white rounded-md border border-[rgba(15,23,42,0.06)] p-5"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-[#0F172A]">Taxes</h3>
+                  <span className="text-xs text-[#475569]">From invoices</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "GST", amount: invoiceAnalytics.taxTotals.GST, color: "text-[#0891B2]" },
+                    { label: "PST", amount: invoiceAnalytics.taxTotals.PST, color: "text-[#D97706]" },
+                    { label: "HST", amount: invoiceAnalytics.taxTotals.HST, color: "text-purple-600" },
+                    { label: "QST / Other", amount: invoiceAnalytics.taxTotals.QST + invoiceAnalytics.taxTotals.Other, color: "text-[#475569]" },
+                  ].map((taxItem) => (
+                    <div key={taxItem.label} className="rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-3">
+                      <p className="text-xs text-[#64748B]">{taxItem.label}</p>
+                      <p className={cn("mt-1 text-base font-bold", taxItem.color)}>{formatCurrency(taxItem.amount)}</p>
+                    </div>
                   ))}
                 </div>
               </motion.div>
@@ -3173,16 +3345,15 @@ const InvoicePage = () => {
                 <h3 className="font-semibold text-[#0F172A] mb-4">Payment Methods</h3>
 
                 <div className="space-y-3">
-                  {[
-                    { method: "Bank Transfer", percentage: 45, color: "bg-[#0891B2]" },
-                    { method: "UPI", percentage: 30, color: "bg-[#D97706]" },
-                    { method: "Card", percentage: 15, color: "bg-purple-500" },
-                    { method: "Cash", percentage: 10, color: "bg-slate-400" },
-                  ].map((item, index) => (
+                  {(invoiceAnalytics.paymentMethods.length > 0 ? invoiceAnalytics.paymentMethods : [
+                    { method: "No payments recorded", percentage: 0, amount: 0, color: "bg-slate-300" },
+                  ]).map((item, index) => (
                     <div key={index}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm text-[#475569]">{item.method}</span>
-                        <span className="text-sm font-semibold text-[#0F172A]">{item.percentage}%</span>
+                        <span className="text-sm font-semibold text-[#0F172A]">
+                          {item.percentage}% · {formatCurrency(item.amount)}
+                        </span>
                       </div>
                       <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                         <motion.div

@@ -163,6 +163,7 @@ interface Invoice {
   discount?: number;
   total: number;
   amountPaid?: number;
+  amountDue?: number;
   notes?: string;
   items?: InvoiceItem[];
   createdAt?: string;
@@ -348,9 +349,12 @@ const getStatusConfig = (status: string) => {
 };
 
 const isOverdue = (dueDate?: string, status?: string) => {
-  if (!dueDate || status?.toLowerCase() === "paid" || status?.toLowerCase() === "cancelled") {
+  const normalizedStatus = status?.toLowerCase();
+  if (normalizedStatus === "paid" || normalizedStatus === "cancelled") {
     return false;
   }
+  if (normalizedStatus === "overdue") return true;
+  if (!dueDate) return false;
   const due = parseInvoiceCalendarDate(dueDate);
   if (!due) return false;
   const today = new Date();
@@ -445,6 +449,9 @@ const normalizeInvoice = (inv: any): Invoice => {
     discount: Number(inv?.discountAmount) || 0,
     total: Number(inv?.total) || 0,
     amountPaid: Number(inv?.amountPaid) || 0,
+    amountDue: Number.isFinite(Number(inv?.amountDue))
+      ? Math.max(Number(inv.amountDue), 0)
+      : Math.max((Number(inv?.total) || 0) - (Number(inv?.amountPaid) || 0), 0),
     notes: inv?.notes || "",
     items: (inv?.items || []).map((item: any, index: number) => ({
       id: item?.id || item?.sortOrder || index,
@@ -471,6 +478,13 @@ const normalizeInvoice = (inv: any): Invoice => {
     lastSent: inv?.sentAt || "",
     currency: inv?.currency || "CAD",
   };
+};
+
+const getInvoiceOutstandingAmount = (invoice: Invoice) => {
+  if (typeof invoice.amountDue === "number" && Number.isFinite(invoice.amountDue)) {
+    return Math.max(invoice.amountDue, 0);
+  }
+  return Math.max((invoice.total || 0) - (invoice.amountPaid || 0), 0);
 };
 
 const readText = (value: unknown) => {
@@ -669,7 +683,7 @@ const InvoiceRow = ({
   const StatusIcon = statusConfig.icon;
   const overdue = isOverdue(invoice.dueDate, invoice.status);
   const daysUntilDue = getDaysUntilDue(invoice.dueDate);
-  const amountDue = (invoice.total || 0) - (invoice.amountPaid || 0);
+  const amountDue = getInvoiceOutstandingAmount(invoice);
 
   return (
     <motion.tr
@@ -1100,7 +1114,7 @@ const MobileInvoiceCard = ({
   const overdue = isOverdue(invoice.dueDate, invoice.status);
   const statusConfig = getStatusConfig(overdue && invoice.status !== "Paid" ? "overdue" : invoice.status);
   const StatusIcon = statusConfig.icon;
-  const amountDue = Math.max((invoice.total || 0) - (invoice.amountPaid || 0), 0);
+  const amountDue = getInvoiceOutstandingAmount(invoice);
   const quickActionLabel =
     invoice.status === "Draft" && canSend
       ? "Send"
@@ -1220,7 +1234,7 @@ const RecordPaymentDialog = ({
     return availableInvoices.find((entry) => entry.id === selectedInvoiceId) || null;
   }, [availableInvoices, invoice, selectedInvoiceId]);
 
-  const amountDue = selectedInvoice ? (selectedInvoice.total - (selectedInvoice.amountPaid || 0)) : 0;
+  const amountDue = selectedInvoice ? getInvoiceOutstandingAmount(selectedInvoice) : 0;
 
   useEffect(() => {
     if (invoice) {
@@ -2044,10 +2058,10 @@ const InvoicePage = () => {
       return acc + (recordedPaid > 0 ? Math.min(recordedPaid, invoice.total || recordedPaid) : invoice.status === "Paid" ? invoice.total || 0 : 0);
     }, 0);
     const pending = activeInvoices
-      .reduce((acc, invoice) => acc + Math.max((invoice.total || 0) - (invoice.amountPaid || 0), 0), 0);
+      .reduce((acc, invoice) => acc + getInvoiceOutstandingAmount(invoice), 0);
     const overdue = activeInvoices
       .filter((inv) => isOverdue(inv.dueDate, inv.status))
-      .reduce((acc, inv) => acc + (inv.total || 0) - (inv.amountPaid || 0), 0);
+      .reduce((acc, inv) => acc + getInvoiceOutstandingAmount(inv), 0);
     const overdueCount = activeInvoices.filter((inv) => isOverdue(inv.dueDate, inv.status)).length;
 
     return { total, paid, pending, overdue, overdueCount, count: activeInvoices.length };

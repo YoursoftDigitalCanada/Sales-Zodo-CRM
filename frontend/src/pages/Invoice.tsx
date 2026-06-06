@@ -285,9 +285,21 @@ const formatCurrency = (amount?: number, currency = "CAD") => {
   }).format(amount);
 };
 
+const parseInvoiceCalendarDate = (value?: string) => {
+  if (!value) return null;
+  const calendarMatch = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (calendarMatch) {
+    const [, year, month, day] = calendarMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day), 12);
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 const formatDate = (dateString: string) => {
   if (!dateString) return "-";
-  const date = new Date(dateString);
+  const date = parseInvoiceCalendarDate(dateString);
+  if (!date) return "-";
   return date.toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
@@ -312,8 +324,10 @@ const getRelativeTime = (dateString?: string) => {
 
 const getDaysUntilDue = (dueDate?: string) => {
   if (!dueDate) return null;
-  const due = new Date(dueDate);
+  const due = parseInvoiceCalendarDate(dueDate);
+  if (!due) return null;
   const now = new Date();
+  now.setHours(12, 0, 0, 0);
   const diffInDays = Math.floor(
     (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
   );
@@ -337,7 +351,11 @@ const isOverdue = (dueDate?: string, status?: string) => {
   if (!dueDate || status?.toLowerCase() === "paid" || status?.toLowerCase() === "cancelled") {
     return false;
   }
-  return new Date(dueDate) < new Date();
+  const due = parseInvoiceCalendarDate(dueDate);
+  if (!due) return false;
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  return due < today;
 };
 
 const getInvoiceDateRange = (filterDate: string) => {
@@ -390,11 +408,12 @@ const getInvoiceDateRange = (filterDate: string) => {
 };
 
 const compareInvoices = (sortBy: InvoiceSort) => (first: Invoice, second: Invoice) => {
+  const invoiceTime = (value?: string, fallback = 0) => parseInvoiceCalendarDate(value)?.getTime() ?? fallback;
   switch (sortBy) {
     case "date-asc":
-      return new Date(first.invoiceDate).getTime() - new Date(second.invoiceDate).getTime();
+      return invoiceTime(first.invoiceDate) - invoiceTime(second.invoiceDate);
     case "due-date-asc":
-      return new Date(first.dueDate || "9999-12-31").getTime() - new Date(second.dueDate || "9999-12-31").getTime();
+      return invoiceTime(first.dueDate, Number.MAX_SAFE_INTEGER) - invoiceTime(second.dueDate, Number.MAX_SAFE_INTEGER);
     case "amount-desc":
       return (second.total || 0) - (first.total || 0);
     case "amount-asc":
@@ -403,7 +422,7 @@ const compareInvoices = (sortBy: InvoiceSort) => (first: Invoice, second: Invoic
       return first.invoiceNumber.localeCompare(second.invoiceNumber, undefined, { numeric: true });
     case "date-desc":
     default:
-      return new Date(second.invoiceDate).getTime() - new Date(first.invoiceDate).getTime();
+      return invoiceTime(second.invoiceDate) - invoiceTime(first.invoiceDate);
   }
 };
 
@@ -1985,7 +2004,8 @@ const InvoicePage = () => {
     if (filterDate !== "all") {
       const range = getInvoiceDateRange(filterDate);
       result = result.filter((inv) => {
-        const invDate = new Date(inv.invoiceDate);
+        const invDate = parseInvoiceCalendarDate(inv.invoiceDate);
+        if (!invDate) return false;
         return (!range.startDate || invDate >= new Date(range.startDate))
           && (!range.endDate || invDate <= new Date(range.endDate));
       });
@@ -2000,8 +2020,8 @@ const InvoicePage = () => {
     const currentYear = new Date().getFullYear();
     const years = new Set<number>([currentYear]);
     invoices.forEach((invoice) => {
-      const year = new Date(invoice.invoiceDate).getFullYear();
-      if (Number.isInteger(year)) years.add(year);
+      const year = parseInvoiceCalendarDate(invoice.invoiceDate)?.getFullYear();
+      if (typeof year === "number" && Number.isInteger(year)) years.add(year);
     });
     return [...years]
       .sort((first, second) => second - first)
@@ -2017,20 +2037,21 @@ const InvoicePage = () => {
 
   // Stats
   const stats = useMemo(() => {
-    const total = invoices.reduce((acc, inv) => acc + (inv.total || 0), 0);
-    const paid = invoices
-      .filter((inv) => inv.status === "Paid")
-      .reduce((acc, inv) => acc + (inv.total || 0), 0);
-    const pending = invoices
-      .filter((inv) => inv.status !== "Paid" && inv.status !== "Cancelled")
-      .reduce((acc, inv) => acc + (inv.total || 0) - (inv.amountPaid || 0), 0);
-    const overdue = invoices
+    const activeInvoices = filteredInvoices.filter((invoice) => invoice.status !== "Cancelled");
+    const total = activeInvoices.reduce((acc, invoice) => acc + Math.max(invoice.total || 0, 0), 0);
+    const paid = activeInvoices.reduce((acc, invoice) => {
+      const recordedPaid = Math.max(invoice.amountPaid || 0, 0);
+      return acc + (recordedPaid > 0 ? Math.min(recordedPaid, invoice.total || recordedPaid) : invoice.status === "Paid" ? invoice.total || 0 : 0);
+    }, 0);
+    const pending = activeInvoices
+      .reduce((acc, invoice) => acc + Math.max((invoice.total || 0) - (invoice.amountPaid || 0), 0), 0);
+    const overdue = activeInvoices
       .filter((inv) => isOverdue(inv.dueDate, inv.status))
       .reduce((acc, inv) => acc + (inv.total || 0) - (inv.amountPaid || 0), 0);
-    const overdueCount = invoices.filter((inv) => isOverdue(inv.dueDate, inv.status)).length;
+    const overdueCount = activeInvoices.filter((inv) => isOverdue(inv.dueDate, inv.status)).length;
 
-    return { total, paid, pending, overdue, overdueCount, count: invoices.length };
-  }, [invoices]);
+    return { total, paid, pending, overdue, overdueCount, count: activeInvoices.length };
+  }, [filteredInvoices]);
 
   const invoiceAnalytics = useMemo(() => {
     const now = new Date();
@@ -2052,7 +2073,7 @@ const InvoicePage = () => {
     let currentMonthCollected = 0;
     let previousMonthCollected = 0;
 
-    invoices.forEach((invoice) => {
+    filteredInvoices.forEach((invoice) => {
       const invoiceTax = Math.max(Number(invoice.tax || 0), 0);
       if (invoiceTax > 0) {
         const rows = Array.isArray(invoice.taxRates) ? invoice.taxRates.filter((row) => Number(row?.rate) > 0) : [];
@@ -2158,7 +2179,7 @@ const InvoicePage = () => {
       taxTotals,
       paymentMethods,
     };
-  }, [invoices]);
+  }, [filteredInvoices]);
 
   // ============================================
   // HANDLERS
@@ -2493,7 +2514,6 @@ const InvoicePage = () => {
               subtitle="Payment success rate"
               icon={TrendingUp}
               color="purple"
-              trend={{ value: 5, positive: true }}
               delay={0.4}
             />
             </div>

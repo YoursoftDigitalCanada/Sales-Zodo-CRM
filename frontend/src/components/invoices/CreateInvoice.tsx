@@ -1852,9 +1852,7 @@ const CreateInvoicePage = () => {
             businessName: c.clientName || c.ClientName || c.companyName || c.name || "",
             email: c.primaryEmail || c.contactEmail || c.email || "",
             phone: c.primaryPhone || c.contactNo || c.phone || "",
-            address: readText(c.city) || readText(c.province) || readText(c.postalCode)
-              ? readText(c.streetAddress || c.address)
-              : parsedAddress.address,
+            address: parsedAddress.address || readText(c.streetAddress || c.address),
             city: readText(c.city) || parsedAddress.city,
             province,
             postalCode: readText(c.postalCode) || parsedAddress.postalCode,
@@ -1893,13 +1891,7 @@ const CreateInvoicePage = () => {
 
   // Handlers
   const handleSelectClient = (client: Client) => {
-    const parsedAddress = parseCompanyAddress([
-      client.address,
-      client.city,
-      client.province,
-      client.postalCode,
-      client.country,
-    ].filter(Boolean).join(" "));
+    const parsedAddress = parseCompanyAddress(client.address);
     const provinceCode = getProvinceCode(client.province || parsedAddress.province);
 
     selectedClientIdRef.current = String(client.id);

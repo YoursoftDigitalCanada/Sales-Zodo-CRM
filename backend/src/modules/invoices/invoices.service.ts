@@ -869,7 +869,8 @@ export class InvoicesService {
         const addressBlockHeight = Math.max(fromLines.length, billToLines.length) * 5;
 
         const items = ((invoice as any).items || []).map((item: any) => [
-            [item.itemName || item.description || 'Item', item.details].filter(Boolean).join('\n'),
+            item.itemName || item.description || 'Item',
+            item.details || '',
             Number(item.quantity || 0).toFixed(2),
             Number(item.unitPrice || 0).toFixed(2),
             Number(item.amount || 0).toFixed(2),
@@ -877,11 +878,18 @@ export class InvoicesService {
 
         autoTable(doc, {
             startY: addressTitleY + 12 + addressBlockHeight + 10,
-            head: [['Description', 'Qty', 'Rate', 'Amount']],
+            head: [['Item', 'Description', 'Qty', 'Rate', 'Amount']],
             body: items,
             theme: 'striped',
             headStyles: { fillColor: [8, 145, 178], textColor: [255, 255, 255], fontStyle: 'bold' },
             styles: { fontSize: 9, cellPadding: 3.5, textColor: [51, 65, 85] },
+            columnStyles: {
+                0: { fontStyle: 'bold', cellWidth: 42 },
+                1: { cellWidth: 'auto' },
+                2: { halign: 'right', cellWidth: 18 },
+                3: { halign: 'right', cellWidth: 24 },
+                4: { halign: 'right', cellWidth: 26 },
+            },
             margin: { left: margin, right: margin },
         });
 

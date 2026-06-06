@@ -38,25 +38,25 @@ export const CreateLeadSchema = z.object({
   lastName: z
     .string()
     .trim()
+    .min(1, "Last name is required.")
     .max(100)
-    .refine((value) => !value || isValidPersonName(value), `Last name ${PERSON_NAME_VALIDATION_MESSAGE}`),
+    .refine(isValidPersonName, `Last name ${PERSON_NAME_VALIDATION_MESSAGE}`),
   gender: z.string().max(50).optional().nullable(),
   email: z
     .string()
     .trim()
-    .refine((value) => !value || isValidEmailAddress(value), EMAIL_VALIDATION_MESSAGE)
-    .optional()
-    .nullable(),
+    .min(1, "Email is required.")
+    .refine(isValidEmailAddress, EMAIL_VALIDATION_MESSAGE),
   phone: z
     .string()
     .trim()
+    .min(1, "Phone number is required.")
     .max(30)
-    .optional()
-    .nullable(),
+    .refine(isValidCanadianPhoneNumber, CANADIAN_PHONE_VALIDATION_MESSAGE),
   mobileNo: z.string().trim().max(30).optional().nullable(),
   location: z.string().max(255).optional().nullable(),
   organization: z.string().max(255).optional().nullable(),
-  companyName: z.string().max(255).default(""),
+  companyName: z.string().trim().min(1, "Company name is required.").max(255),
   jobTitle: z.string().max(100).optional().nullable(),
   website: WebsiteSchema,
   territory: z.string().max(100).optional().nullable(),

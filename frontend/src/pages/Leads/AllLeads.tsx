@@ -1592,12 +1592,14 @@ export const LeadFormDialog = ({
           nextErrors.firstName = firstNameError;
         }
 
-        const lastNameError = getPersonNameError(formData.lastName, "Last name");
+        const lastNameError = getPersonNameError(formData.lastName, "Last name", { required: true });
         if (lastNameError) {
           nextErrors.lastName = lastNameError;
         }
 
-        const phoneError = getCanadianPhoneError(formData.phone, "Phone number");
+        const phoneError = formData.phone.trim()
+          ? getCanadianPhoneError(formData.phone, "Phone number")
+          : "Phone number is required.";
         if (phoneError) {
           nextErrors.phone = phoneError;
         }
@@ -1605,7 +1607,9 @@ export const LeadFormDialog = ({
           nextErrors.companyName = "Company is required.";
         }
 
-        const emailError = getEmailAddressError(formData.email, "Email");
+        const emailError = formData.email.trim()
+          ? getEmailAddressError(formData.email, "Email")
+          : "Email is required.";
         if (emailError) {
           nextErrors.email = emailError;
         }
@@ -1630,12 +1634,6 @@ export const LeadFormDialog = ({
         }
         break;
       case "service":
-        if (!formData.useCase.trim()) {
-          nextErrors.useCase = "Use case is required.";
-        }
-        if (!formData.productInterest.trim()) {
-          nextErrors.productInterest = "Product interest is required.";
-        }
         if (formData.numberOfUsers.trim()) {
           const seats = Number(formData.numberOfUsers);
           if (!Number.isInteger(seats) || seats < 0) {
@@ -1650,21 +1648,6 @@ export const LeadFormDialog = ({
         }
         break;
       case "qualification":
-        if (!formData.leadSourceId || formData.leadSourceId === "none") {
-          nextErrors.leadSourceId = "Source is required.";
-        }
-        if (!formData.leadType) {
-          nextErrors.leadType = "Lead type is required.";
-        }
-        if (!formData.buyingIntent) {
-          nextErrors.buyingIntent = "Buying intent is required.";
-        }
-        if (!formData.budgetRange) {
-          nextErrors.budgetRange = "Budget is required.";
-        }
-        if (!formData.purchaseTimeline) {
-          nextErrors.purchaseTimeline = "Timeline is required.";
-        }
         break;
       case "assessment":
         if (formData.leadScore.trim()) {
@@ -1675,9 +1658,6 @@ export const LeadFormDialog = ({
         }
         break;
       case "details":
-        if (!formData.assignedToId || formData.assignedToId === "unassigned") {
-          nextErrors.assignedToId = "Assigned rep is required.";
-        }
         if (formData.potentialValue.trim()) {
           const potentialValue = Number(formData.potentialValue);
           if (Number.isNaN(potentialValue) || potentialValue < 0) {
@@ -2033,12 +2013,18 @@ export const LeadFormDialog = ({
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#475569]">Gender</Label>
-                  <Input
-                    value={formData.gender}
-                    onChange={(e) => setFieldValue("gender", e.target.value)}
-                    placeholder="Gender"
-                    className="h-11 rounded-md"
-                  />
+                  <Select value={formData.gender} onValueChange={(val) => setFieldValue("gender", val)}>
+                    <SelectTrigger className="h-11 rounded-md">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      <SelectItem value="Male" className="rounded-md">Male</SelectItem>
+                      <SelectItem value="Female" className="rounded-md">Female</SelectItem>
+                      <SelectItem value="Non-binary" className="rounded-md">Non-binary</SelectItem>
+                      <SelectItem value="Prefer not to say" className="rounded-md">Prefer not to say</SelectItem>
+                      <SelectItem value="Other" className="rounded-md">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -2057,11 +2043,14 @@ export const LeadFormDialog = ({
                   {renderFieldError("firstName")}
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Last Name</Label>
+                  <Label className="text-sm font-medium text-[#475569]">
+                    Last Name <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     value={formData.lastName}
                     onChange={(e) => setFieldValue("lastName", e.target.value)}
                     placeholder="Doe"
+                    required
                     className={cn("h-11 rounded-md", getFieldErrorClass("lastName"))}
                   />
                   {renderFieldError("lastName")}
@@ -2069,7 +2058,9 @@ export const LeadFormDialog = ({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Email</Label>
+                <Label className="text-sm font-medium text-[#475569]">
+                  Email <span className="text-red-500">*</span>
+                </Label>
                 <div className="relative">
                   <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
@@ -2077,6 +2068,7 @@ export const LeadFormDialog = ({
                     value={formData.email}
                     onChange={(e) => setFieldValue("email", e.target.value)}
                     placeholder="john@company.com"
+                    required
                     className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("email"))}
                   />
                 </div>
@@ -2100,11 +2092,14 @@ export const LeadFormDialog = ({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Phone</Label>
+                  <Label className="text-sm font-medium text-[#475569]">
+                    Phone <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     value={formData.phone}
                     onChange={(e) => setFieldValue("phone", e.target.value)}
                     placeholder="Office phone"
+                    required
                     className={cn("h-11 rounded-md", getFieldErrorClass("phone"))}
                   />
                   {renderFieldError("phone")}
@@ -2123,13 +2118,16 @@ export const LeadFormDialog = ({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Company</Label>
+                <Label className="text-sm font-medium text-[#475569]">
+                  Company <span className="text-red-500">*</span>
+                </Label>
                 <div className="relative">
                   <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                   <Input
                     value={formData.companyName}
                     onChange={(e) => setFieldValue("companyName", e.target.value)}
                     placeholder="Acme Inc."
+                    required
                     className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("companyName"))}
                   />
                 </div>
@@ -2141,13 +2139,16 @@ export const LeadFormDialog = ({
             <TabsContent value="property" className="space-y-4 mt-0">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Company Name</Label>
+                  <Label className="text-sm font-medium text-[#475569]">
+                    Company Name <span className="text-red-500">*</span>
+                  </Label>
                   <div className="relative">
                     <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
                     <Input
                       value={formData.companyName}
                       onChange={(e) => setFieldValue("companyName", e.target.value)}
                       placeholder="Acme Inc."
+                      required
                       className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("companyName"))}
                     />
                   </div>
@@ -2343,7 +2344,7 @@ export const LeadFormDialog = ({
             {/* ── TAB: Requirement ─────────────────────────────────────────── */}
             <TabsContent value="service" className="space-y-4 mt-0">
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Product Interest <span className="text-red-500">*</span></Label>
+                <Label className="text-sm font-medium text-[#475569]">Product Interest</Label>
                 <Select
                   value={formData.productInterest}
                   onValueChange={(val) => {
@@ -2363,7 +2364,7 @@ export const LeadFormDialog = ({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Use Case / Requirement <span className="text-red-500">*</span></Label>
+                <Label className="text-sm font-medium text-[#475569]">Use Case / Requirement</Label>
                 <Textarea
                   value={formData.useCase}
                   onChange={(e) => setFieldValue("useCase", e.target.value)}
@@ -2494,7 +2495,7 @@ export const LeadFormDialog = ({
                 <h4 className="text-sm font-semibold text-[#0F172A] mb-3">Lead Qualification</h4>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Lead Status <span className="text-red-500">*</span></Label>
+                    <Label className="text-sm font-medium text-[#475569]">Lead Status</Label>
                     <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val as Lead["status"] })}>
                       <SelectTrigger className="h-11 rounded-md"><SelectValue placeholder="Select status" /></SelectTrigger>
                       <SelectContent className="rounded-md">
@@ -2505,7 +2506,7 @@ export const LeadFormDialog = ({
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Lead Source <span className="text-red-500">*</span></Label>
+                    <Label className="text-sm font-medium text-[#475569]">Lead Source</Label>
                     <Select value={formData.leadSourceId} onValueChange={(val) => setFormData({ ...formData, leadSourceId: val })}>
                       <SelectTrigger className={cn("h-11 rounded-md", getFieldErrorClass("leadSourceId"))}><SelectValue placeholder="Select source" /></SelectTrigger>
                       <SelectContent className="rounded-md">
@@ -2517,7 +2518,7 @@ export const LeadFormDialog = ({
                     {renderFieldError("leadSourceId")}
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Lead Type <span className="text-red-500">*</span></Label>
+                    <Label className="text-sm font-medium text-[#475569]">Lead Type</Label>
                     <Select value={formData.leadType} onValueChange={(val) => setFormData({ ...formData, leadType: val })}>
                       <SelectTrigger className={cn("h-11 rounded-md", getFieldErrorClass("leadType"))}><SelectValue placeholder="Inbound or outbound" /></SelectTrigger>
                       <SelectContent className="rounded-md">
@@ -2528,7 +2529,7 @@ export const LeadFormDialog = ({
                     {renderFieldError("leadType")}
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Buying Intent <span className="text-red-500">*</span></Label>
+                    <Label className="text-sm font-medium text-[#475569]">Buying Intent</Label>
                     <Select
                       value={formData.buyingIntent}
                       onValueChange={(val) => {
@@ -2546,7 +2547,7 @@ export const LeadFormDialog = ({
                     {renderFieldError("buyingIntent")}
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Budget Range <span className="text-red-500">*</span></Label>
+                    <Label className="text-sm font-medium text-[#475569]">Budget Range</Label>
                     <Select value={formData.budgetRange} onValueChange={(val) => setFormData({ ...formData, budgetRange: val })}>
                       <SelectTrigger className={cn("h-11 rounded-md", getFieldErrorClass("budgetRange"))}><SelectValue placeholder="Select budget" /></SelectTrigger>
                       <SelectContent className="rounded-md">
@@ -2558,7 +2559,7 @@ export const LeadFormDialog = ({
                     {renderFieldError("budgetRange")}
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-[#475569]">Purchase Timeline <span className="text-red-500">*</span></Label>
+                    <Label className="text-sm font-medium text-[#475569]">Purchase Timeline</Label>
                     <Select
                       value={formData.purchaseTimeline}
                       onValueChange={(val) => {

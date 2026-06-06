@@ -25,6 +25,10 @@ export interface CompanyProfile {
   phone: string;
   taxId: string;
   address: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  country: string;
   invoiceDefaultFooter: string;
   logoUrl: string | null;
 }

@@ -1530,17 +1530,23 @@ const CreateInvoicePage = () => {
       return;
     }
 
-    const parsedAddress = parseCompanyAddress(companyProfile.address);
+    const parsedAddress = parseCompanyAddress([
+      companyProfile.address,
+      companyProfile.city,
+      companyProfile.province,
+      companyProfile.postalCode,
+      companyProfile.country,
+    ].filter(Boolean).join(", "));
     const currentValues = getValues("billedBy");
 
     setValue("billedBy.businessName", companyProfile.companyName || currentValues.businessName || "");
     setValue("billedBy.email", companyProfile.email || currentValues.email || "");
     setValue("billedBy.phone", companyProfile.phone || currentValues.phone || "");
     setValue("billedBy.address", parsedAddress.address || currentValues.address || "");
-    setValue("billedBy.city", parsedAddress.city || currentValues.city || "");
-    setValue("billedBy.province", parsedAddress.province || currentValues.province || "ON");
-    setValue("billedBy.postalCode", parsedAddress.postalCode || currentValues.postalCode || "");
-    setValue("billedBy.country", parsedAddress.country || currentValues.country || "Canada");
+    setValue("billedBy.city", companyProfile.city || parsedAddress.city || currentValues.city || "");
+    setValue("billedBy.province", getProvinceCode(companyProfile.province || parsedAddress.province || currentValues.province));
+    setValue("billedBy.postalCode", companyProfile.postalCode || parsedAddress.postalCode || currentValues.postalCode || "");
+    setValue("billedBy.country", companyProfile.country || parsedAddress.country || currentValues.country || "Canada");
     setValue("billedBy.gstNumber", companyProfile.taxId || currentValues.gstNumber || "");
 
     const tenantInvoiceFooter = String(companyProfile.invoiceDefaultFooter || "").trim();
@@ -1670,6 +1676,13 @@ const CreateInvoicePage = () => {
         const client = invoice?.client && typeof invoice.client === "object" ? invoice.client : null;
         const businessAddress = invoice?.businessAddress && typeof invoice.businessAddress === "object" ? invoice.businessAddress : null;
         const clientAddress = invoice?.clientAddress && typeof invoice.clientAddress === "object" ? invoice.clientAddress : null;
+        const parsedBusinessAddress = parseCompanyAddress([
+          businessAddress?.address,
+          businessAddress?.city,
+          businessAddress?.province,
+          businessAddress?.postalCode,
+          businessAddress?.country,
+        ].filter(Boolean).join(", "));
         const invoiceDateValue = toDateInputValue(invoice?.issueDate || invoice?.invoiceDate);
         const dueDateValue = toDateInputValue(invoice?.dueDate);
         const provinceCode = getProvinceCode(invoice?.taxProvince || clientAddress?.province || client?.province || currentValues.billedTo.province);
@@ -1709,11 +1722,11 @@ const CreateInvoicePage = () => {
             businessName: readText(invoice?.businessName) || currentValues.billedBy.businessName,
             email: readText(invoice?.businessEmail) || currentValues.billedBy.email,
             phone: readText(invoice?.businessPhone) || currentValues.billedBy.phone,
-            address: readText(businessAddress?.address) || currentValues.billedBy.address,
-            city: readText(businessAddress?.city) || currentValues.billedBy.city,
-            province: getProvinceCode(businessAddress?.province || currentValues.billedBy.province),
-            postalCode: readText(businessAddress?.postalCode) || currentValues.billedBy.postalCode,
-            country: currentValues.billedBy.country,
+            address: parsedBusinessAddress.address || currentValues.billedBy.address,
+            city: readText(businessAddress?.city) || parsedBusinessAddress.city || currentValues.billedBy.city,
+            province: getProvinceCode(businessAddress?.province || parsedBusinessAddress.province || currentValues.billedBy.province),
+            postalCode: readText(businessAddress?.postalCode) || parsedBusinessAddress.postalCode || currentValues.billedBy.postalCode,
+            country: readText(businessAddress?.country) || parsedBusinessAddress.country || currentValues.billedBy.country,
             gstNumber: readText(invoice?.businessGstHstNumber) || currentValues.billedBy.gstNumber,
           },
           billedTo: {

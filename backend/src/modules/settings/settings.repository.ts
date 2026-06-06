@@ -142,6 +142,18 @@ export class SettingsRepository {
       if (data.company.address !== undefined) {
         nextIntegrations.companyAddress = data.company.address;
       }
+      if (data.company.city !== undefined) {
+        nextIntegrations.companyCity = data.company.city;
+      }
+      if (data.company.province !== undefined) {
+        nextIntegrations.companyProvince = data.company.province;
+      }
+      if (data.company.postalCode !== undefined) {
+        nextIntegrations.companyPostalCode = data.company.postalCode;
+      }
+      if (data.company.country !== undefined) {
+        nextIntegrations.companyCountry = data.company.country;
+      }
       if (data.company.taxId !== undefined) {
         nextIntegrations.taxId = data.company.taxId;
       }

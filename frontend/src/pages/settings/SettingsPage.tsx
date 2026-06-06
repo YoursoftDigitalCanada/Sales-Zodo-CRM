@@ -553,6 +553,10 @@ export default function SettingsPage() {
         phone: company.phone,
         taxId: company.taxId,
         address: company.address,
+        city: company.city,
+        province: company.province,
+        postalCode: company.postalCode,
+        country: company.country,
         invoiceDefaultFooter: company.invoiceDefaultFooter,
       });
       setCompany(next);
@@ -1134,10 +1138,29 @@ export default function SettingsPage() {
                         <AddressAutocompleteInput
                           value={company.address}
                           onValueChange={(value) => setCompany({ ...company, address: value })}
-                          onSelectAddress={(details) => setCompany({ ...company, address: details.formattedAddress || details.addressLine1 || company.address })}
+                          onSelectAddress={(details) => setCompany({
+                            ...company,
+                            address: details.addressLine1 || details.formattedAddress || company.address,
+                            city: details.city || "",
+                            province: details.state || "",
+                            postalCode: details.postalCode || "",
+                            country: details.country || "Canada",
+                          })}
                           className={fieldClass}
                           iconClassName="text-[#64748B]"
                         />
+                      </Field>
+                      <Field label="City">
+                        <input className={fieldClass} value={company.city || ""} onChange={(event) => setCompany({ ...company, city: event.target.value })} />
+                      </Field>
+                      <Field label="Province / State">
+                        <input className={fieldClass} value={company.province || ""} onChange={(event) => setCompany({ ...company, province: event.target.value })} />
+                      </Field>
+                      <Field label="Postal code">
+                        <input className={fieldClass} value={company.postalCode || ""} onChange={(event) => setCompany({ ...company, postalCode: event.target.value })} />
+                      </Field>
+                      <Field label="Country">
+                        <input className={fieldClass} value={company.country || ""} onChange={(event) => setCompany({ ...company, country: event.target.value })} />
                       </Field>
                       <div className="lg:col-span-2">
                         <Field

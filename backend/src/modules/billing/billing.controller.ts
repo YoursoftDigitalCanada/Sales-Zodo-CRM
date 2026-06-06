@@ -64,8 +64,20 @@ export class BillingController {
     try { sendSuccess(res, await billingService.listPayments(req.context.tenantId, req.query as any)); } catch (error) { next(error); }
   }
 
+  async getPayment(req: Request, res: Response, next: NextFunction) {
+    try { sendSuccess(res, await billingService.getPayment(req.params.id, req.context.tenantId)); } catch (error) { next(error); }
+  }
+
   async recordPayment(req: Request, res: Response, next: NextFunction) {
     try { sendCreated(res, await billingService.recordPayment(req.context.tenantId, sanitizeBody(req.body), req.user?.userId), 'Payment recorded'); } catch (error) { next(error); }
+  }
+
+  async updatePayment(req: Request, res: Response, next: NextFunction) {
+    try { sendSuccess(res, await billingService.updatePayment(req.params.id, req.context.tenantId, sanitizeBody(req.body), req.user?.userId), 'Payment updated'); } catch (error) { next(error); }
+  }
+
+  async voidPayment(req: Request, res: Response, next: NextFunction) {
+    try { sendSuccess(res, await billingService.voidPayment(req.params.id, req.context.tenantId, req.user?.userId), 'Payment voided'); } catch (error) { next(error); }
   }
 
   async renewalReminders(req: Request, res: Response, next: NextFunction) {

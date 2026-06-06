@@ -78,6 +78,21 @@ export async function recordPayment(data: BillingRecord) {
   return extractApiData<BillingRecord>(response.data);
 }
 
+export async function getPayment(id: string) {
+  const response = await api.get(`/billing/payments/${id}`);
+  return extractApiData<BillingRecord>(response.data);
+}
+
+export async function updatePayment(id: string, data: BillingRecord) {
+  const response = await api.put(`/billing/payments/${id}`, data);
+  return extractApiData<BillingRecord>(response.data);
+}
+
+export async function voidPayment(id: string) {
+  const response = await api.delete(`/billing/payments/${id}`);
+  return extractApiData<BillingRecord>(response.data);
+}
+
 export async function createRenewalReminders(days = 30) {
   const response = await api.post("/billing/renewal-reminders", { days });
   return extractApiData<BillingRecord>(response.data);

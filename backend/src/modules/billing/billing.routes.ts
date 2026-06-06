@@ -9,6 +9,25 @@ import { billingController } from './billing.controller';
 const router = Router();
 const idSchema = z.object({ params: z.object({ id: z.string().uuid() }) }).passthrough();
 const bodySchema = z.object({ body: z.object({}).passthrough() }).passthrough();
+const paymentBodySchema = z.object({
+  body: z.object({
+    amount: z.coerce.number().positive(),
+    paymentMethod: z.enum([
+      'CASH',
+      'CREDIT_CARD',
+      'DEBIT_CARD',
+      'BANK_TRANSFER',
+      'E_TRANSFER',
+      'CHECK',
+      'PAYPAL',
+      'STRIPE',
+      'OTHER',
+    ]),
+    paymentDate: z.coerce.date().optional(),
+    reference: z.string().trim().max(255).optional().nullable(),
+    notes: z.string().trim().max(5000).optional().nullable(),
+  }),
+}).passthrough();
 
 router.use(authenticate);
 router.use(loadEmployee);
@@ -31,7 +50,10 @@ router.patch('/invoices/:id/sent', requirePermission(PERMISSIONS.INVOICES_UPDATE
 router.patch('/invoices/:id/paid', requirePermission(PERMISSIONS.INVOICES_MARK_PAID), validate(idSchema), validate(bodySchema), billingController.markInvoicePaid.bind(billingController));
 
 router.get('/payments', requirePermission(PERMISSIONS.PAYMENTS_VIEW), billingController.listPayments.bind(billingController));
-router.post('/payments', requirePermission(PERMISSIONS.PAYMENTS_CREATE), validate(bodySchema), billingController.recordPayment.bind(billingController));
+router.post('/payments', requirePermission(PERMISSIONS.PAYMENTS_CREATE), validate(paymentBodySchema), billingController.recordPayment.bind(billingController));
+router.get('/payments/:id', requirePermission(PERMISSIONS.PAYMENTS_VIEW), validate(idSchema), billingController.getPayment.bind(billingController));
+router.put('/payments/:id', requirePermission(PERMISSIONS.PAYMENTS_UPDATE), validate(idSchema), validate(paymentBodySchema), billingController.updatePayment.bind(billingController));
+router.delete('/payments/:id', requirePermission(PERMISSIONS.PAYMENTS_DELETE), validate(idSchema), billingController.voidPayment.bind(billingController));
 
 router.post('/renewal-reminders', requirePermission(PERMISSIONS.SUBSCRIPTIONS_UPDATE), validate(bodySchema), billingController.renewalReminders.bind(billingController));
 

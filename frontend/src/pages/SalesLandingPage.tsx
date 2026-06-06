@@ -36,6 +36,10 @@ const metrics = [
   { value: "0", label: "Duplicate handoffs needed" },
 ];
 
+const liveStages = ["Lead", "Qualified", "Proposal", "Contract", "Invoice"];
+
+const automationUpdates = ["Proposal emailed", "Deal updated", "Invoice ready"];
+
 export default function SalesLandingPage() {
   return (
     <PublicV2Shell>
@@ -76,20 +80,36 @@ export default function SalesLandingPage() {
           >
             <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-5">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-cyan">Pipeline value</p>
-                <p className="mt-2 text-4xl font-bold text-white">$428K</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-cyan">Live workflow</p>
+                <p className="mt-2 text-3xl font-bold text-white">Sales Opportunity - John Doe</p>
+                <p className="mt-1 text-sm text-section-dark-foreground/60">Active</p>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-green/15">
                 <BarChart3 className="h-6 w-6 text-brand-green" />
               </div>
             </div>
-            <div className="mt-6 space-y-3">
-              {["New lead assigned", "Proposal sent", "Contract signed", "Invoice paid"].map((item, index) => (
-                <div key={item} className="flex items-center justify-between rounded-2xl bg-white/7 px-4 py-3">
-                  <span className="text-sm text-section-dark-foreground/80">{item}</span>
-                  <span className="rounded-full bg-brand-cyan/15 px-3 py-1 text-xs font-semibold text-brand-cyan">
-                    Step {index + 1}
-                  </span>
+            <div className="mt-6 grid gap-3 sm:grid-cols-5">
+              {liveStages.map((stage, index) => (
+                <div key={stage} className="rounded-2xl bg-white/7 p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 min-h-7 w-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-brand-cyan text-xs font-bold leading-none text-white">
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0 truncate text-sm font-semibold text-section-dark-foreground/90">{stage}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 rounded-2xl border border-white/10 bg-white/7 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-section-dark-foreground/50">Ask Zodo AI</p>
+              <p className="mt-2 text-sm leading-6 text-section-dark-foreground/80">
+                "Show me this lead, skipped sales steps, overdue tasks, proposal status, and next action."
+              </p>
+            </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              {automationUpdates.map((item) => (
+                <div key={item} className="rounded-full bg-brand-green/10 px-3 py-2 text-center text-xs font-semibold text-brand-green">
+                  {item}
                 </div>
               ))}
             </div>

@@ -60,6 +60,15 @@ function normalizeInvoiceStatus(value: unknown): string {
   return allowed.has(normalized) ? normalized : 'DRAFT';
 }
 
+function paymentContribution(payment: Record<string, any>): number {
+  const status = String(payment.status || 'SUCCESSFUL').toUpperCase();
+  if (status === 'SUCCESSFUL') return toNumber(payment.amount);
+  if (status === 'PARTIALLY_REFUNDED') {
+    return Math.max(toNumber(payment.amount) - toNumber(payment.refundAmount), 0);
+  }
+  return 0;
+}
+
 export class BillingService {
   private proposalHandlerInitialized = false;
 
@@ -457,6 +466,189 @@ export class BillingService {
       orderBy: { paymentDate: 'desc' },
       take: Number(query.limit || 300),
     });
+  }
+
+  async getPayment(id: string, tenantId: string) {
+    const payment = await prisma.invoicePayment.findFirst({
+      where: { id, tenantId },
+      include: {
+        invoice: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            total: true,
+            amountPaid: true,
+            amountDue: true,
+            status: true,
+            currency: true,
+            projectId: true,
+            quoteId: true,
+          },
+        },
+        client: { select: { id: true, clientName: true, primaryEmail: true, primaryPhone: true } },
+        project: { select: { id: true, name: true, organizationName: true } },
+      },
+    });
+    if (!payment) throw new NotFoundError('Payment not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    return payment;
+  }
+
+  private async assertPaymentIsEditable(paymentId: string, tenantId: string) {
+    const transaction = await prismaAny.bookkeepingTransaction.findFirst({
+      where: { tenantId, sourceType: 'INVOICE_PAYMENT', sourceId: paymentId },
+      select: { id: true, status: true, isReconciled: true },
+    });
+    if (transaction && (transaction.isReconciled || String(transaction.status).toUpperCase() === 'RECONCILED')) {
+      throw new BadRequestError(
+        'Unreconcile the related bookkeeping transaction before editing or voiding this payment.',
+        ErrorCodes.INVALID_INPUT,
+      );
+    }
+  }
+
+  private async recalculateInvoiceFromPayments(invoiceId: string, tenantId: string, tx: any = prisma) {
+    const invoice = await tx.invoice.findFirst({ where: { id: invoiceId, tenantId } });
+    if (!invoice) throw new NotFoundError('Invoice not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    const payments = await tx.invoicePayment.findMany({ where: { invoiceId, tenantId } });
+    const amountPaid = payments.reduce(
+      (sum: number, payment: Record<string, any>) => sum + paymentContribution(payment),
+      0,
+    );
+    const total = toNumber(invoice.total);
+    const amountDue = Math.max(total - amountPaid, 0);
+    const status = amountDue === 0 ? 'PAID' : amountPaid > 0 ? 'PARTIALLY_PAID' : 'SENT';
+    return tx.invoice.update({
+      where: { id_tenantId: { id: invoiceId, tenantId } },
+      data: {
+        amountPaid,
+        amountDue,
+        status,
+        paidAt: amountDue === 0 ? invoice.paidAt || new Date() : null,
+      },
+    });
+  }
+
+  async updatePayment(id: string, tenantId: string, data: Record<string, any>, actorUserId?: string) {
+    const payment = await prisma.invoicePayment.findFirst({
+      where: { id, tenantId },
+      include: { invoice: true },
+    });
+    if (!payment) throw new NotFoundError('Payment not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    if (!payment.invoiceId || !payment.invoice) {
+      throw new BadRequestError('Only invoice-linked payments can be edited', ErrorCodes.INVALID_INPUT);
+    }
+    await this.assertPaymentIsEditable(id, tenantId);
+
+    const status = String(payment.status || 'SUCCESSFUL').toUpperCase();
+    if (!['SUCCESSFUL', 'PARTIALLY_REFUNDED'].includes(status)) {
+      throw new BadRequestError('Voided, failed, or refunded payments cannot be edited', ErrorCodes.INVALID_INPUT);
+    }
+
+    const amount = toNumber(data.amount);
+    if (amount <= 0) throw new BadRequestError('Payment amount must be greater than zero', ErrorCodes.VALIDATION_FAILED);
+    if (status === 'PARTIALLY_REFUNDED' && amount <= toNumber(payment.refundAmount)) {
+      throw new BadRequestError('Payment amount must exceed the refunded amount', ErrorCodes.VALIDATION_FAILED);
+    }
+
+    const otherPayments = await prisma.invoicePayment.findMany({
+      where: { tenantId, invoiceId: payment.invoiceId, id: { not: id } },
+    });
+    const otherPaid = otherPayments.reduce(
+      (sum: number, row: Record<string, any>) => sum + paymentContribution(row),
+      0,
+    );
+    const available = Math.max(toNumber(payment.invoice.total) - otherPaid, 0);
+    const contribution = status === 'PARTIALLY_REFUNDED'
+      ? Math.max(amount - toNumber(payment.refundAmount), 0)
+      : amount;
+    if (contribution > available) {
+      throw new BadRequestError('Payment cannot exceed the remaining invoice balance', ErrorCodes.VALIDATION_FAILED);
+    }
+
+    const previousContribution = paymentContribution(payment as any);
+    const updated = await prisma.$transaction(async (tx) => {
+      const next = await tx.invoicePayment.update({
+        where: { id },
+        data: {
+          amount,
+          paymentMethod: String(data.paymentMethod).toUpperCase() as any,
+          paymentDate: data.paymentDate ? new Date(data.paymentDate) : payment.paymentDate,
+          reference: data.reference ?? null,
+          notes: data.notes ?? null,
+        },
+      });
+      await this.recalculateInvoiceFromPayments(payment.invoiceId!, tenantId, tx);
+      const delta = paymentContribution(next as any) - previousContribution;
+      if (delta !== 0) {
+        await tx.client.update({
+          where: { id: payment.clientId },
+          data: { totalRevenue: { increment: delta } },
+        });
+      }
+      return next;
+    });
+
+    await bookkeepingService.syncInvoicePayment(tenantId, id);
+    activityLogger.log({
+      tenantId,
+      entityType: 'InvoicePayment',
+      entityId: id,
+      action: 'UPDATE',
+      module: 'payments',
+      description: `Payment ${payment.paymentNumber || id} updated`,
+      userId: actorUserId,
+      metadata: { invoiceId: payment.invoiceId, previousAmount: toNumber(payment.amount), amount },
+    });
+    return this.getPayment(updated.id, tenantId);
+  }
+
+  async voidPayment(id: string, tenantId: string, actorUserId?: string) {
+    const payment = await prisma.invoicePayment.findFirst({
+      where: { id, tenantId },
+      include: { invoice: true },
+    });
+    if (!payment) throw new NotFoundError('Payment not found', ErrorCodes.RESOURCE_NOT_FOUND);
+    if (!payment.invoiceId) throw new BadRequestError('Only invoice-linked payments can be voided', ErrorCodes.INVALID_INPUT);
+    await this.assertPaymentIsEditable(id, tenantId);
+    if (String(payment.status).toUpperCase() === 'VOIDED') return this.getPayment(id, tenantId);
+
+    const previousContribution = paymentContribution(payment as any);
+    await prisma.$transaction(async (tx) => {
+      await tx.invoicePayment.update({
+        where: { id },
+        data: { status: 'VOIDED', voidedAt: new Date() },
+      });
+      await this.recalculateInvoiceFromPayments(payment.invoiceId!, tenantId, tx);
+      if (previousContribution !== 0) {
+        await tx.client.update({
+          where: { id: payment.clientId },
+          data: { totalRevenue: { decrement: previousContribution } },
+        });
+      }
+    });
+
+    await bookkeepingService.syncInvoicePayment(tenantId, id);
+    eventBus.emit('payment.voided', {
+      tenantId,
+      paymentId: id,
+      invoiceId: payment.invoiceId,
+      invoiceNumber: (payment.invoice as any)?.invoiceNumber || '',
+      clientId: payment.clientId,
+      amount: toNumber(payment.amount),
+      status: 'VOIDED',
+      paidByUserId: actorUserId,
+    });
+    activityLogger.log({
+      tenantId,
+      entityType: 'InvoicePayment',
+      entityId: id,
+      action: 'DELETE',
+      module: 'payments',
+      description: `Payment ${payment.paymentNumber || id} voided`,
+      userId: actorUserId,
+      metadata: { invoiceId: payment.invoiceId, amount: toNumber(payment.amount) },
+    });
+    return this.getPayment(id, tenantId);
   }
 
   async recordPayment(tenantId: string, data: Record<string, any>, actorUserId?: string) {

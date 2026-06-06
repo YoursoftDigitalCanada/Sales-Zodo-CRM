@@ -354,8 +354,19 @@ const getProvinceCode = (value: unknown) => {
   return province?.code || "ON";
 };
 
+const canadianProvincePattern = /\b(AB|BC|MB|NB|NL|NS|NT|NU|ON|PE|QC|SK|YT|Alberta|British Columbia|Manitoba|New Brunswick|Newfoundland and Labrador|Nova Scotia|Northwest Territories|Nunavut|Ontario|Prince Edward Island|Quebec|Saskatchewan|Yukon)\b/i;
+const canadianPostalPattern = /\b([A-Z]\d[A-Z]\s?\d[A-Z]\d)\b/i;
+const streetSuffixPattern = /(.*?\b(?:AVENUE|AVE|STREET|ST|ROAD|RD|DRIVE|DR|BOULEVARD|BLVD|LANE|LN|COURT|CT|CRESCENT|CRES|WAY|PLACE|PL|HIGHWAY|HWY)\.?)\s*(.*)$/i;
+
+const normalizeAddressText = (value: unknown) =>
+  readText(value)
+    .replace(/\s+/g, " ")
+    .replace(/([A-Z]\d[A-Z])\s?(\d[A-Z]\d)\s*(CANADA)$/i, "$1 $2 Canada")
+    .replace(/\b(CANADA)$/i, "Canada")
+    .trim();
+
 const parseCompanyAddress = (value: unknown): ParsedCompanyAddress => {
-  const text = readText(value);
+  const text = normalizeAddressText(value);
 
   if (!text) {
     return {
@@ -374,8 +385,8 @@ const parseCompanyAddress = (value: unknown): ParsedCompanyAddress => {
 
   const firstSegment = segments[0] || text;
   const lastSegment = segments[segments.length - 1] || "";
-  const postalMatch = text.match(/\b([A-Z]\d[A-Z]\s?\d[A-Z]\d)\b/i);
-  const provinceMatch = text.match(/\b(AB|BC|MB|NB|NL|NS|NT|NU|ON|PE|QC|SK|YT|Alberta|British Columbia|Manitoba|New Brunswick|Newfoundland and Labrador|Nova Scotia|Northwest Territories|Nunavut|Ontario|Prince Edward Island|Quebec|Saskatchewan|Yukon)\b/i);
+  const postalMatch = text.match(canadianPostalPattern);
+  const provinceMatch = text.match(canadianProvincePattern);
 
   let city = "";
   if (segments.length >= 3) {
@@ -384,8 +395,26 @@ const parseCompanyAddress = (value: unknown): ParsedCompanyAddress => {
     city = segments[1];
   }
 
+  let address = firstSegment;
+
+  if (segments.length <= 1 && provinceMatch?.index !== undefined) {
+    const beforeProvince = text.slice(0, provinceMatch.index).trim();
+    const streetMatch = beforeProvince.match(streetSuffixPattern);
+
+    if (streetMatch) {
+      address = streetMatch[1].trim();
+      city = streetMatch[2].trim();
+    } else {
+      address = beforeProvince;
+    }
+  }
+
+  if (postalMatch?.[1] && city) {
+    city = city.replace(postalMatch[1], "").trim();
+  }
+
   return {
-    address: firstSegment,
+    address,
     city,
     province: getProvinceCode(provinceMatch?.[1] || ""),
     postalCode: postalMatch?.[1]?.toUpperCase() || "",
@@ -394,7 +423,7 @@ const parseCompanyAddress = (value: unknown): ParsedCompanyAddress => {
 };
 
 const getSelectedInvoiceAddress = (details: { formattedAddress?: string | null; addressLine1?: string | null }, fallback?: string) =>
-  readText(details.formattedAddress) || readText(details.addressLine1) || readText(fallback);
+  readText(details.addressLine1) || readText(details.formattedAddress) || readText(fallback);
 
 const buildInvoiceAddressLines = (party: InvoiceFormData["billedBy"] | InvoiceFormData["billedTo"]) => {
   const address = readText(party.address);
@@ -1801,18 +1830,25 @@ const CreateInvoicePage = () => {
     const fetchClients = async () => {
       try {
         const data = await getClients();
-        const mapped: Client[] = (data || []).map((c: any) => ({
-          id: c.id || c.Id || 0,
-          businessName: c.clientName || c.ClientName || c.companyName || c.name || "",
-          email: c.primaryEmail || c.contactEmail || c.email || "",
-          phone: c.primaryPhone || c.contactNo || c.phone || "",
-          address: c.streetAddress || c.address || "",
-          city: c.city || "",
-          province: c.province || "ON",
-          postalCode: c.postalCode || "",
-          country: c.country || "Canada",
-          gstNumber: c.gstHstNumber || "",
-        }));
+        const mapped: Client[] = (data || []).map((c: any) => {
+          const parsedAddress = parseCompanyAddress(c.streetAddress || c.address || "");
+          const province = getProvinceCode(c.province || parsedAddress.province);
+
+          return {
+            id: c.id || c.Id || 0,
+            businessName: c.clientName || c.ClientName || c.companyName || c.name || "",
+            email: c.primaryEmail || c.contactEmail || c.email || "",
+            phone: c.primaryPhone || c.contactNo || c.phone || "",
+            address: readText(c.city) || readText(c.province) || readText(c.postalCode)
+              ? readText(c.streetAddress || c.address)
+              : parsedAddress.address,
+            city: readText(c.city) || parsedAddress.city,
+            province,
+            postalCode: readText(c.postalCode) || parsedAddress.postalCode,
+            country: readText(c.country) || parsedAddress.country || "Canada",
+            gstNumber: c.gstHstNumber || "",
+          };
+        });
         setClients(mapped);
       } catch (err) {
         console.error("Failed to load organizations:", err);
@@ -1844,17 +1880,26 @@ const CreateInvoicePage = () => {
 
   // Handlers
   const handleSelectClient = (client: Client) => {
+    const parsedAddress = parseCompanyAddress([
+      client.address,
+      client.city,
+      client.province,
+      client.postalCode,
+      client.country,
+    ].filter(Boolean).join(" "));
+    const provinceCode = getProvinceCode(client.province || parsedAddress.province);
+
     selectedClientIdRef.current = String(client.id);
     setValue("billedTo.businessName", client.businessName);
     setValue("billedTo.email", client.email);
     setValue("billedTo.phone", client.phone);
-    setValue("billedTo.address", client.address);
-    setValue("billedTo.city", client.city);
-    setValue("billedTo.province", client.province);
-    setValue("billedTo.postalCode", client.postalCode);
-    setValue("billedTo.country", client.country || "Canada");
+    setValue("billedTo.address", parsedAddress.address || client.address);
+    setValue("billedTo.city", client.city || parsedAddress.city);
+    setValue("billedTo.province", provinceCode);
+    setValue("billedTo.postalCode", client.postalCode || parsedAddress.postalCode);
+    setValue("billedTo.country", client.country || parsedAddress.country || "Canada");
     setValue("billedTo.gstNumber", client.gstNumber || "");
-    setValue("clientProvince", client.province);
+    setValue("clientProvince", provinceCode);
   };
 
   const buildInvoicePayload = (data: InvoiceFormData, clientId: string) => {

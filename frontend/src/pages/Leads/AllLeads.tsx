@@ -2769,21 +2769,21 @@ export const LeadFormDialog = ({
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <Label className="text-sm font-medium text-[#475569]">Follow-Up Date</Label>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="grid grid-cols-[minmax(132px,1fr)_64px_64px_74px] gap-2">
                     <Input
                       type="date"
                       value={followUpDateTimeParts.date}
                       onChange={(e) => updateDateTimeField("followUpDateTime", { date: e.target.value })}
-                      className="h-11 min-w-[220px] flex-[1.35_1_220px] rounded-md"
+                      className="h-11 min-w-0 rounded-md"
                     />
                     <Select
                       value={followUpDateTimeParts.hour}
                       onValueChange={(value) => updateDateTimeField("followUpDateTime", { hour: value })}
                       disabled={!followUpDateTimeParts.date}
                     >
-                      <SelectTrigger className="h-11 w-[92px] rounded-md">
+                      <SelectTrigger className="h-11 w-full rounded-md px-2">
                         <SelectValue placeholder="Hour" />
                       </SelectTrigger>
                       <SelectContent className="rounded-md">
@@ -2799,7 +2799,7 @@ export const LeadFormDialog = ({
                       onValueChange={(value) => updateDateTimeField("followUpDateTime", { minute: value })}
                       disabled={!followUpDateTimeParts.date}
                     >
-                      <SelectTrigger className="h-11 w-[92px] rounded-md">
+                      <SelectTrigger className="h-11 w-full rounded-md px-2">
                         <SelectValue placeholder="Min" />
                       </SelectTrigger>
                       <SelectContent className="rounded-md">
@@ -2815,7 +2815,7 @@ export const LeadFormDialog = ({
                       onValueChange={(value) => updateDateTimeField("followUpDateTime", { period: value as "AM" | "PM" })}
                       disabled={!followUpDateTimeParts.date}
                     >
-                      <SelectTrigger className="h-11 w-[96px] rounded-md">
+                      <SelectTrigger className="h-11 w-full rounded-md px-2">
                         <SelectValue placeholder="AM/PM" />
                       </SelectTrigger>
                       <SelectContent className="rounded-md">

@@ -1,11 +1,17 @@
 import { Invoice } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
-import type {
-    CanonicalInvoiceItemDto,
-} from '@contracts/invoice';
 import type { Currency, InvoiceStatus } from '@contracts/enums';
 
-type InvoiceItemDto = CanonicalInvoiceItemDto;
+type InvoiceItemDto = {
+    itemName?: string | null;
+    description: string;
+    details?: string | null;
+    quantity: number;
+    unitPrice: number;
+    amount: number;
+    taxRate: number | null;
+    sortOrder: number;
+};
 
 // ============================================================================
 // INVOICES DTOs - Matching Prisma Schema (Invoice, InvoiceItem)
@@ -105,7 +111,17 @@ type InvoiceWithRelations = Invoice & {
     quote?: { id: string; quoteNumber: string } | null;
     project?: { id: string; name: string | null; projectNumber: string | null } | null;
     contract?: { id: string; contractNumber: string; title: string } | null;
-    items?: { id: string; description: string; quantity: Decimal; unitPrice: Decimal; amount: Decimal; taxRate: Decimal | null; sortOrder: number }[];
+    items?: {
+        id: string;
+        itemName?: string | null;
+        description: string;
+        details?: string | null;
+        quantity: Decimal;
+        unitPrice: Decimal;
+        amount: Decimal;
+        taxRate: Decimal | null;
+        sortOrder: number;
+    }[];
     payments?: {
         id: string;
         amount: Decimal;
@@ -182,7 +198,9 @@ export function toInvoiceResponseDto(inv: InvoiceWithRelations): InvoiceResponse
         notes: inv.notes,
         terms: inv.terms,
         items: (inv.items || []).map((i) => ({
+            itemName: (i as any).itemName || i.description,
             description: i.description,
+            details: (i as any).details || null,
             quantity: Number(i.quantity),
             unitPrice: Number(i.unitPrice),
             amount: Number(i.amount),

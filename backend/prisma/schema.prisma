@@ -3688,6 +3688,8 @@ model InvoiceItem {
   invoice         Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   
   // Item details
+  itemName        String?
+  details         String?
   description     String
   quantity        Decimal   @db.Decimal(10, 2)
   unitPrice       Decimal   @db.Decimal(15, 2)

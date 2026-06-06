@@ -102,15 +102,21 @@ export class InvoicesRepository {
                 amountPaid: 0,
                 amountDue,
                 items: {
-                    create: data.items.map((item: any, index: number) => ({
-                        tenantId,
-                        description: item.description || item.itemName || '',
-                        quantity: item.quantity || 0,
-                        unitPrice: item.unitPrice ?? item.rate ?? 0,
-                        amount: item.amount || item.lineTotal || ((item.quantity || 0) * (item.unitPrice ?? item.rate ?? 0)),
-                        taxRate: item.taxRate,
-                        sortOrder: item.sortOrder || index,
-                    })),
+                    create: data.items.map((item: any, index: number) => {
+                        const itemName = item.itemName || item.name || item.description || `Item ${index + 1}`;
+                        const details = item.details ?? (item.itemName || item.name ? item.description : null);
+                        return {
+                            tenantId,
+                            itemName,
+                            details: details || null,
+                            description: itemName,
+                            quantity: item.quantity || 0,
+                            unitPrice: item.unitPrice ?? item.rate ?? 0,
+                            amount: item.amount || item.lineTotal || ((item.quantity || 0) * (item.unitPrice ?? item.rate ?? 0)),
+                            taxRate: item.taxRate,
+                            sortOrder: item.sortOrder || index,
+                        };
+                    }),
                 },
             } as any,
             include: invoiceInclude,
@@ -204,15 +210,21 @@ export class InvoicesRepository {
                 ...totals,
                 ...(data.items && {
                     items: {
-                        create: data.items.map((item: any, index: number) => ({
-                            tenantId,
-                            description: item.description || item.itemName || 'Item',
-                            quantity: item.quantity || 0,
-                            unitPrice: item.unitPrice ?? item.rate ?? 0,
-                            amount: item.amount || item.lineTotal || ((item.quantity || 0) * (item.unitPrice ?? item.rate ?? 0)),
-                            taxRate: item.taxRate,
-                            sortOrder: item.sortOrder || index,
-                        })),
+                        create: data.items.map((item: any, index: number) => {
+                            const itemName = item.itemName || item.name || item.description || `Item ${index + 1}`;
+                            const details = item.details ?? (item.itemName || item.name ? item.description : null);
+                            return {
+                                tenantId,
+                                itemName,
+                                details: details || null,
+                                description: itemName,
+                                quantity: item.quantity || 0,
+                                unitPrice: item.unitPrice ?? item.rate ?? 0,
+                                amount: item.amount || item.lineTotal || ((item.quantity || 0) * (item.unitPrice ?? item.rate ?? 0)),
+                                taxRate: item.taxRate,
+                                sortOrder: item.sortOrder || index,
+                            };
+                        }),
                     },
                 }),
             } as any,

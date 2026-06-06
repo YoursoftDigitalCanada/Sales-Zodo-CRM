@@ -496,10 +496,11 @@ const mapInvoiceItemsToFormItems = (
     const quantity = toNumber(item.quantity) || 1;
     const rate = toNumber(item.unitPrice);
     const amount = quantity * rate;
+    const itemName = readText(item.itemName) || readText(item.description) || `Line Item ${index + 1}`;
     return {
       id: readText(item.id) || crypto.randomUUID(),
-      name: readText(item.description) || `Line Item ${index + 1}`,
-      description: readText(item.description),
+      name: itemName,
+      description: readText(item.details),
       quantity,
       rate,
       taxType: taxRates.hst > 0 ? "HST" : taxRates.pst > 0 ? "GST+PST" : "GST",
@@ -1903,6 +1904,7 @@ const CreateInvoicePage = () => {
       items: data.items.map((item) => ({
         itemName: item.name,
         description: item.description || null,
+        details: item.description || null,
         quantity: item.quantity,
         rate: item.rate,
         taxApplied: (item.gst || 0) > 0 || (item.pst || 0) > 0 || (item.hst || 0) > 0,

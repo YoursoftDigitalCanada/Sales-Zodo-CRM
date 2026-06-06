@@ -621,7 +621,10 @@ export class InvoicesService {
         const itemsHtml = Array.isArray(invoice.items)
             ? invoice.items.map((item: any) => `
                 <tr>
-                  <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:13px;color:#0F172A;">${this.escapeHtml(item.description || 'Item')}</td>
+                  <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:13px;color:#0F172A;">
+                    <div style="font-weight:600;">${this.escapeHtml(item.itemName || item.description || 'Item')}</div>
+                    ${item.details ? `<div style="margin-top:4px;color:#64748B;font-size:12px;line-height:1.5;">${this.escapeHtml(item.details)}</div>` : ''}
+                  </td>
                   <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:13px;color:#475569;text-align:center;">${Number(item.quantity || 0).toFixed(2)}</td>
                   <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:13px;color:#475569;text-align:right;">${this.formatCurrency(Number(item.unitPrice || 0), currency)}</td>
                   <td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;font-size:13px;color:#0F172A;font-weight:600;text-align:right;">${this.formatCurrency(Number(item.amount || 0), currency)}</td>
@@ -866,7 +869,7 @@ export class InvoicesService {
         const addressBlockHeight = Math.max(fromLines.length, billToLines.length) * 5;
 
         const items = ((invoice as any).items || []).map((item: any) => [
-            item.description || 'Item',
+            [item.itemName || item.description || 'Item', item.details].filter(Boolean).join('\n'),
             Number(item.quantity || 0).toFixed(2),
             Number(item.unitPrice || 0).toFixed(2),
             Number(item.amount || 0).toFixed(2),

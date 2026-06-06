@@ -25,6 +25,7 @@ export const InvoiceAddressSchema = z.object({
 export const InvoiceItemSchema = z.object({
   itemName: z.string().min(1).max(255).optional(),
   description: z.string().optional().nullable(),
+  details: z.string().optional().nullable(),
   quantity: z.number().min(0).default(1).optional(),
   rate: z.number().min(0).optional(),
   taxApplied: z.boolean().default(false),

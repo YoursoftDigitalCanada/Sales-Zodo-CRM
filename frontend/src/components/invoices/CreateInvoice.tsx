@@ -758,11 +758,15 @@ const AddressBlock = ({
                 disabled={disabled}
                 className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm"
                 onSelectAddress={(details) => {
+                  const provinceCode = getProvinceCode(details.state);
                   field.onChange(getSelectedInvoiceAddress(details, field.value));
                   setValue(`${prefix}.city`, details.city || "", { shouldDirty: true });
-                  setValue(`${prefix}.province`, getProvinceCode(details.state), { shouldDirty: true });
+                  setValue(`${prefix}.province`, provinceCode, { shouldDirty: true });
                   setValue(`${prefix}.postalCode`, details.postalCode || "", { shouldDirty: true });
                   setValue(`${prefix}.country`, details.country || "Canada", { shouldDirty: true });
+                  if (isBilledTo) {
+                    setValue("clientProvince", provinceCode, { shouldDirty: true });
+                  }
                 }}
               />
             )}
@@ -785,7 +789,16 @@ const AddressBlock = ({
             name={`${prefix}.province`}
             control={control}
             render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
+              <Select
+                value={field.value}
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  if (isBilledTo) {
+                    setValue("clientProvince", value, { shouldDirty: true });
+                  }
+                }}
+                disabled={disabled}
+              >
                 <SelectTrigger className="h-10 rounded-md border-[rgba(15,23,42,0.06)] text-sm">
                   <SelectValue placeholder="Select Province" />
                 </SelectTrigger>

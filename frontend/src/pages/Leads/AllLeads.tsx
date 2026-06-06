@@ -1997,7 +1997,7 @@ export const LeadFormDialog = ({
                 Company
               </TabsTrigger>
               <TabsTrigger value="service" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
-                Need
+                Requirement
               </TabsTrigger>
               <TabsTrigger value="qualification" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
                 Qualification
@@ -2006,7 +2006,7 @@ export const LeadFormDialog = ({
                 Sales Actions
               </TabsTrigger>
               <TabsTrigger value="details" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm">
-                Lead Details
+                Additional Details
               </TabsTrigger>
             </TabsList>
 
@@ -2139,6 +2139,34 @@ export const LeadFormDialog = ({
 
             {/* ── TAB: Company Info ───────────────────────────────────────── */}
             <TabsContent value="property" className="space-y-4 mt-0">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Company Name</Label>
+                  <div className="relative">
+                    <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                    <Input
+                      value={formData.companyName}
+                      onChange={(e) => setFieldValue("companyName", e.target.value)}
+                      placeholder="Acme Inc."
+                      className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("companyName"))}
+                    />
+                  </div>
+                  {renderFieldError("companyName")}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#475569]">Job Title</Label>
+                  <div className="relative">
+                    <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
+                    <Input
+                      value={formData.jobTitle}
+                      onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+                      placeholder="VP of Sales"
+                      className="h-11 pl-10 rounded-md"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">
                   Company Address
@@ -2312,7 +2340,7 @@ export const LeadFormDialog = ({
               </div>
             </TabsContent>
 
-            {/* ── TAB: Sales Need ─────────────────────────────────────────── */}
+            {/* ── TAB: Requirement ─────────────────────────────────────────── */}
             <TabsContent value="service" className="space-y-4 mt-0">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">Product Interest <span className="text-red-500">*</span></Label>
@@ -2825,7 +2853,7 @@ export const LeadFormDialog = ({
               </div>
             </TabsContent>
 
-            {/* ── TAB: Lead Details (existing — status/temp/value/assignee) ── */}
+            {/* ── TAB: Additional Details (existing — status/temp/value/assignee) ── */}
             <TabsContent value="details" className="space-y-4 mt-0">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -2925,7 +2953,7 @@ export const LeadFormDialog = ({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#475569]">Lead Source</Label>
+                <Label className="text-sm font-medium text-[#475569]">Marketing Lead Source</Label>
                 <Select
                   value={formData.leadSourceId}
                   onValueChange={(val) => setFormData({ ...formData, leadSourceId: val })}
@@ -3014,34 +3042,6 @@ export const LeadFormDialog = ({
                 <p className="text-xs text-[#475569]">Separate tags with commas</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Job Title</Label>
-                  <div className="relative">
-                    <Briefcase size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-                    <Input
-                      value={formData.jobTitle}
-                      onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-                      placeholder="VP of Sales"
-                      className="h-11 pl-10 rounded-md"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#475569]">Website</Label>
-                  <div className="relative">
-                    <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
-                    <Input
-                      value={formData.website}
-                      onChange={(e) => setFieldValue("website", e.target.value)}
-                      placeholder="https://company.com"
-                      className={cn("h-11 pl-10 rounded-md", getFieldErrorClass("website"))}
-                    />
-                  </div>
-                  {renderFieldError("website")}
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#475569]">Notes</Label>
                 <Textarea
@@ -3064,6 +3064,9 @@ export const LeadFormDialog = ({
                 Previous
               </Button>
             )}
+            <Button type="button" variant="outline" onClick={() => void submitLeadForm()} disabled={saving} className="rounded-md">
+              Save Draft
+            </Button>
             <Button
               type="button"
               onClick={isLastTab ? () => void submitLeadForm() : handleNext}
@@ -3077,13 +3080,13 @@ export const LeadFormDialog = ({
                 </>
               ) : !isLastTab ? (
                 <>
-                  Next
+                  Save & Continue
                   <ArrowRight size={16} className="ml-2" />
                 </>
               ) : (
                 <>
                   {lead ? <Check size={16} className="mr-2" /> : <Plus size={16} className="mr-2" />}
-                  {lead ? "Update Lead" : "Add Lead"}
+                  {lead ? "Submit Lead" : "Submit Lead"}
                 </>
               )}
             </Button>

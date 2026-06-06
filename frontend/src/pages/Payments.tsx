@@ -44,7 +44,49 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 
-const PAYMENT_METHODS = ["BANK_TRANSFER", "E_TRANSFER", "CREDIT_CARD", "DEBIT_CARD", "CHECK", "CASH", "STRIPE", "PAYPAL", "OTHER"];
+const PAYMENT_METHODS = ["BANK_TRANSFER", "E_TRANSFER", "CREDIT_CARD", "DEBIT_CARD", "CHECK", "CASH", "STRIPE", "PAYPAL", "OTHER"] as const;
+const PAYMENT_METHOD_ALIASES: Record<string, typeof PAYMENT_METHODS[number]> = {
+  CARD: "CREDIT_CARD",
+  CREDITCARD: "CREDIT_CARD",
+  CREDIT_CARD: "CREDIT_CARD",
+  DEBITCARD: "DEBIT_CARD",
+  DEBIT_CARD: "DEBIT_CARD",
+  BANK: "BANK_TRANSFER",
+  TRANSFER: "BANK_TRANSFER",
+  WIRE: "BANK_TRANSFER",
+  WIRE_TRANSFER: "BANK_TRANSFER",
+  BANK_TRANSFER: "BANK_TRANSFER",
+  ETRANSFER: "E_TRANSFER",
+  E_TRANSFER: "E_TRANSFER",
+  INTERAC: "E_TRANSFER",
+  CHEQUE: "CHECK",
+  CHECK: "CHECK",
+  CASH: "CASH",
+  PAYPAL: "PAYPAL",
+  STRIPE: "STRIPE",
+  OTHER: "OTHER",
+};
+
+const normalizePaymentMethod = (value: unknown): typeof PAYMENT_METHODS[number] => {
+  const normalized = String(value || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+  return PAYMENT_METHOD_ALIASES[normalized]
+    || PAYMENT_METHOD_ALIASES[normalized.replaceAll("_", "")]
+    || "OTHER";
+};
+
+const toDateInputValue = (value: unknown) => {
+  const text = String(value || "").trim();
+  const calendarDate = text.match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
+  if (calendarDate) return calendarDate;
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? emptyForm.paymentDate : parsed.toISOString().slice(0, 10);
+};
+
+const apiErrorMessage = (error: any, fallback: string) => {
+  const errors = error?.response?.data?.details?.errors;
+  const firstError = errors && Object.values(errors).flat().find((value) => typeof value === "string");
+  return String(firstError || error?.response?.data?.message || error?.message || fallback);
+};
 
 const emptyForm = {
   invoiceId: "",
@@ -61,9 +103,16 @@ const money = (value: unknown, currency = "CAD") => new Intl.NumberFormat("en-CA
   maximumFractionDigits: 2,
 }).format(Number(value || 0));
 
-const dateLabel = (value?: string) => value
-  ? new Date(value).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })
-  : "-";
+const dateLabel = (value?: string) => {
+  if (!value) return "-";
+  const calendarDate = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const date = calendarDate
+    ? new Date(Number(calendarDate[1]), Number(calendarDate[2]) - 1, Number(calendarDate[3]))
+    : new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "-"
+    : date.toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
+};
 
 const methodLabel = (value?: string) => String(value || "OTHER").replaceAll("_", " ");
 
@@ -136,7 +185,7 @@ export default function PaymentsPage() {
   const updateMutation = useMutation({
     mutationFn: () => updatePayment(editingPayment!.id, {
       amount: Number(form.amount),
-      paymentMethod: form.paymentMethod,
+      paymentMethod: normalizePaymentMethod(form.paymentMethod),
       paymentDate: form.paymentDate,
       reference: form.reference,
       notes: form.notes,
@@ -148,7 +197,7 @@ export default function PaymentsPage() {
     },
     onError: (error: any) => toast({
       title: "Payment update failed",
-      description: error?.response?.data?.message || error?.message,
+      description: apiErrorMessage(error, "The payment could not be updated."),
       variant: "destructive",
     }),
   });
@@ -197,8 +246,8 @@ export default function PaymentsPage() {
     setForm({
       invoiceId: payment.invoiceId || payment.invoice?.id || "",
       amount: String(payment.amount || ""),
-      paymentMethod: payment.paymentMethod || "BANK_TRANSFER",
-      paymentDate: payment.paymentDate ? new Date(payment.paymentDate).toISOString().slice(0, 10) : emptyForm.paymentDate,
+      paymentMethod: normalizePaymentMethod(payment.paymentMethod),
+      paymentDate: toDateInputValue(payment.paymentDate),
       reference: payment.reference || "",
       notes: payment.notes || "",
     });

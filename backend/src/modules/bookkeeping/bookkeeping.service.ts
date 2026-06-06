@@ -356,7 +356,31 @@ export class BookkeepingService {
     if (isReconciled(existing)) throw new BadRequestError('Unreconcile this transaction before editing or voiding it.', ErrorCodes.INVALID_INPUT);
     await this.validateTransactionLinks(tenantId, data);
     if (existing.status === 'POSTED' && existing.accountId) await this.applyTransactionBalance(existing, -1);
-    const updated = await db().bookkeepingTransaction.update({ where: { id }, data: { ...data, amount: data.amount !== undefined ? requirePositiveAmount(data.amount) : undefined, transactionDate: data.transactionDate ? toDate(data.transactionDate) : undefined } });
+    const updateData = {
+      transactionNumber: data.transactionNumber,
+      accountId: data.accountId,
+      categoryId: data.categoryId,
+      vendorId: data.vendorId,
+      type: data.type,
+      sourceType: data.sourceType,
+      sourceId: data.sourceId,
+      description: data.description,
+      amount: data.amount !== undefined ? requirePositiveAmount(data.amount) : undefined,
+      currency: data.currency,
+      transactionDate: data.transactionDate ? toDate(data.transactionDate) : undefined,
+      paymentMethod: data.paymentMethod,
+      reference: data.reference,
+      clientId: data.clientId,
+      projectId: data.projectId,
+      invoiceId: data.invoiceId,
+      expenseId: data.expenseId,
+      fileId: data.fileId,
+      status: data.status,
+      isReconciled: data.isReconciled,
+      reconciledAt: data.reconciledAt,
+      metadata: data.metadata,
+    };
+    const updated = await db().bookkeepingTransaction.update({ where: { id }, data: updateData });
     if (updated.status === 'POSTED' && updated.accountId) await this.applyTransactionBalance(updated, 1);
     activityLogger.log({ tenantId, entityType: 'BookkeepingTransaction', entityId: id, action: 'UPDATE', module: 'bookkeeping', description: 'Updated bookkeeping transaction', userId: actorUserId });
     return updated;

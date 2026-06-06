@@ -69,6 +69,15 @@ function paymentContribution(payment: Record<string, any>): number {
   return 0;
 }
 
+function latestContributingPaymentDate(payments: Record<string, any>[]): Date | null {
+  return payments.reduce<Date | null>((latest, payment) => {
+    if (paymentContribution(payment) <= 0 || !payment.paymentDate) return latest;
+    const paymentDate = new Date(payment.paymentDate);
+    if (Number.isNaN(paymentDate.getTime())) return latest;
+    return !latest || paymentDate > latest ? paymentDate : latest;
+  }, null);
+}
+
 export class BillingService {
   private proposalHandlerInitialized = false;
 
@@ -517,13 +526,14 @@ export class BillingService {
     const total = toNumber(invoice.total);
     const amountDue = Math.max(total - amountPaid, 0);
     const status = amountDue === 0 ? 'PAID' : amountPaid > 0 ? 'PARTIALLY_PAID' : 'SENT';
+    const paidAt = amountDue === 0 ? latestContributingPaymentDate(payments) || invoice.paidAt || new Date() : null;
     return tx.invoice.update({
       where: { id_tenantId: { id: invoiceId, tenantId } },
       data: {
         amountPaid,
         amountDue,
         status,
-        paidAt: amountDue === 0 ? invoice.paidAt || new Date() : null,
+        paidAt,
       },
     });
   }
@@ -684,7 +694,7 @@ export class BillingService {
     const status = due <= 0 ? 'PAID' : 'PARTIALLY_PAID';
     const updatedInvoice = await prisma.invoice.update({
       where: { id_tenantId: { id: invoiceId, tenantId } },
-      data: { amountPaid: paid, amountDue: due, status: status as any, paidAt: status === 'PAID' ? new Date() : null },
+      data: { amountPaid: paid, amountDue: due, status: status as any, paidAt: status === 'PAID' ? payment.paymentDate : null },
       include: INVOICE_INCLUDE,
     });
     if (subscription && status === 'PAID') {

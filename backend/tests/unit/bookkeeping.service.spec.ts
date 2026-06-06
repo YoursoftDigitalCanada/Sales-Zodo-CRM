@@ -219,6 +219,11 @@ describe('BookkeepingService', () => {
 
     expect(mockDb.bookkeepingTransaction.create).toHaveBeenCalledTimes(1);
     expect(mockDb.bookkeepingTransaction.update).toHaveBeenCalledTimes(1);
+    expect(mockDb.bookkeepingTransaction.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.not.objectContaining({
+        skipSourceIdempotency: expect.anything(),
+      }),
+    }));
     expect(mockDb.bookkeepingTransaction.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         tenantId: 'tenant-1',

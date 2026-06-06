@@ -9,20 +9,46 @@ import { billingController } from './billing.controller';
 const router = Router();
 const idSchema = z.object({ params: z.object({ id: z.string().uuid() }) }).passthrough();
 const bodySchema = z.object({ body: z.object({}).passthrough() }).passthrough();
+const PAYMENT_METHODS = [
+  'CASH',
+  'CREDIT_CARD',
+  'DEBIT_CARD',
+  'BANK_TRANSFER',
+  'E_TRANSFER',
+  'CHECK',
+  'PAYPAL',
+  'STRIPE',
+  'OTHER',
+] as const;
+const PAYMENT_METHOD_ALIASES: Record<string, typeof PAYMENT_METHODS[number]> = {
+  CARD: 'CREDIT_CARD',
+  CREDITCARD: 'CREDIT_CARD',
+  CREDIT_CARD: 'CREDIT_CARD',
+  DEBITCARD: 'DEBIT_CARD',
+  DEBIT_CARD: 'DEBIT_CARD',
+  BANK: 'BANK_TRANSFER',
+  TRANSFER: 'BANK_TRANSFER',
+  WIRE: 'BANK_TRANSFER',
+  WIRE_TRANSFER: 'BANK_TRANSFER',
+  BANK_TRANSFER: 'BANK_TRANSFER',
+  ETRANSFER: 'E_TRANSFER',
+  E_TRANSFER: 'E_TRANSFER',
+  INTERAC: 'E_TRANSFER',
+  CHEQUE: 'CHECK',
+  CHECK: 'CHECK',
+  CASH: 'CASH',
+  PAYPAL: 'PAYPAL',
+  STRIPE: 'STRIPE',
+  OTHER: 'OTHER',
+};
+const paymentMethodSchema = z.preprocess((value) => {
+  const normalized = String(value || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+  return PAYMENT_METHOD_ALIASES[normalized] || PAYMENT_METHOD_ALIASES[normalized.replaceAll('_', '')] || normalized;
+}, z.enum(PAYMENT_METHODS));
 const paymentBodySchema = z.object({
   body: z.object({
     amount: z.coerce.number().positive(),
-    paymentMethod: z.enum([
-      'CASH',
-      'CREDIT_CARD',
-      'DEBIT_CARD',
-      'BANK_TRANSFER',
-      'E_TRANSFER',
-      'CHECK',
-      'PAYPAL',
-      'STRIPE',
-      'OTHER',
-    ]),
+    paymentMethod: paymentMethodSchema,
     paymentDate: z.coerce.date().optional(),
     reference: z.string().trim().max(255).optional().nullable(),
     notes: z.string().trim().max(5000).optional().nullable(),

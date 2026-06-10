@@ -438,22 +438,25 @@ export default function BookkeepingPage() {
             ))}
           </TabsList>
 
-          <TabsContent value="overview">
-            <div className="grid gap-6 lg:grid-cols-3">
-              <Panel className="lg:col-span-2">
-                <h2 className="mb-4 text-lg font-semibold text-[#0F172A]">Recent Transactions</h2>
-                <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} />
-              </Panel>
-              <Panel>
-                <h2 className="mb-4 text-lg font-semibold text-[#0F172A]">Operating Signals</h2>
-                <div className="space-y-4 text-sm">
-                  <Metric label="Unpaid invoices" value={dashboard.totals?.unpaidInvoices || 0} />
-                  <Metric label="Overdue invoices" value={dashboard.totals?.overdueInvoices || 0} />
-                  <Metric label="Pending expenses" value={dashboard.totals?.pendingExpenses || 0} />
-                  <Metric label="Bookkeeping accounts" value={accounts.length} />
-                </div>
-              </Panel>
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-4">
+              {[
+                ["Unpaid invoices", dashboard.totals?.unpaidInvoices || 0, "text-amber-600"],
+                ["Overdue invoices", dashboard.totals?.overdueInvoices || 0, "text-rose-600"],
+                ["Pending expenses", dashboard.totals?.pendingExpenses || 0, "text-slate-700"],
+                ["Bookkeeping accounts", accounts.length, "text-[#0891B2]"],
+              ].map(([label, value, tone]) => (
+                <Panel key={String(label)}>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#64748B]">{label}</p>
+                  <p className={`mt-3 text-3xl font-bold tracking-tight ${tone}`}>{value}</p>
+                </Panel>
+              ))}
             </div>
+
+            <Panel>
+              <h2 className="mb-4 text-lg font-semibold text-[#0F172A]">Recent Transactions</h2>
+              <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} />
+            </Panel>
           </TabsContent>
 
           <TabsContent value="transactions">

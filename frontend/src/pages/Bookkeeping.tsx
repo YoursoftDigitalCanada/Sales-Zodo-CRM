@@ -29,6 +29,7 @@ import {
   createVendor,
   deleteReconciliation,
   deleteRecurringRule,
+  deleteTransaction,
   deleteVendor,
   downloadBookkeepingCsv,
   getAccounts,
@@ -50,6 +51,7 @@ import {
   syncBookkeeping,
   reconcileTransaction,
   unreconcileTransaction,
+  updateTransaction,
   voidTransaction,
 } from "@/features/bookkeeping";
 import {
@@ -160,11 +162,30 @@ function normalizeVendorPayload(data: BookkeepingRecord) {
   };
 }
 
-function TransactionDialog({ accounts, categories, vendors, onSaved }: { accounts: BookkeepingRecord[]; categories: BookkeepingRecord[]; vendors: BookkeepingRecord[]; onSaved: () => void }) {
-  const [open, setOpen] = useState(false);
+function TransactionDialog({ accounts, categories, vendors, onSaved, tx, open: controlledOpen, onOpenChange }: { accounts: BookkeepingRecord[]; categories: BookkeepingRecord[]; vendors: BookkeepingRecord[]; onSaved: () => void; tx?: BookkeepingRecord; open?: boolean; onOpenChange?: (open: boolean) => void; }) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
+  const setOpen = onOpenChange || setUncontrolledOpen;
+
   const [saving, setSaving] = useState(false);
   const [receipt, setReceipt] = useState<File | null>(null);
-  const [form, setForm] = useState<BookkeepingRecord>({ type: "EXPENSE", description: "", amount: "", currency: "CAD", transactionDate: today(), status: "POSTED" });
+  
+  const defaultForm = { type: "EXPENSE", description: "", amount: "", currency: "CAD", transactionDate: today(), status: "POSTED" };
+  const [form, setForm] = useState<BookkeepingRecord>(defaultForm);
+
+  useEffect(() => {
+    if (open) {
+      if (tx) {
+        setForm({
+          ...tx,
+          amount: tx.amount || "",
+          transactionDate: tx.transactionDate ? new Date(tx.transactionDate).toISOString().slice(0, 10) : today()
+        });
+      } else {
+        setForm(defaultForm);
+      }
+    }
+  }, [open, tx]);
 
   const save = async () => {
     const amount = Number(form.amount);
@@ -185,7 +206,7 @@ function TransactionDialog({ accounts, categories, vendors, onSaved }: { account
         const uploaded = await uploadDocument(receipt, { documentType: "receipt", categoryId });
         fileId = uploaded.fileId;
       }
-      const transaction = await createTransaction({
+      const payload = {
         ...form,
         amount,
         accountId: form.accountId || null,
@@ -196,12 +217,20 @@ function TransactionDialog({ accounts, categories, vendors, onSaved }: { account
         status: form.status || "POSTED",
         description: form.description.trim(),
         fileId,
-      });
-      if (fileId && transaction?.id) {
-        await linkDocument(fileId, "BookkeepingTransaction", transaction.id);
+      };
+
+      if (tx) {
+        await updateTransaction(tx.id, payload);
+        toast.success("Transaction updated");
+      } else {
+        const transaction = await createTransaction(payload);
+        if (fileId && transaction?.id) {
+          await linkDocument(fileId, "BookkeepingTransaction", transaction.id);
+        }
+        toast.success("Transaction saved");
       }
-      toast.success("Transaction saved");
-      setForm({ type: "EXPENSE", description: "", amount: "", currency: "CAD", transactionDate: today(), status: "POSTED" });
+      
+      setForm(defaultForm);
       setReceipt(null);
       setOpen(false);
       onSaved();
@@ -214,7 +243,7 @@ function TransactionDialog({ accounts, categories, vendors, onSaved }: { account
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button className="rounded-xl bg-[#0891B2] hover:bg-[#0E7490] text-white"><Plus className="mr-2 h-4 w-4" />Add Transaction</Button></DialogTrigger>
+      {!tx && <DialogTrigger asChild><Button className="rounded-xl bg-[#0891B2] hover:bg-[#0E7490] text-white"><Plus className="mr-2 h-4 w-4" />Add Transaction</Button></DialogTrigger>}
       <DialogContent className="max-w-2xl rounded-2xl">
         <DialogHeader>
           <DialogTitle className="text-[#0F172A]">Manual Transaction</DialogTitle>
@@ -293,6 +322,7 @@ export default function BookkeepingPage() {
   const [reconciliations, setReconciliations] = useState<BookkeepingRecord[]>([]);
   const [recurringRules, setRecurringRules] = useState<BookkeepingRecord[]>([]);
   const [reports, setReports] = useState<BookkeepingRecord>({});
+  const [editingTx, setEditingTx] = useState<BookkeepingRecord | null>(null);
 
   const reload = () => setRefreshKey((key) => key + 1);
   const filters = useMemo(() => ({ search, dateFrom, dateTo }), [search, dateFrom, dateTo]);
@@ -312,7 +342,7 @@ export default function BookkeepingPage() {
     async function load() {
       setLoading(true);
       const [dash, accountRes, categoryRes, vendorRes, transactionRes, transferRes, journalRes, recRes, recurringRes, pl, cash, tax, balance] = await Promise.all([
-        safe(getBookkeepingDashboard(), {}, "dashboard"),
+        safe(getBookkeepingDashboard(filters), {}, "dashboard"),
         safe(getAccounts({ limit: 200 }), emptyList, "accounts"),
         safe(getCategories({ limit: 200 }), emptyList, "categories"),
         safe(getVendors({ limit: 200 }), emptyList, "vendors"),
@@ -466,7 +496,8 @@ export default function BookkeepingPage() {
           <TabsContent value="transactions">
             <Panel>
               <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-[#0F172A]">Transactions Ledger</h2><TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} /></div>
-              <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} />
+              <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={async (id) => { await deleteTransaction(id); reload(); }} />
+              {editingTx && <TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} tx={editingTx} open={true} onOpenChange={(o) => { if (!o) setEditingTx(null); }} />}
             </Panel>
           </TabsContent>
 
@@ -539,6 +570,8 @@ function TransactionTable({
   onVoid: (id: string) => Promise<void>;
   onReceipt: (tx: BookkeepingRecord, file: File) => Promise<void>;
   onToggleReconcile: (tx: BookkeepingRecord) => Promise<void>;
+  onEdit?: (tx: BookkeepingRecord) => void;
+  onDelete?: (id: string) => Promise<void>;
 }) {
   if (!rows.length) return <EmptyState title="No transactions found." />;
   return (
@@ -601,11 +634,15 @@ function TransactionTable({
                       Void
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem onClick={() => toast.info("Edit not fully implemented yet.")} className="cursor-pointer rounded-lg font-medium">
+                  <DropdownMenuItem onClick={() => onEdit?.(tx)} className="cursor-pointer rounded-lg font-medium">
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => toast.info("Delete not fully implemented yet.")} className="cursor-pointer rounded-lg text-rose-600 focus:text-rose-600 font-medium">
+                  <DropdownMenuItem onClick={() => {
+                    if (confirm("Are you sure you want to permanently delete this transaction?")) {
+                      onDelete?.(tx.id).catch(() => toast.error("Failed to delete transaction"));
+                    }
+                  }} className="cursor-pointer rounded-lg text-rose-600 focus:text-rose-600 font-medium">
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>

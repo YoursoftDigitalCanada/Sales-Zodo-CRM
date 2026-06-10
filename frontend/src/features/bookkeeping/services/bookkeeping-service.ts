@@ -23,8 +23,8 @@ export async function syncBookkeeping() {
   return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/sync")));
 }
 
-export async function getBookkeepingDashboard() {
-  return unwrap<BookkeepingRecord>((await api.get("/bookkeeping/dashboard")));
+export async function getBookkeepingDashboard(params?: Record<string, unknown>) {
+  return unwrap<BookkeepingRecord>((await api.get("/bookkeeping/dashboard", { params })));
 }
 
 export async function getAccounts(params?: Record<string, unknown>) {
@@ -81,6 +81,14 @@ export async function getTransactions(params?: Record<string, unknown>) {
 
 export async function createTransaction(data: BookkeepingRecord) {
   return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/transactions", data)));
+}
+
+export async function updateTransaction(id: string, data: BookkeepingRecord) {
+  return unwrap<BookkeepingRecord>((await api.put(`/bookkeeping/transactions/${id}`, data)));
+}
+
+export async function deleteTransaction(id: string) {
+  await api.delete(`/bookkeeping/transactions/${id}`);
 }
 
 export async function voidTransaction(id: string) {

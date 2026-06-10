@@ -700,17 +700,35 @@ export class BookkeepingService {
     return { created: created.length };
   }
 
-  async dashboard(tenantId: string) {
+  async dashboard(tenantId: string, query: Record<string, any> = {}) {
     await this.setupIfEmpty(tenantId);
-    const now = new Date();
-    const yearStart = new Date(now.getFullYear(), 0, 1);
-    const transactions: any[] = await this.reportTransactions(tenantId, yearStart, now);
-    const income = transactions.reduce((sum: number, tx: any) => sum + this.incomeImpact(tx), 0);
+    let from = new Date(new Date().getFullYear(), 0, 1);
+    let to = new Date();
+    
+    if (query.dateFrom) from = new Date(query.dateFrom);
+    if (query.dateTo) {
+      to = new Date(query.dateTo);
+      to.setUTCHours(23, 59, 59, 999);
+    }
+    
+    // 1. Calculate Income from Invoice Payments
+    const invoicePayments = await prisma.invoicePayment.findMany({
+      where: {
+        tenantId,
+        paymentDate: { gte: from, lte: to },
+        status: { in: ['SUCCESSFUL', 'COMPLETED', 'PAID'] }
+      }
+    });
+    const income = invoicePayments.reduce((sum, p) => sum + (toNumber(p.amount) - toNumber(p.refundAmount || 0)), 0);
+
+    // 2. Calculate Expenses from Bookkeeping Transactions
+    const transactions: any[] = await this.reportTransactions(tenantId, from, to);
     const expenses = transactions.reduce((sum: number, tx: any) => sum + this.expenseImpact(tx), 0);
+
     const [accounts, unpaidInvoices, overdueInvoices, pendingExpenses, recentTransactions] = await Promise.all([
       db().bookkeepingAccount.findMany({ where: { tenantId, isActive: true } }),
       prisma.invoice.count({ where: { tenantId, status: { in: ['SENT', 'OVERDUE', 'PARTIALLY_PAID'] } as any } }),
-      prisma.invoice.count({ where: { tenantId, dueDate: { lt: now }, status: { notIn: ['PAID', 'CANCELLED'] } as any } }),
+      prisma.invoice.count({ where: { tenantId, dueDate: { lt: new Date() }, status: { notIn: ['PAID', 'CANCELLED'] } as any } }),
       prisma.expense.count({ where: { tenantId, status: { in: ['DRAFT', 'PENDING_APPROVAL'] } as any } }),
       db().bookkeepingTransaction.findMany({ where: { tenantId }, orderBy: { transactionDate: 'desc' }, take: 8 }),
     ]);
@@ -728,9 +746,9 @@ export class BookkeepingService {
       monthlyIncomeTrend: this.monthlyTrend(transactions, 'INCOME'),
       monthlyExpenseTrend: this.monthlyTrend(transactions, 'EXPENSE'),
       recentTransactions,
-      topExpenseCategories: await this.topCategories(tenantId, 'EXPENSE', yearStart, now),
-      topCustomersByIncome: await this.topCustomersByIncome(tenantId, yearStart, now),
-      topVendorsBySpend: await this.topVendorsBySpend(tenantId, yearStart, now),
+      topExpenseCategories: await this.topCategories(tenantId, 'EXPENSE', from, to),
+      topCustomersByIncome: await this.topCustomersByIncome(tenantId, from, to),
+      topVendorsBySpend: await this.topVendorsBySpend(tenantId, from, to),
     };
   }
 
@@ -1124,6 +1142,26 @@ export class BookkeepingService {
     }
 
     return { success: true, createdCount, newAccounts: (accountsToCreate || []).length, newVendors: (vendorsToCreate || []).length, newCategories: (categoriesToCreate || []).length };
+  }
+
+
+  async deleteTransaction(id: string, tenantId: string, actorUserId?: string) {
+    const existing = await db().bookkeepingTransaction.findUnique({ where: { id, tenantId } });
+    if (!existing) throw new Error('Transaction not found');
+
+    if (existing.accountId && existing.status !== 'VOID') {
+      const isExpense = existing.type === 'EXPENSE' || existing.type === 'REFUND';
+      const isIncome = existing.type === 'INCOME';
+      let oldDelta = 0;
+      if (isExpense) oldDelta = toNumber(existing.amount);
+      if (isIncome) oldDelta = -toNumber(existing.amount);
+      if (oldDelta !== 0) {
+        await db().bookkeepingAccount.update({ where: { id: existing.accountId }, data: { currentBalance: { increment: oldDelta } } });
+      }
+    }
+
+    await db().bookkeepingTransaction.delete({ where: { id, tenantId } });
+    return { success: true };
   }
 }
 

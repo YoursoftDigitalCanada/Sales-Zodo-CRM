@@ -14,7 +14,7 @@ function actor(req: Request) {
 export class BookkeepingController {
   setup = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.setup(tenant(req), actor(req)), 'Bookkeeping initialized'); } catch (error) { next(error); } };
   sync = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.sync(tenant(req), actor(req)), 'Bookkeeping synced'); } catch (error) { next(error); } };
-  dashboard = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.dashboard(tenant(req))); } catch (error) { next(error); } };
+  dashboard = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.dashboard(tenant(req), req.query)); } catch (error) { next(error); } };
 
   listAccounts = async (req: Request, res: Response, next: NextFunction) => { try { const result = await bookkeepingService.listAccounts(tenant(req), req.query); sendSuccess(res, result.data, undefined, 200, result.meta); } catch (error) { next(error); } };
   createAccount = async (req: Request, res: Response, next: NextFunction) => { try { sendCreated(res, await bookkeepingService.createAccount(tenant(req), sanitizeBody(req.body), actor(req)), 'Account created'); } catch (error) { next(error); } };
@@ -38,7 +38,7 @@ export class BookkeepingController {
   importTransactions = async (req: Request, res: Response, next: NextFunction) => { try { sendCreated(res, await bookkeepingService.importTransactions(tenant(req), sanitizeBody(req.body), actor(req)), 'Transactions imported'); } catch (error) { next(error); } };
   getTransaction = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.getTransaction(req.params.id, tenant(req))); } catch (error) { next(error); } };
   updateTransaction = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.updateTransaction(req.params.id, tenant(req), sanitizeBody(req.body), actor(req)), 'Transaction updated'); } catch (error) { next(error); } };
-  deleteTransaction = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.voidTransaction(req.params.id, tenant(req), actor(req)), 'Transaction voided'); } catch (error) { next(error); } };
+  deleteTransaction = async (req: Request, res: Response, next: NextFunction) => { try { await bookkeepingService.deleteTransaction(req.params.id, tenant(req), actor(req)); sendNoContent(res); } catch (error) { next(error); } };
   voidTransaction = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.voidTransaction(req.params.id, tenant(req), actor(req)), 'Transaction voided'); } catch (error) { next(error); } };
   attachReceipt = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.attachReceipt(req.params.id, tenant(req), req.body.fileId, actor(req)), 'Receipt attached'); } catch (error) { next(error); } };
   reconcileTransaction = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.reconcileTransaction(req.params.id, tenant(req), actor(req)), 'Transaction reconciled'); } catch (error) { next(error); } };

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Upload, FileText, CheckCircle, AlertTriangle, ArrowRight, X } from "lucide-react";
 import { Progress } from "../ui/progress";
 import { toast } from "sonner";
-import axios from "axios";
+import api from "@/lib/axios";
 
 function parseMoney(value: any) {
   if (!value) return 0;
@@ -214,9 +214,6 @@ export function ImportTransactionsDialog({
     setStep("IMPORTING");
     setProgress(10);
     try {
-      const token = localStorage.getItem("auth_token");
-      const tenantId = localStorage.getItem("tenantId");
-      
       const payload = {
         accountsToCreate: previewData.accounts,
         vendorsToCreate: previewData.vendors,
@@ -227,19 +224,17 @@ export function ImportTransactionsDialog({
       };
 
       setProgress(50);
-      const { data } = await axios.post(`/api/bookkeeping/import`, payload, {
-        headers: { Authorization: `Bearer ${token}`, "X-Tenant-Id": tenantId }
-      });
+      const { data } = await api.post(`/bookkeeping/import`, payload);
       
       setProgress(100);
       setTimeout(() => {
         setStep("SUCCESS");
-        toast.success(`Imported ${data.createdCount} transactions successfully`);
+        toast.success(`Imported ${data.createdCount || data.data?.createdCount || 0} transactions successfully`);
         onSuccess();
       }, 500);
     } catch (error: any) {
       console.error(error);
-      toast.error(error.response?.data?.error || "Failed to import transactions");
+      toast.error(error.response?.data?.error || error.response?.data?.message || "Failed to import transactions");
       setStep("PREVIEW");
     }
   };

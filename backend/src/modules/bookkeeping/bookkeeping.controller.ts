@@ -35,6 +35,7 @@ export class BookkeepingController {
 
   listTransactions = async (req: Request, res: Response, next: NextFunction) => { try { const result = await bookkeepingService.listTransactions(tenant(req), req.query); sendSuccess(res, result.data, undefined, 200, result.meta); } catch (error) { next(error); } };
   createTransaction = async (req: Request, res: Response, next: NextFunction) => { try { sendCreated(res, await bookkeepingService.createTransaction(tenant(req), sanitizeBody(req.body), actor(req)), 'Transaction created'); } catch (error) { next(error); } };
+  importTransactions = async (req: Request, res: Response, next: NextFunction) => { try { sendCreated(res, await bookkeepingService.importTransactions(tenant(req), sanitizeBody(req.body), actor(req)), 'Transactions imported'); } catch (error) { next(error); } };
   getTransaction = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.getTransaction(req.params.id, tenant(req))); } catch (error) { next(error); } };
   updateTransaction = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.updateTransaction(req.params.id, tenant(req), sanitizeBody(req.body), actor(req)), 'Transaction updated'); } catch (error) { next(error); } };
   deleteTransaction = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.voidTransaction(req.params.id, tenant(req), actor(req)), 'Transaction voided'); } catch (error) { next(error); } };

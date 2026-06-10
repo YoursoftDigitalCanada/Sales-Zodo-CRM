@@ -4,6 +4,7 @@ import { authenticate, loadEmployee } from '../../common/middleware/auth.middlew
 import { requireAnyPermission, requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { bookkeepingController } from './bookkeeping.controller';
+import { importBookkeepingPayloadSchema } from './bookkeeping.import.dto';
 import {
   attachReceiptSchema,
   createAccountSchema,
@@ -62,6 +63,7 @@ router.delete('/vendors/:id', canDeleteBookkeeping, validate(idSchema), bookkeep
 
 router.get('/transactions', requirePermission(PERMISSIONS.BOOKKEEPING_VIEW), validate(listQuerySchema), bookkeepingController.listTransactions);
 router.post('/transactions', canCreateBookkeeping, validate(createTransactionSchema), bookkeepingController.createTransaction);
+router.post('/import', canCreateBookkeeping, validate(importBookkeepingPayloadSchema), bookkeepingController.importTransactions);
 router.get('/transactions/:id', requirePermission(PERMISSIONS.BOOKKEEPING_VIEW), validate(idSchema), bookkeepingController.getTransaction);
 router.put('/transactions/:id', canUpdateBookkeeping, validate(idSchema), validate(updateTransactionSchema), bookkeepingController.updateTransaction);
 router.delete('/transactions/:id', canDeleteBookkeeping, validate(idSchema), bookkeepingController.deleteTransaction);

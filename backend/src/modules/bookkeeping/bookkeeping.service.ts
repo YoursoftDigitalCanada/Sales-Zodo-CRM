@@ -1081,6 +1081,50 @@ export class BookkeepingService {
     if (tx.type === 'EXPENSE' || tx.type === 'REFUND') return toNumber(tx.amount);
     return 0;
   }
+
+  async importTransactions(tenantId: string, payload: any, actorUserId?: string) {
+    const { accountsToCreate, vendorsToCreate, categoriesToCreate, transactions } = payload;
+    const mappedAccounts: Record<string, string> = {};
+    const mappedVendors: Record<string, string> = {};
+    const mappedCategories: Record<string, string> = {};
+
+    for (const acc of accountsToCreate || []) {
+      const created = await this.createAccount(tenantId, { name: acc.name, type: acc.type, isBankAccount: acc.isBankAccount, openingBalance: 0 }, actorUserId);
+      mappedAccounts[acc.tempId] = created.id;
+    }
+
+    for (const v of vendorsToCreate || []) {
+      const created = await this.createVendor(tenantId, { name: v.name }, actorUserId);
+      mappedVendors[v.tempId] = created.id;
+    }
+
+    for (const c of categoriesToCreate || []) {
+      const created = await this.createCategory(tenantId, { name: c.name, type: c.type }, actorUserId);
+      mappedCategories[c.tempId] = created.id;
+    }
+
+    let createdCount = 0;
+
+    for (const tx of transactions || []) {
+      const accountId = mappedAccounts[tx.accountId] || tx.accountId;
+      const vendorId = mappedVendors[tx.vendorId] || tx.vendorId;
+      const categoryId = mappedCategories[tx.categoryId] || tx.categoryId;
+
+      if (!accountId) continue;
+
+      await this.createTransaction(tenantId, {
+        ...tx,
+        accountId,
+        vendorId: vendorId || null,
+        categoryId: categoryId || null,
+        skipSourceIdempotency: true
+      }, actorUserId);
+
+      createdCount++;
+    }
+
+    return { success: true, createdCount, newAccounts: (accountsToCreate || []).length, newVendors: (vendorsToCreate || []).length, newCategories: (categoriesToCreate || []).length };
+  }
 }
 
 export const bookkeepingService = new BookkeepingService();

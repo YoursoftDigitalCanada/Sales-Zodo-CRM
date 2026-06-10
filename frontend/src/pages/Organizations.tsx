@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Building2, ExternalLink, Loader2, Mail, Pencil, Phone, Plus, Search, Trash2, Users, X } from "lucide-react";
+import { Building2, ExternalLink, Loader2, Mail, Pencil, Phone, Plus, Search, Trash2, Users, X, RefreshCw } from "lucide-react";
 import { WorkspaceHero } from "@/components/crm/WorkspaceUi";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -129,7 +129,7 @@ function OrganizationStatCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       whileHover={{ y: -4 }}
-      className="group rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-5 transition-all hover:border-[#0891B2]/30 hover:shadow-md"
+      className="group rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-5 transition-all hover:border-[#0891B2]/30 hover:shadow-md"
     >
       <div className="flex items-start justify-between">
         <div>
@@ -153,6 +153,9 @@ export default function OrganizationsPage() {
   const { toast } = useToast();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [industryFilter, setIndustryFilter] = useState("ALL");
+  const [territoryFilter, setTerritoryFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -171,14 +174,31 @@ export default function OrganizationsPage() {
   const [form, setForm] = useState<OrgForm>(emptyForm);
 
   const filtered = useMemo(() => {
+    let result = organizations;
+    
+    if (statusFilter !== "ALL") {
+      result = result.filter((org) => org.status === statusFilter);
+    }
+    if (industryFilter !== "ALL") {
+      result = result.filter((org) => org.industry === industryFilter);
+    }
+    if (territoryFilter !== "ALL") {
+      result = result.filter((org) => org.territory === territoryFilter);
+    }
+
     const q = search.trim().toLowerCase();
-    if (!q) return organizations;
-    return organizations.filter((org) =>
+    if (!q) return result;
+    return result.filter((org) =>
       [org.clientName, org.website, org.industry, org.territory, org.primaryEmail]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(q)),
     );
-  }, [organizations, search]);
+  }, [organizations, search, statusFilter, industryFilter, territoryFilter]);
+
+  const uniqueIndustries = useMemo(() => Array.from(new Set(organizations.map((org) => org.industry).filter(Boolean))).sort(), [organizations]);
+  const uniqueTerritories = useMemo(() => Array.from(new Set(organizations.map((org) => org.territory).filter(Boolean))).sort(), [organizations]);
+
+  const hasActiveFilters = Boolean(search) || statusFilter !== "ALL" || industryFilter !== "ALL" || territoryFilter !== "ALL";
 
   const stats = useMemo(() => ({
     total: organizations.length,
@@ -332,7 +352,7 @@ export default function OrganizationsPage() {
   return (
     <main className="min-h-screen bg-[#F8FAFC] p-4 md:p-6">
       <div className="mx-auto max-w-7xl space-y-5">
-        <WorkspaceHero eyebrow="Customer Accounts" title="Sales" accent="Organizations" description="Company accounts connected to contacts, deals, documents, invoices, and customer lifecycle automation." icon={Building2} actions={<Button onClick={openCreate} className="rounded-md bg-[#0891B2] text-white hover:bg-[#0E7490]"><Plus size={16} className="mr-2" />Create Organization</Button>} />
+        <WorkspaceHero eyebrow="Customer Accounts" title="Sales" accent="Organizations" description="Company accounts connected to contacts, deals, documents, invoices, and customer lifecycle automation." icon={Building2} actions={<Button onClick={openCreate} className="rounded-xl bg-[#0891B2] text-white hover:bg-[#0E7490]"><Plus size={16} className="mr-2" />Create Organization</Button>} />
 
         <div className="grid gap-3 md:grid-cols-4">
           {[
@@ -352,13 +372,89 @@ export default function OrganizationsPage() {
           ))}
         </div>
 
-        <div className="overflow-hidden rounded-md border border-[rgba(15,23,42,0.06)] bg-white">
-          <div className="flex items-center gap-3 border-b border-[rgba(15,23,42,0.06)] p-4">
-            <div className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search organizations, website, industry, territory..." className="h-10 rounded-md border-[rgba(15,23,42,0.06)] pl-10 focus-visible:ring-[#0891B2]/20" />
+        <div className="overflow-hidden rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white shadow-sm flex flex-col">
+          <div className="border-b border-[rgba(15,23,42,0.06)] p-6 bg-[#F8FAFC]">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="relative flex-1 sm:max-w-md">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+                <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search organizations, website, email..." className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] pl-10 focus-visible:ring-[#0891B2]/20" />
+              </div>
+              <div className="flex items-center gap-2 overflow-x-auto">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[120px] sm:w-[140px] h-10 rounded-xl border-[rgba(15,23,42,0.06)] text-sm flex-shrink-0">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="ALL" className="rounded-xl">All Statuses</SelectItem>
+                    <SelectItem value="ACTIVE" className="rounded-xl">Active</SelectItem>
+                    <SelectItem value="PROSPECT" className="rounded-xl">Prospect</SelectItem>
+                    <SelectItem value="INACTIVE" className="rounded-xl">Inactive</SelectItem>
+                    <SelectItem value="CHURNED" className="rounded-xl">Churned</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={industryFilter} onValueChange={setIndustryFilter}>
+                  <SelectTrigger className="w-[120px] sm:w-[150px] h-10 rounded-xl border-[rgba(15,23,42,0.06)] text-sm flex-shrink-0">
+                    <SelectValue placeholder="Industry" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl max-h-64">
+                    <SelectItem value="ALL" className="rounded-xl">All Industries</SelectItem>
+                    {uniqueIndustries.map((ind) => (
+                      <SelectItem key={String(ind)} value={String(ind)} className="rounded-xl">
+                        {String(ind)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={territoryFilter} onValueChange={setTerritoryFilter}>
+                  <SelectTrigger className="w-[120px] sm:w-[140px] h-10 rounded-xl border-[rgba(15,23,42,0.06)] text-sm flex-shrink-0">
+                    <SelectValue placeholder="Territory" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl max-h-64">
+                    <SelectItem value="ALL" className="rounded-xl">All Territories</SelectItem>
+                    {uniqueTerritories.map((terr) => (
+                      <SelectItem key={String(terr)} value={String(terr)} className="rounded-xl">
+                        {String(terr)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" onClick={loadOrganizations} className="rounded-xl h-10"><RefreshCw size={14} className="mr-2" />Refresh</Button>
+              </div>
             </div>
-            <Button variant="outline" onClick={loadOrganizations} className="rounded-md">Refresh</Button>
+
+            {/* Active Filter Chips */}
+            {hasActiveFilters && (
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                <span className="text-xs text-[#94A3B8] font-medium">Active filters:</span>
+                {search && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-[rgba(15,23,42,0.06)] text-[#475569] rounded-lg text-xs shadow-sm">
+                    <Search size={10} /> "{search}"
+                    <button onClick={() => setSearch("")} className="ml-0.5 hover:text-red-500 transition-colors"><X size={12} /></button>
+                  </span>
+                )}
+                {statusFilter !== "ALL" && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-[rgba(15,23,42,0.06)] text-[#475569] rounded-lg text-xs shadow-sm">
+                    Status: {statusFilter.charAt(0) + statusFilter.slice(1).toLowerCase()}
+                    <button onClick={() => setStatusFilter("ALL")} className="ml-0.5 hover:text-red-500 transition-colors"><X size={12} /></button>
+                  </span>
+                )}
+                {industryFilter !== "ALL" && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-[rgba(15,23,42,0.06)] text-[#475569] rounded-lg text-xs shadow-sm">
+                    Industry: {industryFilter}
+                    <button onClick={() => setIndustryFilter("ALL")} className="ml-0.5 hover:text-red-500 transition-colors"><X size={12} /></button>
+                  </span>
+                )}
+                {territoryFilter !== "ALL" && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-[rgba(15,23,42,0.06)] text-[#475569] rounded-lg text-xs shadow-sm">
+                    Territory: {territoryFilter}
+                    <button onClick={() => setTerritoryFilter("ALL")} className="ml-0.5 hover:text-red-500 transition-colors"><X size={12} /></button>
+                  </span>
+                )}
+                <button onClick={() => { setSearch(""); setStatusFilter("ALL"); setIndustryFilter("ALL"); setTerritoryFilter("ALL"); }} className="text-xs text-[#0891B2] hover:text-[#0E7490] font-medium transition-colors ml-1">
+                  Clear all
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="overflow-x-auto">
@@ -397,8 +493,8 @@ export default function OrganizationsPage() {
                     <td className="px-4 py-4">{org.territory || "-"}</td>
                     <td className="px-4 py-4">
                       <div className="flex justify-end gap-2">
-                        <Button size="icon" variant="outline" onClick={() => openEdit(org)} className="h-9 w-9 rounded-md hover:border-[#0891B2]/30 hover:bg-[#0891B2]/10 hover:text-[#0891B2]"><Pencil size={15} /></Button>
-                        <Button size="icon" variant="outline" onClick={() => removeOrganization(org)} className="h-9 w-9 rounded-md text-red-600"><Trash2 size={15} /></Button>
+                        <Button size="icon" variant="outline" onClick={() => openEdit(org)} className="h-9 w-9 rounded-xl hover:border-[#0891B2]/30 hover:bg-[#0891B2]/10 hover:text-[#0891B2]"><Pencil size={15} /></Button>
+                        <Button size="icon" variant="outline" onClick={() => removeOrganization(org)} className="h-9 w-9 rounded-xl text-red-600"><Trash2 size={15} /></Button>
                       </div>
                     </td>
                   </tr>
@@ -412,7 +508,7 @@ export default function OrganizationsPage() {
       </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md p-0 sm:max-w-[760px]">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl p-0 sm:max-w-[760px]">
           <DialogHeader className="border-b border-[rgba(15,23,42,0.06)] bg-[#ECFEFF] p-5">
             <DialogTitle>{editing ? "Edit Organization" : "New Organization"}</DialogTitle>
           </DialogHeader>
@@ -503,7 +599,7 @@ export default function OrganizationsPage() {
           </div>
           <div className="flex justify-end gap-3 border-t border-[rgba(15,23,42,0.06)] p-5">
             <Button variant="outline" onClick={() => setModalOpen(false)} className="rounded-md">Cancel</Button>
-            <Button onClick={saveOrganization} disabled={saving} className="rounded-md bg-[#0891B2] text-white hover:bg-[#0E7490]">
+            <Button onClick={saveOrganization} disabled={saving} className="rounded-xl bg-[#0891B2] text-white hover:bg-[#0E7490]">
               {saving ? <Loader2 size={16} className="mr-2 animate-spin" /> : null}
               {editing ? "Update" : "Create"}
             </Button>
@@ -512,7 +608,7 @@ export default function OrganizationsPage() {
       </Dialog>
 
       <Dialog open={Boolean(viewing)} onOpenChange={() => setViewing(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-md p-0 sm:max-w-[900px]">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl p-0 sm:max-w-[900px]">
           {viewing ? (
             <>
               <div className="flex items-start justify-between border-b border-[rgba(15,23,42,0.06)] bg-[#ECFEFF] p-5">
@@ -536,7 +632,7 @@ export default function OrganizationsPage() {
                   <TabsTrigger value="activity">Activity</TabsTrigger>
                 </TabsList>
                 <TabsContent value="details" className="mt-5 grid gap-4 md:grid-cols-2">
-                  <div className="md:col-span-2 rounded-md border border-[#0891B2]/15 bg-[#ECFEFF] p-4">
+                  <div className="md:col-span-2 rounded-2xl border border-[#0891B2]/15 bg-[#ECFEFF] p-5">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-[#0F172A]">Automation Links</p>
@@ -599,14 +695,14 @@ function Field({ label, value, onChange, type = "text", required = false }: { la
   return (
     <div className="space-y-2">
       <Label>{label} {required ? <span className="text-red-500">*</span> : null}</Label>
-      <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="h-11 rounded-md border-[rgba(15,23,42,0.06)] focus-visible:ring-[#0891B2]/20" />
+      <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="h-11 rounded-xl border-[rgba(15,23,42,0.06)] focus-visible:ring-[#0891B2]/20" />
     </div>
   );
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-4 transition-all hover:border-[#0891B2]/20 hover:shadow-sm">
+    <div className="rounded-xl border border-[rgba(15,23,42,0.06)] bg-white p-4 transition-all hover:border-[#0891B2]/20 hover:shadow-sm">
       <p className="text-xs uppercase tracking-wide text-[#64748B]">{label}</p>
       <p className="mt-1 font-semibold text-[#0F172A]">{value}</p>
     </div>
@@ -617,7 +713,7 @@ function LinkedTable({ loading, rows, columns, empty }: { loading: boolean; rows
   if (loading) return <div className="py-8 text-center text-[#64748B]"><Loader2 className="mx-auto mb-2 animate-spin" />Loading...</div>;
   if (!rows.length) return <div className="rounded-md border border-dashed border-[rgba(15,23,42,0.16)] py-8 text-center text-[#64748B]">{empty}</div>;
   return (
-    <div className="overflow-x-auto rounded-md border border-[rgba(15,23,42,0.06)]">
+    <div className="overflow-x-auto rounded-xl border border-[rgba(15,23,42,0.06)]">
       <table className="w-full min-w-[620px] text-sm">
         <thead className="bg-[#F8FAFC] text-left text-xs uppercase tracking-wide text-[#64748B]">
           <tr>{columns.map((column) => <th key={column} className="px-4 py-3">{column.replace(/([A-Z])/g, " $1")}</th>)}</tr>

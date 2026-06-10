@@ -499,7 +499,6 @@ export default function BookkeepingPage() {
             <Panel>
               <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-[#0F172A]">Transactions Ledger</h2><TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} /></div>
               <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} />
-              {editingTx && <TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} tx={editingTx} open={true} onOpenChange={(o) => { if (!o) setEditingTx(null); }} />}
             </Panel>
           </TabsContent>
 
@@ -577,6 +576,8 @@ export default function BookkeepingPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {editingTx && <TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} tx={editingTx} open={true} onOpenChange={(o) => { if (!o) setEditingTx(null); }} />}
     </main>
   );
 }

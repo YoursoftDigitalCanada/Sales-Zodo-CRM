@@ -1306,7 +1306,7 @@ const EmailListItem = ({
           "text-xs",
           !email.read ? "text-[#0891B2] font-semibold" : "text-[#475569]"
         )}>
-          {email.time}
+          {email.date}, {email.time}
         </span>
         <div className="flex items-center gap-1">
           {email.hasAttachments && (

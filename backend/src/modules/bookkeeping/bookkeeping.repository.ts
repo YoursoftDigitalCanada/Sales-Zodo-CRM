@@ -36,7 +36,12 @@ export class BookkeepingRepository {
       const dateField = delegate === 'bookkeepingTransaction' ? 'transactionDate' : 'createdAt';
       where[dateField] = {};
       if (query.dateFrom) where[dateField].gte = new Date(query.dateFrom);
-      if (query.dateTo) where[dateField].lte = new Date(query.dateTo);
+      if (query.dateTo) {
+        const d = new Date(query.dateTo);
+        // Include the entire day by adding almost 24 hours
+        d.setUTCHours(23, 59, 59, 999);
+        where[dateField].lte = d;
+      }
     }
     const sortBy = String(query.sortBy || (delegate === 'bookkeepingTransaction' ? 'transactionDate' : 'createdAt'));
     const sortOrder = query.sortOrder === 'asc' ? 'asc' : 'desc';

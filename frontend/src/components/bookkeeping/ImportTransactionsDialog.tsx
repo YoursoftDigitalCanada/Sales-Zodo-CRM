@@ -388,13 +388,15 @@ export function ImportTransactionsDialog({
               </div>
             </div>
 
-            {/* Preview first 5 transactions */}
+            {/* Preview all transactions */}
             {previewData.transactions.length > 0 && (
-              <div className="bg-white rounded-xl p-4 border border-[rgba(15,23,42,0.06)]">
-                <h4 className="text-sm font-semibold text-[#0F172A] mb-2">Preview (first {Math.min(5, previewData.transactions.length)} rows)</h4>
-                <div className="space-y-1 text-xs">
-                  {previewData.transactions.slice(0, 5).map((tx: any, i: number) => (
-                    <div key={i} className="flex justify-between items-center py-1.5 border-b border-slate-50 last:border-0">
+              <div className="bg-white rounded-xl border border-[rgba(15,23,42,0.06)] overflow-hidden flex flex-col max-h-[300px]">
+                <div className="p-3 bg-slate-50 border-b border-[rgba(15,23,42,0.06)]">
+                  <h4 className="text-sm font-semibold text-[#0F172A]">Preview ({previewData.transactions.length} rows)</h4>
+                </div>
+                <div className="overflow-y-auto p-4 space-y-2 text-xs flex-1">
+                  {previewData.transactions.map((tx: any, i: number) => (
+                    <div key={i} className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${tx.type === "EXPENSE" ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>{tx.type}</span>
                         <span className="text-[#64748B] w-20 flex-shrink-0">{tx.transactionDate.slice(0, 10)}</span>
@@ -405,9 +407,6 @@ export function ImportTransactionsDialog({
                       </span>
                     </div>
                   ))}
-                  {previewData.transactions.length > 5 && (
-                    <p className="text-[#94A3B8] text-center pt-1">...and {previewData.transactions.length - 5} more</p>
-                  )}
                 </div>
               </div>
             )}

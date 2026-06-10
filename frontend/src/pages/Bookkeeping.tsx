@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
 import { ImportTransactionsDialog } from "@/components/bookkeeping/ImportTransactionsDialog";
 import {
   BookkeepingRecord,
@@ -279,8 +281,8 @@ export default function BookkeepingPage() {
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
-  const [dateFrom, setDateFrom] = useState(monthStart());
-  const [dateTo, setDateTo] = useState(today());
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [dashboard, setDashboard] = useState<BookkeepingRecord>({});
   const [accounts, setAccounts] = useState<BookkeepingRecord[]>([]);
   const [categories, setCategories] = useState<BookkeepingRecord[]>([]);
@@ -583,10 +585,31 @@ function TransactionTable({
             <TableCell className={tx.type === "EXPENSE" ? "text-rose-600" : "text-emerald-600"}>{money(tx.amount, tx.currency || "CAD")}</TableCell>
             <TableCell>{tx.isReconciled ? <Badge>Reconciled</Badge> : <Badge variant="outline">{tx.status}</Badge>}</TableCell>
             <TableCell>
-              <div className="flex flex-wrap gap-1">
-                <Button variant="ghost" size="sm" className="rounded-lg text-[#0891B2] hover:bg-[#0891B2]/10" onClick={() => onToggleReconcile(tx)}>{tx.isReconciled || tx.status === "RECONCILED" ? "Unreconcile" : "Reconcile"}</Button>
-                {tx.status !== "VOID" && !(tx.isReconciled || tx.status === "RECONCILED") ? <Button variant="ghost" size="sm" className="rounded-lg text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => onVoid(tx.id)}>Void</Button> : null}
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-8 w-8 p-0 rounded-lg text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9]">
+                    <span className="sr-only">Open menu</span>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-xl">
+                  <DropdownMenuItem onClick={() => onToggleReconcile(tx)} className="cursor-pointer rounded-lg font-medium">
+                    {tx.isReconciled || tx.status === "RECONCILED" ? "Unreconcile" : "Reconcile"}
+                  </DropdownMenuItem>
+                  {tx.status !== "VOID" && !(tx.isReconciled || tx.status === "RECONCILED") && (
+                    <DropdownMenuItem onClick={() => onVoid(tx.id)} className="cursor-pointer rounded-lg text-rose-600 focus:text-rose-600 font-medium">
+                      Void
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => toast.info("Edit not fully implemented yet.")} className="cursor-pointer rounded-lg font-medium">
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => toast.info("Delete not fully implemented yet.")} className="cursor-pointer rounded-lg text-rose-600 focus:text-rose-600 font-medium">
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </TableCell>
           </TableRow>
         ))}</TableBody>

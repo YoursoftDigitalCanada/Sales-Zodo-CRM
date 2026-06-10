@@ -1163,6 +1163,19 @@ export class BookkeepingService {
     await db().bookkeepingTransaction.delete({ where: { id, tenantId } });
     return { success: true };
   }
+
+  async bulkDeleteTransactions(ids: string[], tenantId: string, actorUserId?: string) {
+    let deletedCount = 0;
+    for (const id of ids) {
+      try {
+        await this.deleteTransaction(id, tenantId, actorUserId);
+        deletedCount++;
+      } catch (err) {
+        console.error(`Failed to delete transaction ${id}:`, err);
+      }
+    }
+    return { success: true, deletedCount };
+  }
 }
 
 export const bookkeepingService = new BookkeepingService();

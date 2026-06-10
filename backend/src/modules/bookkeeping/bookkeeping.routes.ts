@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { PERMISSIONS } from '../../common/constants/permissions';
 import { authenticate, loadEmployee } from '../../common/middleware/auth.middleware';
 import { requireAnyPermission, requirePermission } from '../../common/middleware/permission.middleware';
@@ -66,6 +67,7 @@ router.post('/transactions', canCreateBookkeeping, validate(createTransactionSch
 router.post('/import', canCreateBookkeeping, validate(importBookkeepingPayloadSchema), bookkeepingController.importTransactions);
 router.get('/transactions/:id', requirePermission(PERMISSIONS.BOOKKEEPING_VIEW), validate(idSchema), bookkeepingController.getTransaction);
 router.put('/transactions/:id', canUpdateBookkeeping, validate(idSchema), validate(updateTransactionSchema), bookkeepingController.updateTransaction);
+router.post('/transactions/bulk-delete', canDeleteBookkeeping, validate(z.object({ body: z.object({ ids: z.array(z.string()) }) })), bookkeepingController.bulkDeleteTransactions);
 router.delete('/transactions/:id', canDeleteBookkeeping, validate(idSchema), bookkeepingController.deleteTransaction);
 router.post('/transactions/:id/void', canDeleteBookkeeping, validate(idSchema), bookkeepingController.voidTransaction);
 router.post('/transactions/:id/attach-receipt', canUpdateBookkeeping, validate(idSchema), validate(attachReceiptSchema), bookkeepingController.attachReceipt);

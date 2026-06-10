@@ -30,6 +30,7 @@ import {
   createVendor,
   deleteReconciliation,
   deleteRecurringRule,
+  bulkDeleteTransactions,
   deleteTransaction,
   deleteVendor,
   downloadBookkeepingCsv,
@@ -491,14 +492,14 @@ export default function BookkeepingPage() {
 
             <Panel>
               <h2 className="mb-4 text-lg font-semibold text-[#0F172A]">Recent Transactions</h2>
-              <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} />
+              <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { await bulkDeleteTransactions(ids); reload(); }} />
             </Panel>
           </TabsContent>
 
           <TabsContent value="transactions">
             <Panel>
               <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-[#0F172A]">Transactions Ledger</h2><TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} /></div>
-              <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} />
+              <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { await bulkDeleteTransactions(ids); reload(); }} />
             </Panel>
           </TabsContent>
 
@@ -606,18 +607,83 @@ function TransactionTable({
   onToggleReconcile: (tx: BookkeepingRecord) => Promise<void>;
   onEdit?: (tx: BookkeepingRecord) => void;
   onDelete?: (tx: BookkeepingRecord) => void;
+  onBulkDelete?: (ids: string[]) => Promise<void>;
 }) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   if (!rows.length) return <EmptyState title="No transactions found." />;
+
+  const toggleAll = () => {
+    if (selectedIds.size === rows.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(rows.map(r => r.id)));
+  };
+
+  const toggleOne = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  };
+
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader><TableRow className="bg-[#F8FAFC]">{["Date", "Number", "Type", "Description", "Account", "Category", "Vendor", "Source", "Sync", "Receipt", "Amount", "Status", "Actions"].map((h) => <TableHead key={h} className="text-[#64748B] uppercase text-xs tracking-wide">{h}</TableHead>)}</TableRow></TableHeader>
-        <TableBody>{rows.map((tx) => (
-          <TableRow key={tx.id}>
-            <TableCell>{tx.transactionDate ? new Date(tx.transactionDate).toLocaleDateString() : "-"}</TableCell>
-            <TableCell className="font-mono text-xs">{tx.transactionNumber || "-"}</TableCell>
-            <TableCell><Badge variant={tx.type === "INCOME" ? "default" : "secondary"}>{tx.type}</Badge></TableCell>
-            <TableCell className="min-w-56">{tx.description}</TableCell>
+    <div className="space-y-4">
+      {selectedIds.size > 0 && onBulkDelete && (
+        <div className="flex items-center justify-between rounded-2xl border border-rose-200 bg-rose-50 p-3 shadow-sm transition-all duration-300">
+          <span className="text-sm font-medium text-rose-800">{selectedIds.size} transaction{selectedIds.size > 1 ? "s" : ""} selected</span>
+          <Button variant="destructive" size="sm" onClick={() => setShowBulkConfirm(true)} disabled={isDeleting} className="rounded-xl bg-rose-600 hover:bg-rose-700 h-8 shadow-sm">
+            Delete Selected
+          </Button>
+        </div>
+      )}
+
+      <AlertDialog open={showBulkConfirm} onOpenChange={setShowBulkConfirm}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#0F172A]">Delete {selectedIds.size} Transactions?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#64748B]">
+              Are you sure you want to permanently delete {selectedIds.size} selected transaction{selectedIds.size > 1 ? "s" : ""}? All associated account balances will be reversed and updated. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white"
+              onClick={async () => {
+                if (!onBulkDelete) return;
+                try {
+                  setIsDeleting(true);
+                  await onBulkDelete(Array.from(selectedIds));
+                  toast.success(`${selectedIds.size} transaction${selectedIds.size > 1 ? "s" : ""} deleted`);
+                  setSelectedIds(new Set());
+                } catch (e: any) {
+                  toast.error(e?.response?.data?.message || "Failed to delete transactions");
+                } finally {
+                  setIsDeleting(false);
+                  setShowBulkConfirm(false);
+                }
+              }}
+            >
+              {isDeleting ? "Deleting..." : "Delete All"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader><TableRow className="bg-[#F8FAFC]">
+            <TableHead className="w-12"><Checkbox className="rounded shadow-none border-[#CBD5E1] data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#0891B2]" checked={selectedIds.size > 0 && selectedIds.size === rows.length} onCheckedChange={toggleAll} /></TableHead>
+            {["Date", "Number", "Type", "Description", "Account", "Category", "Vendor", "Source", "Sync", "Receipt", "Amount", "Status", "Actions"].map((h) => <TableHead key={h} className="text-[#64748B] uppercase text-xs tracking-wide">{h}</TableHead>)}
+          </TableRow></TableHeader>
+          <TableBody>{rows.map((tx) => (
+            <TableRow key={tx.id} className={selectedIds.has(tx.id) ? "bg-[#F0F9FA]" : ""}>
+              <TableCell><Checkbox className="rounded shadow-none border-[#CBD5E1] data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#0891B2]" checked={selectedIds.has(tx.id)} onCheckedChange={() => toggleOne(tx.id)} /></TableCell>
+              <TableCell>{tx.transactionDate ? new Date(tx.transactionDate).toLocaleDateString() : "-"}</TableCell>
+              <TableCell className="font-mono text-xs">{tx.transactionNumber || "-"}</TableCell>
+              <TableCell><Badge variant={tx.type === "INCOME" ? "default" : "secondary"}>{tx.type}</Badge></TableCell>
+              <TableCell className="min-w-56">{tx.description}</TableCell>
             <TableCell>{accountName(tx.accountId)}</TableCell>
             <TableCell>{categoryName(tx.categoryId)}</TableCell>
             <TableCell>{vendorName(tx.vendorId)}</TableCell>
@@ -683,6 +749,7 @@ function TransactionTable({
           </TableRow>
         ))}</TableBody>
       </Table>
+      </div>
     </div>
   );
 }

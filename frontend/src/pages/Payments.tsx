@@ -410,27 +410,11 @@ export default function PaymentsPage() {
     return Array.from(years).sort((a, b) => b - a);
   }, [payments]);
 
-  // Stats
-  const total = payments.reduce((sum, payment) => sum + effectiveAmount(payment), 0);
-  const successfulCount = payments.filter((p) => String(p.status || "SUCCESSFUL").toUpperCase() === "SUCCESSFUL").length;
-  const refundedCount = payments.filter((p) => {
-    const s = String(p.status || "").toUpperCase();
-    return s === "REFUNDED" || s === "PARTIALLY_REFUNDED";
-  }).length;
-  const voidedCount = payments.filter((p) => String(p.status || "").toUpperCase() === "VOIDED").length;
-  const failedCount = payments.filter((p) => String(p.status || "").toUpperCase() === "FAILED").length;
-
-  // Filtered & sorted payments
-  const filteredPayments = useMemo(() => {
+  // 1. Base Filtered Payments (Search, Status Dropdown, Name, Year)
+  const baseFilteredPayments = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    let result = payments.filter((payment) => {
+    return payments.filter((payment) => {
       const status = String(payment.status || "SUCCESSFUL").toUpperCase();
-
-      // Tab filter
-      if (activeTab === "successful" && status !== "SUCCESSFUL") return false;
-      if (activeTab === "refunded" && status !== "REFUNDED" && status !== "PARTIALLY_REFUNDED") return false;
-      if (activeTab === "voided" && status !== "VOIDED") return false;
-      if (activeTab === "failed" && status !== "FAILED") return false;
 
       // Status dropdown filter
       if (statusFilter !== "ALL" && status !== statusFilter) return false;
@@ -460,6 +444,46 @@ export default function PaymentsPage() {
 
       return true;
     });
+  }, [payments, search, statusFilter, nameFilter, yearFilter]);
+
+  // Stats (Calculated from baseFilteredPayments to respect dropdown filters)
+  const total = baseFilteredPayments.reduce((sum, payment) => sum + effectiveAmount(payment), 0);
+  const successfulCount = baseFilteredPayments.filter((p) => String(p.status || "SUCCESSFUL").toUpperCase() === "SUCCESSFUL").length;
+  const refundedCount = baseFilteredPayments.filter((p) => {
+    const s = String(p.status || "").toUpperCase();
+    return s === "REFUNDED" || s === "PARTIALLY_REFUNDED";
+  }).length;
+  const voidedCount = baseFilteredPayments.filter((p) => String(p.status || "").toUpperCase() === "VOIDED").length;
+  const failedCount = baseFilteredPayments.filter((p) => String(p.status || "").toUpperCase() === "FAILED").length;
+
+  // Filtered Invoices (for Open Invoices stat)
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(invoice => {
+      if (nameFilter !== "ALL") {
+        const clientName = invoice.client?.clientName || invoice.client?.name || "Account";
+        if (clientName !== nameFilter) return false;
+      }
+      if (yearFilter !== "ALL") {
+        const year = getPaymentYear(invoice.issueDate || invoice.createdAt || invoice.date);
+        if (!year || String(year) !== yearFilter) return false;
+      }
+      return true;
+    });
+  }, [invoices, nameFilter, yearFilter]);
+
+  // 2. Filtered & Sorted Payments (for the table, adds Tab filter and sorting)
+  const filteredPayments = useMemo(() => {
+    let result = baseFilteredPayments.filter((payment) => {
+      const status = String(payment.status || "SUCCESSFUL").toUpperCase();
+
+      // Tab filter
+      if (activeTab === "successful" && status !== "SUCCESSFUL") return false;
+      if (activeTab === "refunded" && status !== "REFUNDED" && status !== "PARTIALLY_REFUNDED") return false;
+      if (activeTab === "voided" && status !== "VOIDED") return false;
+      if (activeTab === "failed" && status !== "FAILED") return false;
+
+      return true;
+    });
 
     // Sort
     result.sort((a, b) => {
@@ -479,7 +503,7 @@ export default function PaymentsPage() {
     });
 
     return result;
-  }, [payments, search, statusFilter, nameFilter, yearFilter, activeTab, sortBy, sortOrder]);
+  }, [baseFilteredPayments, activeTab, sortBy, sortOrder]);
 
   const hasActiveFilters =
     Boolean(search) ||
@@ -572,10 +596,10 @@ export default function PaymentsPage() {
           <div className="mb-4 lg:mb-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             <StatCard
               title="Total Payments"
-              value={payments.length}
+              value={baseFilteredPayments.length}
               icon={Receipt}
               color="#0F766E"
-              sparklineData={[3, 5, 4, 7, 6, 8, payments.length || 10]}
+              sparklineData={[3, 5, 4, 7, 6, 8, baseFilteredPayments.length || 10]}
             />
             <StatCard
               title="Net Collected"
@@ -587,11 +611,11 @@ export default function PaymentsPage() {
             />
             <StatCard
               title="Open Invoices"
-              value={invoices.length}
+              value={filteredInvoices.length}
               icon={CreditCard}
               color="#3B82F6"
               delay={0.2}
-              sparklineData={[2, 3, 1, 4, 3, 2, invoices.length || 1]}
+              sparklineData={[2, 3, 1, 4, 3, 2, filteredInvoices.length || 1]}
             />
             <StatCard
               title="Successful"
@@ -616,7 +640,7 @@ export default function PaymentsPage() {
                   <div className="overflow-x-auto -mx-1 px-1 flex-1 min-w-0">
                     <TabsList className="bg-white/5 rounded-md p-1 inline-flex w-max">
                       <TabsTrigger value="all" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm px-2 sm:px-3">
-                        All ({payments.length})
+                        All ({baseFilteredPayments.length})
                       </TabsTrigger>
                       <TabsTrigger value="successful" className="rounded-md data-[state=active]:bg-white text-xs sm:text-sm px-2 sm:px-3">
                         Successful ({successfulCount})
@@ -969,7 +993,7 @@ export default function PaymentsPage() {
             {/* Results Count Footer */}
             {!paymentsQuery.isLoading && filteredPayments.length > 0 && (
               <div className="px-4 py-3 border-t border-[rgba(15,23,42,0.06)] text-xs text-[#94A3B8]">
-                Showing {filteredPayments.length} of {payments.length} payment{payments.length !== 1 ? "s" : ""}
+                Showing {filteredPayments.length} of {baseFilteredPayments.length} payment{baseFilteredPayments.length !== 1 ? "s" : ""}
               </div>
             )}
           </motion.div>

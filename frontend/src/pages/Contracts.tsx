@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  AlertCircle, Building2, CalendarClock, CheckCircle2, Download, Eye, FileSignature, FileText, Loader2, Mail, Plus, RefreshCw, Save, Search, Send, UserRound, XCircle, ChevronRight, ChevronDown, ChevronUp, Filter, Check, User, X, MoreHorizontal
+  AlertCircle, Building2, CalendarClock, CheckCircle2, Download, Eye, FileSignature, FileText, Loader2, Mail, Plus, RefreshCw, Save, Search, Send, UserRound, XCircle, ChevronRight, ChevronDown, ChevronUp, Filter, Check, User, X, MoreHorizontal, Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -273,6 +274,7 @@ function ContractDetailDialog({
   onAction: (label: string, action: () => Promise<unknown>) => void;
   onCreateInvoice: (contract: ContractEntity) => void;
   onSend: (contract: ContractEntity) => void;
+  onDelete: (contract: ContractEntity) => void;
 }) {
   if (!contract) return null;
   const docsUrl = `/documents?linkedEntityType=Contract&linkedEntityId=${encodeURIComponent(contract.id)}`;
@@ -338,6 +340,7 @@ function ContractDetailDialog({
           <Button variant="outline" onClick={() => onDownload(contract)}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
           <Button variant="outline" onClick={() => onAction("Contract saved to Documents", () => saveContractDocument(contract.id, contract.status === "ACTIVE" ? "signed" : "sent"))}><Save className="mr-2 h-4 w-4" />Save to Documents</Button>
           <Button variant="outline" onClick={() => onCreateInvoice(contract)}><FileText className="mr-2 h-4 w-4" />Create Invoice</Button>
+          <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" onClick={() => onDelete(contract)}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -440,6 +443,7 @@ export default function ContractsPage() {
   const [contacts, setContacts] = useState<ContractContactEntity[]>([]);
   const [selectedContract, setSelectedContract] = useState<ContractEntity | null>(null);
   const [contractToSend, setContractToSend] = useState<ContractEntity | null>(null);
+  const [contractToDelete, setContractToDelete] = useState<ContractEntity | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Filters
@@ -603,6 +607,21 @@ export default function ContractsPage() {
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Action failed");
       throw error;
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!contractToDelete) return;
+    try {
+      await deleteContract(contractToDelete.id);
+      toast.success("Contract deleted successfully");
+      setContractToDelete(null);
+      if (selectedContract?.id === contractToDelete.id) {
+        closeContract();
+      }
+      await load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Could not delete contract");
     }
   };
 
@@ -1023,6 +1042,9 @@ export default function ContractsPage() {
                                   <DropdownMenuItem onClick={() => createInvoice(contract)} className="rounded-md">
                                     <FileText size={14} className="mr-2" /> Create Invoice
                                   </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => setContractToDelete(contract)} className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50">
+                                    <Trash2 size={14} className="mr-2" /> Delete Contract
+                                  </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
@@ -1053,12 +1075,31 @@ export default function ContractsPage() {
         onAction={runAction} 
         onCreateInvoice={createInvoice} 
         onSend={setContractToSend} 
+        onDelete={(c) => {
+          closeContract();
+          setContractToDelete(c);
+        }}
       />
       <SendContractDialog 
         contract={contractToSend} 
         onClose={() => setContractToSend(null)} 
         onSent={load} 
       />
+      
+      <AlertDialog open={Boolean(contractToDelete)} onOpenChange={(open) => { if (!open) setContractToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Contract?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {contractToDelete?.contractNumber}? This action cannot be undone and will permanently remove the contract and its history.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

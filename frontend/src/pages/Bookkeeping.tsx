@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
 import { ImportTransactionsDialog } from "@/components/bookkeeping/ImportTransactionsDialog";
@@ -323,6 +324,7 @@ export default function BookkeepingPage() {
   const [recurringRules, setRecurringRules] = useState<BookkeepingRecord[]>([]);
   const [reports, setReports] = useState<BookkeepingRecord>({});
   const [editingTx, setEditingTx] = useState<BookkeepingRecord | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<BookkeepingRecord | null>(null);
 
   const reload = () => setRefreshKey((key) => key + 1);
   const filters = useMemo(() => ({ search, dateFrom, dateTo }), [search, dateFrom, dateTo]);
@@ -489,14 +491,14 @@ export default function BookkeepingPage() {
 
             <Panel>
               <h2 className="mb-4 text-lg font-semibold text-[#0F172A]">Recent Transactions</h2>
-              <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={async (id) => { await deleteTransaction(id); reload(); }} />
+              <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} />
             </Panel>
           </TabsContent>
 
           <TabsContent value="transactions">
             <Panel>
               <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-[#0F172A]">Transactions Ledger</h2><TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} /></div>
-              <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={async (id) => { await deleteTransaction(id); reload(); }} />
+              <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} />
               {editingTx && <TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} tx={editingTx} open={true} onOpenChange={(o) => { if (!o) setEditingTx(null); }} />}
             </Panel>
           </TabsContent>
@@ -546,6 +548,35 @@ export default function BookkeepingPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#0F172A]">Delete Transaction?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#64748B]">
+              Are you sure you want to delete this <strong className="text-[#0F172A]">{deleteTarget ? money(deleteTarget.amount, deleteTarget.currency || "CAD") : ""}</strong> transaction?
+              It will be permanently removed and balances will be updated.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={async () => {
+              if (deleteTarget) {
+                try {
+                  await deleteTransaction(deleteTarget.id);
+                  toast.success("Transaction deleted");
+                  reload();
+                } catch (e: any) {
+                  toast.error(e?.response?.data?.message || "Failed to delete transaction");
+                }
+                setDeleteTarget(null);
+              }
+            }} className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white">
+              Delete Transaction
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
@@ -573,7 +604,7 @@ function TransactionTable({
   onReceipt: (tx: BookkeepingRecord, file: File) => Promise<void>;
   onToggleReconcile: (tx: BookkeepingRecord) => Promise<void>;
   onEdit?: (tx: BookkeepingRecord) => void;
-  onDelete?: (id: string) => Promise<void>;
+  onDelete?: (tx: BookkeepingRecord) => void;
 }) {
   if (!rows.length) return <EmptyState title="No transactions found." />;
   return (
@@ -641,9 +672,7 @@ function TransactionTable({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => {
-                    if (confirm("Are you sure you want to permanently delete this transaction?")) {
-                      onDelete?.(tx.id).catch(() => toast.error("Failed to delete transaction"));
-                    }
+                    onDelete?.(tx);
                   }} className="cursor-pointer rounded-lg text-rose-600 focus:text-rose-600 font-medium">
                     Delete
                   </DropdownMenuItem>

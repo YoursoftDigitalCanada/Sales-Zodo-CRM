@@ -1793,7 +1793,9 @@ export default function WebsiteAnalyticsPage() {
                 </div>
               </aside>
             </section>
-               <TabsContent value="integrations" className="mt-0 space-y-6">
+          </TabsContent>
+
+          <TabsContent value="integrations" className="mt-0 space-y-6">
             <section className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
               <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
                 <h2 className="text-base font-semibold text-[#0F172A]">Create Integration</h2>
@@ -1831,16 +1833,24 @@ export default function WebsiteAnalyticsPage() {
                 </div>
               </div>
             </section>
-          </TabsContent>  </section>
-            <section className="rounded-lg border border-[#E2E8F0] bg-white">
-              <div className="border-b border-[#E2E8F0] p-5"><h2 className="text-sm font-semibold text-[#0F172A]">Delivery Log</h2></div>
-              <div className="divide-y divide-[#E2E8F0]">
+            <section className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white shadow-sm overflow-hidden flex flex-col">
+              <div className="border-b border-[rgba(15,23,42,0.06)] p-6 bg-[#F8FAFC]">
+                <h2 className="text-base font-semibold text-[#0F172A]">Delivery Log</h2>
+              </div>
+              <div className="divide-y divide-[rgba(15,23,42,0.06)] flex-1 overflow-y-auto">
                 {integrationDeliveries.map((delivery: WebsiteAnalyticsWebhookDelivery) => (
-                  <div key={delivery.id} className="grid gap-2 p-4 text-sm md:grid-cols-5">
-                    <span>{delivery.eventType}</span><span>{delivery.status}</span><span>{delivery.attempts} attempts</span><span>{delivery.responseStatus || "-"}</span><span className="truncate">{delivery.responseBody || "-"}</span>
+                  <div key={delivery.id} className="grid gap-4 p-5 text-sm md:grid-cols-5 hover:bg-[#F8FAFC] transition-colors text-[#475569]">
+                    <span className="font-medium text-[#0F172A]">{delivery.eventType}</span>
+                    <span className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${delivery.status === "SUCCESS" ? "bg-emerald-500" : delivery.status === "FAILED" ? "bg-red-500" : "bg-amber-500"}`} />
+                      {delivery.status}
+                    </span>
+                    <span>{delivery.attempts} attempts</span>
+                    <span>{delivery.responseStatus || "-"}</span>
+                    <span className="truncate">{delivery.responseBody || "-"}</span>
                   </div>
                 ))}
-                {integrationDeliveries.length === 0 ? <p className="p-6 text-sm text-[#64748B]">Select an integration to inspect deliveries.</p> : null}
+                {integrationDeliveries.length === 0 ? <p className="p-6 text-sm text-[#475569] text-center bg-[#F8FAFC]">Select an integration to inspect deliveries.</p> : null}
               </div>
             </section>
           </TabsContent>

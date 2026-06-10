@@ -378,10 +378,10 @@ export default function PaymentsPage() {
     onSuccess: () => {
       refresh();
       setVoidTarget(null);
-      toast({ title: "Payment voided", description: "Invoice and bookkeeping balances were recalculated." });
+      toast({ title: "Payment deleted", description: "Invoice and bookkeeping balances were recalculated." });
     },
     onError: (error: any) => toast({
-      title: "Payment could not be voided",
+      title: "Payment could not be deleted",
       description: error?.response?.data?.message || error?.message,
       variant: "destructive",
     }),
@@ -972,9 +972,9 @@ export default function PaymentsPage() {
                                     {canDelete && status !== "VOIDED" ? (
                                       <DropdownMenuItem
                                         onClick={() => setVoidTarget(payment)}
-                                        className="rounded-md text-red-600 focus:text-red-600"
+                                        className="rounded-md text-red-600 focus:text-red-600 focus:bg-red-50"
                                       >
-                                        <Trash2 size={14} className="mr-2" />Void Payment
+                                        <Trash2 size={14} className="mr-2" />Delete Payment
                                       </DropdownMenuItem>
                                     ) : null}
                                   </DropdownMenuContent>
@@ -1069,15 +1069,16 @@ export default function PaymentsPage() {
       <AlertDialog open={Boolean(voidTarget)} onOpenChange={(open) => { if (!open) setVoidTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Void this payment?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Payment?</AlertDialogTitle>
             <AlertDialogDescription>
-              The payment will remain in the audit history, but its value will be removed from the invoice and bookkeeping totals. Reconciled payments cannot be voided.
+              Are you sure you want to delete this {money(voidTarget?.amount)} payment?
+              It will be removed from the invoice and balances will be updated.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => voidTarget && voidMutation.mutate(voidTarget.id)} className="bg-red-600 hover:bg-red-700">
-              {voidMutation.isPending ? "Voiding..." : "Void Payment"}
+            <AlertDialogAction onClick={() => voidTarget && voidMutation.mutate(voidTarget.id)} className="bg-red-600 hover:bg-red-700 text-white">
+              Delete Payment
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

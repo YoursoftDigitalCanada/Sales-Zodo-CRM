@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 import rrwebPlayer from "rrweb-player";
 import "rrweb-player/dist/style.css";
-import { Activity, AlertTriangle, Bot, Clock, Copy, Eye, Globe2, MessageSquare, MousePointerClick, Plus, RefreshCw, Search, Share2, Sparkles, Star, Tags, Wifi } from "lucide-react";
+import { Activity, AlertTriangle, Bot, Clock, Copy, Eye, Globe2, MessageSquare, MousePointerClick, Plus, RefreshCw, Search, Share2, Sparkles, Star, Tags, Wifi, LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -126,21 +128,76 @@ function severityBadgeVariant(severity?: string) {
   return severity === "HIGH" ? "destructive" : severity === "MEDIUM" ? "default" : "secondary";
 }
 
-function MetricCard({ label, value, icon: Icon }: { label: string; value: string; icon: typeof Activity }) {
+const StatCard = ({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  color,
+  trend,
+  delay = 0,
+}: {
+  title: string;
+  value: string | number;
+  subtitle: string;
+  icon: LucideIcon;
+  color: "teal" | "gold" | "navy" | "purple" | "green" | "red" | "blue";
+  trend?: { value: number; positive: boolean };
+  delay?: number;
+}) => {
+  const colorClasses = {
+    teal: { bg: "bg-[#0891B2]", light: "bg-[#0891B2]/10", text: "text-[#0891B2]" },
+    gold: { bg: "bg-[#D97706]", light: "bg-[#D97706]/10", text: "text-[#D97706]" },
+    navy: { bg: "bg-[#F8FAFC]", light: "bg-[#F8FAFC]/10", text: "text-[#0F172A]" },
+    purple: { bg: "bg-purple-500", light: "bg-purple-500/10", text: "text-purple-500" },
+    green: { bg: "bg-green-500", light: "bg-green-500/10", text: "text-green-500" },
+    red: { bg: "bg-red-500", light: "bg-red-500/10", text: "text-red-500" },
+    blue: { bg: "bg-[#0891B2]", light: "bg-[#0891B2]/10", text: "text-blue-500" },
+  };
+
+  const selectedColor = colorClasses[color];
+
   return (
-    <div className="rounded-lg border border-[#E2E8F0] bg-white p-4">
-      <div className="flex items-center justify-between gap-3">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.4 }}
+      className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm relative overflow-hidden group"
+    >
+      <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-gradient-to-br from-transparent to-black/5 opacity-0 group-hover:opacity-100 transition-opacity blur-2xl" />
+      <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-[#64748B]">{label}</p>
-          <p className="mt-2 text-2xl font-semibold text-[#0F172A]">{value}</p>
+          <p className="text-sm font-medium text-[#475569]">{title}</p>
+          <div className="mt-2 flex items-baseline gap-2">
+            <h3 className="text-3xl font-bold text-[#0F172A] tracking-tight">{value}</h3>
+            {trend && (
+              <span
+                className={cn(
+                  "text-xs font-semibold px-2 py-0.5 rounded-full",
+                  trend.positive
+                    ? "text-emerald-700 bg-emerald-50"
+                    : "text-rose-700 bg-rose-50"
+                )}
+              >
+                {trend.positive ? "+" : "-"}{trend.value}%
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-[#94A3B8]">{subtitle}</p>
         </div>
-        <div className="rounded-lg bg-[#0891B2]/10 p-2 text-[#0891B2]">
-          <Icon size={20} />
+        <div
+          className={cn(
+            "flex h-12 w-12 items-center justify-center rounded-xl",
+            selectedColor.light,
+            selectedColor.text
+          )}
+        >
+          <Icon size={24} strokeWidth={1.5} />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
-}
+};
 
 export default function WebsiteAnalyticsPage() {
   const queryClient = useQueryClient();
@@ -828,84 +885,93 @@ export default function WebsiteAnalyticsPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      <header className="border-b border-[#E2E8F0] bg-white px-4 py-5 sm:px-6">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-[#0891B2]/10 p-2 text-[#0891B2]"><Globe2 size={22} /></div>
+      <header className="relative overflow-hidden border-b border-[rgba(15,23,42,0.06)] bg-white px-4 py-8 sm:px-6 lg:px-8">
+        <div className="absolute top-0 right-0 -mt-16 -mr-16 h-64 w-64 rounded-full bg-gradient-to-br from-[#22D3EE]/20 to-[#0891B2]/5 blur-3xl" />
+        <div className="absolute bottom-0 left-0 -mb-16 -ml-16 h-64 w-64 rounded-full bg-gradient-to-tr from-[#38BDF8]/20 to-[#0EA5E9]/5 blur-3xl" />
+        <div className="relative mx-auto flex max-w-7xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#0891B2]/10 text-[#0891B2] ring-1 ring-[#0891B2]/20">
+              <Globe2 size={24} />
+            </div>
             <div>
-              <h1 className="text-2xl font-semibold text-[#0F172A]">Website Analytics</h1>
-              <p className="text-sm text-[#64748B]">Tenant-safe visitor tracking for websites you connect to this CRM.</p>
+              <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">Website Analytics</h1>
+              <p className="text-sm text-[#475569] mt-1">Tenant-safe visitor tracking for websites you connect to this CRM.</p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => { void sitesQuery.refetch(); void sessionsQuery.refetch(); }} className="gap-2">
+          <Button variant="outline" onClick={() => { void sitesQuery.refetch(); void sessionsQuery.refetch(); }} className="gap-2 rounded-xl h-11 px-4 border-[rgba(15,23,42,0.06)] text-[#0F172A]">
             <RefreshCw size={16} />Refresh
           </Button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <MetricCard label="Total Sessions" value={formatNumber(totals.totalSessions)} icon={Activity} />
-          <MetricCard label="Page Views" value={formatNumber(totals.pageViews)} icon={Search} />
-          <MetricCard label="Unique Visitors" value={formatNumber(totals.uniqueVisitors)} icon={Globe2} />
-          <MetricCard label="JS Errors" value={formatNumber(totals.jsErrors)} icon={AlertTriangle} />
-          <MetricCard label="Avg Duration" value={formatDuration(averageDuration)} icon={Clock} />
+          <StatCard title="Total Sessions" subtitle="Active tracking" value={formatNumber(totals.totalSessions)} icon={Activity} color="teal" delay={0.1} />
+          <StatCard title="Page Views" subtitle="Across all pages" value={formatNumber(totals.pageViews)} icon={Search} color="blue" delay={0.2} />
+          <StatCard title="Unique Visitors" subtitle="Distinct users" value={formatNumber(totals.uniqueVisitors)} icon={Globe2} color="purple" delay={0.3} />
+          <StatCard title="JS Errors" subtitle="Console errors" value={formatNumber(totals.jsErrors)} icon={AlertTriangle} color="red" delay={0.4} />
+          <StatCard title="Avg Duration" subtitle="Time on site" value={formatDuration(averageDuration)} icon={Clock} color="gold" delay={0.5} />
         </section>
 
-        <section className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm"
+        >
+          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-[#0F172A]">Filters & Segments</h2>
-              <p className="text-xs text-[#64748B]">Apply one filter set across sessions, recordings, heatmaps, and behavior issues.</p>
+              <h2 className="text-base font-semibold text-[#0F172A]">Filters & Segments</h2>
+              <p className="text-sm text-[#475569] mt-1">Apply one filter set across sessions, recordings, heatmaps, and behavior issues.</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Input className="w-48" value={segmentName} onChange={(event) => setSegmentName(event.target.value)} placeholder="Segment name" />
-              <Button variant="outline" disabled={!segmentName.trim() || segmentMutation.isPending} onClick={() => segmentMutation.mutate()}>Save Segment</Button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Input className="w-56 h-10 rounded-xl border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 bg-[#F8FAFC]" value={segmentName} onChange={(event) => setSegmentName(event.target.value)} placeholder="Segment name" />
+              <Button disabled={!segmentName.trim() || segmentMutation.isPending} onClick={() => segmentMutation.mutate()} className="h-10 px-5 rounded-xl bg-[#0891B2] hover:bg-[#0E7490] text-white shadow-sm transition-all">Save Segment</Button>
             </div>
           </div>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-            <div className="space-y-1">
-              <Label>Segment</Label>
-              <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={filters.segmentId} onChange={(event) => setFilters((current) => ({ ...current, segmentId: event.target.value }))}>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-[#475569]">Segment</Label>
+              <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={filters.segmentId} onChange={(event) => setFilters((current) => ({ ...current, segmentId: event.target.value }))}>
                 <option value="">Current filters</option>
                 {segments.map((segment: WebsiteAnalyticsSegment) => <option key={segment.id} value={segment.id}>{segment.isDefault ? "★ " : ""}{segment.name}</option>)}
               </select>
             </div>
-            <div className="space-y-1"><Label>Date From</Label><Input type="date" value={filters.dateFrom} onChange={(event) => setFilters((current) => ({ ...current, dateFrom: event.target.value }))} /></div>
-            <div className="space-y-1"><Label>Date To</Label><Input type="date" value={filters.dateTo} onChange={(event) => setFilters((current) => ({ ...current, dateTo: event.target.value }))} /></div>
-            <div className="space-y-1"><Label>Country</Label><Input list="wa-countries" value={filters.country} onChange={(event) => setFilters((current) => ({ ...current, country: event.target.value }))} placeholder="Canada" /></div>
-            <div className="space-y-1"><Label>Browser</Label><Input list="wa-browsers" value={filters.browser} onChange={(event) => setFilters((current) => ({ ...current, browser: event.target.value }))} placeholder="Chrome" /></div>
-            <div className="space-y-1"><Label>Device</Label><Input list="wa-devices" value={filters.device} onChange={(event) => setFilters((current) => ({ ...current, device: event.target.value }))} placeholder="Desktop" /></div>
-            <div className="space-y-1"><Label>OS</Label><Input list="wa-os" value={filters.os} onChange={(event) => setFilters((current) => ({ ...current, os: event.target.value }))} placeholder="macOS" /></div>
-            <div className="space-y-1"><Label>URL / Path</Label><Input list="wa-pages" value={filters.path} onChange={(event) => setFilters((current) => ({ ...current, path: event.target.value }))} placeholder="/pricing" /></div>
-            <div className="space-y-1"><Label>Referrer</Label><Input list="wa-referrers" value={filters.referrer} onChange={(event) => setFilters((current) => ({ ...current, referrer: event.target.value }))} placeholder="google.com" /></div>
-            <div className="space-y-1"><Label>User ID</Label><Input value={filters.externalUserId} onChange={(event) => setFilters((current) => ({ ...current, externalUserId: event.target.value }))} placeholder="user_123" /></div>
-            <div className="space-y-1"><Label>Tags</Label><Input list="wa-tags" value={filters.tags} onChange={(event) => setFilters((current) => ({ ...current, tags: event.target.value }))} placeholder="pricing-interest" /></div>
-            <div className="space-y-1"><Label>Labels</Label><Input list="wa-labels" value={filters.labels} onChange={(event) => setFilters((current) => ({ ...current, labels: event.target.value }))} placeholder="bug, vip" /></div>
-            <div className="space-y-1">
-              <Label>Errors</Label>
-              <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={filters.hasJsError} onChange={(event) => setFilters((current) => ({ ...current, hasJsError: event.target.value }))}>
+            <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Date From</Label><Input type="date" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20" value={filters.dateFrom} onChange={(event) => setFilters((current) => ({ ...current, dateFrom: event.target.value }))} /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Date To</Label><Input type="date" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20" value={filters.dateTo} onChange={(event) => setFilters((current) => ({ ...current, dateTo: event.target.value }))} /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Country</Label><Input list="wa-countries" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20" value={filters.country} onChange={(event) => setFilters((current) => ({ ...current, country: event.target.value }))} placeholder="Canada" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Browser</Label><Input list="wa-browsers" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20" value={filters.browser} onChange={(event) => setFilters((current) => ({ ...current, browser: event.target.value }))} placeholder="Chrome" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Device</Label><Input list="wa-devices" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20" value={filters.device} onChange={(event) => setFilters((current) => ({ ...current, device: event.target.value }))} placeholder="Desktop" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">OS</Label><Input list="wa-os" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20" value={filters.os} onChange={(event) => setFilters((current) => ({ ...current, os: event.target.value }))} placeholder="macOS" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">URL / Path</Label><Input list="wa-pages" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20" value={filters.path} onChange={(event) => setFilters((current) => ({ ...current, path: event.target.value }))} placeholder="/pricing" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Referrer</Label><Input list="wa-referrers" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20" value={filters.referrer} onChange={(event) => setFilters((current) => ({ ...current, referrer: event.target.value }))} placeholder="google.com" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">User ID</Label><Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20" value={filters.externalUserId} onChange={(event) => setFilters((current) => ({ ...current, externalUserId: event.target.value }))} placeholder="user_123" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Tags</Label><Input list="wa-tags" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20" value={filters.tags} onChange={(event) => setFilters((current) => ({ ...current, tags: event.target.value }))} placeholder="pricing-interest" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Labels</Label><Input list="wa-labels" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20" value={filters.labels} onChange={(event) => setFilters((current) => ({ ...current, labels: event.target.value }))} placeholder="bug, vip" /></div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-[#475569]">Errors</Label>
+              <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={filters.hasJsError} onChange={(event) => setFilters((current) => ({ ...current, hasJsError: event.target.value }))}>
                 <option value="all">All</option><option value="true">With errors</option><option value="false">No errors</option>
               </select>
             </div>
-            <div className="space-y-1">
-              <Label>Recording</Label>
-              <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={filters.hasRecording} onChange={(event) => setFilters((current) => ({ ...current, hasRecording: event.target.value }))}>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-[#475569]">Recording</Label>
+              <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={filters.hasRecording} onChange={(event) => setFilters((current) => ({ ...current, hasRecording: event.target.value }))}>
                 <option value="all">All</option><option value="true">Available</option><option value="false">Missing</option>
               </select>
             </div>
-            <div className="space-y-1">
-              <Label>Favorite</Label>
-              <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={filters.isFavorite} onChange={(event) => setFilters((current) => ({ ...current, isFavorite: event.target.value }))}>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-[#475569]">Favorite</Label>
+              <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={filters.isFavorite} onChange={(event) => setFilters((current) => ({ ...current, isFavorite: event.target.value }))}>
                 <option value="all">All</option><option value="true">Favorites</option><option value="false">Not favorite</option>
               </select>
             </div>
-            <div className="space-y-1"><Label>Behavior</Label><Input list="wa-behaviors" value={filters.behaviorTypes} onChange={(event) => setFilters((current) => ({ ...current, behaviorTypes: event.target.value }))} placeholder="RAGE_CLICK" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Behavior</Label><Input list="wa-behaviors" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20" value={filters.behaviorTypes} onChange={(event) => setFilters((current) => ({ ...current, behaviorTypes: event.target.value }))} placeholder="RAGE_CLICK" /></div>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {filters.segmentId ? <Button variant="outline" onClick={() => defaultSegmentMutation.mutate({ id: filters.segmentId, isDefault: true })}>Mark Default</Button> : null}
-            {filters.segmentId ? <Button variant="outline" onClick={() => deleteSegmentMutation.mutate(filters.segmentId)}>Delete Segment</Button> : null}
-            <Button variant="outline" onClick={() => setFilters((current) => ({ ...current, segmentId: "", country: "", browser: "", os: "", device: "", path: "", referrer: "", externalUserId: "", tags: "", labels: "", hasJsError: "all", hasRecording: "all", isFavorite: "all", behaviorTypes: "" }))}>Clear Filters</Button>
+          <div className="mt-6 flex flex-wrap gap-3 pt-4 border-t border-[rgba(15,23,42,0.06)]">
+            {filters.segmentId ? <Button variant="outline" className="rounded-xl border-[rgba(15,23,42,0.06)]" onClick={() => defaultSegmentMutation.mutate({ id: filters.segmentId, isDefault: true })}>Mark Default</Button> : null}
+            {filters.segmentId ? <Button variant="outline" className="rounded-xl border-[rgba(15,23,42,0.06)] text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => deleteSegmentMutation.mutate(filters.segmentId)}>Delete Segment</Button> : null}
+            <Button variant="outline" className="rounded-xl border-[rgba(15,23,42,0.06)]" onClick={() => setFilters((current) => ({ ...current, segmentId: "", country: "", browser: "", os: "", device: "", path: "", referrer: "", externalUserId: "", tags: "", labels: "", hasJsError: "all", hasRecording: "all", isFavorite: "all", behaviorTypes: "" }))}>Clear Filters</Button>
           </div>
           <datalist id="wa-countries">{(filterOptions?.countries || []).map((item) => <option key={item} value={item} />)}</datalist>
           <datalist id="wa-browsers">{(filterOptions?.browsers || []).map((item) => <option key={item} value={item} />)}</datalist>
@@ -916,61 +982,69 @@ export default function WebsiteAnalyticsPage() {
           <datalist id="wa-tags">{(filterOptions?.tags || []).map((item) => <option key={item} value={item} />)}</datalist>
           <datalist id="wa-labels">{(filterOptions?.labels || []).map((item) => <option key={item} value={item} />)}</datalist>
           <datalist id="wa-behaviors">{(filterOptions?.behaviorTypes || []).map((item) => <option key={item} value={item} />)}</datalist>
-        </section>
+        </motion.section>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
-          <div className="rounded-lg border border-[#E2E8F0] bg-white p-2">
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 bg-transparent p-0 lg:grid-cols-12">
-              <TabsTrigger value="websites" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Globe2 size={16} />Websites</TabsTrigger>
-              <TabsTrigger value="privacy" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Eye size={16} />Privacy & Tracking</TabsTrigger>
-              <TabsTrigger value="sessions" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Sessions</TabsTrigger>
-              <TabsTrigger value="recordings" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><MousePointerClick size={16} />Recordings</TabsTrigger>
-              <TabsTrigger value="live" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Wifi size={16} />Live</TabsTrigger>
-              <TabsTrigger value="heatmaps" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Heatmaps</TabsTrigger>
-              <TabsTrigger value="behavior" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><AlertTriangle size={16} />Behavior</TabsTrigger>
-              <TabsTrigger value="funnels" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Funnels</TabsTrigger>
-              <TabsTrigger value="ai" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Sparkles size={16} />AI Insights</TabsTrigger>
-              <TabsTrigger value="integrations" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Share2 size={16} />Integrations</TabsTrigger>
-              <TabsTrigger value="reports" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Search size={16} />Reports</TabsTrigger>
-              <TabsTrigger value="admin" className="gap-2 rounded-md py-3 data-[state=active]:bg-[#ECFEFF] data-[state=active]:text-[#0E7490] data-[state=active]:shadow-none"><Activity size={16} />Admin</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <div className="w-full overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex h-auto items-center justify-start gap-2 bg-transparent p-1 bg-white/50 backdrop-blur-sm rounded-full border border-[rgba(15,23,42,0.06)]">
+              <TabsTrigger value="websites" className="gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-[#475569] data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-md transition-all"><Globe2 size={16} />Websites</TabsTrigger>
+              <TabsTrigger value="privacy" className="gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-[#475569] data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-md transition-all"><Eye size={16} />Privacy</TabsTrigger>
+              <TabsTrigger value="sessions" className="gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-[#475569] data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-md transition-all"><Activity size={16} />Sessions</TabsTrigger>
+              <TabsTrigger value="recordings" className="gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-[#475569] data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-md transition-all"><MousePointerClick size={16} />Recordings</TabsTrigger>
+              <TabsTrigger value="live" className="gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-[#475569] data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-md transition-all"><Wifi size={16} />Live</TabsTrigger>
+              <TabsTrigger value="heatmaps" className="gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-[#475569] data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-md transition-all"><Activity size={16} />Heatmaps</TabsTrigger>
+              <TabsTrigger value="behavior" className="gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-[#475569] data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-md transition-all"><AlertTriangle size={16} />Behavior</TabsTrigger>
+              <TabsTrigger value="funnels" className="gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-[#475569] data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-md transition-all"><Activity size={16} />Funnels</TabsTrigger>
+              <TabsTrigger value="ai" className="gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-[#475569] data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-md transition-all"><Sparkles size={16} />AI Insights</TabsTrigger>
+              <TabsTrigger value="integrations" className="gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-[#475569] data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-md transition-all"><Share2 size={16} />Integrations</TabsTrigger>
+              <TabsTrigger value="reports" className="gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-[#475569] data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-md transition-all"><Search size={16} />Reports</TabsTrigger>
+              <TabsTrigger value="admin" className="gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-[#475569] data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-md transition-all"><Activity size={16} />Admin</TabsTrigger>
             </TabsList>
           </div>
 
-          <TabsContent value="websites" className="mt-0 space-y-5">
-            <section className="grid gap-5 lg:grid-cols-[360px_minmax(0,1fr)]">
-              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                <div className="mb-4 flex items-center gap-2">
-                  <Plus size={18} className="text-[#0891B2]" />
-                  <h2 className="text-sm font-semibold text-[#0F172A]">Add Website</h2>
+          <TabsContent value="websites" className="mt-0 space-y-6">
+            <section className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0891B2]/10 text-[#0891B2]">
+                    <Plus size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-semibold text-[#0F172A]">Add Website</h2>
+                    <p className="text-xs text-[#475569] mt-0.5">Start tracking a new domain</p>
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  <div className="space-y-2"><Label>Name</Label><Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="Company website" /></div>
-                  <div className="space-y-2"><Label>Domain</Label><Input value={form.domain} onChange={(event) => setForm((current) => ({ ...current, domain: event.target.value }))} placeholder="example.com" /></div>
-                  <Button disabled={createMutation.isPending} onClick={() => createMutation.mutate(form)} className="w-full bg-[#0891B2] hover:bg-[#0E7490]">Create Tracking Site</Button>
+                <div className="space-y-4">
+                  <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Name</Label><Input className="h-11 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="Company website" /></div>
+                  <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Domain</Label><Input className="h-11 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={form.domain} onChange={(event) => setForm((current) => ({ ...current, domain: event.target.value }))} placeholder="example.com" /></div>
+                  <Button disabled={createMutation.isPending} onClick={() => createMutation.mutate(form)} className="w-full h-11 rounded-xl bg-[#0891B2] hover:bg-[#0E7490] text-white shadow-sm transition-all mt-2">Create Tracking Site</Button>
                 </div>
               </div>
 
-              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                <h2 className="text-sm font-semibold text-[#0F172A]">Websites</h2>
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  {sites.length === 0 ? <p className="rounded-md bg-[#F8FAFC] p-4 text-sm text-[#64748B] md:col-span-2">No websites connected yet.</p> : null}
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-[#0F172A]">Connected Websites</h2>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  {sites.length === 0 ? <p className="rounded-xl bg-[#F8FAFC] p-5 text-sm text-[#475569] md:col-span-2 text-center">No websites connected yet.</p> : null}
                   {sites.map((site: WebsiteAnalyticsSite) => (
-                    <div key={site.id} className={`rounded-md border p-3 transition ${activeSiteId === site.id ? "border-[#0891B2] bg-[#ECFEFF]" : "border-[#E2E8F0] bg-white"}`}>
+                    <div key={site.id} className={`rounded-xl border p-5 transition-all ${activeSiteId === site.id ? "border-[#0891B2] bg-[#ECFEFF] shadow-sm" : "border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] hover:border-[#CBD5E1]"}`}>
                       <button type="button" onClick={() => { setSelectedSiteId(site.id); setSnippet(""); }} className="w-full text-left">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-[#0F172A]">{site.name}</span>
-                          <Badge variant={site.isActive ? "default" : "secondary"}>{site.isActive ? "Active" : "Inactive"}</Badge>
+                          <span className="font-semibold text-[#0F172A]">{site.name}</span>
+                          <Badge variant={site.isActive ? "default" : "secondary"} className={site.isActive ? "bg-[#0891B2] hover:bg-[#0891B2]/90" : ""}>{site.isActive ? "Active" : "Inactive"}</Badge>
                         </div>
-                        <p className="mt-1 text-xs text-[#64748B]">{site.domain}</p>
-                        <p className="mt-2 text-xs text-[#64748B]">{formatNumber(site.metrics?.totalSessions)} sessions · {formatNumber(site.metrics?.uniqueVisitors)} visitors</p>
+                        <p className="mt-1.5 text-sm text-[#64748B] font-medium">{site.domain}</p>
+                        <div className="mt-3 flex items-center gap-3 text-xs text-[#475569]">
+                          <span className="flex items-center gap-1"><Activity size={14} />{formatNumber(site.metrics?.totalSessions)} sessions</span>
+                          <span className="flex items-center gap-1"><Globe2 size={14} />{formatNumber(site.metrics?.uniqueVisitors)} visitors</span>
+                        </div>
                       </button>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline" onClick={() => { setSelectedSiteId(site.id); setSnippet(""); }}>View Dashboard</Button>
-                        <Button size="sm" variant="outline" disabled={snippetMutation.isPending} onClick={() => { setSelectedSiteId(site.id); snippetMutation.mutate(site.id); }}>Generate Script</Button>
+                      <div className="mt-5 flex flex-wrap gap-2 pt-4 border-t border-[rgba(15,23,42,0.06)]">
+                        <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)] bg-white" onClick={() => { setSelectedSiteId(site.id); setSnippet(""); }}>Dashboard</Button>
+                        <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)] bg-white" disabled={snippetMutation.isPending} onClick={() => { setSelectedSiteId(site.id); snippetMutation.mutate(site.id); }}>Script</Button>
                         {site.isActive ? (
-                          <Button size="sm" variant="outline" disabled={disableSiteMutation.isPending || siteStatusMutation.isPending} onClick={() => disableSiteMutation.mutate(site.id)}>Disable</Button>
+                          <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)] bg-white text-red-600 hover:text-red-700 hover:bg-red-50" disabled={disableSiteMutation.isPending || siteStatusMutation.isPending} onClick={() => disableSiteMutation.mutate(site.id)}>Disable</Button>
                         ) : (
-                          <Button size="sm" variant="outline" disabled={siteStatusMutation.isPending} onClick={() => siteStatusMutation.mutate({ id: site.id, isActive: true })}>Reactivate</Button>
+                          <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)] bg-white text-green-600 hover:text-green-700 hover:bg-green-50" disabled={siteStatusMutation.isPending} onClick={() => siteStatusMutation.mutate({ id: site.id, isActive: true })}>Reactivate</Button>
                         )}
                       </div>
                     </div>
@@ -980,20 +1054,25 @@ export default function WebsiteAnalyticsPage() {
             </section>
           </TabsContent>
 
-          <TabsContent value="privacy" className="mt-0 space-y-5">
-            <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
-              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                <h2 className="text-sm font-semibold text-[#0F172A]">Tracking Snippet</h2>
-                <p className="mt-1 text-xs text-[#64748B]">{selectedSite ? `Install this on ${selectedSite.domain}.` : "Create a website to generate a script."}</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button variant="outline" disabled={!activeSiteId || snippetMutation.isPending} onClick={() => activeSiteId && snippetMutation.mutate(activeSiteId)}>Generate</Button>
-                  <Button variant="outline" disabled={!snippet} onClick={copySnippet} className="gap-2"><Copy size={16} />Copy</Button>
+          <TabsContent value="privacy" className="mt-0 space-y-6">
+            <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm flex flex-col">
+                <div className="mb-5 flex flex-col gap-2">
+                  <h2 className="text-base font-semibold text-[#0F172A]">Tracking Snippet</h2>
+                  <p className="text-sm text-[#475569]">{selectedSite ? `Install this on ${selectedSite.domain}.` : "Create a website to generate a script."}</p>
                 </div>
-                <Textarea readOnly value={snippet || "Tracking snippet will appear here."} className="mt-4 min-h-[132px] font-mono text-xs" />
+                <div className="mt-2 flex flex-wrap gap-3">
+                  <Button variant="outline" className="rounded-xl border-[rgba(15,23,42,0.06)] h-10 px-4" disabled={!activeSiteId || snippetMutation.isPending} onClick={() => activeSiteId && snippetMutation.mutate(activeSiteId)}>Generate Script</Button>
+                  <Button variant="outline" className="gap-2 rounded-xl border-[rgba(15,23,42,0.06)] h-10 px-4 bg-[#F8FAFC]" disabled={!snippet} onClick={copySnippet}><Copy size={16} />Copy to clipboard</Button>
+                </div>
+                <Textarea readOnly value={snippet || "Tracking snippet will appear here."} className="mt-5 flex-1 min-h-[160px] rounded-xl border-[rgba(15,23,42,0.06)] bg-[#0F172A] p-4 font-mono text-xs text-[#E2E8F0] shadow-inner focus-visible:ring-0" />
               </div>
 
-              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                <h2 className="text-sm font-semibold text-[#0F172A]">Privacy & Recording Settings</h2>
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                <div className="mb-5 flex flex-col gap-2">
+                  <h2 className="text-base font-semibold text-[#0F172A]">Privacy Settings</h2>
+                  <p className="text-xs text-[#475569]">Manage data collection rules</p>
+                </div>
                 <div className="mt-4 grid gap-3">
                   {[
                     ["trackingEnabled", "Enable tracking"],
@@ -1009,9 +1088,9 @@ export default function WebsiteAnalyticsPage() {
                     ["ipAnonymizationEnabled", "Anonymize IP"],
                     ["piiRedactionEnabled", "Redact PII"],
                   ].map(([key, label]) => (
-                    <label key={key} className="flex items-center justify-between rounded-md border border-[#E2E8F0] px-3 py-2 text-sm">
+                    <label key={key} className="flex cursor-pointer items-center justify-between rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-4 py-3 text-sm font-medium text-[#475569] transition-all hover:border-[#CBD5E1]">
                       <span>{label}</span>
-                      <input type="checkbox" checked={privacy[key] !== false} onChange={(event) => updatePrivacy({ [key]: event.target.checked })} />
+                      <input type="checkbox" className="h-4 w-4 rounded border-[#CBD5E1] text-[#0891B2] focus:ring-[#0891B2]" checked={privacy[key] !== false} onChange={(event) => updatePrivacy({ [key]: event.target.checked })} />
                     </label>
                   ))}
                   <div className="space-y-2">
@@ -1054,33 +1133,33 @@ export default function WebsiteAnalyticsPage() {
           </TabsContent>
 
           <TabsContent value="sessions" className="mt-0">
-            <div className="rounded-lg border border-[#E2E8F0] bg-white">
-              <div className="border-b border-[#E2E8F0] p-5">
-                <h2 className="text-sm font-semibold text-[#0F172A]">Sessions</h2>
-                <p className="text-xs text-[#64748B]">Click a session to inspect page views, clicks, scrolls, and errors.</p>
+            <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white shadow-sm overflow-hidden">
+              <div className="border-b border-[rgba(15,23,42,0.06)] p-6 bg-[#F8FAFC]">
+                <h2 className="text-base font-semibold text-[#0F172A]">Sessions</h2>
+                <p className="text-sm text-[#475569] mt-0.5">Click a session to inspect page views, clicks, scrolls, and errors.</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[880px] text-sm">
-                  <thead className="bg-[#F8FAFC] text-left text-xs uppercase text-[#64748B]">
+                  <thead className="bg-white border-b border-[rgba(15,23,42,0.06)] text-left text-xs uppercase text-[#64748B]">
                     <tr>
-                      {["Started", "Entry URL", "Duration", "Browser", "Device", "Country", "Pages", "Events", "Errors"].map((item) => <th key={item} className="px-4 py-3 font-medium">{item}</th>)}
+                      {["Started", "Entry URL", "Duration", "Browser", "Device", "Country", "Pages", "Events", "Errors"].map((item) => <th key={item} className="px-6 py-4 font-semibold tracking-wider">{item}</th>)}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E2E8F0]">
+                  <tbody className="divide-y divide-[rgba(15,23,42,0.06)] bg-white">
                     {sessions.map((session: WebsiteSession) => (
-                      <tr key={session.id} onClick={() => setSelectedSessionId(session.id)} className="cursor-pointer hover:bg-[#F8FAFC]">
-                        <td className="px-4 py-3 text-[#0F172A]">{formatDate(session.startedAt)}</td>
-                        <td className="max-w-[260px] truncate px-4 py-3 text-[#334155]">{session.entryUrl}</td>
-                        <td className="px-4 py-3">{formatDuration(session.durationMs)}</td>
-                        <td className="px-4 py-3">{session.browser || "-"}</td>
-                        <td className="px-4 py-3">{session.device || "-"}</td>
-                        <td className="px-4 py-3">{session.country || "-"}</td>
-                        <td className="px-4 py-3">{session.pageCount}</td>
-                        <td className="px-4 py-3">{session.eventCount}</td>
-                        <td className="px-4 py-3">{session.hasJsError ? <Badge variant="destructive">Yes</Badge> : <Badge variant="secondary">No</Badge>}</td>
+                      <tr key={session.id} onClick={() => setSelectedSessionId(session.id)} className="cursor-pointer hover:bg-[#F8FAFC] transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{formatDate(session.startedAt)}</td>
+                        <td className="max-w-[260px] truncate px-6 py-4 text-[#475569]">{session.entryUrl}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{formatDuration(session.durationMs)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{session.browser || "-"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{session.device || "-"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{session.country || "-"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[#0F172A]">{session.pageCount}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[#0F172A]">{session.eventCount}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">{session.hasJsError ? <Badge variant="destructive">Yes</Badge> : <Badge variant="secondary">No</Badge>}</td>
                       </tr>
                     ))}
-                    {sessions.length === 0 ? <tr><td colSpan={9} className="px-4 py-10 text-center text-[#64748B]">No sessions collected yet. Install the tracking snippet to start receiving data.</td></tr> : null}
+                    {sessions.length === 0 ? <tr><td colSpan={9} className="px-6 py-12 text-center text-[#64748B] bg-[#F8FAFC]">No sessions collected yet. Install the tracking snippet to start receiving data.</td></tr> : null}
                   </tbody>
                 </table>
               </div>
@@ -1088,27 +1167,27 @@ export default function WebsiteAnalyticsPage() {
           </TabsContent>
 
           <TabsContent value="recordings" className="mt-0">
-            <div className="rounded-lg border border-[#E2E8F0] bg-white">
-              <div className="border-b border-[#E2E8F0] p-5">
-                <h2 className="text-sm font-semibold text-[#0F172A]">Session Recordings</h2>
-                <p className="text-xs text-[#64748B]">Replay rrweb recordings captured by the tracking script.</p>
+            <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white shadow-sm overflow-hidden">
+              <div className="border-b border-[rgba(15,23,42,0.06)] p-6 bg-[#F8FAFC]">
+                <h2 className="text-base font-semibold text-[#0F172A]">Session Recordings</h2>
+                <p className="text-sm text-[#475569] mt-0.5">Replay rrweb recordings captured by the tracking script.</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[980px] text-sm">
-                  <thead className="bg-[#F8FAFC] text-left text-xs uppercase text-[#64748B]">
+                  <thead className="bg-white border-b border-[rgba(15,23,42,0.06)] text-left text-xs uppercase text-[#64748B]">
                     <tr>
-                      {["", "Started", "Entry URL", "Duration", "Browser", "Device", "Country", "Events", "JS Error", "Labels", "Replay"].map((item) => <th key={item} className="px-4 py-3 font-medium">{item}</th>)}
+                      {["", "Started", "Entry URL", "Duration", "Browser", "Device", "Country", "Events", "JS Error", "Labels", "Replay"].map((item) => <th key={item} className="px-6 py-4 font-semibold tracking-wider">{item}</th>)}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E2E8F0]">
+                  <tbody className="divide-y divide-[rgba(15,23,42,0.06)] bg-white">
                     {recordings.map((recording: WebsiteRecording) => (
-                      <tr key={recording.id} className="hover:bg-[#F8FAFC]">
-                        <td className="px-4 py-3"><button onClick={() => favoriteMutation.mutate({ id: recording.id, isFavorite: !recording.isFavorite })}><Star size={16} className={recording.isFavorite ? "fill-amber-400 text-amber-500" : "text-[#94A3B8]"} /></button></td>
-                        <td className="px-4 py-3">{formatDate(recording.startedAt)}</td>
-                        <td className="max-w-[260px] truncate px-4 py-3">{recording.session?.entryUrl || "-"}</td>
-                        <td className="px-4 py-3">{formatDuration(recording.durationMs)}</td>
-                        <td className="px-4 py-3">{recording.session?.browser || "-"}</td>
-                        <td className="px-4 py-3">{recording.session?.device || "-"}</td>
+                      <tr key={recording.id} className="hover:bg-[#F8FAFC] transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap"><button onClick={() => favoriteMutation.mutate({ id: recording.id, isFavorite: !recording.isFavorite })} className="hover:scale-110 transition-transform"><Star size={18} className={recording.isFavorite ? "fill-amber-400 text-amber-500" : "text-[#CBD5E1]"} /></button></td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[#0F172A] font-medium">{formatDate(recording.startedAt)}</td>
+                        <td className="max-w-[260px] truncate px-6 py-4 text-[#475569]">{recording.session?.entryUrl || "-"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{formatDuration(recording.durationMs)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{recording.session?.browser || "-"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{recording.session?.device || "-"}</td>
                         <td className="px-4 py-3">{recording.session?.country || "-"}</td>
                         <td className="px-4 py-3">{recording.eventCount}</td>
                         <td className="px-4 py-3">{recording.session?.hasJsError ? <Badge variant="destructive">Yes</Badge> : <Badge variant="secondary">No</Badge>}</td>
@@ -1123,102 +1202,102 @@ export default function WebsiteAnalyticsPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="live" className="mt-0 space-y-5">
+          <TabsContent value="live" className="mt-0 space-y-6">
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-              <MetricCard label="Active Sessions" value={formatNumber(liveOverview?.activeSessionCount)} icon={Wifi} />
-              <MetricCard label="Active Visitors" value={formatNumber(liveOverview?.activeVisitors)} icon={Globe2} />
-              <MetricCard label="Live Errors" value={formatNumber(liveOverview?.liveErrorsCount)} icon={AlertTriangle} />
-              <MetricCard label="Behavior Alerts" value={formatNumber(liveOverview?.liveBehaviorAlertsCount)} icon={MousePointerClick} />
-              <MetricCard label="Recording Now" value={formatNumber(liveOverview?.activeRecordingsCount)} icon={Eye} />
+              <StatCard title="Active Sessions" subtitle="Now on site" value={formatNumber(liveOverview?.activeSessionCount)} icon={Wifi} color="teal" delay={0.1} />
+              <StatCard title="Active Visitors" subtitle="Live distinct users" value={formatNumber(liveOverview?.activeVisitors)} icon={Globe2} color="blue" delay={0.2} />
+              <StatCard title="Live Errors" subtitle="Recent JS errors" value={formatNumber(liveOverview?.liveErrorsCount)} icon={AlertTriangle} color="red" delay={0.3} />
+              <StatCard title="Behavior Alerts" subtitle="Recent anomalies" value={formatNumber(liveOverview?.liveBehaviorAlertsCount)} icon={MousePointerClick} color="gold" delay={0.4} />
+              <StatCard title="Recording Now" subtitle="Active recordings" value={formatNumber(liveOverview?.activeRecordingsCount)} icon={Eye} color="purple" delay={0.5} />
             </section>
 
-            <section className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-              <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <section className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+              <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <h2 className="flex items-center gap-2 text-sm font-semibold text-[#0F172A]"><Wifi size={16} />Live Analytics</h2>
-                  <p className="text-xs text-[#64748B]">Connection: <span className={liveStatus === "connected" ? "text-[#159A62]" : "text-[#B45309]"}>{liveStatus}</span></p>
+                  <h2 className="flex items-center gap-2 text-base font-semibold text-[#0F172A]"><Wifi size={18} className="text-[#0891B2]" />Live Analytics</h2>
+                  <p className="text-sm text-[#475569] mt-0.5">Connection: <span className={liveStatus === "connected" ? "text-[#10B981] font-medium" : "text-[#F59E0B] font-medium"}>{liveStatus}</span></p>
                 </div>
-                <Button variant="outline" onClick={() => { void liveOverviewQuery.refetch(); void liveSessionsQuery.refetch(); }} className="gap-2"><RefreshCw size={16} />Refresh</Button>
+                <Button variant="outline" onClick={() => { void liveOverviewQuery.refetch(); void liveSessionsQuery.refetch(); }} className="gap-2 rounded-xl h-10 px-4 border-[rgba(15,23,42,0.06)]"><RefreshCw size={16} />Refresh</Button>
               </div>
-              <div className="grid gap-3 md:grid-cols-5">
-                <div className="space-y-1"><Label>Page / Path</Label><Input value={liveFilters.path} onChange={(event) => setLiveFilters((current) => ({ ...current, path: event.target.value }))} placeholder="/pricing" /></div>
-                <div className="space-y-1"><Label>Country</Label><Input value={liveFilters.country} onChange={(event) => setLiveFilters((current) => ({ ...current, country: event.target.value }))} placeholder="Canada" /></div>
-                <div className="space-y-1"><Label>Device</Label><Input value={liveFilters.device} onChange={(event) => setLiveFilters((current) => ({ ...current, device: event.target.value }))} placeholder="Desktop" /></div>
-                <div className="space-y-1">
-                  <Label>Errors</Label>
-                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={liveFilters.hasJsError} onChange={(event) => setLiveFilters((current) => ({ ...current, hasJsError: event.target.value }))}>
+              <div className="grid gap-4 md:grid-cols-5">
+                <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Page / Path</Label><Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={liveFilters.path} onChange={(event) => setLiveFilters((current) => ({ ...current, path: event.target.value }))} placeholder="/pricing" /></div>
+                <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Country</Label><Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={liveFilters.country} onChange={(event) => setLiveFilters((current) => ({ ...current, country: event.target.value }))} placeholder="Canada" /></div>
+                <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Device</Label><Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={liveFilters.device} onChange={(event) => setLiveFilters((current) => ({ ...current, device: event.target.value }))} placeholder="Desktop" /></div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#475569]">Errors</Label>
+                  <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={liveFilters.hasJsError} onChange={(event) => setLiveFilters((current) => ({ ...current, hasJsError: event.target.value }))}>
                     <option value="all">All</option><option value="true">With errors</option><option value="false">No errors</option>
                   </select>
                 </div>
-                <div className="space-y-1">
-                  <Label>Behavior</Label>
-                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={liveFilters.hasBehaviorSignal} onChange={(event) => setLiveFilters((current) => ({ ...current, hasBehaviorSignal: event.target.value }))}>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#475569]">Behavior</Label>
+                  <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={liveFilters.hasBehaviorSignal} onChange={(event) => setLiveFilters((current) => ({ ...current, hasBehaviorSignal: event.target.value }))}>
                     <option value="all">All</option><option value="true">With alerts</option><option value="false">No alerts</option>
                   </select>
                 </div>
               </div>
             </section>
 
-            <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-              <div className="rounded-lg border border-[#E2E8F0] bg-white">
-                <div className="border-b border-[#E2E8F0] p-5">
-                  <h2 className="text-sm font-semibold text-[#0F172A]">Live Sessions</h2>
-                  <p className="text-xs text-[#64748B]">Active means the visitor sent an event or heartbeat in the last 2 minutes.</p>
+            <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white shadow-sm overflow-hidden flex flex-col">
+                <div className="border-b border-[rgba(15,23,42,0.06)] p-6 bg-[#F8FAFC]">
+                  <h2 className="text-base font-semibold text-[#0F172A]">Live Sessions</h2>
+                  <p className="text-sm text-[#475569] mt-0.5">Active means the visitor sent an event or heartbeat in the last 2 minutes.</p>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto flex-1">
                   <table className="w-full min-w-[1040px] text-sm">
-                    <thead className="bg-[#F8FAFC] text-left text-xs uppercase text-[#64748B]">
+                    <thead className="bg-white border-b border-[rgba(15,23,42,0.06)] text-left text-xs uppercase text-[#64748B]">
                       <tr>
-                        {["Current Page", "Visitor / User", "Country", "Browser", "Device", "Started", "Last Event", "Pages", "Events", "Recording", "Alerts", "Open"].map((item) => <th key={item} className="px-4 py-3 font-medium">{item}</th>)}
+                        {["Current Page", "Visitor / User", "Country", "Browser", "Device", "Started", "Last Event", "Pages", "Events", "Recording", "Alerts", "Open"].map((item) => <th key={item} className="px-6 py-4 font-semibold tracking-wider">{item}</th>)}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#E2E8F0]">
+                    <tbody className="divide-y divide-[rgba(15,23,42,0.06)] bg-white">
                       {liveSessions.map((session: WebsiteLiveSessionState) => (
-                        <tr key={session.id} className="hover:bg-[#F8FAFC]">
-                          <td className="max-w-[260px] truncate px-4 py-3 text-[#0F172A]">{session.currentPath || session.currentUrl || "-"}</td>
-                          <td className="px-4 py-3">{session.session?.visitor?.identity?.externalUserId || session.session?.visitor?.anonymousId || session.visitorId || "-"}</td>
-                          <td className="px-4 py-3">{session.country || "-"}</td>
-                          <td className="px-4 py-3">{session.browser || "-"}</td>
-                          <td className="px-4 py-3">{session.device || "-"}</td>
-                          <td className="px-4 py-3">{formatDate(session.startedAt)}</td>
-                          <td className="px-4 py-3">{formatDate(session.lastEventAt)}</td>
-                          <td className="px-4 py-3">{session.pageCount}</td>
-                          <td className="px-4 py-3">{session.eventCount}</td>
-                          <td className="px-4 py-3">{session.isRecording ? <Badge variant="default">Live</Badge> : <Badge variant="secondary">No</Badge>}</td>
-                          <td className="px-4 py-3">{session.hasJsError || session.hasBehaviorSignal ? <Badge variant="destructive">Yes</Badge> : <Badge variant="secondary">No</Badge>}</td>
-                          <td className="px-4 py-3">
+                        <tr key={session.id} className="hover:bg-[#F8FAFC] transition-colors">
+                          <td className="max-w-[260px] truncate px-6 py-4 text-[#0F172A] font-medium">{session.currentPath || session.currentUrl || "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{session.session?.visitor?.identity?.externalUserId || session.session?.visitor?.anonymousId || session.visitorId || "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{session.country || "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{session.browser || "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{session.device || "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{formatDate(session.startedAt)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{formatDate(session.lastEventAt)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-[#0F172A]">{session.pageCount}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-[#0F172A]">{session.eventCount}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">{session.isRecording ? <Badge variant="default" className="bg-[#0891B2]">Live</Badge> : <Badge variant="secondary">No</Badge>}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">{session.hasJsError || session.hasBehaviorSignal ? <Badge variant="destructive">Yes</Badge> : <Badge variant="secondary">No</Badge>}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex gap-2">
-                              <Button size="sm" variant="outline" onClick={() => setSelectedSessionId(session.sessionId)}>Session</Button>
-                              {session.session?.recordings?.[0]?.id ? <Button size="sm" variant="outline" onClick={() => setSelectedRecordingId(session.session?.recordings?.[0]?.id || null)}>Replay</Button> : null}
+                              <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)]" onClick={() => setSelectedSessionId(session.sessionId)}>Session</Button>
+                              {session.session?.recordings?.[0]?.id ? <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)]" onClick={() => setSelectedRecordingId(session.session?.recordings?.[0]?.id || null)}>Replay</Button> : null}
                             </div>
                           </td>
                         </tr>
                       ))}
-                      {liveSessions.length === 0 ? <tr><td colSpan={12} className="px-4 py-10 text-center text-[#64748B]">No active visitors right now.</td></tr> : null}
+                      {liveSessions.length === 0 ? <tr><td colSpan={12} className="px-6 py-12 text-center text-[#64748B] bg-[#F8FAFC]">No active visitors right now.</td></tr> : null}
                     </tbody>
                   </table>
                 </div>
               </div>
 
-              <aside className="space-y-5">
-                <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                  <h3 className="text-sm font-semibold text-[#0F172A]">Top Live Pages</h3>
-                  <div className="mt-3 space-y-2">
-                    {(liveOverview?.topCurrentPages || []).length === 0 ? <p className="text-sm text-[#64748B]">No live pages yet.</p> : null}
+              <aside className="space-y-6">
+                <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                  <h3 className="text-base font-semibold text-[#0F172A]">Top Live Pages</h3>
+                  <div className="mt-4 space-y-2">
+                    {(liveOverview?.topCurrentPages || []).length === 0 ? <p className="text-sm text-[#475569]">No live pages yet.</p> : null}
                     {(liveOverview?.topCurrentPages || []).map((page) => (
-                      <div key={page.path} className="flex items-center justify-between gap-3 rounded-md bg-[#F8FAFC] px-3 py-2 text-sm">
-                        <span className="truncate">{page.path}</span>
-                        <Badge variant="outline">{page.count}</Badge>
+                      <div key={page.path} className="flex items-center justify-between gap-3 rounded-xl bg-[#F8FAFC] px-4 py-3 text-sm border border-[rgba(15,23,42,0.06)]">
+                        <span className="truncate text-[#475569] font-medium">{page.path}</span>
+                        <Badge variant="secondary" className="bg-white">{page.count}</Badge>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                  <h3 className="text-sm font-semibold text-[#0F172A]">Live Event Feed</h3>
-                  <div className="mt-3 max-h-[520px] space-y-2 overflow-y-auto">
-                    {liveEvents.length === 0 ? <p className="text-sm text-[#64748B]">Waiting for live events.</p> : null}
+                <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                  <h3 className="text-base font-semibold text-[#0F172A]">Live Event Feed</h3>
+                  <div className="mt-4 max-h-[520px] space-y-3 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[rgba(15,23,42,0.1)]">
+                    {liveEvents.length === 0 ? <p className="text-sm text-[#475569]">Waiting for live events.</p> : null}
                     {liveEvents.map((event) => (
-                      <div key={event.id} className="rounded-md border border-[#E2E8F0] bg-[#F8FAFC] p-3 text-sm">
+                      <div key={event.id} className="rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 text-sm transition-all hover:border-[#CBD5E1]">
                         <div className="flex items-center justify-between gap-2">
                           <Badge variant={event.type.includes("error") || event.type.includes("behavior") ? "destructive" : "outline"}>{event.type}</Badge>
                           <span className="text-xs text-[#64748B]">{formatDate(event.at)}</span>
@@ -1232,24 +1311,24 @@ export default function WebsiteAnalyticsPage() {
             </section>
           </TabsContent>
 
-          <TabsContent value="heatmaps" className="mt-0 space-y-5">
-            <section className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+          <TabsContent value="heatmaps" className="mt-0 space-y-6">
+            <section className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
               <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr_1fr_auto]">
-                <div className="space-y-2">
-                  <Label>URL / Path</Label>
-                  <Input value={heatmapForm.path} onChange={(event) => setHeatmapForm((current) => ({ ...current, path: event.target.value }))} placeholder="/pricing" />
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#475569]">URL / Path</Label>
+                  <Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={heatmapForm.path} onChange={(event) => setHeatmapForm((current) => ({ ...current, path: event.target.value }))} placeholder="/pricing" />
                 </div>
-                <div className="space-y-2">
-                  <Label>Date From</Label>
-                  <Input type="date" value={heatmapForm.dateFrom} onChange={(event) => setHeatmapForm((current) => ({ ...current, dateFrom: event.target.value }))} />
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#475569]">Date From</Label>
+                  <Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" type="date" value={heatmapForm.dateFrom} onChange={(event) => setHeatmapForm((current) => ({ ...current, dateFrom: event.target.value }))} />
                 </div>
-                <div className="space-y-2">
-                  <Label>Date To</Label>
-                  <Input type="date" value={heatmapForm.dateTo} onChange={(event) => setHeatmapForm((current) => ({ ...current, dateTo: event.target.value }))} />
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#475569]">Date To</Label>
+                  <Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" type="date" value={heatmapForm.dateTo} onChange={(event) => setHeatmapForm((current) => ({ ...current, dateTo: event.target.value }))} />
                 </div>
-                <div className="space-y-2">
-                  <Label>Device</Label>
-                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={heatmapForm.deviceType} onChange={(event) => setHeatmapForm((current) => ({ ...current, deviceType: event.target.value }))}>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#475569]">Device</Label>
+                  <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={heatmapForm.deviceType} onChange={(event) => setHeatmapForm((current) => ({ ...current, deviceType: event.target.value }))}>
                     <option value="all">All</option>
                     <option value="desktop">Desktop</option>
                     <option value="tablet">Tablet</option>
@@ -1257,58 +1336,58 @@ export default function WebsiteAnalyticsPage() {
                   </select>
                 </div>
                 <div className="flex items-end">
-                  <Button disabled={!activeSiteId || heatmapMutation.isPending} onClick={generateHeatmap} className="w-full bg-[#0891B2] hover:bg-[#0E7490]">Generate</Button>
+                  <Button disabled={!activeSiteId || heatmapMutation.isPending} onClick={generateHeatmap} className="w-full h-10 px-6 rounded-xl bg-[#0891B2] hover:bg-[#0E7490] text-white shadow-sm transition-all">Generate</Button>
                 </div>
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-5 flex flex-wrap gap-3">
                 {["click", "scroll", "engagement"].map((type) => (
-                  <Button key={type} variant={heatmapForm.type === type ? "default" : "outline"} onClick={() => setHeatmapForm((current) => ({ ...current, type }))}>{type}</Button>
+                  <Button key={type} variant={heatmapForm.type === type ? "default" : "outline"} onClick={() => setHeatmapForm((current) => ({ ...current, type }))} className={`h-9 rounded-lg capitalize transition-all ${heatmapForm.type === type ? "bg-[#0891B2] text-white" : "border-[rgba(15,23,42,0.06)] text-[#475569] hover:bg-[#F8FAFC] hover:text-[#0F172A]"}`}>{type}</Button>
                 ))}
               </div>
             </section>
 
-            <section className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
-              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                <h2 className="text-sm font-semibold text-[#0F172A]">Snapshots</h2>
-                <div className="mt-3 space-y-2">
-                  {heatmaps.length === 0 ? <p className="rounded-md bg-[#F8FAFC] p-4 text-sm text-[#64748B]">No heatmap snapshots yet.</p> : null}
+            <section className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm flex flex-col">
+                <h2 className="text-base font-semibold text-[#0F172A]">Snapshots</h2>
+                <div className="mt-4 space-y-3 flex-1 overflow-y-auto">
+                  {heatmaps.length === 0 ? <p className="rounded-xl bg-[#F8FAFC] p-4 text-sm text-[#475569] text-center border border-[rgba(15,23,42,0.06)]">No heatmap snapshots yet.</p> : null}
                   {heatmaps.map((snapshot) => (
-                    <button key={snapshot.id} onClick={() => setSelectedHeatmapId(snapshot.id)} className={`w-full rounded-md border p-3 text-left text-sm ${selectedHeatmap?.id === snapshot.id ? "border-[#0891B2] bg-[#ECFEFF]" : "border-[#E2E8F0]"}`}>
-                      <div className="font-medium text-[#0F172A]">{snapshot.path}</div>
-                      <div className="mt-1 text-xs text-[#64748B]">{snapshot.deviceType || "all"} · {snapshot.clickCount} clicks</div>
+                    <button key={snapshot.id} onClick={() => setSelectedHeatmapId(snapshot.id)} className={`w-full rounded-xl border p-4 text-left text-sm transition-all ${selectedHeatmap?.id === snapshot.id ? "border-[#0891B2] bg-[#ECFEFF] shadow-sm" : "border-[rgba(15,23,42,0.06)] hover:border-[#CBD5E1] bg-[#F8FAFC]"}`}>
+                      <div className="font-semibold text-[#0F172A] truncate">{snapshot.path}</div>
+                      <div className="mt-1.5 text-xs text-[#64748B] font-medium capitalize">{snapshot.deviceType || "all"} · {snapshot.clickCount} clicks</div>
                     </button>
                   ))}
                 </div>
-                <div className="mt-4 space-y-2">
-                  <Label>Compare With</Label>
-                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={compareHeatmapId} onChange={(event) => setCompareHeatmapId(event.target.value)}>
+                <div className="mt-6 pt-5 border-t border-[rgba(15,23,42,0.06)] space-y-2">
+                  <Label className="text-xs font-medium text-[#475569]">Compare With</Label>
+                  <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={compareHeatmapId} onChange={(event) => setCompareHeatmapId(event.target.value)}>
                     <option value="">No comparison</option>
                     {heatmaps.filter((snapshot) => snapshot.id !== selectedHeatmap?.id).map((snapshot) => <option key={snapshot.id} value={snapshot.id}>{snapshot.path} · {new Date(snapshot.createdAt).toLocaleDateString()}</option>)}
                   </select>
                 </div>
               </div>
-              <div className="space-y-5">
-                <div className={compareHeatmap ? "grid gap-5 xl:grid-cols-2" : ""}>
+              <div className="space-y-6">
+                <div className={compareHeatmap ? "grid gap-6 xl:grid-cols-2" : ""}>
                   {renderHeatmapCanvas(heatmapPoints, selectedHeatmap, "Selected Heatmap")}
                   {compareHeatmap ? renderHeatmapCanvas(comparePoints, compareHeatmap, "Comparison Heatmap") : null}
                 </div>
-                <div className="grid gap-5 lg:grid-cols-2">
-                  <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                    <h3 className="text-sm font-semibold text-[#0F172A]">Scroll Depth Summary</h3>
-                    <div className="mt-3 space-y-2 text-sm text-[#334155]">
-                      <p>Max depth: {selectedHeatmap?.maxScrollDepth ?? 0}%</p>
-                      <p>Average depth: {selectedHeatmap?.avgScrollDepth ?? 0}%</p>
-                      <p>Samples: {selectedHeatmap?.scrollSampleCount ?? 0}</p>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                    <h3 className="text-base font-semibold text-[#0F172A]">Scroll Depth Summary</h3>
+                    <div className="mt-4 space-y-3 text-sm text-[#475569]">
+                      <div className="flex justify-between items-center py-2 border-b border-[rgba(15,23,42,0.06)]"><span>Max depth</span><span className="font-semibold text-[#0F172A]">{selectedHeatmap?.maxScrollDepth ?? 0}%</span></div>
+                      <div className="flex justify-between items-center py-2 border-b border-[rgba(15,23,42,0.06)]"><span>Average depth</span><span className="font-semibold text-[#0F172A]">{selectedHeatmap?.avgScrollDepth ?? 0}%</span></div>
+                      <div className="flex justify-between items-center py-2"><span>Samples</span><span className="font-semibold text-[#0F172A]">{selectedHeatmap?.scrollSampleCount ?? 0}</span></div>
                     </div>
                   </div>
-                  <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                    <h3 className="text-sm font-semibold text-[#0F172A]">Top Clicked Areas</h3>
-                    <div className="mt-3 space-y-2">
-                      {((selectedHeatmap?.metadata?.topClickedAreas as any[]) || []).length === 0 ? <p className="text-sm text-[#64748B]">No click areas yet.</p> : null}
+                  <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                    <h3 className="text-base font-semibold text-[#0F172A]">Top Clicked Areas</h3>
+                    <div className="mt-4 space-y-3">
+                      {((selectedHeatmap?.metadata?.topClickedAreas as any[]) || []).length === 0 ? <p className="text-sm text-[#475569]">No click areas yet.</p> : null}
                       {((selectedHeatmap?.metadata?.topClickedAreas as any[]) || []).map((item) => (
-                        <div key={item.selector} className="flex items-center justify-between rounded-md bg-[#F8FAFC] px-3 py-2 text-sm">
-                          <span className="truncate text-[#334155]">{item.selector}</span>
-                          <Badge variant="outline">{item.count}</Badge>
+                        <div key={item.selector} className="flex items-center justify-between rounded-xl bg-[#F8FAFC] px-4 py-3 border border-[rgba(15,23,42,0.06)] text-sm">
+                          <span className="truncate text-[#475569] font-medium mr-4">{item.selector}</span>
+                          <Badge variant="secondary" className="bg-white">{item.count}</Badge>
                         </div>
                       ))}
                     </div>
@@ -1318,106 +1397,106 @@ export default function WebsiteAnalyticsPage() {
             </section>
           </TabsContent>
 
-          <TabsContent value="behavior" className="mt-0 space-y-5">
+          <TabsContent value="behavior" className="mt-0 space-y-6">
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
               {behaviorSummary.map((item) => (
-                <div key={item.type} className="rounded-lg border border-[#E2E8F0] bg-white p-4">
-                  <p className="text-xs font-medium uppercase text-[#64748B]">{formatBehaviorType(item.type)}</p>
-                  <p className="mt-2 text-2xl font-semibold text-[#0F172A]">{formatNumber(item.count)}</p>
+                <div key={item.type} className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#475569]">{formatBehaviorType(item.type)}</p>
+                  <p className="mt-3 text-3xl font-bold text-[#0F172A] tracking-tight">{formatNumber(item.count)}</p>
                 </div>
               ))}
             </section>
 
-            <section className="rounded-lg border border-[#E2E8F0] bg-white p-5">
+            <section className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
               <div className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr_1.3fr_auto]">
-                <div className="space-y-2">
-                  <Label>Issue Type</Label>
-                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={behaviorFilters.type} onChange={(event) => setBehaviorFilters((current) => ({ ...current, type: event.target.value }))}>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#475569]">Issue Type</Label>
+                  <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={behaviorFilters.type} onChange={(event) => setBehaviorFilters((current) => ({ ...current, type: event.target.value }))}>
                     <option value="all">All</option>
                     {["RAGE_CLICK", "DEAD_CLICK", "QUICK_BACK", "EXCESSIVE_SCROLL", "JS_ERROR", "BROKEN_INTERACTION"].map((type) => <option key={type} value={type}>{formatBehaviorType(type)}</option>)}
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Severity</Label>
-                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={behaviorFilters.severity} onChange={(event) => setBehaviorFilters((current) => ({ ...current, severity: event.target.value }))}>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#475569]">Severity</Label>
+                  <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={behaviorFilters.severity} onChange={(event) => setBehaviorFilters((current) => ({ ...current, severity: event.target.value }))}>
                     <option value="all">All</option>
                     <option value="HIGH">High</option>
                     <option value="MEDIUM">Medium</option>
                     <option value="LOW">Low</option>
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={behaviorFilters.status} onChange={(event) => setBehaviorFilters((current) => ({ ...current, status: event.target.value }))}>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#475569]">Status</Label>
+                  <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={behaviorFilters.status} onChange={(event) => setBehaviorFilters((current) => ({ ...current, status: event.target.value }))}>
                     <option value="all">All</option>
                     <option value="OPEN">Open</option>
                     <option value="IGNORED">Ignored</option>
                     <option value="RESOLVED">Resolved</option>
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Page Path</Label>
-                  <Input value={behaviorFilters.path} onChange={(event) => setBehaviorFilters((current) => ({ ...current, path: event.target.value }))} placeholder="/pricing" />
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#475569]">Page Path</Label>
+                  <Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={behaviorFilters.path} onChange={(event) => setBehaviorFilters((current) => ({ ...current, path: event.target.value }))} placeholder="/pricing" />
                 </div>
                 <div className="flex items-end">
-                  <Button variant="outline" onClick={() => { void behaviorIssuesQuery.refetch(); void behaviorSignalsQuery.refetch(); }} className="w-full gap-2"><RefreshCw size={16} />Refresh</Button>
+                  <Button variant="outline" onClick={() => { void behaviorIssuesQuery.refetch(); void behaviorSignalsQuery.refetch(); }} className="w-full h-10 px-6 rounded-xl border-[rgba(15,23,42,0.06)] gap-2"><RefreshCw size={16} />Refresh</Button>
                 </div>
               </div>
             </section>
 
-            <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="rounded-lg border border-[#E2E8F0] bg-white">
-                <div className="border-b border-[#E2E8F0] p-5">
-                  <h2 className="text-sm font-semibold text-[#0F172A]">Issue Groups</h2>
-                  <p className="text-xs text-[#64748B]">Grouped behavior problems across visitor sessions.</p>
+            <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white shadow-sm overflow-hidden flex flex-col">
+                <div className="border-b border-[rgba(15,23,42,0.06)] p-6 bg-[#F8FAFC]">
+                  <h2 className="text-base font-semibold text-[#0F172A]">Issue Groups</h2>
+                  <p className="text-sm text-[#475569] mt-0.5">Grouped behavior problems across visitor sessions.</p>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto flex-1">
                   <table className="w-full min-w-[980px] text-sm">
-                    <thead className="bg-[#F8FAFC] text-left text-xs uppercase text-[#64748B]">
+                    <thead className="bg-white border-b border-[rgba(15,23,42,0.06)] text-left text-xs uppercase text-[#64748B]">
                       <tr>
-                        {["Type", "Severity", "Page", "Selector / Message", "Occurrences", "Sessions", "Last Seen", "Status", "Open"].map((item) => <th key={item} className="px-4 py-3 font-medium">{item}</th>)}
+                        {["Type", "Severity", "Page", "Selector / Message", "Occurrences", "Sessions", "Last Seen", "Status", "Open"].map((item) => <th key={item} className="px-6 py-4 font-semibold tracking-wider">{item}</th>)}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#E2E8F0]">
+                    <tbody className="divide-y divide-[rgba(15,23,42,0.06)] bg-white">
                       {behaviorIssues.map((issue: WebsiteIssueGroup) => (
-                        <tr key={issue.id} className="hover:bg-[#F8FAFC]">
-                          <td className="px-4 py-3 font-medium text-[#0F172A]">{formatBehaviorType(issue.type)}</td>
-                          <td className="px-4 py-3"><Badge variant={severityBadgeVariant(issue.severity) as any}>{issue.severity}</Badge></td>
-                          <td className="max-w-[220px] truncate px-4 py-3">{issue.path || issue.url || "-"}</td>
-                          <td className="max-w-[260px] truncate px-4 py-3">{issue.selector || issue.message || "-"}</td>
-                          <td className="px-4 py-3">{issue.occurrenceCount}</td>
-                          <td className="px-4 py-3">{issue.affectedSessionCount}</td>
-                          <td className="px-4 py-3">{formatDate(issue.lastSeenAt)}</td>
-                          <td className="px-4 py-3"><Badge variant={issue.status === "OPEN" ? "default" : "secondary"}>{issue.status}</Badge></td>
-                          <td className="px-4 py-3"><Button size="sm" variant="outline" onClick={() => setSelectedIssueId(issue.id)}>Details</Button></td>
+                        <tr key={issue.id} className="hover:bg-[#F8FAFC] transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">{formatBehaviorType(issue.type)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap"><Badge variant={severityBadgeVariant(issue.severity) as any}>{issue.severity}</Badge></td>
+                          <td className="max-w-[220px] truncate px-6 py-4 text-[#475569]">{issue.path || issue.url || "-"}</td>
+                          <td className="max-w-[260px] truncate px-6 py-4 text-[#475569]">{issue.selector || issue.message || "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-[#0F172A]">{issue.occurrenceCount}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-[#0F172A]">{issue.affectedSessionCount}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{formatDate(issue.lastSeenAt)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap"><Badge variant={issue.status === "OPEN" ? "default" : "secondary"}>{issue.status}</Badge></td>
+                          <td className="px-6 py-4 whitespace-nowrap"><Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)]" onClick={() => setSelectedIssueId(issue.id)}>Details</Button></td>
                         </tr>
                       ))}
-                      {behaviorIssues.length === 0 ? <tr><td colSpan={9} className="px-4 py-10 text-center text-[#64748B]">No behavior issues match these filters yet.</td></tr> : null}
+                      {behaviorIssues.length === 0 ? <tr><td colSpan={9} className="px-6 py-12 text-center text-[#64748B] bg-[#F8FAFC]">No behavior issues match these filters yet.</td></tr> : null}
                     </tbody>
                   </table>
                 </div>
               </div>
 
-              <aside className="space-y-5">
-                <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                  <h3 className="text-sm font-semibold text-[#0F172A]">Severity Breakdown</h3>
-                  <div className="mt-3 space-y-2">
+              <aside className="space-y-6">
+                <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                  <h3 className="text-base font-semibold text-[#0F172A]">Severity Breakdown</h3>
+                  <div className="mt-4 space-y-2">
                     {severitySummary.map((item) => (
-                      <div key={item.severity} className="flex items-center justify-between rounded-md bg-[#F8FAFC] px-3 py-2 text-sm">
-                        <span>{item.severity}</span>
+                      <div key={item.severity} className="flex items-center justify-between rounded-xl bg-[#F8FAFC] px-4 py-3 text-sm border border-[rgba(15,23,42,0.06)]">
+                        <span className="font-medium text-[#475569]">{item.severity}</span>
                         <Badge variant={severityBadgeVariant(item.severity) as any}>{item.count}</Badge>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                  <h3 className="text-sm font-semibold text-[#0F172A]">Top Affected Pages</h3>
-                  <div className="mt-3 space-y-2">
-                    {topAffectedPages.length === 0 ? <p className="text-sm text-[#64748B]">No affected pages yet.</p> : null}
+                <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                  <h3 className="text-base font-semibold text-[#0F172A]">Top Affected Pages</h3>
+                  <div className="mt-4 space-y-2">
+                    {topAffectedPages.length === 0 ? <p className="text-sm text-[#475569]">No affected pages yet.</p> : null}
                     {topAffectedPages.map(([path, count]) => (
-                      <div key={path} className="flex items-center justify-between gap-3 rounded-md bg-[#F8FAFC] px-3 py-2 text-sm">
-                        <span className="truncate">{path}</span>
-                        <Badge variant="outline">{count}</Badge>
+                      <div key={path} className="flex items-center justify-between gap-3 rounded-xl bg-[#F8FAFC] px-4 py-3 text-sm border border-[rgba(15,23,42,0.06)]">
+                        <span className="truncate text-[#475569] font-medium">{path}</span>
+                        <Badge variant="secondary" className="bg-white">{count}</Badge>
                       </div>
                     ))}
                   </div>
@@ -1425,217 +1504,219 @@ export default function WebsiteAnalyticsPage() {
               </aside>
             </section>
 
-            <section className="rounded-lg border border-[#E2E8F0] bg-white">
-              <div className="border-b border-[#E2E8F0] p-5">
-                <h2 className="text-sm font-semibold text-[#0F172A]">Signals by Session</h2>
-                <p className="text-xs text-[#64748B]">Individual rage clicks, dead clicks, errors, quick backs, and broken interactions.</p>
+            <section className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white shadow-sm overflow-hidden">
+              <div className="border-b border-[rgba(15,23,42,0.06)] p-6 bg-[#F8FAFC]">
+                <h2 className="text-base font-semibold text-[#0F172A]">Signals by Session</h2>
+                <p className="text-sm text-[#475569] mt-0.5">Individual rage clicks, dead clicks, errors, quick backs, and broken interactions.</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[980px] text-sm">
-                  <thead className="bg-[#F8FAFC] text-left text-xs uppercase text-[#64748B]">
+                  <thead className="bg-white border-b border-[rgba(15,23,42,0.06)] text-left text-xs uppercase text-[#64748B]">
                     <tr>
-                      {["Timestamp", "Type", "Severity", "Page", "Browser", "Device", "Country", "Recording"].map((item) => <th key={item} className="px-4 py-3 font-medium">{item}</th>)}
+                      {["Timestamp", "Type", "Severity", "Page", "Browser", "Device", "Country", "Recording"].map((item) => <th key={item} className="px-6 py-4 font-semibold tracking-wider">{item}</th>)}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E2E8F0]">
+                  <tbody className="divide-y divide-[rgba(15,23,42,0.06)] bg-white">
                     {behaviorSignals.map((signal: WebsiteBehaviorSignal) => (
-                      <tr key={signal.id} className="hover:bg-[#F8FAFC]">
-                        <td className="px-4 py-3">{formatDate(signal.firstSeenAt)}</td>
-                        <td className="px-4 py-3 font-medium text-[#0F172A]">{formatBehaviorType(signal.type)}</td>
-                        <td className="px-4 py-3"><Badge variant={severityBadgeVariant(signal.severity) as any}>{signal.severity}</Badge></td>
-                        <td className="max-w-[260px] truncate px-4 py-3">{signal.path || signal.url}</td>
-                        <td className="px-4 py-3">{signal.session?.browser || "-"}</td>
-                        <td className="px-4 py-3">{signal.session?.device || "-"}</td>
-                        <td className="px-4 py-3">{signal.session?.country || "-"}</td>
-                        <td className="px-4 py-3">{signal.recordingId ? <Button size="sm" variant="outline" onClick={() => setSelectedRecordingId(signal.recordingId!)}>Open</Button> : "-"}</td>
+                      <tr key={signal.id} className="hover:bg-[#F8FAFC] transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{formatDate(signal.firstSeenAt)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-[#0F172A]">{formatBehaviorType(signal.type)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap"><Badge variant={severityBadgeVariant(signal.severity) as any}>{signal.severity}</Badge></td>
+                        <td className="max-w-[260px] truncate px-6 py-4 text-[#475569]">{signal.path || signal.url}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{signal.session?.browser || "-"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{signal.session?.device || "-"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[#475569]">{signal.session?.country || "-"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">{signal.recordingId ? <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)]" onClick={() => setSelectedRecordingId(signal.recordingId!)}>Open</Button> : "-"}</td>
                       </tr>
                     ))}
-                    {behaviorSignals.length === 0 ? <tr><td colSpan={8} className="px-4 py-10 text-center text-[#64748B]">No behavior signals collected yet.</td></tr> : null}
+                    {behaviorSignals.length === 0 ? <tr><td colSpan={8} className="px-6 py-12 text-center text-[#64748B] bg-[#F8FAFC]">No behavior signals collected yet.</td></tr> : null}
                   </tbody>
                 </table>
               </div>
             </section>
           </TabsContent>
 
-          <TabsContent value="funnels" className="mt-0 space-y-5">
-            <section className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                <h2 className="text-sm font-semibold text-[#0F172A]">Create Funnel</h2>
-                <div className="mt-4 space-y-3">
-                  <div className="space-y-2"><Label>Name</Label><Input value={funnelForm.name} onChange={(event) => setFunnelForm((current) => ({ ...current, name: event.target.value }))} placeholder="Pricing to lead" /></div>
-                  <div className="space-y-2"><Label>Description</Label><Input value={funnelForm.description} onChange={(event) => setFunnelForm((current) => ({ ...current, description: event.target.value }))} placeholder="Track pricing page visitors into leads" /></div>
-                  <div className="space-y-3">
+          <TabsContent value="funnels" className="mt-0 space-y-6">
+            <section className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-[#0F172A]">Create Funnel</h2>
+                <div className="mt-5 space-y-4">
+                  <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Name</Label><Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={funnelForm.name} onChange={(event) => setFunnelForm((current) => ({ ...current, name: event.target.value }))} placeholder="Pricing to lead" /></div>
+                  <div className="space-y-1.5"><Label className="text-xs font-medium text-[#475569]">Description</Label><Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={funnelForm.description} onChange={(event) => setFunnelForm((current) => ({ ...current, description: event.target.value }))} placeholder="Track pricing page visitors into leads" /></div>
+                  <div className="space-y-4">
                     {funnelForm.steps.map((step, index) => (
-                      <div key={index} className="rounded-md border border-[#E2E8F0] p-3">
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="text-xs font-semibold text-[#64748B]">Step {index + 1}</span>
-                          <Button size="sm" variant="outline" onClick={() => setFunnelForm((current) => ({ ...current, steps: current.steps.filter((_, stepIndex) => stepIndex !== index) }))}>Remove</Button>
+                      <div key={index} className="rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 relative transition-all hover:border-[#CBD5E1]">
+                        <div className="mb-3 flex items-center justify-between">
+                          <span className="text-xs font-semibold uppercase text-[#64748B] tracking-wider">Step {index + 1}</span>
+                          <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-[#64748B] hover:text-red-500 rounded-full" onClick={() => setFunnelForm((current) => ({ ...current, steps: current.steps.filter((_, stepIndex) => stepIndex !== index) }))}><X size={14}/></Button>
                         </div>
-                        <div className="grid gap-2">
-                          <Input value={step.name} onChange={(event) => setFunnelForm((current) => ({ ...current, steps: current.steps.map((item, stepIndex) => stepIndex === index ? { ...item, name: event.target.value } : item) }))} placeholder="Step name" />
-                          <select className="h-10 rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={step.type} onChange={(event) => setFunnelForm((current) => ({ ...current, steps: current.steps.map((item, stepIndex) => stepIndex === index ? { ...item, type: event.target.value } : item) }))}>
-                            <option value="page">Page</option>
-                            <option value="custom_event">Custom Event</option>
-                            <option value="click">Click Selector</option>
-                            <option value="behavior_signal">Behavior Signal</option>
-                            <option value="tag">Session Tag</option>
-                            <option value="js_error">JS Error</option>
-                          </select>
-                          <select className="h-10 rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={step.operator} onChange={(event) => setFunnelForm((current) => ({ ...current, steps: current.steps.map((item, stepIndex) => stepIndex === index ? { ...item, operator: event.target.value } : item) }))}>
-                            <option value="contains">Contains</option>
-                            <option value="equals">Equals</option>
-                            <option value="selector">Selector</option>
-                          </select>
-                          <Input value={step.value || ""} onChange={(event) => setFunnelForm((current) => ({ ...current, steps: current.steps.map((item, stepIndex) => stepIndex === index ? { ...item, value: event.target.value } : item) }))} placeholder="/pricing, lead_created, #signup" />
+                        <div className="grid gap-3">
+                          <Input className="h-9 rounded-lg border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={step.name} onChange={(event) => setFunnelForm((current) => ({ ...current, steps: current.steps.map((item, stepIndex) => stepIndex === index ? { ...item, name: event.target.value } : item) }))} placeholder="Step name" />
+                          <div className="grid grid-cols-2 gap-2">
+                            <select className="h-9 rounded-lg border border-[rgba(15,23,42,0.06)] bg-white px-2 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={step.type} onChange={(event) => setFunnelForm((current) => ({ ...current, steps: current.steps.map((item, stepIndex) => stepIndex === index ? { ...item, type: event.target.value } : item) }))}>
+                              <option value="page">Page</option>
+                              <option value="custom_event">Custom Event</option>
+                              <option value="click">Click Selector</option>
+                              <option value="behavior_signal">Behavior Signal</option>
+                              <option value="tag">Session Tag</option>
+                              <option value="js_error">JS Error</option>
+                            </select>
+                            <select className="h-9 rounded-lg border border-[rgba(15,23,42,0.06)] bg-white px-2 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={step.operator} onChange={(event) => setFunnelForm((current) => ({ ...current, steps: current.steps.map((item, stepIndex) => stepIndex === index ? { ...item, operator: event.target.value } : item) }))}>
+                              <option value="contains">Contains</option>
+                              <option value="equals">Equals</option>
+                              <option value="selector">Selector</option>
+                            </select>
+                          </div>
+                          <Input className="h-9 rounded-lg border-[rgba(15,23,42,0.06)] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={step.value || ""} onChange={(event) => setFunnelForm((current) => ({ ...current, steps: current.steps.map((item, stepIndex) => stepIndex === index ? { ...item, value: event.target.value } : item) }))} placeholder="/pricing, lead_created, #signup" />
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setFunnelForm((current) => ({ ...current, steps: [...current.steps, { name: `Step ${current.steps.length + 1}`, type: "page", operator: "contains", value: "" }] }))}>Add Step</Button>
-                    <Button disabled={!activeSiteId || !funnelForm.name.trim() || createFunnelMutation.isPending} onClick={() => createFunnelMutation.mutate()} className="bg-[#0891B2] hover:bg-[#0E7490]">Save Funnel</Button>
+                  <div className="flex gap-3">
+                    <Button variant="outline" className="rounded-xl border-[rgba(15,23,42,0.06)] flex-1" onClick={() => setFunnelForm((current) => ({ ...current, steps: [...current.steps, { name: `Step ${current.steps.length + 1}`, type: "page", operator: "contains", value: "" }] }))}>Add Step</Button>
+                    <Button disabled={!activeSiteId || !funnelForm.name.trim() || createFunnelMutation.isPending} className="rounded-xl bg-[#0891B2] hover:bg-[#0E7490] text-white flex-1" onClick={() => createFunnelMutation.mutate()}>Save Funnel</Button>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-5">
-                <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="space-y-2">
-                      <Label>Saved Funnels</Label>
-                      <select className="h-10 min-w-[260px] rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={selectedFunnel?.id || ""} onChange={(event) => { setSelectedFunnelId(event.target.value); setSelectedRunId(""); }}>
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="space-y-1.5 w-full lg:w-auto">
+                      <Label className="text-xs font-medium text-[#475569]">Saved Funnels</Label>
+                      <select className="h-10 w-full lg:min-w-[280px] rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={selectedFunnel?.id || ""} onChange={(event) => { setSelectedFunnelId(event.target.value); setSelectedRunId(""); }}>
                         {funnels.length === 0 ? <option value="">No funnels yet</option> : null}
                         {funnels.map((funnel: WebsiteFunnel) => <option key={funnel.id} value={funnel.id}>{funnel.name}</option>)}
                       </select>
                     </div>
-                    <Button disabled={!selectedFunnel?.id || runFunnelMutation.isPending} onClick={() => selectedFunnel?.id && runFunnelMutation.mutate(selectedFunnel.id)} className="bg-[#0891B2] hover:bg-[#0E7490]">Run Funnel</Button>
+                    <Button disabled={!selectedFunnel?.id || runFunnelMutation.isPending} onClick={() => selectedFunnel?.id && runFunnelMutation.mutate(selectedFunnel.id)} className="h-10 px-6 rounded-xl bg-[#0891B2] hover:bg-[#0E7490] text-white w-full lg:w-auto">Run Funnel</Button>
                   </div>
                   {selectedRun ? (
-                    <div className="mt-5 grid gap-4 sm:grid-cols-3">
-                      <MetricCard label="Entrants" value={formatNumber(selectedRun.totalEntrants)} icon={Activity} />
-                      <MetricCard label="Conversions" value={formatNumber(selectedRun.totalConversions)} icon={MousePointerClick} />
-                      <MetricCard label="Conversion Rate" value={`${selectedRun.conversionRate || 0}%`} icon={Search} />
+                    <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                      <StatCard title="Entrants" subtitle="Users who entered" value={formatNumber(selectedRun.totalEntrants)} icon={Activity} color="teal" delay={0.1} />
+                      <StatCard title="Conversions" subtitle="Completed funnel" value={formatNumber(selectedRun.totalConversions)} icon={MousePointerClick} color="blue" delay={0.2} />
+                      <StatCard title="Conversion Rate" subtitle="% of entrants" value={`${selectedRun.conversionRate || 0}%`} icon={Search} color="purple" delay={0.3} />
                     </div>
-                  ) : <p className="mt-5 rounded-md bg-[#F8FAFC] p-4 text-sm text-[#64748B]">Run a funnel to see conversion and drop-off metrics.</p>}
+                  ) : <p className="mt-6 rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 text-sm text-[#475569] text-center">Run a funnel to see conversion and drop-off metrics.</p>}
                 </div>
 
                 {selectedRun?.results?.steps ? (
-                  <div className="grid gap-3 lg:grid-cols-3">
+                  <div className="grid gap-4 lg:grid-cols-3">
                     {selectedRun.results.steps.map((step) => (
-                      <div key={step.index} className="rounded-lg border border-[#E2E8F0] bg-white p-4">
+                      <div key={step.index} className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-5 shadow-sm">
                         <p className="text-sm font-semibold text-[#0F172A]">{step.name}</p>
-                        <div className="mt-3 space-y-1 text-sm text-[#334155]">
-                          <p>Entrants: {step.entrants}</p>
-                          <p>Drop-offs: {step.dropOffs}</p>
-                          <p>Avg time: {formatDuration(step.avgTimeFromPreviousMs)}</p>
-                          <p>Median time: {formatDuration(step.medianTimeFromPreviousMs)}</p>
+                        <div className="mt-4 space-y-2 text-sm text-[#475569]">
+                          <div className="flex justify-between items-center py-1 border-b border-[rgba(15,23,42,0.06)]"><span>Entrants</span><span className="font-medium text-[#0F172A]">{step.entrants}</span></div>
+                          <div className="flex justify-between items-center py-1 border-b border-[rgba(15,23,42,0.06)]"><span>Drop-offs</span><span className="font-medium text-[#0F172A]">{step.dropOffs}</span></div>
+                          <div className="flex justify-between items-center py-1 border-b border-[rgba(15,23,42,0.06)]"><span>Avg time</span><span className="font-medium text-[#0F172A]">{formatDuration(step.avgTimeFromPreviousMs)}</span></div>
+                          <div className="flex justify-between items-center py-1"><span>Median time</span><span className="font-medium text-[#0F172A]">{formatDuration(step.medianTimeFromPreviousMs)}</span></div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : null}
 
-                <div className="rounded-lg border border-[#E2E8F0] bg-white">
-                  <div className="border-b border-[#E2E8F0] p-5">
-                    <h2 className="text-sm font-semibold text-[#0F172A]">Drop-off Sessions</h2>
+                <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white shadow-sm overflow-hidden">
+                  <div className="border-b border-[rgba(15,23,42,0.06)] p-6 bg-[#F8FAFC]">
+                    <h2 className="text-base font-semibold text-[#0F172A]">Drop-off Sessions</h2>
                   </div>
-                  <div className="divide-y divide-[#E2E8F0]">
+                  <div className="divide-y divide-[rgba(15,23,42,0.06)]">
                     {runSessions.map((session) => (
-                      <div key={session.id} className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
+                      <div key={session.id} className="flex flex-wrap items-center justify-between gap-4 p-5 hover:bg-[#F8FAFC] transition-colors text-sm">
                         <div>
                           <p className="font-medium text-[#0F172A]">{session.entryUrl}</p>
-                          <p className="text-xs text-[#64748B]">{session.browser || "-"} / {session.device || "-"} / {formatDuration(session.durationMs)}</p>
+                          <p className="text-xs text-[#475569] mt-0.5">{session.browser || "-"} / {session.device || "-"} / {formatDuration(session.durationMs)}</p>
                         </div>
                         <div className="flex gap-2">
-                          {session.recordings?.[0]?.id ? <Button size="sm" variant="outline" onClick={() => setSelectedRecordingId(session.recordings?.[0]?.id || null)}>Recording</Button> : null}
-                          <Button size="sm" variant="outline" onClick={() => setSelectedSessionId(session.id)}>Session</Button>
+                          {session.recordings?.[0]?.id ? <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)]" onClick={() => setSelectedRecordingId(session.recordings?.[0]?.id || null)}>Recording</Button> : null}
+                          <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)]" onClick={() => setSelectedSessionId(session.id)}>Session</Button>
                         </div>
                       </div>
                     ))}
-                    {runSessions.length === 0 ? <p className="p-6 text-sm text-[#64748B]">No drop-off sessions for the selected run yet.</p> : null}
+                    {runSessions.length === 0 ? <p className="p-6 text-sm text-[#475569] text-center bg-[#F8FAFC]">No drop-off sessions for the selected run yet.</p> : null}
                   </div>
                 </div>
               </div>
             </section>
 
-            <section className="grid gap-5 xl:grid-cols-2">
-              <div className="rounded-lg border border-[#E2E8F0] bg-white">
-                <div className="flex items-center justify-between border-b border-[#E2E8F0] p-5">
+            <section className="grid gap-6 xl:grid-cols-2">
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white shadow-sm overflow-hidden flex flex-col">
+                <div className="flex items-center justify-between border-b border-[rgba(15,23,42,0.06)] p-6 bg-[#F8FAFC]">
                   <div>
-                    <h2 className="text-sm font-semibold text-[#0F172A]">Top Journey Paths</h2>
-                    <p className="text-xs text-[#64748B]">Common page and custom-event paths.</p>
+                    <h2 className="text-base font-semibold text-[#0F172A]">Top Journey Paths</h2>
+                    <p className="text-sm text-[#475569] mt-0.5">Common page and custom-event paths.</p>
                   </div>
-                  <Button variant="outline" disabled={!activeSiteId || journeyAnalyzeMutation.isPending} onClick={() => journeyAnalyzeMutation.mutate()}>Analyze</Button>
+                  <Button variant="outline" className="rounded-xl border-[rgba(15,23,42,0.06)] h-10 px-4" disabled={!activeSiteId || journeyAnalyzeMutation.isPending} onClick={() => journeyAnalyzeMutation.mutate()}>Analyze</Button>
                 </div>
-                <div className="divide-y divide-[#E2E8F0]">
+                <div className="divide-y divide-[rgba(15,23,42,0.06)] flex-1 overflow-y-auto">
                   {journeyAggregates.map((path: WebsitePathAggregate) => (
-                    <div key={path.id} className="p-4">
-                      <div className="flex items-center justify-between gap-3">
+                    <div key={path.id} className="p-5 hover:bg-[#F8FAFC] transition-colors">
+                      <div className="flex items-center justify-between gap-4">
                         <p className="text-sm font-medium text-[#0F172A]">{path.steps.map((step) => step.label).join(" → ")}</p>
-                        <Badge variant="outline">{path.occurrenceCount}</Badge>
+                        <Badge variant="secondary" className="bg-white border border-[rgba(15,23,42,0.06)]">{path.occurrenceCount}</Badge>
                       </div>
-                      <p className="mt-1 text-xs text-[#64748B]">Conversions: {path.conversionCount} · Avg duration: {formatDuration(path.avgDurationMs)}</p>
+                      <p className="mt-2 text-xs text-[#64748B]">Conversions: {path.conversionCount} · Avg duration: {formatDuration(path.avgDurationMs)}</p>
                     </div>
                   ))}
-                  {journeyAggregates.length === 0 ? <p className="p-6 text-sm text-[#64748B]">Analyze journeys to populate common paths.</p> : null}
+                  {journeyAggregates.length === 0 ? <p className="p-6 text-sm text-[#475569] text-center bg-[#F8FAFC]">Analyze journeys to populate common paths.</p> : null}
                 </div>
               </div>
 
-              <div className="rounded-lg border border-[#E2E8F0] bg-white">
-                <div className="border-b border-[#E2E8F0] p-5">
-                  <h2 className="text-sm font-semibold text-[#0F172A]">Session Journeys</h2>
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white shadow-sm overflow-hidden flex flex-col">
+                <div className="border-b border-[rgba(15,23,42,0.06)] p-6 bg-[#F8FAFC]">
+                  <h2 className="text-base font-semibold text-[#0F172A]">Session Journeys</h2>
                 </div>
-                <div className="divide-y divide-[#E2E8F0]">
+                <div className="divide-y divide-[rgba(15,23,42,0.06)] flex-1 overflow-y-auto">
                   {journeyPaths.map((path: WebsiteJourneyPath) => (
-                    <div key={path.id} className="flex items-center justify-between gap-3 p-4">
-                      <div className="min-w-0">
+                    <div key={path.id} className="flex items-center justify-between gap-4 p-5 hover:bg-[#F8FAFC] transition-colors">
+                      <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-[#0F172A]">{path.steps.map((step) => step.label).join(" → ")}</p>
-                        <p className="text-xs text-[#64748B]">{path.stepCount} steps · {path.converted ? `Converted: ${path.conversionEvent}` : "Dropped off"}</p>
+                        <p className="mt-1 text-xs text-[#64748B]">{path.stepCount} steps · {path.converted ? `Converted: ${path.conversionEvent}` : "Dropped off"}</p>
                       </div>
-                      <Button size="sm" variant="outline" onClick={() => setSelectedJourneyId(path.id)}>Open</Button>
+                      <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)] whitespace-nowrap" onClick={() => setSelectedJourneyId(path.id)}>Open</Button>
                     </div>
                   ))}
-                  {journeyPaths.length === 0 ? <p className="p-6 text-sm text-[#64748B]">No journey paths yet.</p> : null}
+                  {journeyPaths.length === 0 ? <p className="p-6 text-sm text-[#475569] text-center bg-[#F8FAFC]">No journey paths yet.</p> : null}
                 </div>
               </div>
             </section>
           </TabsContent>
 
-          <TabsContent value="ai" className="mt-0 space-y-5">
-            <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
-              <div className="space-y-5">
-                <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <TabsContent value="ai" className="mt-0 space-y-6">
+            <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
-                      <h2 className="flex items-center gap-2 text-sm font-semibold text-[#0F172A]"><Sparkles size={16} />AI Insights</h2>
-                      <p className="mt-1 text-xs text-[#64748B]">Evidence-based summaries from sessions, behavior issues, heatmaps, funnels, and journeys.</p>
+                      <h2 className="flex items-center gap-2 text-base font-semibold text-[#0F172A]"><Sparkles size={18} className="text-[#0891B2]" />AI Insights</h2>
+                      <p className="mt-1 text-sm text-[#475569]">Evidence-based summaries from sessions, behavior issues, heatmaps, funnels, and journeys.</p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" disabled={!activeSiteId || generateAiInsightMutation.isPending} onClick={() => generateAiInsightMutation.mutate("TREND_SUMMARY")}>Trend Summary</Button>
-                      <Button variant="outline" disabled={!activeSiteId || generateAiInsightMutation.isPending} onClick={() => generateAiInsightMutation.mutate("RECOMMENDATION")}>Recommendations</Button>
-                      <Button disabled={!activeSiteId || generateAiInsightMutation.isPending} onClick={() => generateAiInsightMutation.mutate("BEHAVIOR_INSIGHT")} className="bg-[#0891B2] hover:bg-[#0E7490]">Generate Insight</Button>
+                    <div className="flex flex-wrap gap-3">
+                      <Button variant="outline" className="rounded-xl border-[rgba(15,23,42,0.06)]" disabled={!activeSiteId || generateAiInsightMutation.isPending} onClick={() => generateAiInsightMutation.mutate("TREND_SUMMARY")}>Trend Summary</Button>
+                      <Button variant="outline" className="rounded-xl border-[rgba(15,23,42,0.06)]" disabled={!activeSiteId || generateAiInsightMutation.isPending} onClick={() => generateAiInsightMutation.mutate("RECOMMENDATION")}>Recommendations</Button>
+                      <Button disabled={!activeSiteId || generateAiInsightMutation.isPending} onClick={() => generateAiInsightMutation.mutate("BEHAVIOR_INSIGHT")} className="rounded-xl bg-[#0891B2] hover:bg-[#0E7490] text-white">Generate Insight</Button>
                     </div>
                   </div>
-                  <div className="mt-4 grid gap-3 md:grid-cols-3">
-                    <div className="space-y-1">
-                      <Label>Type</Label>
-                      <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={aiFilters.type} onChange={(event) => setAiFilters((current) => ({ ...current, type: event.target.value }))}>
+                  <div className="mt-6 grid gap-4 md:grid-cols-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-[#475569]">Type</Label>
+                      <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={aiFilters.type} onChange={(event) => setAiFilters((current) => ({ ...current, type: event.target.value }))}>
                         <option value="all">All</option>
                         {["RECORDING_SUMMARY", "SESSION_SUMMARY", "HEATMAP_INSIGHT", "BEHAVIOR_INSIGHT", "FUNNEL_INSIGHT", "JOURNEY_INSIGHT", "TREND_SUMMARY", "RECOMMENDATION"].map((type) => <option key={type} value={type}>{formatBehaviorType(type)}</option>)}
                       </select>
                     </div>
-                    <div className="space-y-1">
-                      <Label>Severity</Label>
-                      <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={aiFilters.severity} onChange={(event) => setAiFilters((current) => ({ ...current, severity: event.target.value }))}>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-[#475569]">Severity</Label>
+                      <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={aiFilters.severity} onChange={(event) => setAiFilters((current) => ({ ...current, severity: event.target.value }))}>
                         <option value="all">All</option>
                         <option value="HIGH">High</option>
                         <option value="MEDIUM">Medium</option>
                         <option value="LOW">Low</option>
                       </select>
                     </div>
-                    <div className="space-y-1">
-                      <Label>Status</Label>
-                      <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={aiFilters.status} onChange={(event) => setAiFilters((current) => ({ ...current, status: event.target.value }))}>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-[#475569]">Status</Label>
+                      <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={aiFilters.status} onChange={(event) => setAiFilters((current) => ({ ...current, status: event.target.value }))}>
                         <option value="all">All</option>
                         <option value="GENERATED">Generated</option>
                         <option value="DISMISSED">Dismissed</option>
@@ -1645,113 +1726,112 @@ export default function WebsiteAnalyticsPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-2">
+                <div className="grid gap-6 lg:grid-cols-2">
                   {aiInsights.map((insight: WebsiteAiInsight) => (
-                    <article key={insight.id} className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
+                    <article key={insight.id} className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm flex flex-col">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
-                            <Badge variant="outline">{formatBehaviorType(insight.type)}</Badge>
+                            <Badge variant="outline" className="border-[rgba(15,23,42,0.06)]">{formatBehaviorType(insight.type)}</Badge>
                             {insight.severity ? <Badge variant={severityBadgeVariant(insight.severity) as any}>{insight.severity}</Badge> : null}
-                            {typeof insight.confidence === "number" ? <Badge variant="secondary">{Math.round(insight.confidence * 100)}% confidence</Badge> : null}
+                            {typeof insight.confidence === "number" ? <Badge variant="secondary" className="bg-[#F8FAFC]">{Math.round(insight.confidence * 100)}% confidence</Badge> : null}
                           </div>
-                          <h3 className="mt-3 text-base font-semibold text-[#0F172A]">{insight.title}</h3>
+                          <h3 className="mt-4 text-base font-semibold text-[#0F172A]">{insight.title}</h3>
                         </div>
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline" disabled={updateAiInsightMutation.isPending} onClick={() => updateAiInsightMutation.mutate({ id: insight.id, status: "DISMISSED" })}>Dismiss</Button>
-                          <Button size="sm" variant="outline" disabled={updateAiInsightMutation.isPending} onClick={() => updateAiInsightMutation.mutate({ id: insight.id, status: "ARCHIVED" })}>Archive</Button>
+                          <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)]" disabled={updateAiInsightMutation.isPending} onClick={() => updateAiInsightMutation.mutate({ id: insight.id, status: "DISMISSED" })}>Dismiss</Button>
+                          <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)]" disabled={updateAiInsightMutation.isPending} onClick={() => updateAiInsightMutation.mutate({ id: insight.id, status: "ARCHIVED" })}>Archive</Button>
                         </div>
                       </div>
-                      <p className="mt-3 whitespace-pre-line text-sm leading-6 text-[#334155]">{insight.summary}</p>
+                      <p className="mt-4 whitespace-pre-line text-sm leading-6 text-[#475569] flex-1">{insight.summary}</p>
                       {(insight.recommendations || []).length ? (
-                        <div className="mt-4 rounded-md bg-[#F8FAFC] p-3">
-                          <p className="text-xs font-semibold uppercase text-[#64748B]">Recommendations</p>
-                          <ul className="mt-2 space-y-1 text-sm text-[#334155]">
-                            {(insight.recommendations || []).map((item, index) => <li key={`${item}-${index}`}>• {item}</li>)}
+                        <div className="mt-5 rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4">
+                          <p className="text-xs font-semibold uppercase text-[#64748B] tracking-wider">Recommendations</p>
+                          <ul className="mt-3 space-y-2 text-sm text-[#475569]">
+                            {(insight.recommendations || []).map((item, index) => <li key={`${item}-${index}`} className="flex gap-2"><span className="text-[#0891B2]">•</span> <span>{item}</span></li>)}
                           </ul>
                         </div>
                       ) : null}
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {insight.sourceType && insight.sourceId ? <Badge variant="outline">{insight.sourceType}: {insight.sourceId.slice(0, 8)}</Badge> : null}
-                        {((insight.evidence?.citations || insight.evidence || []) as any[]).slice?.(0, 6)?.map((citation: any, index: number) => <Badge key={`${citation.type}-${citation.id}-${index}`} variant="secondary">{citation.type || "Source"} {String(citation.id || "").slice(0, 8)}</Badge>)}
+                      <div className="mt-5 pt-4 border-t border-[rgba(15,23,42,0.06)] flex flex-wrap gap-2">
+                        {insight.sourceType && insight.sourceId ? <Badge variant="secondary" className="bg-white border border-[rgba(15,23,42,0.06)]">{insight.sourceType}: {insight.sourceId.slice(0, 8)}</Badge> : null}
+                        {((insight.evidence?.citations || insight.evidence || []) as any[]).slice?.(0, 6)?.map((citation: any, index: number) => <Badge key={`${citation.type}-${citation.id}-${index}`} variant="secondary" className="bg-white border border-[rgba(15,23,42,0.06)]">{citation.type || "Source"} {String(citation.id || "").slice(0, 8)}</Badge>)}
                       </div>
                     </article>
                   ))}
-                  {aiInsights.length === 0 ? <p className="rounded-lg border border-[#E2E8F0] bg-white p-8 text-center text-sm text-[#64748B] lg:col-span-2">No AI insights yet. Generate a trend summary or inspect a session/recording to create the first one.</p> : null}
+                  {aiInsights.length === 0 ? <p className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-10 text-center text-sm text-[#475569] shadow-sm lg:col-span-2">No AI insights yet. Generate a trend summary or inspect a session/recording to create the first one.</p> : null}
                 </div>
               </div>
 
-              <aside className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                <div className="flex items-center justify-between gap-3">
+              <aside className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm flex flex-col">
+                <div className="flex items-center justify-between gap-4">
                   <div>
-                    <h2 className="flex items-center gap-2 text-sm font-semibold text-[#0F172A]"><MessageSquare size={16} />AI Chat</h2>
-                    <p className="mt-1 text-xs text-[#64748B]">Ask questions using the selected site, date range, and segment context.</p>
+                    <h2 className="flex items-center gap-2 text-base font-semibold text-[#0F172A]"><MessageSquare size={18} className="text-[#0891B2]" />AI Chat</h2>
+                    <p className="mt-1 text-xs text-[#475569]">Ask questions using the selected site, date range, and segment context.</p>
                   </div>
-                  <Button size="sm" variant="outline" disabled={!activeSiteId || createAiConversationMutation.isPending} onClick={() => createAiConversationMutation.mutate()}>New</Button>
+                  <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)]" disabled={!activeSiteId || createAiConversationMutation.isPending} onClick={() => createAiConversationMutation.mutate()}>New</Button>
                 </div>
-                <div className="mt-4 space-y-2">
-                  <Label>Conversation</Label>
-                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={selectedAiConversation?.id || ""} onChange={(event) => setSelectedAiConversationId(event.target.value)}>
+                <div className="mt-5 space-y-1.5">
+                  <Label className="text-xs font-medium text-[#475569]">Conversation</Label>
+                  <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={selectedAiConversation?.id || ""} onChange={(event) => setSelectedAiConversationId(event.target.value)}>
                     {aiConversations.length === 0 ? <option value="">Start a chat</option> : null}
                     {aiConversations.map((conversation: WebsiteAiConversation) => <option key={conversation.id} value={conversation.id}>{conversation.title || formatDate(conversation.createdAt)}</option>)}
                   </select>
                 </div>
-                <div className="mt-4 h-[440px] space-y-3 overflow-y-auto rounded-md bg-[#F8FAFC] p-3">
+                <div className="mt-5 flex-1 min-h-[440px] space-y-4 overflow-y-auto rounded-xl bg-[#F8FAFC] p-4 border border-[rgba(15,23,42,0.06)] scrollbar-thin scrollbar-thumb-[rgba(15,23,42,0.1)]">
                   {aiMessages.map((message: WebsiteAiMessage) => (
-                    <div key={message.id} className={`rounded-lg border p-3 text-sm ${message.role === "USER" ? "border-[#BAE6FD] bg-white" : "border-[#E2E8F0] bg-[#ECFEFF]"}`}>
-                      <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-[#64748B]">{message.role === "USER" ? "You" : <><Bot size={13} />AI Analyst</>}</p>
-                      <p className="whitespace-pre-line text-[#334155]">{message.content}</p>
-                      {(message.citations || []).length ? <div className="mt-2 flex flex-wrap gap-1">{message.citations?.slice(0, 5).map((citation: any, index: number) => <Badge key={`${citation.type}-${citation.id}-${index}`} variant="outline">{citation.type} {String(citation.id).slice(0, 8)}</Badge>)}</div> : null}
+                    <div key={message.id} className={`rounded-2xl p-4 text-sm transition-all ${message.role === "USER" ? "border border-[rgba(15,23,42,0.06)] bg-white ml-6 shadow-sm" : "border border-[#0891B2]/20 bg-[#ECFEFF] mr-6"}`}>
+                      <p className={`mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider ${message.role === "USER" ? "text-[#475569]" : "text-[#0891B2]"}`}>{message.role === "USER" ? "You" : <><Bot size={14} />AI Analyst</>}</p>
+                      <p className={`whitespace-pre-line leading-6 ${message.role === "USER" ? "text-[#0F172A]" : "text-[#0F172A]"}`}>{message.content}</p>
+                      {(message.citations || []).length ? <div className="mt-3 flex flex-wrap gap-2 pt-3 border-t border-[rgba(15,23,42,0.06)]">{message.citations?.slice(0, 5).map((citation: any, index: number) => <Badge key={`${citation.type}-${citation.id}-${index}`} variant="outline" className="bg-white border-[rgba(15,23,42,0.06)]">{citation.type} {String(citation.id).slice(0, 8)}</Badge>)}</div> : null}
                     </div>
                   ))}
-                  {aiMessages.length === 0 ? <div className="rounded-lg border border-dashed border-[#CBD5E1] bg-white p-5 text-sm text-[#64748B]">Try: “Why are users dropping off?” or “Which recordings should I watch first?”</div> : null}
+                  {aiMessages.length === 0 ? <div className="rounded-xl border border-dashed border-[#CBD5E1] bg-white p-6 text-sm text-[#475569] text-center">Try: “Why are users dropping off?” or “Which recordings should I watch first?”</div> : null}
                 </div>
-                <div className="mt-4 space-y-2">
-                  <Textarea value={aiPrompt} onChange={(event) => setAiPrompt(event.target.value)} placeholder="Ask about drop-offs, rage clicks, recordings, funnels, or pages..." className="min-h-[92px]" />
-                  <Button disabled={!activeSiteId || !aiPrompt.trim() || sendAiMessageMutation.isPending} onClick={() => sendAiMessageMutation.mutate()} className="w-full bg-[#0891B2] hover:bg-[#0E7490]">Ask AI</Button>
+                <div className="mt-5 space-y-3">
+                      <Textarea value={aiPrompt} onChange={(event) => setAiPrompt(event.target.value)} placeholder="Ask about drop-offs, rage clicks, recordings, funnels, or pages..." className="min-h-[100px] rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A] resize-none" />
+                  <Button disabled={!activeSiteId || !aiPrompt.trim() || sendAiMessageMutation.isPending} onClick={() => sendAiMessageMutation.mutate()} className="w-full h-10 rounded-xl bg-[#0891B2] hover:bg-[#0E7490] text-white">Ask AI</Button>
                 </div>
               </aside>
             </section>
-          </TabsContent>
-
-          <TabsContent value="integrations" className="mt-0 space-y-5">
-            <section className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
-              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                <h2 className="text-sm font-semibold text-[#0F172A]">Create Integration</h2>
-                <div className="mt-4 space-y-3">
-                  <select className="h-10 w-full rounded-md border border-[#E2E8F0] bg-white px-3 text-sm" value={integrationForm.provider} onChange={(event) => setIntegrationForm((current) => ({ ...current, provider: event.target.value }))}>
+               <TabsContent value="integrations" className="mt-0 space-y-6">
+            <section className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-[#0F172A]">Create Integration</h2>
+                <div className="mt-5 space-y-4">
+                  <select className="h-10 w-full rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-3 text-sm focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={integrationForm.provider} onChange={(event) => setIntegrationForm((current) => ({ ...current, provider: event.target.value }))}>
                     {["CUSTOM_WEBHOOK", "GOOGLE_ANALYTICS", "GOOGLE_TAG_MANAGER", "SHOPIFY", "ADS"].map((provider) => <option key={provider} value={provider}>{formatBehaviorType(provider)}</option>)}
                   </select>
-                  <Input value={integrationForm.name} onChange={(event) => setIntegrationForm((current) => ({ ...current, name: event.target.value }))} placeholder="Integration name" />
+                  <Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={integrationForm.name} onChange={(event) => setIntegrationForm((current) => ({ ...current, name: event.target.value }))} placeholder="Integration name" />
                   {integrationForm.provider === "CUSTOM_WEBHOOK" ? (
                     <>
-                      <Input value={integrationForm.webhookUrl} onChange={(event) => setIntegrationForm((current) => ({ ...current, webhookUrl: event.target.value }))} placeholder="https://example.com/webhook" />
-                      <Input value={integrationForm.signingSecret} onChange={(event) => setIntegrationForm((current) => ({ ...current, signingSecret: event.target.value }))} placeholder="Signing secret" />
-                      <Textarea value={integrationForm.events} onChange={(event) => setIntegrationForm((current) => ({ ...current, events: event.target.value }))} />
+                      <Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={integrationForm.webhookUrl} onChange={(event) => setIntegrationForm((current) => ({ ...current, webhookUrl: event.target.value }))} placeholder="https://example.com/webhook" />
+                      <Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={integrationForm.signingSecret} onChange={(event) => setIntegrationForm((current) => ({ ...current, signingSecret: event.target.value }))} placeholder="Signing secret" />
+                      <Textarea className="min-h-[100px] rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A] resize-none" value={integrationForm.events} onChange={(event) => setIntegrationForm((current) => ({ ...current, events: event.target.value }))} placeholder='["session.created", "behavior.rage_click"]' />
                     </>
-                  ) : <p className="rounded-md bg-[#F8FAFC] p-3 text-sm text-[#64748B]">OAuth is not enabled yet. Save this provider to keep setup instructions and mapping fields for rollout.</p>}
-                  <Button disabled={!activeSiteId || createIntegrationMutation.isPending} onClick={() => createIntegrationMutation.mutate()} className="w-full bg-[#0891B2] hover:bg-[#0E7490]">Save Integration</Button>
+                  ) : <p className="rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 text-sm text-[#475569] leading-6">OAuth is not enabled yet. Save this provider to keep setup instructions and mapping fields for rollout.</p>}
+                  <Button disabled={!activeSiteId || createIntegrationMutation.isPending} onClick={() => createIntegrationMutation.mutate()} className="w-full h-10 rounded-xl bg-[#0891B2] hover:bg-[#0E7490] text-white">Save Integration</Button>
                 </div>
               </div>
-              <div className="rounded-lg border border-[#E2E8F0] bg-white">
-                <div className="border-b border-[#E2E8F0] p-5"><h2 className="text-sm font-semibold text-[#0F172A]">Integrations</h2></div>
-                <div className="divide-y divide-[#E2E8F0]">
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white shadow-sm overflow-hidden flex flex-col">
+                <div className="border-b border-[rgba(15,23,42,0.06)] p-6 bg-[#F8FAFC]"><h2 className="text-base font-semibold text-[#0F172A]">Integrations</h2></div>
+                <div className="divide-y divide-[rgba(15,23,42,0.06)] flex-1 overflow-y-auto">
                   {integrations.map((integration: WebsiteAnalyticsIntegration) => (
-                    <div key={integration.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+                    <div key={integration.id} className="flex flex-wrap items-center justify-between gap-4 p-5 hover:bg-[#F8FAFC] transition-colors">
                       <button className="text-left" onClick={() => setSelectedIntegrationId(integration.id)}>
                         <p className="font-medium text-[#0F172A]">{integration.name}</p>
-                        <p className="text-xs text-[#64748B]">{formatBehaviorType(integration.provider)} · {integration.status} · {integration.lastError || "No errors"}</p>
+                        <p className="text-xs text-[#475569] mt-1">{formatBehaviorType(integration.provider)} · <span className={integration.status === "ACTIVE" ? "text-emerald-600" : ""}>{integration.status}</span> · {integration.lastError || "No errors"}</p>
                       </button>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => testIntegrationMutation.mutate(integration.id)}>Test</Button>
-                        <Button size="sm" variant="outline" onClick={() => deleteIntegrationMutation.mutate(integration.id)}>Delete</Button>
+                        <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)]" onClick={() => testIntegrationMutation.mutate(integration.id)}>Test</Button>
+                        <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)] text-red-600 hover:bg-red-50" onClick={() => deleteIntegrationMutation.mutate(integration.id)}>Delete</Button>
                       </div>
                     </div>
                   ))}
-                  {integrations.length === 0 ? <p className="p-6 text-sm text-[#64748B]">No integrations yet.</p> : null}
+                  {integrations.length === 0 ? <p className="p-6 text-sm text-[#475569] text-center bg-[#F8FAFC]">No integrations configured yet.</p> : null}
                 </div>
               </div>
             </section>
+          </TabsContent>  </section>
             <section className="rounded-lg border border-[#E2E8F0] bg-white">
               <div className="border-b border-[#E2E8F0] p-5"><h2 className="text-sm font-semibold text-[#0F172A]">Delivery Log</h2></div>
               <div className="divide-y divide-[#E2E8F0]">
@@ -1765,16 +1845,16 @@ export default function WebsiteAnalyticsPage() {
             </section>
           </TabsContent>
 
-          <TabsContent value="reports" className="mt-0 space-y-5">
+          <TabsContent value="reports" className="mt-0 space-y-6">
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-              <MetricCard label="Sessions" value={formatNumber(reportOverview.sessions)} icon={Activity} />
-              <MetricCard label="Visitors" value={formatNumber(reportOverview.uniqueVisitors)} icon={Globe2} />
-              <MetricCard label="Page Views" value={formatNumber(reportOverview.pageViews)} icon={Search} />
-              <MetricCard label="Avg Duration" value={formatDuration(reportOverview.averageDurationMs)} icon={Clock} />
-              <MetricCard label="Behavior Issues" value={formatNumber(reportOverview.behaviorIssues)} icon={AlertTriangle} />
-              <MetricCard label="Conversions" value={formatNumber(reportOverview.funnelConversions)} icon={MousePointerClick} />
+              <StatCard title="Sessions" subtitle="Total tracked" value={formatNumber(reportOverview.sessions)} icon={Activity} color="teal" delay={0.1} />
+              <StatCard title="Visitors" subtitle="Unique users" value={formatNumber(reportOverview.uniqueVisitors)} icon={Globe2} color="blue" delay={0.15} />
+              <StatCard title="Page Views" subtitle="Total viewed" value={formatNumber(reportOverview.pageViews)} icon={Search} color="purple" delay={0.2} />
+              <StatCard title="Avg Duration" subtitle="Session length" value={formatDuration(reportOverview.averageDurationMs)} icon={Clock} color="orange" delay={0.25} />
+              <StatCard title="Behavior Issues" subtitle="Rage clicks, etc" value={formatNumber(reportOverview.behaviorIssues)} icon={AlertTriangle} color="rose" delay={0.3} />
+              <StatCard title="Conversions" subtitle="Completed funnels" value={formatNumber(reportOverview.funnelConversions)} icon={MousePointerClick} color="teal" delay={0.35} />
             </section>
-            <section className="grid gap-5 xl:grid-cols-2">
+            <section className="grid gap-6 xl:grid-cols-2">
               {[
                 ["Top Pages", reportPagesQuery.data || [], "path", "pageViews"],
                 ["Acquisition", reportAcquisitionQuery.data || [], "name", "sessions"],
@@ -1782,35 +1862,35 @@ export default function WebsiteAnalyticsPage() {
                 ["Technical Errors", reportTechnicalQuery.data || [], "path", "type"],
                 ["Funnel Conversions", reportConversionsQuery.data || [], "funnel.name", "conversionRate"],
               ].map(([title, rows, labelKey, valueKey]: any) => (
-                <div key={title} className="rounded-lg border border-[#E2E8F0] bg-white">
-                  <div className="border-b border-[#E2E8F0] p-5"><h2 className="text-sm font-semibold text-[#0F172A]">{title}</h2></div>
-                  <div className="divide-y divide-[#E2E8F0]">
+                <div key={title} className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white shadow-sm overflow-hidden flex flex-col">
+                  <div className="border-b border-[rgba(15,23,42,0.06)] p-6 bg-[#F8FAFC]"><h2 className="text-base font-semibold text-[#0F172A]">{title}</h2></div>
+                  <div className="divide-y divide-[rgba(15,23,42,0.06)] flex-1 overflow-y-auto">
                     {rows.slice(0, 8).map((row: any, index: number) => {
                       const label = labelKey.includes(".") ? row.funnel?.name : row[labelKey];
-                      return <div key={`${title}-${index}`} className="flex justify-between gap-3 p-4 text-sm"><span className="truncate">{label || "-"}</span><Badge variant="outline">{String(row[valueKey] ?? "-")}</Badge></div>;
+                      return <div key={`${title}-${index}`} className="flex justify-between items-center gap-4 p-5 hover:bg-[#F8FAFC] transition-colors"><span className="truncate text-sm font-medium text-[#0F172A]">{label || "-"}</span><Badge variant="secondary" className="bg-white border border-[rgba(15,23,42,0.06)]">{String(row[valueKey] ?? "-")}</Badge></div>;
                     })}
-                    {rows.length === 0 ? <p className="p-6 text-sm text-[#64748B]">No data yet.</p> : null}
+                    {rows.length === 0 ? <p className="p-6 text-sm text-[#475569] text-center bg-[#F8FAFC]">No data yet.</p> : null}
                   </div>
                 </div>
               ))}
             </section>
           </TabsContent>
 
-          <TabsContent value="admin" className="mt-0 space-y-5">
+          <TabsContent value="admin" className="mt-0 space-y-6">
             <section className="grid gap-4 md:grid-cols-3">
-              <MetricCard label="Recording Storage" value={`${Math.round((storageUsageQuery.data?.recordingBytes || 0) / 1024)} KB`} icon={Eye} />
-              <MetricCard label="Events Stored" value={formatNumber(storageUsageQuery.data?.eventCount)} icon={Activity} />
-              <MetricCard label="Sessions Stored" value={formatNumber(storageUsageQuery.data?.sessionCount)} icon={Globe2} />
+              <StatCard title="Recording Storage" subtitle="Used space" value={`${Math.round((storageUsageQuery.data?.recordingBytes || 0) / 1024)} KB`} icon={Eye} color="teal" delay={0.1} />
+              <StatCard title="Events Stored" subtitle="Total events" value={formatNumber(storageUsageQuery.data?.eventCount)} icon={Activity} color="blue" delay={0.2} />
+              <StatCard title="Sessions Stored" subtitle="Total sessions" value={formatNumber(storageUsageQuery.data?.sessionCount)} icon={Globe2} color="purple" delay={0.3} />
             </section>
-            <section className="grid gap-5 lg:grid-cols-2">
-              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                <h2 className="text-sm font-semibold text-[#0F172A]">Ingestion Health</h2>
-                <pre className="mt-3 rounded-md bg-[#F8FAFC] p-3 text-xs text-[#475569]">{JSON.stringify(ingestionHealthQuery.data || {}, null, 2)}</pre>
+            <section className="grid gap-6 lg:grid-cols-2">
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm flex flex-col">
+                <h2 className="text-base font-semibold text-[#0F172A]">Ingestion Health</h2>
+                <pre className="mt-5 flex-1 rounded-xl bg-[#F8FAFC] p-4 text-xs text-[#475569] border border-[rgba(15,23,42,0.06)] overflow-auto scrollbar-thin scrollbar-thumb-[rgba(15,23,42,0.1)]">{JSON.stringify(ingestionHealthQuery.data || {}, null, 2)}</pre>
               </div>
-              <div className="rounded-lg border border-[#E2E8F0] bg-white p-5">
-                <h2 className="text-sm font-semibold text-[#0F172A]">Retention Preview</h2>
-                <pre className="mt-3 max-h-64 overflow-auto rounded-md bg-[#F8FAFC] p-3 text-xs text-[#475569]">{JSON.stringify(retentionPreviewQuery.data || [], null, 2)}</pre>
-                <Button className="mt-4 bg-[#0891B2] hover:bg-[#0E7490]" disabled={retentionCleanupMutation.isPending} onClick={() => retentionCleanupMutation.mutate()}>Run Cleanup</Button>
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm flex flex-col">
+                <h2 className="text-base font-semibold text-[#0F172A]">Retention Preview</h2>
+                <pre className="mt-5 flex-1 max-h-[300px] overflow-auto rounded-xl bg-[#F8FAFC] p-4 text-xs text-[#475569] border border-[rgba(15,23,42,0.06)] scrollbar-thin scrollbar-thumb-[rgba(15,23,42,0.1)]">{JSON.stringify(retentionPreviewQuery.data || [], null, 2)}</pre>
+                <Button className="mt-5 h-10 w-full rounded-xl bg-[#0891B2] hover:bg-[#0E7490] text-white" disabled={retentionCleanupMutation.isPending} onClick={() => retentionCleanupMutation.mutate()}>Run Cleanup</Button>
               </div>
             </section>
           </TabsContent>
@@ -1818,202 +1898,210 @@ export default function WebsiteAnalyticsPage() {
       </main>
 
       <Sheet open={Boolean(selectedSessionId)} onOpenChange={(open) => !open && setSelectedSessionId(null)}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
-          <SheetHeader>
-            <SheetTitle>Session Detail</SheetTitle>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl bg-[#F8FAFC] border-l-[rgba(15,23,42,0.06)]">
+          <SheetHeader className="mb-6">
+            <SheetTitle className="text-xl font-semibold text-[#0F172A]">Session Detail</SheetTitle>
           </SheetHeader>
           {sessionDetail ? (
-            <div className="mt-6 space-y-5">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <MetricCard label="Pages" value={String(sessionDetail.pageCount)} icon={Search} />
-                <MetricCard label="Events" value={String(sessionDetail.eventCount)} icon={MousePointerClick} />
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <StatCard title="Pages" subtitle="Pages viewed" value={String(sessionDetail.pageCount)} icon={Search} color="teal" delay={0.1} />
+                <StatCard title="Events" subtitle="Total events" value={String(sessionDetail.eventCount)} icon={MousePointerClick} color="blue" delay={0.2} />
               </div>
-              <div className="rounded-lg border border-[#E2E8F0] p-4 text-sm">
-                <p><span className="font-medium">Entry:</span> {sessionDetail.entryUrl}</p>
-                <p className="mt-2"><span className="font-medium">Exit:</span> {sessionDetail.exitUrl || "-"}</p>
-                <p className="mt-2"><span className="font-medium">Browser:</span> {sessionDetail.browser || "-"} / {sessionDetail.os || "-"}</p>
-                <p className="mt-2"><span className="font-medium">Visitor:</span> {sessionDetail.visitor?.anonymousId || sessionDetail.visitorId || "-"}</p>
-                <p className="mt-2"><span className="font-medium">User ID:</span> {sessionDetail.visitor?.identity?.externalUserId || "-"}</p>
-                {sessionDetail.visitor?.identity?.traits ? <pre className="mt-3 max-h-32 overflow-auto rounded-md bg-[#F8FAFC] p-3 text-xs text-[#475569]">{JSON.stringify(sessionDetail.visitor.identity.traits, null, 2)}</pre> : null}
-                <div className="mt-4 flex flex-wrap gap-2">
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm flex flex-col">
+                <div className="space-y-3 text-sm text-[#475569]">
+                  <p className="flex justify-between border-b border-[rgba(15,23,42,0.06)] pb-2"><span className="font-medium text-[#0F172A]">Entry:</span> <span>{sessionDetail.entryUrl}</span></p>
+                  <p className="flex justify-between border-b border-[rgba(15,23,42,0.06)] pb-2"><span className="font-medium text-[#0F172A]">Exit:</span> <span>{sessionDetail.exitUrl || "-"}</span></p>
+                  <p className="flex justify-between border-b border-[rgba(15,23,42,0.06)] pb-2"><span className="font-medium text-[#0F172A]">Browser:</span> <span>{sessionDetail.browser || "-"} / {sessionDetail.os || "-"}</span></p>
+                  <p className="flex justify-between border-b border-[rgba(15,23,42,0.06)] pb-2"><span className="font-medium text-[#0F172A]">Visitor:</span> <span>{sessionDetail.visitor?.anonymousId || sessionDetail.visitorId || "-"}</span></p>
+                  <p className="flex justify-between border-b border-[rgba(15,23,42,0.06)] pb-2"><span className="font-medium text-[#0F172A]">User ID:</span> <span>{sessionDetail.visitor?.identity?.externalUserId || "-"}</span></p>
+                </div>
+                {sessionDetail.visitor?.identity?.traits ? <pre className="mt-5 max-h-32 overflow-auto rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 text-xs text-[#475569] scrollbar-thin scrollbar-thumb-[rgba(15,23,42,0.1)]">{JSON.stringify(sessionDetail.visitor.identity.traits, null, 2)}</pre> : null}
+                <div className="mt-5 pt-5 border-t border-[rgba(15,23,42,0.06)] flex flex-wrap gap-2">
                   {(sessionDetail.tags || []).map((tag) => (
-                    <Badge key={tag.id} variant="outline" className="gap-2">
+                    <Badge key={tag.id} variant="secondary" className="bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)] gap-2 pr-1">
                       {tag.name}
-                      <button onClick={() => deleteTagMutation.mutate({ sessionId: sessionDetail.id, tagId: tag.id })}>×</button>
+                      <button className="rounded-full hover:bg-[rgba(15,23,42,0.06)] p-0.5" onClick={() => deleteTagMutation.mutate({ sessionId: sessionDetail.id, tagId: tag.id })}><X size={12} /></button>
                     </Badge>
                   ))}
                 </div>
-                <div className="mt-3 flex gap-2">
-                  <Input value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} placeholder="Add tag" />
-                  <Button variant="outline" disabled={!tagDraft.trim()} onClick={() => tagMutation.mutate({ sessionId: sessionDetail.id, name: tagDraft })}>Add</Button>
+                <div className="mt-4 flex gap-3">
+                  <Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} placeholder="Add tag" />
+                  <Button variant="outline" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)]" disabled={!tagDraft.trim()} onClick={() => tagMutation.mutate({ sessionId: sessionDetail.id, name: tagDraft })}>Add</Button>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button variant="outline" disabled={analyzeSessionMutation.isPending} onClick={() => analyzeSessionMutation.mutate(sessionDetail.id)}>Analyze Behavior</Button>
-                  <Button variant="outline" disabled={sessionAiSummaryMutation.isPending} onClick={() => sessionAiSummaryMutation.mutate(sessionDetail.id)} className="gap-2"><Sparkles size={14} />Generate AI Summary</Button>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Button variant="outline" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] flex-1" disabled={analyzeSessionMutation.isPending} onClick={() => analyzeSessionMutation.mutate(sessionDetail.id)}>Analyze Behavior</Button>
+                  <Button disabled={sessionAiSummaryMutation.isPending} onClick={() => sessionAiSummaryMutation.mutate(sessionDetail.id)} className="h-10 rounded-xl bg-[#0891B2] hover:bg-[#0E7490] text-white flex-1 gap-2"><Sparkles size={16} />Generate AI Summary</Button>
                 </div>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-4 relative">
+                <div className="absolute left-6 top-6 bottom-6 w-px bg-[rgba(15,23,42,0.06)]" />
                 {(sessionDetail.events || []).map((event) => (
-                  <div key={event.id} className="rounded-lg border border-[#E2E8F0] bg-white p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <Badge variant="outline">{event.type}</Badge>
-                      <span className="text-xs text-[#64748B]">{formatDate(event.createdAt)}</span>
+                  <div key={event.id} className="relative rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-5 shadow-sm ml-4 hover:border-[#0891B2]/30 transition-colors">
+                    <div className="absolute -left-[21px] top-6 w-2.5 h-2.5 rounded-full bg-[#0891B2] border-2 border-white shadow-sm" />
+                    <div className="flex items-center justify-between gap-4">
+                      <Badge variant="outline" className="border-[rgba(15,23,42,0.06)]">{event.type}</Badge>
+                      <span className="text-xs font-medium text-[#64748B]">{formatDate(event.createdAt)}</span>
                     </div>
-                    <p className="mt-2 truncate text-sm text-[#334155]">{event.url}</p>
-                    {event.payload ? <pre className="mt-3 max-h-44 overflow-auto rounded-md bg-[#F8FAFC] p-3 text-xs text-[#475569]">{JSON.stringify(event.payload, null, 2)}</pre> : null}
+                    <p className="mt-3 truncate text-sm font-medium text-[#0F172A]">{event.url}</p>
+                    {event.payload ? <pre className="mt-4 max-h-44 overflow-auto rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 text-xs text-[#475569] scrollbar-thin scrollbar-thumb-[rgba(15,23,42,0.1)]">{JSON.stringify(event.payload, null, 2)}</pre> : null}
                   </div>
                 ))}
               </div>
             </div>
-          ) : <p className="mt-6 text-sm text-[#64748B]">Loading session...</p>}
+          ) : <p className="mt-8 text-center text-sm text-[#475569]">Loading session...</p>}
         </SheetContent>
       </Sheet>
 
       <Sheet open={Boolean(selectedRecordingId)} onOpenChange={(open) => !open && setSelectedRecordingId(null)}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-6xl">
-          <SheetHeader>
-            <SheetTitle>Session Recording Replay</SheetTitle>
-          </SheetHeader>
-          {recordingDetail ? (
-            <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="space-y-4">
-                <div className="overflow-hidden rounded-lg border border-[#E2E8F0] bg-white">
-                  {replayEvents.length >= 2 ? <div ref={playerRef} className="min-h-[520px]" /> : <div className="p-10 text-center text-sm text-[#64748B]">This recording does not have enough replay data yet. Keep the visitor page open and interact for a few seconds, then refresh recordings.</div>}
-                </div>
-                <div className="rounded-lg border border-[#E2E8F0] bg-white p-4">
-                  <h3 className="text-sm font-semibold text-[#0F172A]">Event Markers</h3>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {(recordingDetail.session?.events || []).filter((event) => ["click", "page_view", "js_error", "unhandled_rejection"].includes(event.type)).slice(0, 80).map((event) => (
-                      <Badge key={event.id} variant={event.type.includes("error") ? "destructive" : "outline"}>{event.type}</Badge>
-                    ))}
-                    {(recordingDetail.session?.behaviorSignals || []).slice(0, 40).map((signal) => (
-                      <Badge key={signal.id} variant={severityBadgeVariant(signal.severity) as any}>{formatBehaviorType(signal.type)}</Badge>
-                    ))}
+        <SheetContent className="w-full overflow-y-auto sm:max-w-[1200px] bg-[#F8FAFC] border-l-[rgba(15,23,42,0.06)] p-0">
+          <div className="p-6">
+            <SheetHeader className="mb-6">
+              <SheetTitle className="text-xl font-semibold text-[#0F172A]">Session Recording Replay</SheetTitle>
+            </SheetHeader>
+            {recordingDetail ? (
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="space-y-6">
+                  <div className="overflow-hidden rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white shadow-sm">
+                    {replayEvents.length >= 2 ? <div ref={playerRef} className="min-h-[600px]" /> : <div className="p-12 flex flex-col items-center justify-center min-h-[600px] text-center"><div className="w-12 h-12 rounded-full bg-[#F8FAFC] flex items-center justify-center mb-4"><Eye size={20} className="text-[#64748B]" /></div><p className="text-sm font-medium text-[#0F172A]">Insufficient Replay Data</p><p className="text-sm text-[#475569] mt-2 max-w-sm">This recording does not have enough replay data yet. Keep the visitor page open and interact for a few seconds, then refresh recordings.</p></div>}
+                  </div>
+                  <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                    <h3 className="text-base font-semibold text-[#0F172A]">Event Markers</h3>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {(recordingDetail.session?.events || []).filter((event) => ["click", "page_view", "js_error", "unhandled_rejection"].includes(event.type)).slice(0, 80).map((event) => (
+                        <Badge key={event.id} variant={event.type.includes("error") ? "destructive" : "secondary"} className={!event.type.includes("error") ? "bg-[#F8FAFC] border-[rgba(15,23,42,0.06)]" : ""}>{event.type}</Badge>
+                      ))}
+                      {(recordingDetail.session?.behaviorSignals || []).slice(0, 40).map((signal) => (
+                        <Badge key={signal.id} variant={severityBadgeVariant(signal.severity) as any}>{formatBehaviorType(signal.type)}</Badge>
+                      ))}
+                    </div>
                   </div>
                 </div>
+                <aside className="space-y-6">
+                  <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                    <div className="flex flex-col gap-3">
+                      <Button variant={recordingDetail.isFavorite ? "default" : "outline"} onClick={() => favoriteMutation.mutate({ id: recordingDetail.id, isFavorite: !recordingDetail.isFavorite })} className={`h-10 rounded-xl gap-2 ${recordingDetail.isFavorite ? "bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200" : "border-[rgba(15,23,42,0.06)]"}`}><Star size={16} className={recordingDetail.isFavorite ? "fill-current" : ""} />{recordingDetail.isFavorite ? "Favorited" : "Favorite"}</Button>
+                      <Button variant="outline" onClick={() => shareMutation.mutate(recordingDetail.id)} className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] gap-2"><Share2 size={16} />Share</Button>
+                      <Button disabled={recordingAiSummaryMutation.isPending} onClick={() => recordingAiSummaryMutation.mutate(recordingDetail.id)} className="h-10 rounded-xl bg-[#0891B2] hover:bg-[#0E7490] text-white gap-2"><Sparkles size={16} />AI Summary</Button>
+                    </div>
+                    <div className="mt-6 pt-6 border-t border-[rgba(15,23,42,0.06)] space-y-3 text-sm text-[#475569]">
+                      <p className="flex justify-between"><span className="font-medium text-[#0F172A]">Site:</span> <span>{recordingDetail.site?.name}</span></p>
+                      <p className="flex justify-between"><span className="font-medium text-[#0F172A]">Entry:</span> <span className="truncate max-w-[150px]">{recordingDetail.session?.entryUrl || "-"}</span></p>
+                      <p className="flex justify-between"><span className="font-medium text-[#0F172A]">Exit:</span> <span className="truncate max-w-[150px]">{recordingDetail.session?.exitUrl || "-"}</span></p>
+                      <p className="flex justify-between"><span className="font-medium text-[#0F172A]">Browser:</span> <span>{recordingDetail.session?.browser || "-"} / {recordingDetail.session?.os || "-"}</span></p>
+                      <p className="flex justify-between"><span className="font-medium text-[#0F172A]">Device:</span> <span>{recordingDetail.session?.device || "-"}</span></p>
+                      <p className="flex justify-between"><span className="font-medium text-[#0F172A]">Country:</span> <span>{recordingDetail.session?.country || "-"}</span></p>
+                      <p className="flex justify-between"><span className="font-medium text-[#0F172A]">Duration:</span> <span>{formatDuration(recordingDetail.durationMs)}</span></p>
+                      <p className="flex justify-between"><span className="font-medium text-[#0F172A]">Events:</span> <span>{recordingDetail.eventCount}</span></p>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                    <h3 className="flex items-center gap-2 text-base font-semibold text-[#0F172A]"><Tags size={18} className="text-[#0891B2]" />Labels</h3>
+                    <div className="mt-4 flex flex-wrap gap-2">{(recordingDetail.labels || []).map((label) => <Badge key={label} variant="secondary" className="bg-[#F8FAFC] border border-[rgba(15,23,42,0.06)]">{label}</Badge>)}</div>
+                    <div className="mt-5 flex gap-3">
+                      <Input className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] focus:border-[#22D3EE] focus:ring-2 focus:ring-[#22D3EE]/20 transition-all text-[#0F172A]" value={labelDraft} onChange={(event) => setLabelDraft(event.target.value)} placeholder="hot, bug, pricing" />
+                      <Button variant="outline" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)]" onClick={() => labelsMutation.mutate({ id: recordingDetail.id, labels: labelDraft.split(",").map((item) => item.trim()).filter(Boolean) })}>Save</Button>
+                    </div>
+                  </div>
+                </aside>
               </div>
-              <aside className="space-y-4">
-                <div className="rounded-lg border border-[#E2E8F0] bg-white p-4">
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => favoriteMutation.mutate({ id: recordingDetail.id, isFavorite: !recordingDetail.isFavorite })} className="gap-2"><Star size={16} />{recordingDetail.isFavorite ? "Unfavorite" : "Favorite"}</Button>
-                    <Button variant="outline" onClick={() => shareMutation.mutate(recordingDetail.id)} className="gap-2"><Share2 size={16} />Share</Button>
-                    <Button variant="outline" disabled={recordingAiSummaryMutation.isPending} onClick={() => recordingAiSummaryMutation.mutate(recordingDetail.id)} className="gap-2"><Sparkles size={16} />AI</Button>
-                  </div>
-                  <div className="mt-4 space-y-2 text-sm text-[#334155]">
-                    <p><span className="font-medium">Site:</span> {recordingDetail.site?.name}</p>
-                    <p><span className="font-medium">Entry:</span> {recordingDetail.session?.entryUrl || "-"}</p>
-                    <p><span className="font-medium">Exit:</span> {recordingDetail.session?.exitUrl || "-"}</p>
-                    <p><span className="font-medium">Browser:</span> {recordingDetail.session?.browser || "-"} / {recordingDetail.session?.os || "-"}</p>
-                    <p><span className="font-medium">Device:</span> {recordingDetail.session?.device || "-"}</p>
-                    <p><span className="font-medium">Country:</span> {recordingDetail.session?.country || "-"}</p>
-                    <p><span className="font-medium">Duration:</span> {formatDuration(recordingDetail.durationMs)}</p>
-                    <p><span className="font-medium">Events:</span> {recordingDetail.eventCount}</p>
-                  </div>
-                </div>
-                <div className="rounded-lg border border-[#E2E8F0] bg-white p-4">
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-[#0F172A]"><Tags size={16} />Labels</h3>
-                  <div className="mt-3 flex flex-wrap gap-2">{(recordingDetail.labels || []).map((label) => <Badge key={label} variant="outline">{label}</Badge>)}</div>
-                  <div className="mt-3 flex gap-2">
-                    <Input value={labelDraft} onChange={(event) => setLabelDraft(event.target.value)} placeholder="hot, bug, pricing" />
-                    <Button variant="outline" onClick={() => labelsMutation.mutate({ id: recordingDetail.id, labels: labelDraft.split(",").map((item) => item.trim()).filter(Boolean) })}>Save</Button>
-                  </div>
-                </div>
-              </aside>
-            </div>
-          ) : <p className="mt-6 text-sm text-[#64748B]">Loading recording...</p>}
+            ) : <p className="mt-8 text-center text-sm text-[#475569]">Loading recording...</p>}
+          </div>
         </SheetContent>
       </Sheet>
 
       <Sheet open={Boolean(selectedIssueId)} onOpenChange={(open) => !open && setSelectedIssueId(null)}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-3xl">
-          <SheetHeader>
-            <SheetTitle>Behavior Issue Detail</SheetTitle>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-3xl bg-[#F8FAFC] border-l-[rgba(15,23,42,0.06)]">
+          <SheetHeader className="mb-6">
+            <SheetTitle className="text-xl font-semibold text-[#0F172A]">Behavior Issue Detail</SheetTitle>
           </SheetHeader>
           {selectedIssue ? (
-            <div className="mt-6 space-y-5">
-              <div className="rounded-lg border border-[#E2E8F0] bg-white p-4">
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">{formatBehaviorType(selectedIssue.type)}</Badge>
+                  <Badge variant="outline" className="border-[rgba(15,23,42,0.06)]">{formatBehaviorType(selectedIssue.type)}</Badge>
                   <Badge variant={severityBadgeVariant(selectedIssue.severity) as any}>{selectedIssue.severity}</Badge>
-                  <Badge variant={selectedIssue.status === "OPEN" ? "default" : "secondary"}>{selectedIssue.status}</Badge>
+                  <Badge variant={selectedIssue.status === "OPEN" ? "default" : "secondary"} className={selectedIssue.status !== "OPEN" ? "bg-[#F8FAFC] border-[rgba(15,23,42,0.06)]" : ""}>{selectedIssue.status}</Badge>
                 </div>
-                <div className="mt-4 space-y-2 text-sm text-[#334155]">
-                  <p><span className="font-medium">Page:</span> {selectedIssue.path || selectedIssue.url || "-"}</p>
-                  <p><span className="font-medium">Selector:</span> {selectedIssue.selector || "-"}</p>
-                  <p><span className="font-medium">Message:</span> {selectedIssue.message || "-"}</p>
-                  <p><span className="font-medium">Occurrences:</span> {selectedIssue.occurrenceCount}</p>
-                  <p><span className="font-medium">Affected sessions:</span> {selectedIssue.affectedSessionCount}</p>
-                  <p><span className="font-medium">Last seen:</span> {formatDate(selectedIssue.lastSeenAt)}</p>
+                <div className="mt-6 space-y-3 text-sm text-[#475569]">
+                  <p className="flex justify-between border-b border-[rgba(15,23,42,0.06)] pb-2"><span className="font-medium text-[#0F172A]">Page:</span> <span>{selectedIssue.path || selectedIssue.url || "-"}</span></p>
+                  <p className="flex justify-between border-b border-[rgba(15,23,42,0.06)] pb-2"><span className="font-medium text-[#0F172A]">Selector:</span> <span>{selectedIssue.selector || "-"}</span></p>
+                  <p className="flex justify-between border-b border-[rgba(15,23,42,0.06)] pb-2"><span className="font-medium text-[#0F172A]">Message:</span> <span className="max-w-[300px] text-right truncate">{selectedIssue.message || "-"}</span></p>
+                  <p className="flex justify-between border-b border-[rgba(15,23,42,0.06)] pb-2"><span className="font-medium text-[#0F172A]">Occurrences:</span> <span>{selectedIssue.occurrenceCount}</span></p>
+                  <p className="flex justify-between border-b border-[rgba(15,23,42,0.06)] pb-2"><span className="font-medium text-[#0F172A]">Affected sessions:</span> <span>{selectedIssue.affectedSessionCount}</span></p>
+                  <p className="flex justify-between"><span className="font-medium text-[#0F172A]">Last seen:</span> <span>{formatDate(selectedIssue.lastSeenAt)}</span></p>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-6 pt-6 border-t border-[rgba(15,23,42,0.06)] flex flex-wrap gap-3">
                   {(["OPEN", "IGNORED", "RESOLVED"] as const).map((status) => (
-                    <Button key={status} variant={selectedIssue.status === status ? "default" : "outline"} size="sm" disabled={issueStatusMutation.isPending} onClick={() => issueStatusMutation.mutate({ id: selectedIssue.id, status })}>{status}</Button>
+                    <Button key={status} variant={selectedIssue.status === status ? "default" : "outline"} className={`h-10 rounded-xl flex-1 ${selectedIssue.status === status ? "bg-[#0891B2] hover:bg-[#0E7490] text-white" : "border-[rgba(15,23,42,0.06)]"}`} disabled={issueStatusMutation.isPending} onClick={() => issueStatusMutation.mutate({ id: selectedIssue.id, status })}>{status}</Button>
                   ))}
                 </div>
               </div>
 
-              <div className="rounded-lg border border-[#E2E8F0] bg-white">
-                <div className="border-b border-[#E2E8F0] p-4">
-                  <h3 className="text-sm font-semibold text-[#0F172A]">Occurrences</h3>
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white shadow-sm overflow-hidden flex flex-col">
+                <div className="border-b border-[rgba(15,23,42,0.06)] p-6 bg-[#F8FAFC]">
+                  <h3 className="text-base font-semibold text-[#0F172A]">Occurrences</h3>
                 </div>
-                <div className="divide-y divide-[#E2E8F0]">
+                <div className="divide-y divide-[rgba(15,23,42,0.06)]">
                   {(selectedIssue.signals || []).map((signal) => (
-                    <div key={signal.id} className="p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex flex-wrap items-center gap-2">
+                    <div key={signal.id} className="p-5 hover:bg-[#F8FAFC] transition-colors">
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div className="flex flex-wrap items-center gap-3">
                           <Badge variant={severityBadgeVariant(signal.severity) as any}>{signal.severity}</Badge>
                           <span className="text-sm font-medium text-[#0F172A]">{formatDate(signal.firstSeenAt)}</span>
                         </div>
-                        {signal.recordingId ? <Button size="sm" variant="outline" onClick={() => setSelectedRecordingId(signal.recordingId!)}>Open Recording</Button> : null}
+                        {signal.recordingId ? <Button size="sm" variant="outline" className="rounded-lg border-[rgba(15,23,42,0.06)]" onClick={() => setSelectedRecordingId(signal.recordingId!)}>Open Recording</Button> : null}
                       </div>
-                      <p className="mt-2 truncate text-sm text-[#334155]">{signal.url}</p>
+                      <p className="mt-3 truncate text-sm text-[#475569]">{signal.url}</p>
                       <p className="mt-1 text-xs text-[#64748B]">{signal.session?.browser || "-"} / {signal.session?.device || "-"} / {signal.session?.country || "-"}</p>
                     </div>
                   ))}
-                  {(selectedIssue.signals || []).length === 0 ? <p className="p-6 text-sm text-[#64748B]">No individual signals returned for this issue.</p> : null}
+                  {(selectedIssue.signals || []).length === 0 ? <p className="p-6 text-sm text-[#475569] text-center bg-[#F8FAFC]">No individual signals returned for this issue.</p> : null}
                 </div>
               </div>
             </div>
-          ) : <p className="mt-6 text-sm text-[#64748B]">Loading behavior issue...</p>}
+          ) : <p className="mt-8 text-center text-sm text-[#475569]">Loading behavior issue...</p>}
         </SheetContent>
       </Sheet>
 
       <Sheet open={Boolean(selectedJourneyId)} onOpenChange={(open) => !open && setSelectedJourneyId(null)}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-3xl">
-          <SheetHeader>
-            <SheetTitle>Journey Detail</SheetTitle>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-3xl bg-[#F8FAFC] border-l-[rgba(15,23,42,0.06)]">
+          <SheetHeader className="mb-6">
+            <SheetTitle className="text-xl font-semibold text-[#0F172A]">Journey Detail</SheetTitle>
           </SheetHeader>
           {selectedJourney ? (
-            <div className="mt-6 space-y-5">
-              <div className="rounded-lg border border-[#E2E8F0] bg-white p-4">
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant={selectedJourney.converted ? "default" : "secondary"}>{selectedJourney.converted ? "Converted" : "Dropped off"}</Badge>
-                  <Badge variant="outline">{selectedJourney.stepCount} steps</Badge>
-                  <Badge variant="outline">{formatDuration(selectedJourney.durationMs)}</Badge>
+                  <Badge variant={selectedJourney.converted ? "default" : "secondary"} className={selectedJourney.converted ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-[#F8FAFC] border-[rgba(15,23,42,0.06)]"}>{selectedJourney.converted ? "Converted" : "Dropped off"}</Badge>
+                  <Badge variant="outline" className="border-[rgba(15,23,42,0.06)]">{selectedJourney.stepCount} steps</Badge>
+                  <Badge variant="outline" className="border-[rgba(15,23,42,0.06)]">{formatDuration(selectedJourney.durationMs)}</Badge>
                 </div>
-                <div className="mt-4 space-y-3">
+                <div className="mt-6 space-y-4 relative">
+                  <div className="absolute left-4 top-4 bottom-4 w-px bg-[rgba(15,23,42,0.06)]" />
                   {(selectedJourney.steps || []).map((step, index) => (
-                    <div key={`${step.label}-${index}`} className="rounded-md bg-[#F8FAFC] px-3 py-2 text-sm">
+                    <div key={`${step.label}-${index}`} className="relative rounded-xl border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] p-4 text-sm ml-8 shadow-sm">
+                      <div className="absolute -left-[37px] top-4 w-2 h-2 rounded-full bg-[#0891B2] border border-white" />
                       <p className="font-medium text-[#0F172A]">{index + 1}. {step.label}</p>
-                      <p className="text-xs text-[#64748B]">{step.type} · {formatDate(step.at)}</p>
+                      <p className="mt-1 text-xs text-[#64748B]">{step.type} · {formatDate(step.at)}</p>
                     </div>
                   ))}
                 </div>
               </div>
               {selectedJourney.session?.behaviorSignals?.length ? (
-                <div className="rounded-lg border border-[#E2E8F0] bg-white p-4">
-                  <h3 className="text-sm font-semibold text-[#0F172A]">Behavior Signals</h3>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                <div className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm">
+                  <h3 className="text-base font-semibold text-[#0F172A]">Behavior Signals</h3>
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {selectedJourney.session.behaviorSignals.map((signal) => <Badge key={signal.id} variant={severityBadgeVariant(signal.severity) as any}>{formatBehaviorType(signal.type)}</Badge>)}
                   </div>
                 </div>
               ) : null}
-              <div className="flex gap-2">
-                {selectedJourney.session?.recordings?.[0]?.id ? <Button variant="outline" onClick={() => setSelectedRecordingId(selectedJourney.session?.recordings?.[0]?.id || null)}>Open Recording</Button> : null}
-                {selectedJourney.sessionId ? <Button variant="outline" onClick={() => setSelectedSessionId(selectedJourney.sessionId || null)}>Open Session</Button> : null}
+              <div className="flex gap-3">
+                {selectedJourney.session?.recordings?.[0]?.id ? <Button variant="outline" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] flex-1" onClick={() => setSelectedRecordingId(selectedJourney.session?.recordings?.[0]?.id || null)}>Open Recording</Button> : null}
+                {selectedJourney.sessionId ? <Button variant="outline" className="h-10 rounded-xl border-[rgba(15,23,42,0.06)] flex-1" onClick={() => setSelectedSessionId(selectedJourney.sessionId || null)}>Open Session</Button> : null}
               </div>
             </div>
-          ) : <p className="mt-6 text-sm text-[#64748B]">Loading journey...</p>}
+          ) : <p className="mt-8 text-center text-sm text-[#475569]">Loading journey...</p>}
         </SheetContent>
       </Sheet>
     </div>

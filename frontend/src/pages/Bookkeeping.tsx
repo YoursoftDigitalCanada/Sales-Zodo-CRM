@@ -597,6 +597,7 @@ function TransactionTable({
   onToggleReconcile,
   onEdit,
   onDelete,
+  onBulkDelete,
 }: {
   rows: BookkeepingRecord[];
   accountName: (id?: string) => string;

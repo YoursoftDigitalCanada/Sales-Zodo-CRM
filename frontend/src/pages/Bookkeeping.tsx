@@ -430,7 +430,7 @@ export default function BookkeepingPage() {
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="md:w-40 h-10 rounded-xl border-[rgba(15,23,42,0.06)] focus-visible:ring-[#0891B2]/20" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="md:w-40 h-10 rounded-xl border-[rgba(15,23,42,0.06)] focus-visible:ring-[#0891B2]/20" />
           <Button variant="outline" onClick={reload} disabled={loading} className="rounded-xl h-10"><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
-          <ImportTransactionsDialog accounts={accounts} categories={categories} vendors={vendors} transactions={transactions} onSuccess={reload} />
+          <ImportTransactionsDialog accounts={accounts} categories={categories} vendors={vendors} transactions={transactions} onSuccess={(dateRange) => { if (dateRange?.from) setDateFrom(dateRange.from); if (dateRange?.to) setDateTo(dateRange.to); reload(); }} />
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">

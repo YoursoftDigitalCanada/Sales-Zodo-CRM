@@ -489,7 +489,7 @@ export default function BookkeepingPage() {
 
             <Panel>
               <h2 className="mb-4 text-lg font-semibold text-[#0F172A]">Recent Transactions</h2>
-              <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} />
+              <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={async (id) => { await deleteTransaction(id); reload(); }} />
             </Panel>
           </TabsContent>
 
@@ -562,6 +562,8 @@ function TransactionTable({
   onVoid,
   onReceipt,
   onToggleReconcile,
+  onEdit,
+  onDelete,
 }: {
   rows: BookkeepingRecord[];
   accountName: (id?: string) => string;

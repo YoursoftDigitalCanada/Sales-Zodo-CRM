@@ -223,6 +223,21 @@ const dateFilterOptions = [
   { value: "year", label: "This Year" },
 ];
 
+const monthOptions = [
+  { value: 0, label: "Jan" },
+  { value: 1, label: "Feb" },
+  { value: 2, label: "Mar" },
+  { value: 3, label: "Apr" },
+  { value: 4, label: "May" },
+  { value: 5, label: "Jun" },
+  { value: 6, label: "Jul" },
+  { value: 7, label: "Aug" },
+  { value: 8, label: "Sep" },
+  { value: 9, label: "Oct" },
+  { value: 10, label: "Nov" },
+  { value: 11, label: "Dec" },
+];
+
 const sortOptions = [
   { value: "date-desc", label: "Newest First" },
   { value: "date-asc", label: "Oldest First" },
@@ -1728,6 +1743,8 @@ const InvoicePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [selectedInvoices, setSelectedInvoices] = useState<string[]>([]);
+  const [revenueMonth, setRevenueMonth] = useState<number>(new Date().getMonth());
+  const [revenueYear, setRevenueYear] = useState<number>(new Date().getFullYear());
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterDate, setFilterDate] = useState("all");
   const [sortBy, setSortBy] = useState<InvoiceSort>("date-desc");
@@ -2068,12 +2085,14 @@ const InvoicePage = () => {
   }, [filteredInvoices]);
 
   const invoiceAnalytics = useMemo(() => {
-    const now = new Date();
-    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const isCurrentMonth = revenueMonth === new Date().getMonth() && revenueYear === new Date().getFullYear();
+    const referenceDate = isCurrentMonth ? new Date() : new Date(revenueYear, revenueMonth + 1, 0);
+
+    const currentMonthStart = new Date(revenueYear, revenueMonth, 1);
+    const nextMonthStart = new Date(revenueYear, revenueMonth + 1, 1);
+    const previousMonthStart = new Date(revenueYear, revenueMonth - 1, 1);
+    const weekStart = new Date(referenceDate);
+    weekStart.setDate(referenceDate.getDate() - ((referenceDate.getDay() + 6) % 7));
     weekStart.setHours(0, 0, 0, 0);
 
     const weeklyCollected = Array.from({ length: 7 }, (_, index) => {
@@ -2087,7 +2106,7 @@ const InvoicePage = () => {
     let currentMonthCollected = 0;
     let previousMonthCollected = 0;
 
-    filteredInvoices.forEach((invoice) => {
+    invoices.forEach((invoice) => {
       const invoiceTax = Math.max(Number(invoice.tax || 0), 0);
       if (invoiceTax > 0) {
         const rows = Array.isArray(invoice.taxRates) ? invoice.taxRates.filter((row) => Number(row?.rate) > 0) : [];
@@ -2193,7 +2212,7 @@ const InvoicePage = () => {
       taxTotals,
       paymentMethods,
     };
-  }, [filteredInvoices]);
+  }, [invoices, revenueMonth, revenueYear]);
 
   // ============================================
   // HANDLERS
@@ -3150,7 +3169,28 @@ const InvoicePage = () => {
               >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-[#0F172A]">Revenue</h3>
-                  <span className="text-xs text-[#475569]">This Month</span>
+                  <div className="flex items-center gap-1">
+                    <Select value={String(revenueMonth)} onValueChange={(v) => setRevenueMonth(Number(v))}>
+                      <SelectTrigger className="h-7 text-xs border border-[rgba(15,23,42,0.06)] hover:bg-slate-50 focus:ring-0 shadow-none px-2 w-[70px] rounded-md">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {monthOptions.map(m => (
+                          <SelectItem key={m.value} value={String(m.value)} className="text-xs rounded-md">{m.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={String(revenueYear)} onValueChange={(v) => setRevenueYear(Number(v))}>
+                      <SelectTrigger className="h-7 text-xs border border-[rgba(15,23,42,0.06)] hover:bg-slate-50 focus:ring-0 shadow-none px-2 w-[70px] rounded-md">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        {yearFilterOptions.map(y => (
+                          <SelectItem key={y.value} value={y.value.replace("year:", "")} className="text-xs rounded-md">{y.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="text-center py-4">

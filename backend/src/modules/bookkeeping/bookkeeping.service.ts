@@ -702,8 +702,8 @@ export class BookkeepingService {
 
   async dashboard(tenantId: string, query: Record<string, any> = {}) {
     await this.setupIfEmpty(tenantId);
-    let from = new Date(new Date().getFullYear(), 0, 1);
-    let to = new Date();
+    let from = new Date(0);
+    let to = new Date(2100, 0, 1);
     
     if (query.dateFrom) from = new Date(query.dateFrom);
     if (query.dateTo) {

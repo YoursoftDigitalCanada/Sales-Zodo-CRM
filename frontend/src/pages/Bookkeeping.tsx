@@ -721,7 +721,7 @@ function TransactionTable({
           onScroll={handleTableScroll}
           className="always-visible-scrollbar overflow-scroll max-h-[500px] relative"
         >
-          <Table>
+          <Table className="min-w-[1500px]">
             <TableHeader className="sticky top-0 z-10 bg-[#F8FAFC] shadow-[0_1px_3px_rgba(0,0,0,0.05)]"><TableRow className="bg-[#F8FAFC] hover:bg-[#F8FAFC]">
             <TableHead className="w-12 bg-[#F8FAFC]"><Checkbox className="rounded shadow-none border-[#CBD5E1] data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#0891B2]" checked={selectedIds.size > 0 && selectedIds.size === rows.length} onCheckedChange={toggleAll} /></TableHead>
             {["Date", "Number", "Type", "Description", "Account", "Category", "Vendor", "Source", "Sync", "Receipt", "Amount", "Status", "Actions"].map((h) => <TableHead key={h} className="text-[#64748B] uppercase text-xs tracking-wide bg-[#F8FAFC]">{h}</TableHead>)}

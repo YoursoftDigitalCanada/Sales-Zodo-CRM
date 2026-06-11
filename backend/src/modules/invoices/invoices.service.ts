@@ -11,7 +11,7 @@ import { logger } from '../../common/utils/logger';
 import { prisma } from '../../config/database';
 import { config } from '../../config';
 import { communicationLogService } from '../communication-logs/communication-log.service';
-import { bookkeepingService } from '../bookkeeping/bookkeeping.service';
+import { bookkeepingService } from '../accounting-engine';
 import { filesService } from '../files/files.service';
 import { documentsService } from '../documents/documents.service';
 import fs from 'fs/promises';

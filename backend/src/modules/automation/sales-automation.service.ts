@@ -6,7 +6,7 @@ import { logger } from '../../common/utils/logger';
 import { BadRequestError, NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { notificationsService } from '../notifications/notifications.service';
-import { bookkeepingService } from '../bookkeeping/bookkeeping.service';
+import { bookkeepingService } from '../accounting-engine';
 import { invoicesService } from '../invoices/invoices.service';
 import { proposalsService } from '../proposals/proposals.service';
 import { contractsService } from '../contracts/contracts.service';

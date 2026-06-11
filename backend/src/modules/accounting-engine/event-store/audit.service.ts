@@ -1,4 +1,4 @@
-import { prisma } from '../../config/database';
+import { prisma } from '../../../config/database';
 
 class BookkeepingAuditService {
   async log(params: {

@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { PERMISSIONS } from '../../common/constants/permissions';
-import { authenticate, loadEmployee } from '../../common/middleware/auth.middleware';
-import { requireAnyPermission, requirePermission } from '../../common/middleware/permission.middleware';
-import { validate } from '../../common/middleware/validate.middleware';
+import { PERMISSIONS } from '../../../common/constants/permissions';
+import { authenticate, loadEmployee } from '../../../common/middleware/auth.middleware';
+import { requireAnyPermission, requirePermission } from '../../../common/middleware/permission.middleware';
+import { validate } from '../../../common/middleware/validate.middleware';
 import { bookkeepingController } from './bookkeeping.controller';
 import importSessionRoutes from './import-session.routes';
 import { importSessionController } from './import-session.controller';
@@ -46,6 +46,7 @@ const canExportBookkeeping = requireAnyPermission([PERMISSIONS.BOOKKEEPING_EXPOR
 router.post('/setup', canCreateBookkeeping, bookkeepingController.setup);
 router.post('/sync', canCreateBookkeeping, bookkeepingController.sync);
 router.get('/dashboard', requirePermission(PERMISSIONS.BOOKKEEPING_VIEW), bookkeepingController.dashboard);
+router.post('/chat', requirePermission(PERMISSIONS.BOOKKEEPING_VIEW), bookkeepingController.askAiAccountant);
 
 router.get('/accounts', requirePermission(PERMISSIONS.BOOKKEEPING_VIEW), validate(listQuerySchema), bookkeepingController.listAccounts);
 router.post('/accounts', canCreateBookkeeping, validate(createAccountSchema), bookkeepingController.createAccount);
@@ -68,6 +69,7 @@ router.get('/transactions', requirePermission(PERMISSIONS.BOOKKEEPING_VIEW), val
 router.post('/transactions', canCreateBookkeeping, validate(createTransactionSchema), bookkeepingController.createTransaction);
 router.post('/import', canCreateBookkeeping, validate(importBookkeepingPayloadSchema), bookkeepingController.importTransactions);
 router.get('/transactions/:id', requirePermission(PERMISSIONS.BOOKKEEPING_VIEW), validate(idSchema), bookkeepingController.getTransaction);
+router.get('/transactions/:id/timeline', requirePermission(PERMISSIONS.BOOKKEEPING_VIEW), validate(idSchema), bookkeepingController.getTransactionTimeline);
 router.put('/transactions/:id', canUpdateBookkeeping, validate(idSchema), validate(updateTransactionSchema), bookkeepingController.updateTransaction);
 router.post('/transactions/bulk-delete', canDeleteBookkeeping, validate(z.object({ body: z.object({ ids: z.array(z.string()) }) })), bookkeepingController.bulkDeleteTransactions);
 router.delete('/transactions/:id', canDeleteBookkeeping, validate(idSchema), bookkeepingController.deleteTransaction);

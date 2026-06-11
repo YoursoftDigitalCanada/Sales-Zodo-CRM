@@ -1,7 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
-import { sendCreated, sendNoContent, sendSuccess } from '../../common/utils/responseFormatter';
-import { sanitizeBody } from '../../common/utils/sanitize-body';
-import { bookkeepingService } from './bookkeeping.service';
+import { sendCreated, sendNoContent, sendSuccess } from '../../../common/utils/responseFormatter';
+import { sanitizeBody } from '../../../common/utils/sanitize-body';
+import { bookkeepingService } from '../ledger/bookkeeping.service';
+import { aiChatService } from '../ai-brain/ai-chat.service';
+import { accountingQueries } from './accounting.query';
 
 function tenant(req: Request) {
   return req.context.tenantId;
@@ -37,6 +39,7 @@ export class BookkeepingController {
   createTransaction = async (req: Request, res: Response, next: NextFunction) => { try { sendCreated(res, await bookkeepingService.createTransaction(tenant(req), sanitizeBody(req.body), actor(req)), 'Transaction created'); } catch (error) { next(error); } };
   importTransactions = async (req: Request, res: Response, next: NextFunction) => { try { sendCreated(res, await bookkeepingService.importTransactions(tenant(req), sanitizeBody(req.body), actor(req)), 'Transactions imported'); } catch (error) { next(error); } };
   getTransaction = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.getTransaction(req.params.id, tenant(req))); } catch (error) { next(error); } };
+  getTransactionTimeline = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await accountingQueries.getTransactionExplainabilityTimeline(tenant(req), req.params.id)); } catch (error) { next(error); } };
   updateTransaction = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.updateTransaction(req.params.id, tenant(req), sanitizeBody(req.body), actor(req)), 'Transaction updated'); } catch (error) { next(error); } };
   deleteTransaction = async (req: Request, res: Response, next: NextFunction) => { try { await bookkeepingService.deleteTransaction(req.params.id, tenant(req), actor(req)); sendNoContent(res); } catch (error) { next(error); } };
   bulkDeleteTransactions = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.bulkDeleteTransactions(req.body.ids, tenant(req), actor(req)), 'Transactions deleted'); } catch (error) { next(error); } };
@@ -74,6 +77,8 @@ export class BookkeepingController {
   balanceSheet = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await bookkeepingService.balanceSheet(tenant(req))); } catch (error) { next(error); } };
   transactionsExport = async (req: Request, res: Response, next: NextFunction) => { try { res.type('text/csv').send(await bookkeepingService.transactionsCsv(tenant(req), req.query)); } catch (error) { next(error); } };
   profitLossExport = async (req: Request, res: Response, next: NextFunction) => { try { res.type('text/csv').send(await bookkeepingService.profitLossCsv(tenant(req), req.query)); } catch (error) { next(error); } };
+
+  askAiAccountant = async (req: Request, res: Response, next: NextFunction) => { try { sendSuccess(res, await aiChatService.askAccountant(tenant(req), req.body.query)); } catch (error) { next(error); } };
 }
 
 export const bookkeepingController = new BookkeepingController();

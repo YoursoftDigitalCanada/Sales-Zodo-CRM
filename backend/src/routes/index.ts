@@ -41,7 +41,7 @@ import invoicesRoutes from '../modules/invoices/invoices.routes';
 import billingRoutes from '../modules/billing/billing.routes';
 import quotesRoutes from '../modules/quotes/quotes.routes';
 import quotesPublicRoutes from '../modules/quotes/quotes.public-routes';
-import bookkeepingRoutes from '../modules/bookkeeping/bookkeeping.routes';
+import bookkeepingRoutes from '../modules/accounting-engine/api/bookkeeping.routes';
 // DRAFT — re-enable next year
 // import bookingsRoutes from '../modules/bookings/bookings.routes';
 import servicesRoutes from '../modules/services/services.routes';
@@ -191,6 +191,7 @@ export function registerRoutes(app: Application): void {
   protectedRouter.use('/billing', billingRoutes);
   protectedRouter.use('/quotes', quotesRoutes);
   protectedRouter.use('/bookkeeping', bookkeepingRoutes);
+  protectedRouter.use('/v1/bookkeeping', bookkeepingRoutes);
   // DRAFT — re-enable next year
   // protectedRouter.use('/bookings', bookingsRoutes);
   protectedRouter.use('/services', servicesRoutes);

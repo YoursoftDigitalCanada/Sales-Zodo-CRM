@@ -4,7 +4,7 @@ import { ErrorCodes } from '../../common/errors/errorCodes';
 import { activityLogger } from '../../common/services/activity-logger.service';
 import { eventBus } from '../../common/events/event-bus';
 import { logger } from '../../common/utils/logger';
-import { bookkeepingService } from '../bookkeeping/bookkeeping.service';
+import { bookkeepingService } from '../accounting-engine';
 
 const prismaAny = prisma as any;
 

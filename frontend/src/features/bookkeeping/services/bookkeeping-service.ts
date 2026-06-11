@@ -188,6 +188,14 @@ export async function getBalanceSheet(params?: Record<string, unknown>) {
   return unwrap<BookkeepingRecord>((await api.get("/bookkeeping/reports/balance-sheet", { params })));
 }
 
+export async function getTransactionTimeline(id: string) {
+  return unwrapList((await api.get(`/v1/bookkeeping/transactions/${id}/timeline`)));
+}
+
+export async function askAiAccountant(query: string) {
+  return unwrap<string>((await api.post("/bookkeeping/chat", { query })));
+}
+
 export function exportUrl(path: "transactions-export" | "profit-loss-export", params?: Record<string, string>) {
   const search = new URLSearchParams(params || {}).toString();
   return `/bookkeeping/reports/${path}${search ? `?${search}` : ""}`;

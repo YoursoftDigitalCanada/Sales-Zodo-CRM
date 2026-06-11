@@ -4,7 +4,7 @@ import { NotFoundError } from '../../common/errors/HttpErrors';
 import { ErrorCodes } from '../../common/errors/errorCodes';
 import { eventBus } from '../../common/events/event-bus';
 import { activityLogger } from '../../common/services/activity-logger.service';
-import { bookkeepingService } from '../bookkeeping/bookkeeping.service';
+import { bookkeepingService } from '../accounting-engine';
 import { logger } from '../../common/utils/logger';
 
 function logBookkeepingSyncFailure(tenantId: string, sourceType: string, sourceId: string, error: unknown) {

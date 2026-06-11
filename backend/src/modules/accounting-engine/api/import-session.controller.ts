@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { importSessionService } from './import-session.service';
-import { transferMatchingService } from './transfer-matching.service';
-import { bookkeepingAuditService } from './audit.service';
+import { transferMatchingService } from '../transfer-intelligence/transfer-matching.service';
+import { bookkeepingAuditService } from '../event-store/audit.service';
 
 function tenant(req: Request): string { return (req as any).tenantId; }
 function actor(req: Request): string | undefined { return (req as any).userId || (req as any).user?.id; }

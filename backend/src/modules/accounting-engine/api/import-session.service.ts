@@ -1,11 +1,11 @@
 import { createHash } from 'crypto';
-import { prisma } from '../../config/database';
+import { prisma } from '../../../config/database';
 import { csvParserService } from './csv-parser.service';
-import { aiCategorizationService } from './ai-categorization.service';
-import { transferMatchingService } from './transfer-matching.service';
-import { bookkeepingAuditService } from './audit.service';
-import { bookkeepingService } from './bookkeeping.service';
-import { toNumber } from './bookkeeping.dto';
+import { aiCategorizationService } from '../ai-brain/ai-categorization.service';
+import { transferMatchingService } from '../transfer-intelligence/transfer-matching.service';
+import { bookkeepingAuditService } from '../event-store/audit.service';
+import { bookkeepingService } from '../ledger/bookkeeping.service';
+import { toNumber } from '../api/bookkeeping.dto';
 
 const db = () => prisma as any;
 
@@ -260,8 +260,10 @@ class ImportSessionService {
                 aiConfidence: aiResult.confidence,
                 aiTransactionType: aiResult.transactionType,
                 aiReason: aiResult.reason,
-                aiPossibleTransfer: aiResult.possibleTransfer,
-                status: rawTx.isDuplicate ? 'SKIPPED' : status,
+                transferScore: aiResult.possibleTransfer ? 90 : 0,
+                status: rawTx.duplicateScore >= 95 ? 'SKIPPED' : status,
+                merchantConfidence: 0.5,
+                aiJournal: [],
               },
             });
 
@@ -280,7 +282,7 @@ class ImportSessionService {
           errors.push(`Batch ${Math.floor(i / batchSize) + 1} failed: ${batchError.message}`);
           // Mark as needs review
           for (const rawTx of batch) {
-            if (!rawTx.isDuplicate) {
+            if (rawTx.duplicateScore < 95) {
               await prisma.rawTransaction.update({
                 where: { id: rawTx.id },
                 data: { status: 'NEEDS_REVIEW', aiReason: 'AI categorization failed' },
@@ -291,7 +293,7 @@ class ImportSessionService {
         }
       }
 
-      duplicates = existingRawTxs.filter((r: any) => r.isDuplicate).length;
+      duplicates = existingRawTxs.filter((r: any) => r.duplicateScore >= 95).length;
 
       // Update file status
       await prisma.uploadedFile.update({
@@ -332,7 +334,7 @@ class ImportSessionService {
 
     // Update session status and counts
     const totalRaw = await prisma.rawTransaction.count({ where: { sessionId, tenantId } });
-    const totalDupes = await prisma.rawTransaction.count({ where: { sessionId, tenantId, isDuplicate: true } });
+    const totalDupes = await prisma.rawTransaction.count({ where: { sessionId, tenantId, duplicateScore: { gte: 95 } } });
 
     await prisma.importSession.update({
       where: { id: sessionId },
@@ -364,19 +366,99 @@ class ImportSessionService {
 
     for (const normalized of parsed.normalized) {
       const hash = csvParserService.generateHash(normalized, uploadedFile.accountId || '');
+      const txDate = new Date(normalized.date);
+      const amount = Number(normalized.amount);
 
-      // Check for duplicates against existing finalized transactions
-      const existingTx = await db().bookkeepingTransaction.findFirst({
-        where: { tenantId, hash },
-      });
+      let duplicateScore = 0;
+      let duplicateReason = '';
+      let duplicateMatchedBy = '';
+      let duplicateOfId: string | undefined = undefined;
 
-      // Also check for duplicates within this session
-      const existingRaw = await prisma.rawTransaction.findFirst({
-        where: { tenantId, hash, sessionId },
-      });
+      // Fingerprint 1: Strict Hash
+      const existingTx1 = await db().bookkeepingTransaction.findFirst({ where: { tenantId, hash } });
+      const existingRaw1 = await prisma.rawTransaction.findFirst({ where: { tenantId, hash, sessionId } });
 
-      const isDuplicate = Boolean(existingTx || existingRaw);
-      if (isDuplicate) duplicateCount++;
+      if (existingTx1 || existingRaw1) {
+        duplicateScore = 100;
+        duplicateReason = 'Matched exact hash (date + amount + description + account)';
+        duplicateMatchedBy = 'STRICT_HASH';
+        duplicateOfId = existingTx1?.id || existingRaw1?.transactionId || undefined;
+      }
+
+      // Fingerprint 2: Merchant Hash (Date + Amount + Merchant)
+      if (duplicateScore === 0 && normalized.merchant) {
+        const fuzzyTx = await db().bookkeepingTransaction.findFirst({
+          where: {
+            tenantId,
+            transactionDate: txDate,
+            amount,
+            description: { contains: normalized.merchant, mode: 'insensitive' },
+            accountId: uploadedFile.accountId || undefined,
+          }
+        });
+        if (fuzzyTx) {
+          duplicateScore = 90;
+          duplicateReason = `Matched date, amount, and merchant (${normalized.merchant})`;
+          duplicateMatchedBy = 'MERCHANT_HASH';
+          duplicateOfId = fuzzyTx.id;
+        }
+      }
+
+      // Fingerprint 3: Reference Hash (Amount + Reference)
+      if (duplicateScore === 0 && normalized.reference) {
+        const refTx = await db().bookkeepingTransaction.findFirst({
+          where: {
+            tenantId,
+            amount,
+            reference: normalized.reference,
+            accountId: uploadedFile.accountId || undefined,
+          }
+        });
+        if (refTx) {
+          duplicateScore = 85;
+          duplicateReason = `Matched amount and reference (${normalized.reference})`;
+          duplicateMatchedBy = 'REFERENCE_HASH';
+          duplicateOfId = refTx.id;
+        }
+      }
+
+      // Fingerprint 4: Amount + Date
+      if (duplicateScore === 0) {
+        const dateTx = await db().bookkeepingTransaction.findFirst({
+          where: {
+            tenantId,
+            transactionDate: txDate,
+            amount,
+            accountId: uploadedFile.accountId || undefined,
+          }
+        });
+        if (dateTx) {
+          duplicateScore = 75;
+          duplicateReason = `Matched amount and date only`;
+          duplicateMatchedBy = 'AMOUNT_DATE';
+          duplicateOfId = dateTx.id;
+        }
+      }
+
+      // Cross-session check
+      if (duplicateScore === 0) {
+        const crossRaw = await prisma.rawTransaction.findFirst({
+          where: {
+            tenantId,
+            sessionId: { not: sessionId },
+            hash
+          }
+        });
+        if (crossRaw) {
+          duplicateScore = 95;
+          duplicateReason = `Matched exact hash in another import session (${crossRaw.sessionId})`;
+          duplicateMatchedBy = 'CROSS_SESSION';
+          duplicateOfId = crossRaw.id;
+        }
+      }
+
+      const isSkipped = duplicateScore >= 95;
+      if (isSkipped) duplicateCount++;
 
       rawTxData.push({
         tenantId,
@@ -396,9 +478,11 @@ class ImportSessionService {
           accountNumber: normalized.accountNumber,
         },
         hash,
-        isDuplicate,
-        duplicateOfId: existingTx?.id || undefined,
-        status: isDuplicate ? 'SKIPPED' : 'PENDING',
+        duplicateScore,
+        duplicateReason: duplicateScore > 0 ? duplicateReason : null,
+        duplicateMatchedBy: duplicateScore > 0 ? duplicateMatchedBy : null,
+        duplicateOfId,
+        status: isSkipped ? 'SKIPPED' : 'PENDING',
       });
     }
 
@@ -439,169 +523,40 @@ class ImportSessionService {
     // Ensure bookkeeping is set up
     await bookkeepingService.setupIfEmpty(tenantId);
 
+    const { deterministicAccountingEngine: deterministicAccountingService } = await import('../deterministic-engine/deterministic-accounting.service');
+
     let totalCreated = 0;
     let totalSkipped = 0;
     let totalTransfers = 0;
-    let journalEntriesCreated = 0;
 
     // Get all non-skipped, non-duplicate raw transactions
     const rawTxs = await prisma.rawTransaction.findMany({
       where: {
         sessionId,
         tenantId,
-        isDuplicate: false,
+        duplicateScore: { lt: 95 },
         status: { in: ['CATEGORIZED', 'MATCHED', 'NEEDS_REVIEW', 'PENDING'] },
       },
-      include: { uploadedFile: { select: { accountId: true } } },
     });
 
-    // Process matched transfer pairs
-    const processedIds = new Set<string>();
-
     for (const rawTx of rawTxs) {
-      if (processedIds.has(rawTx.id)) continue;
-
-      const normalized = rawTx.normalizedData as any;
-      const accountId = rawTx.uploadedFile?.accountId;
-
-      // Handle matched transfers as pairs
-      if (rawTx.isTransfer && rawTx.matchedRawTxId) {
-        const matched = rawTxs.find((r: any) => r.id === rawTx.matchedRawTxId);
-        if (matched && !processedIds.has(matched.id)) {
-          const matchedNorm = matched.normalizedData as any;
-          const matchedAccountId = matched.uploadedFile?.accountId;
-
-          if (accountId && matchedAccountId && accountId !== matchedAccountId) {
-            // Determine which is the source (debit) and destination (credit)
-            const isSource = normalized.type === 'DEBIT';
-            const fromAccountId = isSource ? accountId : matchedAccountId;
-            const toAccountId = isSource ? matchedAccountId : accountId;
-            const amount = normalized.amount;
-
-            try {
-              await bookkeepingService.createTransfer(tenantId, {
-                fromAccountId,
-                toAccountId,
-                amount,
-                currency: normalized.currency || 'CAD',
-                transferDate: normalized.date,
-                reference: normalized.reference,
-                notes: `Auto-matched transfer: ${normalized.description}`,
-              }, actorUserId);
-
-              totalTransfers++;
-              processedIds.add(rawTx.id);
-              processedIds.add(matched.id);
-
-              // Mark both as finalized
-              await prisma.rawTransaction.updateMany({
-                where: { id: { in: [rawTx.id, matched.id] } },
-                data: { status: 'FINALIZED' },
-              });
-
-              continue;
-            } catch (err) {
-              console.error('Failed to create transfer:', err);
-              // Fall through to create as regular transactions
-            }
-          }
-        }
-      }
-
-      // Create regular transaction
-      if (!accountId) {
-        totalSkipped++;
-        await prisma.rawTransaction.update({ where: { id: rawTx.id }, data: { status: 'SKIPPED' } });
-        continue;
-      }
-
       try {
-        // Resolve or create category
-        let categoryId: string | undefined;
-        const categoryName = (rawTx.manualOverrides as any)?.category || rawTx.aiCategory;
-        if (categoryName && categoryName !== 'Uncategorized' && categoryName !== 'Internal Transfer') {
-          const txType = rawTx.aiTransactionType === 'INCOME' ? 'INCOME' : 'EXPENSE';
-          let category = await db().bookkeepingCategory.findFirst({
-            where: { tenantId, name: categoryName },
-          });
-          if (!category) {
-            category = await db().bookkeepingCategory.create({
-              data: { tenantId, name: categoryName, type: txType, isSystem: false },
-            });
-          }
-          categoryId = category.id;
+        const posted = await deterministicAccountingService.processAndPost(rawTx.id, tenantId, actorUserId);
+        if (posted) {
+          if (rawTx.transferScore >= 80) totalTransfers++;
+          else totalCreated++;
+        } else {
+          totalSkipped++; // Routed to review queue
         }
-
-        // Resolve or create vendor
-        let vendorId: string | undefined;
-        const vendorName = (rawTx.manualOverrides as any)?.vendor || rawTx.aiVendor;
-        if (vendorName && vendorName !== 'Unknown' && vendorName !== 'Internal') {
-          let vendor = await db().bookkeepingVendor.findFirst({
-            where: { tenantId, name: vendorName },
-          });
-          if (!vendor) {
-            vendor = await db().bookkeepingVendor.create({
-              data: { tenantId, name: vendorName, isActive: true },
-            });
-          }
-          vendorId = vendor.id;
-        }
-
-        // Determine transaction type
-        const transactionType = (rawTx.manualOverrides as any)?.transactionType ||
-          rawTx.aiTransactionType ||
-          (normalized.type === 'DEBIT' ? 'EXPENSE' : 'INCOME');
-
-        // Create the real transaction
-        const tx = await bookkeepingService.createTransaction(tenantId, {
-          accountId,
-          categoryId,
-          vendorId,
-          type: transactionType,
-          description: normalized.description,
-          amount: normalized.amount,
-          currency: normalized.currency || 'CAD',
-          transactionDate: normalized.date,
-          reference: normalized.reference,
-          status: 'POSTED',
-          sourceType: 'CSV_IMPORT',
-          sourceId: rawTx.id,
-          hash: rawTx.hash,
-          confidenceScore: rawTx.aiConfidence,
-          isTransfer: rawTx.isTransfer,
-          importSessionId: sessionId,
-          uploadedFileId: rawTx.uploadedFileId,
-          rawTransactionId: rawTx.id,
-          skipSourceIdempotency: true,
-        }, actorUserId);
-
-        // Link raw transaction to created transaction
-        await prisma.rawTransaction.update({
-          where: { id: rawTx.id },
-          data: { status: 'FINALIZED', transactionId: tx.id },
-        });
-
-        totalCreated++;
-        processedIds.add(rawTx.id);
-      } catch (err: any) {
-        console.error(`Failed to create transaction for raw tx ${rawTx.id}:`, err);
+      } catch (err) {
+        console.error(`Failed to process raw transaction ${rawTx.id}:`, err);
         totalSkipped++;
-        await prisma.rawTransaction.update({
-          where: { id: rawTx.id },
-          data: { status: 'SKIPPED' },
-        });
       }
     }
 
-    // Update session
     await prisma.importSession.update({
       where: { id: sessionId },
-      data: {
-        status: 'FINALIZED',
-        completedAt: new Date(),
-        totalCreated,
-        totalSkipped,
-      },
+      data: { status: 'FINALIZED', completedAt: new Date() },
     });
 
     await bookkeepingAuditService.log({
@@ -609,11 +564,11 @@ class ImportSessionService {
       entityType: 'IMPORT_SESSION',
       entityId: sessionId,
       action: 'FINALIZE',
-      afterValue: { totalCreated, totalSkipped, totalTransfers, journalEntriesCreated },
+      afterValue: { totalCreated, totalSkipped, totalTransfers, journalEntriesCreated: totalCreated * 2 },
       userId: actorUserId,
     });
 
-    return { totalCreated, totalSkipped, totalTransfers, journalEntriesCreated };
+    return { totalCreated, totalSkipped, totalTransfers, journalEntriesCreated: totalCreated * 2 };
   }
 
   // ─── Raw Transaction Queries ────────────────────────────────────────
@@ -693,7 +648,7 @@ class ImportSessionService {
     const limit = Math.min(query.limit || 50, 200);
     const skip = (page - 1) * limit;
 
-    const where = { sessionId, tenantId, isDuplicate: true };
+    const where = { sessionId, tenantId, duplicateScore: { gte: 95 } };
     const [data, total] = await Promise.all([
       prisma.rawTransaction.findMany({
         where,
@@ -713,7 +668,7 @@ class ImportSessionService {
 
   async getMatches(sessionId: string, tenantId: string) {
     const matched = await prisma.rawTransaction.findMany({
-      where: { sessionId, tenantId, isTransfer: true },
+      where: { sessionId, tenantId, transferScore: { gt: 0 } },
       include: { uploadedFile: { select: { fileName: true, accountId: true } } },
       orderBy: { createdAt: 'asc' },
     });

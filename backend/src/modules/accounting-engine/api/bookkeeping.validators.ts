@@ -7,7 +7,7 @@ import {
   BOOKKEEPING_RECURRING_FREQUENCIES,
   BOOKKEEPING_TRANSACTION_STATUSES,
   BOOKKEEPING_TRANSACTION_TYPES,
-} from './bookkeeping.dto';
+} from '../api/bookkeeping.dto';
 
 const uuid = z.string().uuid();
 const optionalUuid = uuid.optional().nullable();

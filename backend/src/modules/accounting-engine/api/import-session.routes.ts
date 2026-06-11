@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { PERMISSIONS } from '../../common/constants/permissions';
-import { requireAnyPermission } from '../../common/middleware/permission.middleware';
-import { validate } from '../../common/middleware/validate.middleware';
+import { PERMISSIONS } from '../../../common/constants/permissions';
+import { requireAnyPermission } from '../../../common/middleware/permission.middleware';
+import { validate } from '../../../common/middleware/validate.middleware';
 import { importSessionController } from './import-session.controller';
 import {
   createSessionSchema,

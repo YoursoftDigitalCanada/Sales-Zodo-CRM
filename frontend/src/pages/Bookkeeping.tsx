@@ -16,6 +16,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
 import { ImportTransactionsDialog } from "@/components/bookkeeping/ImportTransactionsDialog";
+import { AiAccountantChat } from "@/components/bookkeeping/AiAccountantChat";
+import { DecisionTimelineDialog } from "@/components/bookkeeping/DecisionTimelineDialog";
 import {
   BookkeepingRecord,
   attachReceipt,
@@ -327,6 +329,7 @@ export default function BookkeepingPage() {
   const [reports, setReports] = useState<BookkeepingRecord>({});
   const [editingTx, setEditingTx] = useState<BookkeepingRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BookkeepingRecord | null>(null);
+  const [timelineTarget, setTimelineTarget] = useState<string | null>(null);
 
   const reload = () => setRefreshKey((key) => key + 1);
   const filters = useMemo(() => ({ search, dateFrom, dateTo, ...(type && type !== "ALL" ? { type } : {}) }), [search, dateFrom, dateTo, type]);
@@ -472,8 +475,8 @@ export default function BookkeepingPage() {
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="flex h-12 flex-wrap justify-start rounded-xl bg-white border border-[rgba(15,23,42,0.06)] p-1 shadow-sm">
-            {["overview", "transactions", "accounts", "categories", "vendors", "reconciliation", "recurring", "reports"].map((tab) => (
-              <TabsTrigger key={tab} value={tab} className="capitalize rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">{tab}</TabsTrigger>
+            {["overview", "transactions", "accounts", "categories", "vendors", "reconciliation", "recurring", "reports", "ai-assistant"].map((tab) => (
+              <TabsTrigger key={tab} value={tab} className="capitalize rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">{tab.replace("-", " ")}</TabsTrigger>
             ))}
           </TabsList>
 
@@ -494,14 +497,14 @@ export default function BookkeepingPage() {
 
             <Panel>
               <h2 className="mb-4 text-lg font-semibold text-[#0F172A]">Recent Transactions</h2>
-              <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { await bulkDeleteTransactions(ids); reload(); }} />
+              <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { await bulkDeleteTransactions(ids); reload(); }} onTimeline={setTimelineTarget} />
             </Panel>
           </TabsContent>
 
           <TabsContent value="transactions">
             <Panel>
               <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-[#0F172A]">Transactions Ledger</h2><TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} /></div>
-              <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { await bulkDeleteTransactions(ids); reload(); }} />
+              <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { await bulkDeleteTransactions(ids); reload(); }} onTimeline={setTimelineTarget} />
             </Panel>
           </TabsContent>
 
@@ -548,6 +551,10 @@ export default function BookkeepingPage() {
           <TabsContent value="reports">
             <ReportsPanel reports={reports} dateFrom={dateFrom} dateTo={dateTo} />
           </TabsContent>
+
+          <TabsContent value="ai-assistant">
+            <AiAccountantChat />
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -581,6 +588,7 @@ export default function BookkeepingPage() {
       </AlertDialog>
 
       {editingTx && <TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} tx={editingTx} open={true} onOpenChange={(o) => { if (!o) setEditingTx(null); }} />}
+      <DecisionTimelineDialog transactionId={timelineTarget} open={!!timelineTarget} onOpenChange={(open) => { if (!open) setTimelineTarget(null); }} />
     </main>
   );
 }
@@ -600,6 +608,7 @@ function TransactionTable({
   onEdit,
   onDelete,
   onBulkDelete,
+  onTimeline,
 }: {
   rows: BookkeepingRecord[];
   accountName: (id?: string) => string;
@@ -611,6 +620,7 @@ function TransactionTable({
   onEdit?: (tx: BookkeepingRecord) => void;
   onDelete?: (tx: BookkeepingRecord) => void;
   onBulkDelete?: (ids: string[]) => Promise<void>;
+  onTimeline?: (id: string) => void;
 }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
@@ -739,6 +749,9 @@ function TransactionTable({
                   )}
                   <DropdownMenuItem onClick={() => onEdit?.(tx)} className="cursor-pointer rounded-lg font-medium">
                     Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onTimeline?.(tx.id)} className="cursor-pointer rounded-lg font-medium text-[#0891B2] focus:text-[#0E7490]">
+                    AI Timeline
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => {

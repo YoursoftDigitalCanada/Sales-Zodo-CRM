@@ -1,9 +1,9 @@
-import { prisma } from '../../config/database';
-import { BadRequestError, NotFoundError } from '../../common/errors/HttpErrors';
-import { ErrorCodes } from '../../common/errors/errorCodes';
-import { activityLogger } from '../../common/services/activity-logger.service';
+import { prisma } from '../../../config/database';
+import { BadRequestError, NotFoundError } from '../../../common/errors/HttpErrors';
+import { ErrorCodes } from '../../../common/errors/errorCodes';
+import { activityLogger } from '../../../common/services/activity-logger.service';
 import { bookkeepingRepository } from './bookkeeping.repository';
-import { serializeMoney, toDate, toNumber } from './bookkeeping.dto';
+import { serializeMoney, toDate, toNumber } from '../api/bookkeeping.dto';
 
 const DEFAULT_ACCOUNTS = [
   ['Cash', '1000', 'ASSET', 'Cash on hand', true],

@@ -1,5 +1,5 @@
-import { prisma } from '../../config/database';
-import { buildPagination, BookkeepingListResult } from './bookkeeping.dto';
+import { prisma } from '../../../config/database';
+import { buildPagination, BookkeepingListResult } from '../api/bookkeeping.dto';
 
 type DelegateName =
   | 'bookkeepingAccount'

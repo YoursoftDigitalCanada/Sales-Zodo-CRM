@@ -710,7 +710,7 @@ function TransactionTable({
         <div 
           ref={topScrollRef} 
           onScroll={handleTopScroll} 
-          className="always-visible-scrollbar overflow-x-auto w-full sticky top-0 z-20 bg-gray-50 border-b border-gray-100 hidden md:block"
+          className="always-visible-scrollbar overflow-x-scroll w-full sticky top-0 z-20 bg-gray-50 border-b border-gray-100 hidden md:block"
         >
           <div style={{ width: tableWidth, height: '1px' }}></div>
         </div>
@@ -719,7 +719,7 @@ function TransactionTable({
         <div 
           ref={tableScrollRef}
           onScroll={handleTableScroll}
-          className="always-visible-scrollbar overflow-auto max-h-[500px] relative"
+          className="always-visible-scrollbar overflow-scroll max-h-[500px] relative"
         >
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-[#F8FAFC] shadow-[0_1px_3px_rgba(0,0,0,0.05)]"><TableRow className="bg-[#F8FAFC] hover:bg-[#F8FAFC]">

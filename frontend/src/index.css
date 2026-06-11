@@ -260,28 +260,33 @@ html.dark body {
 .always-visible-scrollbar {
   scrollbar-width: auto;
   scrollbar-color: rgba(8, 145, 178, 0.5) rgba(15, 23, 42, 0.05);
+  -webkit-overflow-scrolling: touch;
 }
 
 .always-visible-scrollbar::-webkit-scrollbar {
   height: 12px;
   width: 12px;
-  display: block; /* force visibility */
+  display: block !important; /* force visibility */
+  -webkit-appearance: none;
+  opacity: 1 !important;
 }
 
 .always-visible-scrollbar::-webkit-scrollbar-track {
   background: rgba(15, 23, 42, 0.02);
   border-radius: 6px;
+  display: block !important;
 }
 
 .always-visible-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(8, 145, 178, 0.4);
+  background-color: rgba(8, 145, 178, 0.5);
   border-radius: 6px;
   border: 2px solid transparent;
   background-clip: content-box;
+  display: block !important;
 }
 
 .always-visible-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(8, 145, 178, 0.7);
+  background-color: rgba(8, 145, 178, 0.8);
 }
 
 /* =============================================

@@ -684,11 +684,11 @@ function TransactionTable({
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[70vh] border-b border-[rgba(15,23,42,0.08)] relative">
         <Table>
-          <TableHeader><TableRow className="bg-[#F8FAFC]">
-            <TableHead className="w-12"><Checkbox className="rounded shadow-none border-[#CBD5E1] data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#0891B2]" checked={selectedIds.size > 0 && selectedIds.size === rows.length} onCheckedChange={toggleAll} /></TableHead>
-            {["Date", "Number", "Type", "Description", "Account", "Category", "Vendor", "Source", "Sync", "Receipt", "Amount", "Status", "Actions"].map((h) => <TableHead key={h} className="text-[#64748B] uppercase text-xs tracking-wide">{h}</TableHead>)}
+          <TableHeader className="sticky top-0 z-10 bg-[#F8FAFC] shadow-[0_1px_3px_rgba(0,0,0,0.05)]"><TableRow className="bg-[#F8FAFC] hover:bg-[#F8FAFC]">
+            <TableHead className="w-12 bg-[#F8FAFC]"><Checkbox className="rounded shadow-none border-[#CBD5E1] data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#0891B2]" checked={selectedIds.size > 0 && selectedIds.size === rows.length} onCheckedChange={toggleAll} /></TableHead>
+            {["Date", "Number", "Type", "Description", "Account", "Category", "Vendor", "Source", "Sync", "Receipt", "Amount", "Status", "Actions"].map((h) => <TableHead key={h} className="text-[#64748B] uppercase text-xs tracking-wide bg-[#F8FAFC]">{h}</TableHead>)}
           </TableRow></TableHeader>
           <TableBody>{rows.map((tx) => (
             <TableRow key={tx.id} className={selectedIds.has(tx.id) ? "bg-[#F0F9FA]" : ""}>

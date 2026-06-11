@@ -38,7 +38,7 @@ export const idSchema = z.object({ params: z.object({ id: uuid }) });
 export const listQuerySchema = z.object({
   query: z.object({
     page: z.coerce.number().int().min(1).default(1),
-    limit: z.coerce.number().int().min(1).max(200).default(50),
+    limit: z.coerce.number().int().min(1).max(5000).default(50),
     search: z.string().optional(),
     type: z.string().optional(),
     status: z.string().optional(),

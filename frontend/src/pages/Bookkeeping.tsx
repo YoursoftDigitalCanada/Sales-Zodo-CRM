@@ -314,6 +314,7 @@ export default function BookkeepingPage() {
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [type, setType] = useState<string>("");
   const [dashboard, setDashboard] = useState<BookkeepingRecord>({});
   const [accounts, setAccounts] = useState<BookkeepingRecord[]>([]);
   const [categories, setCategories] = useState<BookkeepingRecord[]>([]);
@@ -328,7 +329,7 @@ export default function BookkeepingPage() {
   const [deleteTarget, setDeleteTarget] = useState<BookkeepingRecord | null>(null);
 
   const reload = () => setRefreshKey((key) => key + 1);
-  const filters = useMemo(() => ({ search, dateFrom, dateTo }), [search, dateFrom, dateTo]);
+  const filters = useMemo(() => ({ search, dateFrom, dateTo, ...(type && type !== "ALL" ? { type } : {}) }), [search, dateFrom, dateTo, type]);
 
   useEffect(() => {
     let mounted = true;
@@ -349,7 +350,7 @@ export default function BookkeepingPage() {
         safe(getAccounts({ limit: 200 }), emptyList, "accounts"),
         safe(getCategories({ limit: 200 }), emptyList, "categories"),
         safe(getVendors({ limit: 200 }), emptyList, "vendors"),
-        safe(getTransactions({ ...filters, limit: 100 }), emptyList, "transactions"),
+        safe(getTransactions({ ...filters, limit: 5000 }), emptyList, "transactions"),
         safe(getTransfers({ limit: 100 }), emptyList, "transfers"),
         safe(getJournalEntries({ limit: 100 }), emptyList, "journal entries"),
         safe(getReconciliations({ limit: 100 }), emptyList, "reconciliations"),
@@ -462,6 +463,7 @@ export default function BookkeepingPage() {
 
         <div className="flex flex-col gap-3 rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-5 md:flex-row md:items-center shadow-sm">
           <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" /><Input className="pl-10 h-10 rounded-xl border-[rgba(15,23,42,0.06)] focus-visible:ring-[#0891B2]/20" placeholder="Search transactions, vendors, accounts" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+          <Select value={type} onValueChange={setType}><SelectTrigger className="w-[140px] h-10 rounded-xl border-[rgba(15,23,42,0.06)]"><SelectValue placeholder="All Types" /></SelectTrigger><SelectContent className="rounded-xl"><SelectItem value="ALL">All Types</SelectItem><SelectItem value="INCOME">Income</SelectItem><SelectItem value="EXPENSE">Expense</SelectItem></SelectContent></Select>
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="md:w-40 h-10 rounded-xl border-[rgba(15,23,42,0.06)] focus-visible:ring-[#0891B2]/20" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="md:w-40 h-10 rounded-xl border-[rgba(15,23,42,0.06)] focus-visible:ring-[#0891B2]/20" />
           <Button variant="outline" onClick={reload} disabled={loading} className="rounded-xl h-10"><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>

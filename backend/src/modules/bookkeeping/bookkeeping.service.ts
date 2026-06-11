@@ -830,11 +830,14 @@ export class BookkeepingService {
         status: { in: ['SUCCESSFUL', 'COMPLETED', 'PAID'] }
       }
     });
-    const income = invoicePayments.reduce((sum, p) => sum + (toNumber(p.amount) - toNumber(p.refundAmount || 0)), 0);
+    const invoiceIncome = invoicePayments.reduce((sum, p) => sum + (toNumber(p.amount) - toNumber(p.refundAmount || 0)), 0);
 
-    // 2. Calculate Expenses from Bookkeeping Transactions
+    // 2. Calculate Expenses & Bookkeeping Income from Bookkeeping Transactions
     const transactions: any[] = await this.reportTransactions(tenantId, from, to);
+    const bookkeepingIncome = transactions.reduce((sum: number, tx: any) => sum + this.incomeImpact(tx), 0);
     const expenses = transactions.reduce((sum: number, tx: any) => sum + this.expenseImpact(tx), 0);
+    
+    const income = invoiceIncome + bookkeepingIncome;
 
     const [accounts, unpaidInvoices, overdueInvoices, pendingExpenses, recentTransactions] = await Promise.all([
       db().bookkeepingAccount.findMany({ where: { tenantId, isActive: true } }),

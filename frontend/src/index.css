@@ -256,6 +256,34 @@ html.dark body {
   background-color: rgba(0, 0, 0, 0.14);
 }
 
+/* Custom Always Visible Thick Scrollbar */
+.always-visible-scrollbar {
+  scrollbar-width: auto;
+  scrollbar-color: rgba(8, 145, 178, 0.5) rgba(15, 23, 42, 0.05);
+}
+
+.always-visible-scrollbar::-webkit-scrollbar {
+  height: 12px;
+  width: 12px;
+  display: block; /* force visibility */
+}
+
+.always-visible-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.02);
+  border-radius: 6px;
+}
+
+.always-visible-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(8, 145, 178, 0.4);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.always-visible-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(8, 145, 178, 0.7);
+}
+
 /* =============================================
    STATIC NOISE TEXTURE (Premium depth, no motion)
    ============================================= */

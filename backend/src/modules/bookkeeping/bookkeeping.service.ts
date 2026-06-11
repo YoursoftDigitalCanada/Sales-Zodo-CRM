@@ -67,6 +67,114 @@ function db(): any {
   return prisma as any;
 }
 
+// ─── Self-Healing Migration ──────────────────────────────────────────
+// Adds missing columns/tables for the AI-Native Bookkeeping Engine.
+// Runs once per server restart via $executeRawUnsafe with IF NOT EXISTS.
+let _migrationApplied = false;
+async function ensureSchemaUpToDate() {
+  if (_migrationApplied) return;
+  _migrationApplied = true;
+  try {
+    await prisma.$executeRawUnsafe(`
+      -- Add new columns to BookkeepingTransaction
+      ALTER TABLE "BookkeepingTransaction" ADD COLUMN IF NOT EXISTS "hash" TEXT;
+      ALTER TABLE "BookkeepingTransaction" ADD COLUMN IF NOT EXISTS "confidenceScore" DOUBLE PRECISION;
+      ALTER TABLE "BookkeepingTransaction" ADD COLUMN IF NOT EXISTS "isTransfer" BOOLEAN NOT NULL DEFAULT false;
+      ALTER TABLE "BookkeepingTransaction" ADD COLUMN IF NOT EXISTS "matchedTransactionId" TEXT;
+      ALTER TABLE "BookkeepingTransaction" ADD COLUMN IF NOT EXISTS "journalEntryId" TEXT;
+      ALTER TABLE "BookkeepingTransaction" ADD COLUMN IF NOT EXISTS "importSessionId" TEXT;
+      ALTER TABLE "BookkeepingTransaction" ADD COLUMN IF NOT EXISTS "uploadedFileId" TEXT;
+      ALTER TABLE "BookkeepingTransaction" ADD COLUMN IF NOT EXISTS "rawTransactionId" TEXT;
+    `);
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "BookkeepingAccount" ADD COLUMN IF NOT EXISTS "creditLimit" DECIMAL(15,2);
+    `);
+    // Create indexes (no-op if they exist)
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "BookkeepingTransaction_hash_idx" ON "BookkeepingTransaction"("hash")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "BookkeepingTransaction_importSessionId_idx" ON "BookkeepingTransaction"("importSessionId")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "BookkeepingTransaction_isTransfer_idx" ON "BookkeepingTransaction"("isTransfer")`);
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "BookkeepingTransaction_rawTransactionId_key" ON "BookkeepingTransaction"("rawTransactionId")`);
+    // Create new tables
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ImportSession" (
+        "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+        "tenantId" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'DRAFT',
+        "name" TEXT, "notes" TEXT,
+        "totalFiles" INTEGER NOT NULL DEFAULT 0, "totalRawTx" INTEGER NOT NULL DEFAULT 0,
+        "totalCreated" INTEGER NOT NULL DEFAULT 0, "totalSkipped" INTEGER NOT NULL DEFAULT 0,
+        "totalDupes" INTEGER NOT NULL DEFAULT 0, "createdById" TEXT,
+        "completedAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "ImportSession_pkey" PRIMARY KEY ("id")
+      )
+    `);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "ImportSession" ADD CONSTRAINT IF NOT EXISTS "ImportSession_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE`).catch(() => {});
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ImportSession_tenantId_idx" ON "ImportSession"("tenantId")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ImportSession_status_idx" ON "ImportSession"("status")`);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "UploadedFile" (
+        "id" TEXT NOT NULL DEFAULT gen_random_uuid(), "tenantId" TEXT NOT NULL,
+        "sessionId" TEXT NOT NULL, "accountId" TEXT, "fileName" TEXT NOT NULL,
+        "originalName" TEXT NOT NULL, "provider" TEXT, "statementStart" TIMESTAMP(3),
+        "statementEnd" TIMESTAMP(3), "checksum" TEXT NOT NULL,
+        "rowCount" INTEGER NOT NULL DEFAULT 0, "processedCount" INTEGER NOT NULL DEFAULT 0,
+        "duplicateCount" INTEGER NOT NULL DEFAULT 0, "status" TEXT NOT NULL DEFAULT 'PENDING',
+        "errorMessage" TEXT, "metadata" JSONB NOT NULL DEFAULT '{}',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "UploadedFile_pkey" PRIMARY KEY ("id")
+      )
+    `);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "UploadedFile" ADD CONSTRAINT IF NOT EXISTS "UploadedFile_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE`).catch(() => {});
+    await prisma.$executeRawUnsafe(`ALTER TABLE "UploadedFile" ADD CONSTRAINT IF NOT EXISTS "UploadedFile_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "ImportSession"("id") ON DELETE CASCADE ON UPDATE CASCADE`).catch(() => {});
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "UploadedFile_tenantId_idx" ON "UploadedFile"("tenantId")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "UploadedFile_sessionId_idx" ON "UploadedFile"("sessionId")`);
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "UploadedFile_tenantId_checksum_key" ON "UploadedFile"("tenantId", "checksum")`);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "RawTransaction" (
+        "id" TEXT NOT NULL DEFAULT gen_random_uuid(), "tenantId" TEXT NOT NULL,
+        "sessionId" TEXT NOT NULL, "uploadedFileId" TEXT NOT NULL,
+        "originalRow" JSONB NOT NULL, "normalizedData" JSONB NOT NULL, "hash" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'PENDING', "transactionId" TEXT,
+        "aiCategory" TEXT, "aiVendor" TEXT, "aiConfidence" DOUBLE PRECISION,
+        "aiTransactionType" TEXT, "aiReason" TEXT,
+        "aiPossibleTransfer" BOOLEAN NOT NULL DEFAULT false, "matchedRawTxId" TEXT,
+        "isTransfer" BOOLEAN NOT NULL DEFAULT false, "isDuplicate" BOOLEAN NOT NULL DEFAULT false,
+        "duplicateOfId" TEXT, "manualOverrides" JSONB NOT NULL DEFAULT '{}',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "RawTransaction_pkey" PRIMARY KEY ("id")
+      )
+    `);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "RawTransaction" ADD CONSTRAINT IF NOT EXISTS "RawTransaction_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE`).catch(() => {});
+    await prisma.$executeRawUnsafe(`ALTER TABLE "RawTransaction" ADD CONSTRAINT IF NOT EXISTS "RawTransaction_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "ImportSession"("id") ON DELETE CASCADE ON UPDATE CASCADE`).catch(() => {});
+    await prisma.$executeRawUnsafe(`ALTER TABLE "RawTransaction" ADD CONSTRAINT IF NOT EXISTS "RawTransaction_uploadedFileId_fkey" FOREIGN KEY ("uploadedFileId") REFERENCES "UploadedFile"("id") ON DELETE CASCADE ON UPDATE CASCADE`).catch(() => {});
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "RawTransaction_transactionId_key" ON "RawTransaction"("transactionId")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "RawTransaction_tenantId_idx" ON "RawTransaction"("tenantId")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "RawTransaction_sessionId_idx" ON "RawTransaction"("sessionId")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "RawTransaction_hash_idx" ON "RawTransaction"("hash")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "RawTransaction_status_idx" ON "RawTransaction"("status")`);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "BookkeepingAuditLog" (
+        "id" TEXT NOT NULL DEFAULT gen_random_uuid(), "tenantId" TEXT NOT NULL,
+        "entityType" TEXT NOT NULL, "entityId" TEXT NOT NULL, "action" TEXT NOT NULL,
+        "beforeValue" JSONB, "afterValue" JSONB, "aiResponse" JSONB, "userId" TEXT,
+        "metadata" JSONB NOT NULL DEFAULT '{}',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "BookkeepingAuditLog_pkey" PRIMARY KEY ("id")
+      )
+    `);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "BookkeepingAuditLog" ADD CONSTRAINT IF NOT EXISTS "BookkeepingAuditLog_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE`).catch(() => {});
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "BookkeepingAuditLog_tenantId_idx" ON "BookkeepingAuditLog"("tenantId")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "BookkeepingAuditLog_entityType_entityId_idx" ON "BookkeepingAuditLog"("entityType", "entityId")`);
+    console.log('✅ Bookkeeping engine schema up to date');
+  } catch (err) {
+    console.error('⚠️ Bookkeeping schema migration warning (non-fatal):', (err as any)?.message);
+    // Non-fatal — tables may already exist or DB might not be fully initialized
+  }
+}
+
 function requirePositiveAmount(amount: unknown) {
   const value = toNumber(amount);
   if (!Number.isFinite(value) || value <= 0) throw new BadRequestError('Amount must be greater than zero', ErrorCodes.INVALID_INPUT);
@@ -102,6 +210,7 @@ function isReconciled(tx: Record<string, any> | null | undefined) {
 
 export class BookkeepingService {
   async setup(tenantId: string, actorUserId?: string) {
+    await ensureSchemaUpToDate();
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
     const currency = String((tenant?.settings as any)?.currency || 'CAD').toUpperCase();
 
@@ -160,6 +269,7 @@ export class BookkeepingService {
   }
 
   async listAccounts(tenantId: string, query: Record<string, any>) {
+    await ensureSchemaUpToDate();
     return bookkeepingRepository.list('bookkeepingAccount', tenantId, query, ['name', 'code', 'subtype', 'institutionName']);
   }
 
@@ -254,6 +364,7 @@ export class BookkeepingService {
   }
 
   async listTransactions(tenantId: string, query: Record<string, any>) {
+    await ensureSchemaUpToDate();
     return bookkeepingRepository.list('bookkeepingTransaction', tenantId, query, ['transactionNumber', 'description', 'reference']);
   }
 
@@ -950,6 +1061,7 @@ export class BookkeepingService {
   }
 
   async setupIfEmpty(tenantId: string) {
+    await ensureSchemaUpToDate();
     const count = await db().bookkeepingAccount.count({ where: { tenantId } });
     if (count === 0) await this.setup(tenantId);
   }

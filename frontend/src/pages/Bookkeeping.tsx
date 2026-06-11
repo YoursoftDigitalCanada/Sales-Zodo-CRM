@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Download, ExternalLink, Eye, Landmark, Plus, RefreshCw, Search, Upload, WalletCards } from "lucide-react";
 import { toast } from "sonner";
@@ -625,23 +625,23 @@ function TransactionTable({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const topScrollRef = React.useRef<HTMLDivElement>(null);
-  const tableScrollRef = React.useRef<HTMLDivElement>(null);
-  const [tableWidth, setTableWidth] = React.useState(1200);
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const [tableWidth, setTableWidth] = useState(1200);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (tableScrollRef.current) {
       setTableWidth(tableScrollRef.current.scrollWidth);
     }
   }, [rows]);
 
-  const handleTopScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const handleTopScroll = (e: any) => {
     if (tableScrollRef.current && e.currentTarget) {
       tableScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
     }
   };
 
-  const handleTableScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const handleTableScroll = (e: any) => {
     if (topScrollRef.current && e.currentTarget) {
       topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
     }

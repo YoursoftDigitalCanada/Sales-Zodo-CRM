@@ -107,19 +107,29 @@ class DeterministicAccountingEngine {
       categoryId = cat?.id;
     }
 
+    let txType = norm.type === 'CREDIT' ? 'INCOME' : 'EXPENSE';
+    if (rawTx.transferType) {
+      if (['STRIPE_PAYOUT', 'PAYPAL_SETTLEMENT', 'BANK_TRANSFER'].includes(rawTx.transferType)) {
+        txType = 'TRANSFER';
+      } else {
+        txType = rawTx.transferType; // CASHBACK, REFUND, OWNER_DRAW, PAYROLL, etc.
+      }
+    }
+
     await prisma.$transaction(async (tx) => {
       const bkTx = await tx.bookkeepingTransaction.create({
         data: {
           tenantId,
           transactionDate: new Date(norm.date),
-          amount: norm.amount,
-          type: norm.type,
+          amount: Math.abs(norm.amount), // ensure positive in ledger
+          type: txType,
           currency: norm.currency || 'CAD',
           description: norm.description,
           reference: norm.reference,
           status: 'POSTED',
           categoryId,
           isTransfer: rawTx.transferScore >= 80,
+          rawTransactionId: rawTxId, // link to raw transaction
           hash: rawTx.hash
         }
       });

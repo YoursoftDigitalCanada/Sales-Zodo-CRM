@@ -1192,27 +1192,27 @@ export class BookkeepingService {
   private incomeImpact(tx: any) {
     if (tx.status === 'VOID') return 0;
     if (tx.type === 'INCOME') return toNumber(tx.amount);
-    if (tx.type === 'REFUND') return -toNumber(tx.amount);
     return 0;
   }
 
   private expenseImpact(tx: any) {
     if (tx.status === 'VOID') return 0;
-    if (tx.type === 'EXPENSE') return toNumber(tx.amount);
+    if (tx.type === 'EXPENSE' || tx.type === 'PAYROLL' || tx.type === 'TAX_PAYMENT') return toNumber(tx.amount);
+    if (tx.type === 'REFUND' || tx.type === 'CASHBACK') return -toNumber(tx.amount);
     if (tx.type === 'ADJUSTMENT' && tx.metadata?.originalSourceType === 'EXPENSE') return -toNumber(tx.amount);
     return 0;
   }
 
   private cashInImpact(tx: any) {
     if (tx.status === 'VOID') return 0;
-    if (tx.type === 'INCOME') return toNumber(tx.amount);
+    if (tx.type === 'INCOME' || tx.type === 'REFUND' || tx.type === 'CASHBACK' || tx.type === 'OWNER_CONTRIBUTION' || tx.type === 'LOAN_PRINCIPAL') return toNumber(tx.amount);
     if (tx.type === 'ADJUSTMENT' && tx.metadata?.originalSourceType === 'EXPENSE') return toNumber(tx.amount);
     return 0;
   }
 
   private cashOutImpact(tx: any) {
     if (tx.status === 'VOID') return 0;
-    if (tx.type === 'EXPENSE' || tx.type === 'REFUND') return toNumber(tx.amount);
+    if (tx.type === 'EXPENSE' || tx.type === 'PAYROLL' || tx.type === 'TAX_PAYMENT' || tx.type === 'OWNER_DRAW' || tx.type === 'LOAN_PAYMENT' || tx.type === 'CREDIT_CARD_PAYMENT') return toNumber(tx.amount);
     return 0;
   }
 

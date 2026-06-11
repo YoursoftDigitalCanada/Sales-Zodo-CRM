@@ -819,6 +819,7 @@ model Tenant {
   dashboardProjections              DashboardProjection[]
   ledgerProjections                 LedgerProjection[]
   cashFlowProjections               CashFlowProjection[]
+  transferMatches                   TransferMatch[]
 
   @@index([status])
   @@index([slug])
@@ -4158,13 +4159,21 @@ model BookkeepingTransaction {
   hash                 String?
   confidenceScore      Float?
   isTransfer           Boolean   @default(false)
-  matchedTransactionId String?
+  matchStatus          String    @default("UNMATCHED") // UNMATCHED, PARTIALLY_MATCHED, FULLY_MATCHED
+  matchedTransactionId String? // Legacy, keep for backward compatibility temporarily
+  merchantConfidence   Float?
+  transferConfidence   Float?
+  duplicateConfidence  Float?
+  taxConfidence        Float?
+  journalConfidence    Float?
   journalEntryId       String?
   importSessionId      String?
   uploadedFileId       String?
   rawTransactionId     String?   @unique
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+  transferMatchesAsSource      TransferMatch[] @relation("TransferMatchSource")
+  transferMatchesAsDestination TransferMatch[] @relation("TransferMatchDestination")
 
   @@unique([tenantId, transactionNumber])
   @@unique([tenantId, sourceType, sourceId])
@@ -4200,6 +4209,26 @@ model BookkeepingTransfer {
   @@index([tenantId])
   @@index([fromAccountId])
   @@index([toAccountId])
+}
+
+model TransferMatch {
+  id                       String   @id @default(uuid())
+  tenantId                 String
+  tenant                   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sourceTransactionId      String
+  sourceTransaction        BookkeepingTransaction @relation("TransferMatchSource", fields: [sourceTransactionId], references: [id], onDelete: Cascade)
+  destinationTransactionId String
+  destinationTransaction   BookkeepingTransaction @relation("TransferMatchDestination", fields: [destinationTransactionId], references: [id], onDelete: Cascade)
+  matchedAmount            Decimal  @db.Decimal(15, 2)
+  confidence               Float    @default(0)
+  matchType                String   @default("AUTO") // AUTO, MANUAL, AI
+  status                   String   @default("ACTIVE") // ACTIVE, VOIDED
+  createdById              String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@unique([sourceTransactionId, destinationTransactionId])
+  @@index([tenantId])
 }
 
 model BookkeepingJournalEntry {

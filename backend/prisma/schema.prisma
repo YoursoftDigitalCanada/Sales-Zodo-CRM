@@ -807,6 +807,10 @@ model Tenant {
   bookkeepingJournalLines BookkeepingJournalLine[]
   bookkeepingReconciliations BookkeepingReconciliation[]
   bookkeepingRecurringRules BookkeepingRecurringRule[]
+  importSessions ImportSession[]
+  uploadedFiles UploadedFile[]
+  rawTransactions RawTransaction[]
+  bookkeepingAuditLogs BookkeepingAuditLog[]
   formBuilderForms FormBuilderForm[]
   formBuilderSubmissions FormBuilderSubmission[]
 
@@ -4027,6 +4031,7 @@ model BookkeepingAccount {
   isBankAccount      Boolean  @default(false)
   isSystem           Boolean  @default(false)
   isActive           Boolean  @default(true)
+  creditLimit        Decimal? @db.Decimal(15, 2)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -4097,13 +4102,21 @@ model BookkeepingTransaction {
   invoiceId         String?
   expenseId         String?
   fileId            String?
-  status            String   @default("POSTED")
-  isReconciled      Boolean  @default(false)
-  reconciledAt      DateTime?
-  metadata          Json     @default("{}")
-  createdById       String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  status              String   @default("POSTED")
+  isReconciled        Boolean  @default(false)
+  reconciledAt        DateTime?
+  metadata            Json     @default("{}")
+  createdById         String?
+  hash                String?
+  confidenceScore     Float?
+  isTransfer          Boolean  @default(false)
+  matchedTransactionId String?
+  journalEntryId      String?
+  importSessionId     String?
+  uploadedFileId      String?
+  rawTransactionId    String?  @unique
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@index([tenantId])
   @@index([accountId])
@@ -4114,6 +4127,9 @@ model BookkeepingTransaction {
   @@index([tenantId, transactionDate])
   @@index([tenantId, type])
   @@index([tenantId, status])
+  @@index([hash])
+  @@index([importSessionId])
+  @@index([isTransfer])
   @@unique([tenantId, transactionNumber])
   @@unique([tenantId, sourceType, sourceId])
 }
@@ -4227,6 +4243,116 @@ model BookkeepingRecurringRule {
   @@index([categoryId])
   @@index([vendorId])
   @@index([nextRunAt])
+}
+
+model ImportSession {
+  id            String   @id @default(uuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status        String   @default("DRAFT")
+  name          String?
+  notes         String?
+  totalFiles    Int      @default(0)
+  totalRawTx    Int      @default(0)
+  totalCreated  Int      @default(0)
+  totalSkipped  Int      @default(0)
+  totalDupes    Int      @default(0)
+  createdById   String?
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  files           UploadedFile[]
+  rawTransactions RawTransaction[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([tenantId, status])
+}
+
+model UploadedFile {
+  id              String   @id @default(uuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessionId       String
+  session         ImportSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  accountId       String?
+  fileName        String
+  originalName    String
+  provider        String?
+  statementStart  DateTime?
+  statementEnd    DateTime?
+  checksum        String
+  rowCount        Int      @default(0)
+  processedCount  Int      @default(0)
+  duplicateCount  Int      @default(0)
+  status          String   @default("PENDING")
+  errorMessage    String?
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  rawTransactions RawTransaction[]
+
+  @@index([tenantId])
+  @@index([sessionId])
+  @@index([checksum])
+  @@unique([tenantId, checksum])
+}
+
+model RawTransaction {
+  id                String   @id @default(uuid())
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessionId         String
+  session           ImportSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  uploadedFileId    String
+  uploadedFile      UploadedFile @relation(fields: [uploadedFileId], references: [id], onDelete: Cascade)
+  originalRow       Json
+  normalizedData    Json
+  hash              String
+  status            String   @default("PENDING")
+  transactionId     String?  @unique
+  aiCategory        String?
+  aiVendor          String?
+  aiConfidence      Float?
+  aiTransactionType String?
+  aiReason          String?
+  aiPossibleTransfer Boolean @default(false)
+  matchedRawTxId    String?
+  isTransfer        Boolean  @default(false)
+  isDuplicate       Boolean  @default(false)
+  duplicateOfId     String?
+  manualOverrides   Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([sessionId])
+  @@index([uploadedFileId])
+  @@index([hash])
+  @@index([status])
+  @@index([tenantId, hash])
+}
+
+model BookkeepingAuditLog {
+  id            String   @id @default(uuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entityType    String
+  entityId      String
+  action        String
+  beforeValue   Json?
+  afterValue    Json?
+  aiResponse    Json?
+  userId        String?
+  metadata      Json     @default("{}")
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([entityType, entityId])
+  @@index([tenantId, entityType])
+  @@index([createdAt])
 }
 
 // ============================================================================

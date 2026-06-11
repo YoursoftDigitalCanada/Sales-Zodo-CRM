@@ -5,6 +5,8 @@ import { authenticate, loadEmployee } from '../../common/middleware/auth.middlew
 import { requireAnyPermission, requirePermission } from '../../common/middleware/permission.middleware';
 import { validate } from '../../common/middleware/validate.middleware';
 import { bookkeepingController } from './bookkeeping.controller';
+import importSessionRoutes from './import-session.routes';
+import { importSessionController } from './import-session.controller';
 import { importBookkeepingPayloadSchema } from './bookkeeping.import.dto';
 import {
   attachReceiptSchema,
@@ -103,5 +105,11 @@ router.get('/reports/tax-summary', canViewBookkeepingReports, validate(reportQue
 router.get('/reports/balance-sheet', canViewBookkeepingReports, bookkeepingController.balanceSheet);
 router.get('/reports/transactions-export', canExportBookkeeping, validate(reportQuerySchema), bookkeepingController.transactionsExport);
 router.get('/reports/profit-loss-export', canExportBookkeeping, validate(reportQuerySchema), bookkeepingController.profitLossExport);
+
+// Import Sessions sub-routes
+router.use('/import-sessions', importSessionRoutes);
+
+// Audit log
+router.get('/audit-log', requirePermission(PERMISSIONS.BOOKKEEPING_VIEW), importSessionController.getAuditLog);
 
 export default router;

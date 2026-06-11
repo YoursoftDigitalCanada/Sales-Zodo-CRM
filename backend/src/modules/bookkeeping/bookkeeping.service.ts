@@ -749,6 +749,7 @@ export class BookkeepingService {
       topExpenseCategories: await this.topCategories(tenantId, 'EXPENSE', from, to),
       topCustomersByIncome: await this.topCustomersByIncome(tenantId, from, to),
       topVendorsBySpend: await this.topVendorsBySpend(tenantId, from, to),
+      importStats: await this.getImportStats(tenantId),
     };
   }
 
@@ -948,7 +949,7 @@ export class BookkeepingService {
     return this.createTransaction(tenantId, data);
   }
 
-  private async setupIfEmpty(tenantId: string) {
+  async setupIfEmpty(tenantId: string) {
     const count = await db().bookkeepingAccount.count({ where: { tenantId } });
     if (count === 0) await this.setup(tenantId);
   }
@@ -1175,6 +1176,41 @@ export class BookkeepingService {
       }
     }
     return { success: true, deletedCount };
+  }
+
+  private async getImportStats(tenantId: string) {
+    try {
+      const [activeSessions, totalRawTxs, rawStatusCounts, importedFiles, transferCount] = await Promise.all([
+        db().importSession.count({ where: { tenantId, status: { in: ['DRAFT', 'PROCESSING', 'REVIEW'] } } }).catch(() => 0),
+        db().rawTransaction.count({ where: { tenantId } }).catch(() => 0),
+        db().rawTransaction.groupBy({ by: ['status'], where: { tenantId }, _count: true }).catch(() => []),
+        db().uploadedFile.count({ where: { tenantId } }).catch(() => 0),
+        db().bookkeepingTransaction.count({ where: { tenantId, isTransfer: true } }).catch(() => 0),
+      ]);
+
+      const statusMap: Record<string, number> = {};
+      for (const s of rawStatusCounts) statusMap[s.status] = s._count;
+
+      const categorized = (statusMap['CATEGORIZED'] || 0) + (statusMap['MATCHED'] || 0) + (statusMap['FINALIZED'] || 0);
+      const aiCategorizedPercent = totalRawTxs > 0 ? Math.round((categorized / totalRawTxs) * 100) : 0;
+
+      return {
+        pendingMatches: statusMap['PENDING_MATCH'] || statusMap['MATCHED'] || 0,
+        internalTransfers: transferCount,
+        aiCategorizedPercent,
+        needsReview: statusMap['NEEDS_REVIEW'] || 0,
+        duplicateTransactions: statusMap['SKIPPED'] || 0,
+        creditCardRepayments: 0, // will be computed from transfer data in future
+        importedFiles,
+        activeSessions,
+      };
+    } catch {
+      return {
+        pendingMatches: 0, internalTransfers: 0, aiCategorizedPercent: 0,
+        needsReview: 0, duplicateTransactions: 0, creditCardRepayments: 0,
+        importedFiles: 0, activeSessions: 0,
+      };
+    }
   }
 }
 

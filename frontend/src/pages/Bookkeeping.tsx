@@ -625,6 +625,27 @@ function TransactionTable({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const topScrollRef = React.useRef<HTMLDivElement>(null);
+  const tableScrollRef = React.useRef<HTMLDivElement>(null);
+  const [tableWidth, setTableWidth] = React.useState(1200);
+
+  React.useEffect(() => {
+    if (tableScrollRef.current) {
+      setTableWidth(tableScrollRef.current.scrollWidth);
+    }
+  }, [rows]);
+
+  const handleTopScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (tableScrollRef.current && e.currentTarget) {
+      tableScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
+  };
+
+  const handleTableScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (topScrollRef.current && e.currentTarget) {
+      topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
+  };
 
   if (!rows.length) return <EmptyState title="No transactions found." />;
 
@@ -684,9 +705,24 @@ function TransactionTable({
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="overflow-auto max-h-[500px] border-b border-[rgba(15,23,42,0.08)] relative">
-        <Table>
-          <TableHeader className="sticky top-0 z-10 bg-[#F8FAFC] shadow-[0_1px_3px_rgba(0,0,0,0.05)]"><TableRow className="bg-[#F8FAFC] hover:bg-[#F8FAFC]">
+      <div className="rounded-xl border border-[rgba(15,23,42,0.08)] bg-white shadow-sm overflow-hidden">
+        {/* Top Synchronized Scrollbar */}
+        <div 
+          ref={topScrollRef} 
+          onScroll={handleTopScroll} 
+          className="overflow-x-auto w-full sticky top-0 z-20 bg-gray-50 border-b border-gray-100 hidden md:block"
+        >
+          <div style={{ width: tableWidth, height: '1px' }}></div>
+        </div>
+
+        {/* Main Table Container */}
+        <div 
+          ref={tableScrollRef}
+          onScroll={handleTableScroll}
+          className="overflow-auto max-h-[500px] relative"
+        >
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-[#F8FAFC] shadow-[0_1px_3px_rgba(0,0,0,0.05)]"><TableRow className="bg-[#F8FAFC] hover:bg-[#F8FAFC]">
             <TableHead className="w-12 bg-[#F8FAFC]"><Checkbox className="rounded shadow-none border-[#CBD5E1] data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#0891B2]" checked={selectedIds.size > 0 && selectedIds.size === rows.length} onCheckedChange={toggleAll} /></TableHead>
             {["Date", "Number", "Type", "Description", "Account", "Category", "Vendor", "Source", "Sync", "Receipt", "Amount", "Status", "Actions"].map((h) => <TableHead key={h} className="text-[#64748B] uppercase text-xs tracking-wide bg-[#F8FAFC]">{h}</TableHead>)}
           </TableRow></TableHeader>
@@ -765,6 +801,7 @@ function TransactionTable({
           </TableRow>
         ))}</TableBody>
       </Table>
+        </div>
       </div>
     </div>
   );

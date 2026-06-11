@@ -358,6 +358,7 @@ export function ImportTransactionsDialog({
       <DialogContent className="sm:max-w-[640px] rounded-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl text-[#0F172A]">Import Transactions</DialogTitle>
+          <DialogDescription className="sr-only">Upload your CSV to import transactions</DialogDescription>
         </DialogHeader>
 
         {step === "UPLOAD" && (

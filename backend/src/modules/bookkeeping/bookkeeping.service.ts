@@ -1220,18 +1220,27 @@ export class BookkeepingService {
     const mappedCategories: Record<string, string> = {};
 
     for (const acc of accountsToCreate || []) {
-      const created = await this.createAccount(tenantId, { name: acc.name, type: acc.type, isBankAccount: acc.isBankAccount, openingBalance: 0 }, actorUserId);
-      mappedAccounts[acc.tempId] = created.id;
+      let existing = await db().bookkeepingAccount.findFirst({ where: { tenantId, name: acc.name } });
+      if (!existing) {
+        existing = await this.createAccount(tenantId, { name: acc.name, type: acc.type, isBankAccount: acc.isBankAccount, openingBalance: 0 }, actorUserId);
+      }
+      mappedAccounts[acc.tempId] = existing.id;
     }
 
     for (const v of vendorsToCreate || []) {
-      const created = await this.createVendor(tenantId, { name: v.name }, actorUserId);
-      mappedVendors[v.tempId] = created.id;
+      let existing = await db().bookkeepingVendor.findFirst({ where: { tenantId, name: v.name } });
+      if (!existing) {
+        existing = await this.createVendor(tenantId, { name: v.name }, actorUserId);
+      }
+      mappedVendors[v.tempId] = existing.id;
     }
 
     for (const c of categoriesToCreate || []) {
-      const created = await this.createCategory(tenantId, { name: c.name, type: c.type }, actorUserId);
-      mappedCategories[c.tempId] = created.id;
+      let existing = await db().bookkeepingCategory.findFirst({ where: { tenantId, name: c.name, type: c.type } });
+      if (!existing) {
+        existing = await this.createCategory(tenantId, { name: c.name, type: c.type }, actorUserId);
+      }
+      mappedCategories[c.tempId] = existing.id;
     }
 
     let createdCount = 0;

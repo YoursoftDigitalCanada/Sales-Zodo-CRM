@@ -473,7 +473,7 @@ export default function BookkeepingPage() {
           <ImportTransactionsDialog accounts={accounts} categories={categories} vendors={vendors} transactions={transactions} onSuccess={(dateRange) => { if (dateRange?.from) setDateFrom(dateRange.from); if (dateRange?.to) setDateTo(dateRange.to); reload(); }} />
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue="accounts" className="space-y-6">
           <TabsList className="flex h-12 flex-wrap justify-start rounded-xl bg-white border border-[rgba(15,23,42,0.06)] p-1 shadow-sm">
             {["overview", "transactions", "accounts", "categories", "vendors", "reconciliation", "recurring", "reports", "ai-assistant"].map((tab) => (
               <TabsTrigger key={tab} value={tab} className="capitalize rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">{tab.replace("-", " ")}</TabsTrigger>
@@ -481,31 +481,53 @@ export default function BookkeepingPage() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-4">
-              {[
-                ["Unpaid invoices", dashboard.totals?.unpaidInvoices || 0, "text-amber-600"],
-                ["Overdue invoices", dashboard.totals?.overdueInvoices || 0, "text-rose-600"],
-                ["Pending expenses", dashboard.totals?.pendingExpenses || 0, "text-slate-700"],
-                ["Bookkeeping accounts", accounts.length, "text-[#0891B2]"],
-              ].map(([label, value, tone]) => (
-                <Panel key={String(label)}>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[#64748B]">{label}</p>
-                  <p className={`mt-3 text-3xl font-bold tracking-tight ${tone}`}>{value}</p>
-                </Panel>
-              ))}
-            </div>
-
-            <Panel>
-              <h2 className="mb-4 text-lg font-semibold text-[#0F172A]">Recent Transactions</h2>
-              <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { await bulkDeleteTransactions(ids); reload(); }} onTimeline={setTimelineTarget} />
+            <Panel className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="rounded-full bg-[#E0F2FE] p-4 mb-4">
+                <Search className="h-8 w-8 text-[#0284C7]" />
+              </div>
+              <h2 className="text-2xl font-bold text-[#0F172A] mb-2">🚧 Coming Soon</h2>
+              <p className="text-[#64748B] max-w-md">This overview dashboard feature is currently under process. Check back later!</p>
             </Panel>
+            
+            {false && (
+              <>
+                <div className="grid gap-4 md:grid-cols-4">
+                  {[
+                    ["Unpaid invoices", dashboard.totals?.unpaidInvoices || 0, "text-amber-600"],
+                    ["Overdue invoices", dashboard.totals?.overdueInvoices || 0, "text-rose-600"],
+                    ["Pending expenses", dashboard.totals?.pendingExpenses || 0, "text-slate-700"],
+                    ["Bookkeeping accounts", accounts.length, "text-[#0891B2]"],
+                  ].map(([label, value, tone]) => (
+                    <Panel key={String(label)}>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[#64748B]">{label}</p>
+                      <p className={`mt-3 text-3xl font-bold tracking-tight ${tone}`}>{value}</p>
+                    </Panel>
+                  ))}
+                </div>
+
+                <Panel>
+                  <h2 className="mb-4 text-lg font-semibold text-[#0F172A]">Recent Transactions</h2>
+                  <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { await bulkDeleteTransactions(ids); reload(); }} onTimeline={setTimelineTarget} />
+                </Panel>
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="transactions">
-            <Panel>
-              <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-[#0F172A]">Transactions Ledger</h2><TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} /></div>
-              <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { await bulkDeleteTransactions(ids); reload(); }} onTimeline={setTimelineTarget} />
+            <Panel className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="rounded-full bg-[#E0F2FE] p-4 mb-4">
+                <Search className="h-8 w-8 text-[#0284C7]" />
+              </div>
+              <h2 className="text-2xl font-bold text-[#0F172A] mb-2">🚧 Coming Soon</h2>
+              <p className="text-[#64748B] max-w-md">The transactions ledger feature is currently under process. Check back later!</p>
             </Panel>
+
+            {false && (
+              <Panel>
+                <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-[#0F172A]">Transactions Ledger</h2><TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} /></div>
+                <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { await bulkDeleteTransactions(ids); reload(); }} onTimeline={setTimelineTarget} />
+              </Panel>
+            )}
           </TabsContent>
 
           <TabsContent value="accounts">

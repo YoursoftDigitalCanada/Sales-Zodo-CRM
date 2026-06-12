@@ -46,6 +46,21 @@ const statusTone: Record<string, string> = {
   PENDING: "bg-slate-100 text-slate-700",
 };
 
+const months = [
+  ["01", "January"],
+  ["02", "February"],
+  ["03", "March"],
+  ["04", "April"],
+  ["05", "May"],
+  ["06", "June"],
+  ["07", "July"],
+  ["08", "August"],
+  ["09", "September"],
+  ["10", "October"],
+  ["11", "November"],
+  ["12", "December"],
+] as const;
+
 export function StatementImportPanel({
   mode,
   accounts,
@@ -67,6 +82,9 @@ export function StatementImportPanel({
   const [rows, setRows] = useState<BookkeepingRecord[]>([]);
   const [accountId, setAccountId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [filterDate, setFilterDate] = useState("");
+  const [filterMonth, setFilterMonth] = useState("ALL");
+  const [filterYear, setFilterYear] = useState("ALL");
 
   const eligibleAccounts = useMemo(() => accounts.filter((account) => {
     if (mode === "CREDIT_CARD") return account.type === "LIABILITY" || account.subtype === "CREDIT_CARD";
@@ -81,7 +99,7 @@ export function StatementImportPanel({
     }
     const [details, raw] = await Promise.all([
       getImportSession(id),
-      getRawImportTransactions(id, { limit: 200 }),
+      getRawImportTransactions(id, { limit: 5000 }),
     ]);
     setSession(details);
     setRows(raw.data || []);
@@ -97,10 +115,28 @@ export function StatementImportPanel({
   };
 
   useEffect(() => {
+    setFilterDate("");
+    setFilterMonth("ALL");
+    setFilterYear("ALL");
     loadSessions().catch((error) => toast.error(errorMessage(error, `Could not load ${prefix.toLowerCase()} imports.`)));
     // The mode identifies an independent workspace; selection changes are handled explicitly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
+
+  const availableYears = useMemo(() => Array.from(new Set(rows
+    .map((row) => String(row.normalizedData?.date || "").match(/^(\d{4})-\d{2}-\d{2}/)?.[1])
+    .filter((year): year is string => Boolean(year))))
+    .sort((a, b) => Number(b) - Number(a)), [rows]);
+
+  const filteredRows = useMemo(() => rows.filter((row) => {
+    const transactionDate = String(row.normalizedData?.date || "").match(/^(\d{4})-(\d{2})-(\d{2})/)?.slice(1);
+    if (!transactionDate) return !filterDate && filterMonth === "ALL" && filterYear === "ALL";
+    const [year, month, day] = transactionDate;
+    if (filterDate && `${year}-${month}-${day}` !== filterDate) return false;
+    if (filterMonth !== "ALL" && month !== filterMonth) return false;
+    if (filterYear !== "ALL" && year !== filterYear) return false;
+    return true;
+  }), [filterDate, filterMonth, filterYear, rows]);
 
   const upload = async (file: File) => {
     try {
@@ -152,9 +188,10 @@ export function StatementImportPanel({
     }
   };
 
-  const reviewCount = rows.filter((row) => row.status === "NEEDS_REVIEW").length;
-  const duplicateCount = rows.filter((row) => Number(row.duplicateScore || 0) >= 95).length;
-  const readyCount = rows.filter((row) => ["CATEGORIZED", "PENDING", "MATCHED"].includes(String(row.status))).length;
+  const reviewCount = filteredRows.filter((row) => row.status === "NEEDS_REVIEW").length;
+  const duplicateCount = filteredRows.filter((row) => Number(row.duplicateScore || 0) >= 95).length;
+  const readyCount = filteredRows.filter((row) => ["CATEGORIZED", "PENDING", "MATCHED"].includes(String(row.status))).length;
+  const hasFilters = Boolean(filterDate || filterMonth !== "ALL" || filterYear !== "ALL");
   const Icon = mode === "BANK" ? Landmark : CreditCard;
 
   return (
@@ -206,7 +243,7 @@ export function StatementImportPanel({
           </Select>
         </div>
         <div className="flex flex-1 flex-wrap gap-2">
-          <Badge variant="outline">{rows.length} rows</Badge>
+          <Badge variant="outline">{hasFilters ? `${filteredRows.length} of ${rows.length} rows` : `${rows.length} rows`}</Badge>
           <Badge className="bg-sky-100 text-sky-700 hover:bg-sky-100">{readyCount} ready</Badge>
           <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">{reviewCount} review</Badge>
           <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100">{duplicateCount} duplicates</Badge>
@@ -219,6 +256,53 @@ export function StatementImportPanel({
           <Check className="mr-2 h-4 w-4" />Post reviewed transactions
         </Button>
       </div>
+
+      {rows.length ? (
+        <div className="flex flex-col gap-3 rounded-xl bg-[#F8FAFC] p-3 sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="min-w-44 flex-1 space-y-1">
+            <Label className="text-xs text-[#64748B]">Exact date</Label>
+            <Input
+              type="date"
+              value={filterDate}
+              onChange={(event) => setFilterDate(event.target.value)}
+              className="h-10 bg-white"
+            />
+          </div>
+          <div className="min-w-40 flex-1 space-y-1">
+            <Label className="text-xs text-[#64748B]">Month</Label>
+            <Select value={filterMonth} onValueChange={setFilterMonth}>
+              <SelectTrigger className="h-10 bg-white"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All months</SelectItem>
+                {months.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-36 flex-1 space-y-1">
+            <Label className="text-xs text-[#64748B]">Year</Label>
+            <Select value={filterYear} onValueChange={setFilterYear}>
+              <SelectTrigger className="h-10 bg-white"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All years</SelectItem>
+                {availableYears.map((year) => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!hasFilters}
+            onClick={() => {
+              setFilterDate("");
+              setFilterMonth("ALL");
+              setFilterYear("ALL");
+            }}
+            className="h-10"
+          >
+            Clear filters
+          </Button>
+        </div>
+      ) : null}
 
       {!rows.length ? (
         <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-8 text-center">
@@ -242,7 +326,7 @@ export function StatementImportPanel({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row) => {
+                {filteredRows.map((row) => {
                   const normalized = row.normalizedData || {};
                   const overrides = row.manualOverrides || {};
                   const transactionType = overrides.transactionType || row.aiTransactionType || (normalized.type === "CREDIT" ? "INCOME" : "EXPENSE");
@@ -292,6 +376,13 @@ export function StatementImportPanel({
                     </TableRow>
                   );
                 })}
+                {!filteredRows.length ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-32 text-center text-sm text-[#64748B]">
+                      No transactions match the selected date filters.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
               </TableBody>
             </Table>
           </div>

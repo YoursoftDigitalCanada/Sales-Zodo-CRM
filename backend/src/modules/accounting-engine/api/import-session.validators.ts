@@ -56,7 +56,7 @@ export const listRawTxQuerySchema = z.object({
   query: z.object({
     status: z.string().optional(),
     page: z.coerce.number().int().positive().optional(),
-    limit: z.coerce.number().int().positive().max(200).optional(),
+    limit: z.coerce.number().int().positive().max(5000).optional(),
     search: z.string().optional(),
   }).optional(),
 });

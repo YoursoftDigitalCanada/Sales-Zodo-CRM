@@ -589,7 +589,7 @@ class ImportSessionService {
     search?: string;
   } = {}) {
     const page = query.page || 1;
-    const limit = Math.min(query.limit || 50, 200);
+    const limit = Math.min(query.limit || 50, 5000);
     const skip = (page - 1) * limit;
 
     const where: any = { sessionId, tenantId };

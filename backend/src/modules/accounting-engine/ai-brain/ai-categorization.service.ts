@@ -44,8 +44,8 @@ class AiCategorizationService {
         
         // If merchant has high confidence and defaults, bypass AI
         if (merchant && merchant.confidence >= 0.9 && merchant.defaultCategoryId) {
-          const category = await prisma.bookkeepingCategory.findFirst({ where: { id: merchant.defaultCategoryId } });
-          const vendor = merchant.defaultVendorId ? await prisma.bookkeepingVendor.findFirst({ where: { id: merchant.defaultVendorId } }) : null;
+          const category = await prisma.bookkeepingCategory.findFirst({ where: { id: merchant.defaultCategoryId, tenantId } });
+          const vendor = merchant.defaultVendorId ? await prisma.bookkeepingVendor.findFirst({ where: { id: merchant.defaultVendorId, tenantId } }) : null;
           
           if (category) {
             finalResults[i] = {

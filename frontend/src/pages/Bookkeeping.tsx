@@ -15,9 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
-import { ImportTransactionsDialog } from "@/components/bookkeeping/ImportTransactionsDialog";
 import { AiAccountantChat } from "@/components/bookkeeping/AiAccountantChat";
 import { DecisionTimelineDialog } from "@/components/bookkeeping/DecisionTimelineDialog";
+import { StatementImportPanel } from "@/components/bookkeeping/StatementImportPanel";
 import {
   BookkeepingRecord,
   attachReceipt,
@@ -470,12 +470,11 @@ export default function BookkeepingPage() {
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="md:w-40 h-10 rounded-xl border-[rgba(15,23,42,0.06)] focus-visible:ring-[#0891B2]/20" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="md:w-40 h-10 rounded-xl border-[rgba(15,23,42,0.06)] focus-visible:ring-[#0891B2]/20" />
           <Button variant="outline" onClick={reload} disabled={loading} className="rounded-xl h-10"><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
-          <ImportTransactionsDialog accounts={accounts} categories={categories} vendors={vendors} transactions={transactions} onSuccess={(dateRange) => { if (dateRange?.from) setDateFrom(dateRange.from); if (dateRange?.to) setDateTo(dateRange.to); reload(); }} />
         </div>
 
-        <Tabs defaultValue="accounts" className="space-y-6">
-          <TabsList className="flex h-12 flex-wrap justify-start rounded-xl bg-white border border-[rgba(15,23,42,0.06)] p-1 shadow-sm">
-            {["overview", "transactions", "accounts", "categories", "vendors", "reconciliation", "recurring", "reports", "ai-assistant"].map((tab) => (
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="flex h-auto min-h-12 flex-wrap justify-start gap-1 rounded-xl bg-white border border-[rgba(15,23,42,0.06)] p-1 shadow-sm">
+            {["overview", "transactions", "bank", "credit-cards", "accounts", "categories", "vendors", "reconciliation", "recurring", "reports", "ai-assistant"].map((tab) => (
               <TabsTrigger key={tab} value={tab} className="capitalize rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">{tab.replace("-", " ")}</TabsTrigger>
             ))}
           </TabsList>
@@ -528,6 +527,14 @@ export default function BookkeepingPage() {
                 <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { await bulkDeleteTransactions(ids); reload(); }} onTimeline={setTimelineTarget} />
               </Panel>
             )}
+          </TabsContent>
+
+          <TabsContent value="bank">
+            <StatementImportPanel mode="BANK" accounts={accounts} categories={categories} vendors={vendors} onPosted={reload} />
+          </TabsContent>
+
+          <TabsContent value="credit-cards">
+            <StatementImportPanel mode="CREDIT_CARD" accounts={accounts} categories={categories} vendors={vendors} onPosted={reload} />
           </TabsContent>
 
           <TabsContent value="accounts">

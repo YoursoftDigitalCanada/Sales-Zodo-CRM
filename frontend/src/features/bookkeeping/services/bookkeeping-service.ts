@@ -196,6 +196,50 @@ export async function askAiAccountant(query: string) {
   return unwrap<string>((await api.post("/bookkeeping/chat", { query })));
 }
 
+export async function createImportSession(name: string) {
+  return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/import-sessions", { name })));
+}
+
+export async function getImportSessions(params?: Record<string, unknown>) {
+  const response = await api.get("/bookkeeping/import-sessions", { params });
+  const payload = unwrap<any>(response);
+  return payload?.data ? payload as BookkeepingList : { data: payload || [] };
+}
+
+export async function getImportSession(id: string) {
+  return unwrap<BookkeepingRecord>((await api.get(`/bookkeeping/import-sessions/${id}`)));
+}
+
+export async function uploadStatementCsv(sessionId: string, file: File, accountId?: string) {
+  const fileContent = await file.text();
+  return unwrap<BookkeepingRecord>((await api.post(`/bookkeeping/import-sessions/${sessionId}/upload`, {
+    fileContent,
+    fileName: file.name,
+    ...(accountId ? { accountId } : {}),
+  })));
+}
+
+export async function processImportSession(sessionId: string) {
+  return unwrap<BookkeepingRecord>((await api.post(`/bookkeeping/import-sessions/${sessionId}/process`)));
+}
+
+export async function finalizeImportSession(sessionId: string) {
+  return unwrap<BookkeepingRecord>((await api.post(`/bookkeeping/import-sessions/${sessionId}/finalize`)));
+}
+
+export async function getRawImportTransactions(sessionId: string, params?: Record<string, unknown>) {
+  const response = await api.get(`/bookkeeping/import-sessions/${sessionId}/raw-transactions`, { params });
+  const payload = unwrap<any>(response);
+  return payload?.data ? payload as BookkeepingList : { data: payload || [] };
+}
+
+export async function updateRawImportTransaction(sessionId: string, rawTransactionId: string, data: BookkeepingRecord) {
+  return unwrap<BookkeepingRecord>((await api.put(
+    `/bookkeeping/import-sessions/${sessionId}/raw-transactions/${rawTransactionId}`,
+    data,
+  )));
+}
+
 export function exportUrl(path: "transactions-export" | "profit-loss-export", params?: Record<string, string>) {
   const search = new URLSearchParams(params || {}).toString();
   return `/bookkeeping/reports/${path}${search ? `?${search}` : ""}`;

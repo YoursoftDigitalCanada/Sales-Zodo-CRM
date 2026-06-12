@@ -3,8 +3,8 @@ import { importSessionService } from './import-session.service';
 import { transferMatchingService } from '../transfer-intelligence/transfer-matching.service';
 import { bookkeepingAuditService } from '../event-store/audit.service';
 
-function tenant(req: Request): string { return (req as any).tenantId; }
-function actor(req: Request): string | undefined { return (req as any).userId || (req as any).user?.id; }
+function tenant(req: Request): string { return req.context.tenantId; }
+function actor(req: Request): string | undefined { return req.user?.userId || req.user?.employeeId; }
 
 function sendSuccess(res: Response, data: any, message?: string) {
   res.json({ success: true, data, message });

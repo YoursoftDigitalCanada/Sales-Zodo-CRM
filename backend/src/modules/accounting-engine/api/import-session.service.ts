@@ -263,7 +263,11 @@ class ImportSessionService {
                 transferScore: aiResult.possibleTransfer ? 90 : 0,
                 status: rawTx.duplicateScore >= 95 ? 'SKIPPED' : status,
                 merchantConfidence: 0.5,
-                aiJournal: [],
+                taxTreatment: aiResult.taxTreatment,
+                aiJournal: aiResult.journal as any,
+                requiresReview: aiResult.requiresReview || status === 'NEEDS_REVIEW',
+                aiModelVersion: 'openai-or-fallback',
+                decisionTimestamp: new Date(),
               },
             });
 
@@ -556,7 +560,12 @@ class ImportSessionService {
 
     await prisma.importSession.update({
       where: { id: sessionId },
-      data: { status: 'FINALIZED', completedAt: new Date() },
+      data: {
+        status: totalSkipped > 0 ? 'REVIEW' : 'FINALIZED',
+        completedAt: totalSkipped > 0 ? null : new Date(),
+        totalCreated: { increment: totalCreated },
+        totalSkipped,
+      },
     });
 
     await bookkeepingAuditService.log({
@@ -624,6 +633,7 @@ class ImportSessionService {
     if (updates.category || updates.vendor || updates.transactionType) {
       if (!['MATCHED', 'FINALIZED', 'SKIPPED'].includes(rawTx.status)) {
         updateData.status = 'CATEGORIZED';
+        updateData.requiresReview = false;
       }
     }
 

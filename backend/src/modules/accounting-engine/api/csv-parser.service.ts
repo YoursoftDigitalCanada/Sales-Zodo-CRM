@@ -53,7 +53,7 @@ class CsvParserService {
     const lines = content.split(/\r?\n/).filter(l => l.trim());
     if (lines.length < 2) return [];
     const delimiter = this.detectDelimiter(lines[0]);
-    const headers = this.parseCSVLine(lines[0], delimiter);
+    const headers = this.parseCSVLine(lines[0], delimiter).map((header) => header.replace(/^\uFEFF/, '').trim());
     return lines.slice(1).map(line => {
       const values = this.parseCSVLine(line, delimiter);
       const row: Record<string, any> = {};

@@ -822,22 +822,11 @@ export class BookkeepingService {
       to.setUTCHours(23, 59, 59, 999);
     }
     
-    // 1. Calculate Income from Invoice Payments
-    const invoicePayments = await prisma.invoicePayment.findMany({
-      where: {
-        tenantId,
-        paymentDate: { gte: from, lte: to },
-        status: { in: ['SUCCESSFUL', 'COMPLETED', 'PAID'] }
-      }
-    });
-    const invoiceIncome = invoicePayments.reduce((sum, p) => sum + (toNumber(p.amount) - toNumber(p.refundAmount || 0)), 0);
-
-    // 2. Calculate Expenses & Bookkeeping Income from Bookkeeping Transactions
+    // The ledger is the reporting source of truth. Invoice payments are already
+    // synchronized into bookkeeping transactions and must not be counted twice.
     const transactions: any[] = await this.reportTransactions(tenantId, from, to);
-    const bookkeepingIncome = transactions.reduce((sum: number, tx: any) => sum + this.incomeImpact(tx), 0);
+    const income = transactions.reduce((sum: number, tx: any) => sum + this.incomeImpact(tx), 0);
     const expenses = transactions.reduce((sum: number, tx: any) => sum + this.expenseImpact(tx), 0);
-    
-    const income = invoiceIncome + bookkeepingIncome;
 
     const [accounts, unpaidInvoices, overdueInvoices, pendingExpenses, recentTransactions] = await Promise.all([
       db().bookkeepingAccount.findMany({ where: { tenantId, isActive: true } }),
@@ -846,7 +835,12 @@ export class BookkeepingService {
       prisma.expense.count({ where: { tenantId, status: { in: ['DRAFT', 'PENDING_APPROVAL'] } as any } }),
       db().bookkeepingTransaction.findMany({ where: { tenantId }, orderBy: { transactionDate: 'desc' }, take: 8 }),
     ]);
-    const cashBalance = accounts.filter((a: any) => a.type === 'ASSET' && (a.isBankAccount || ['Cash', 'Bank Account'].includes(a.name))).reduce((sum: number, a: any) => sum + toNumber(a.currentBalance), 0);
+    const bankAccountIds = new Set(accounts
+      .filter((a: any) => a.type === 'ASSET' && (a.isBankAccount || ['Cash', 'Bank Account'].includes(a.name)))
+      .map((a: any) => a.id));
+    const cashBalance = transactions
+      .filter((tx: any) => tx.accountId && bankAccountIds.has(tx.accountId))
+      .reduce((sum: number, tx: any) => sum + this.cashInImpact(tx) - this.cashOutImpact(tx), 0);
     return {
       totals: {
         totalIncome: serializeMoney(income),

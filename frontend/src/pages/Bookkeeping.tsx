@@ -313,6 +313,7 @@ function SimpleCreateDialog({ title, fields, onSubmit, trigger }: { title: strin
 export default function BookkeepingPage() {
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeTab, setActiveTab] = useState("overview");
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -327,6 +328,7 @@ export default function BookkeepingPage() {
   const [reconciliations, setReconciliations] = useState<BookkeepingRecord[]>([]);
   const [recurringRules, setRecurringRules] = useState<BookkeepingRecord[]>([]);
   const [reports, setReports] = useState<BookkeepingRecord>({});
+  const [availableYears, setAvailableYears] = useState<number[]>([new Date().getFullYear()]);
   const [editingTx, setEditingTx] = useState<BookkeepingRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BookkeepingRecord | null>(null);
   const [timelineTarget, setTimelineTarget] = useState<string | null>(null);
@@ -369,6 +371,14 @@ export default function BookkeepingPage() {
       setCategories(categoryRes.data);
       setVendors(vendorRes.data);
       setTransactions(transactionRes.data);
+      setAvailableYears((current) => {
+        const years = new Set(current);
+        transactionRes.data.forEach((tx) => {
+          const year = new Date(tx.transactionDate).getUTCFullYear();
+          if (Number.isFinite(year)) years.add(year);
+        });
+        return Array.from(years).sort((a, b) => b - a);
+      });
       setTransfers(transferRes.data);
       setJournalEntries(journalRes.data);
       setReconciliations(recRes.data);
@@ -389,6 +399,56 @@ export default function BookkeepingPage() {
   const accountName = (id?: string) => accounts.find((a) => a.id === id)?.name || "-";
   const categoryName = (id?: string) => categories.find((c) => c.id === id)?.name || "-";
   const vendorName = (id?: string) => vendors.find((v) => v.id === id)?.name || "-";
+  const selectedYear = useMemo(() => {
+    const fromMatch = dateFrom.match(/^(\d{4})-01-01$/);
+    const toMatch = dateTo.match(/^(\d{4})-12-31$/);
+    return fromMatch && toMatch && fromMatch[1] === toMatch[1] ? fromMatch[1] : dateFrom || dateTo ? "CUSTOM" : "ALL";
+  }, [dateFrom, dateTo]);
+
+  const kpiCards = useMemo(() => {
+    const activeTransactions = transactions.filter((tx) => String(tx.status || "").toUpperCase() !== "VOID");
+    const bankAccountIds = new Set(accounts
+      .filter((account) => account.type === "ASSET" && (account.isBankAccount || ["CHECKING", "SAVINGS", "CASH"].includes(String(account.subtype || "").toUpperCase())))
+      .map((account) => account.id));
+    const creditCardAccountIds = new Set(accounts
+      .filter((account) => account.type === "LIABILITY" && String(account.subtype || "").toUpperCase() === "CREDIT_CARD")
+      .map((account) => account.id));
+    const amount = (tx: BookkeepingRecord) => Number(tx.amount || 0);
+    const isMoneyIn = (tx: BookkeepingRecord) => ["INCOME", "REFUND", "CASHBACK", "OWNER_CONTRIBUTION", "LOAN_PRINCIPAL"].includes(String(tx.type || "").toUpperCase());
+    const isMoneyOut = (tx: BookkeepingRecord) => ["EXPENSE", "PAYROLL", "TAX_PAYMENT", "OWNER_DRAW", "LOAN_PAYMENT", "CREDIT_CARD_PAYMENT"].includes(String(tx.type || "").toUpperCase());
+
+    if (activeTab === "bank") {
+      const rows = activeTransactions.filter((tx) => bankAccountIds.has(tx.accountId));
+      const moneyIn = rows.filter(isMoneyIn).reduce((sum, tx) => sum + amount(tx), 0);
+      const moneyOut = rows.filter(isMoneyOut).reduce((sum, tx) => sum + amount(tx), 0);
+      return [
+        ["Money In", moneyIn, "text-[#0F766E]"],
+        ["Money Out", moneyOut, "text-[#E11D48]"],
+        ["Net Bank Movement", moneyIn - moneyOut, "text-[#0F172A]"],
+        ["Total Bank Activity", moneyIn + moneyOut, "text-[#0891B2]"],
+      ];
+    }
+
+    if (activeTab === "credit-cards") {
+      const rows = activeTransactions.filter((tx) => creditCardAccountIds.has(tx.accountId));
+      const charges = rows.filter(isMoneyOut).reduce((sum, tx) => sum + amount(tx), 0);
+      const credits = rows.filter((tx) => isMoneyIn(tx) || ["TRANSFER", "CREDIT_CARD_PAYMENT"].includes(String(tx.type || "").toUpperCase())).reduce((sum, tx) => sum + amount(tx), 0);
+      const largestCharge = rows.filter(isMoneyOut).reduce((largest, tx) => Math.max(largest, amount(tx)), 0);
+      return [
+        ["Card Charges", charges, "text-[#E11D48]"],
+        ["Payments & Credits", credits, "text-[#0F766E]"],
+        ["Net Card Activity", charges - credits, "text-[#0F172A]"],
+        ["Largest Charge", largestCharge, "text-[#0891B2]"],
+      ];
+    }
+
+    return [
+      ["Income", dashboard.totals?.totalIncome, "text-[#0F766E]"],
+      ["Expenses", dashboard.totals?.totalExpenses, "text-[#E11D48]"],
+      ["Net Profit", dashboard.totals?.netProfit, "text-[#0F172A]"],
+      ["Cash / Bank Movement", dashboard.totals?.cashBankBalance, "text-[#0891B2]"],
+    ];
+  }, [accounts, activeTab, dashboard.totals, transactions]);
 
   const sync = async () => {
     try {
@@ -451,12 +511,7 @@ export default function BookkeepingPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-4">
-          {[
-            ["Income", dashboard.totals?.totalIncome, "text-[#0F766E]"],
-            ["Expenses", dashboard.totals?.totalExpenses, "text-[#E11D48]"],
-            ["Net Profit", dashboard.totals?.netProfit, "text-[#0F172A]"],
-            ["Cash / Bank", dashboard.totals?.cashBankBalance, "text-[#0891B2]"],
-          ].map(([label, value, tone]) => (
+          {kpiCards.map(([label, value, tone]) => (
             <Panel key={String(label)}>
               <p className="text-xs font-semibold uppercase tracking-wider text-[#64748B]">{label}</p>
               <p className={`mt-3 text-3xl font-bold tracking-tight ${tone}`}>{money(value)}</p>
@@ -467,12 +522,30 @@ export default function BookkeepingPage() {
         <div className="flex flex-col gap-3 rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white p-5 md:flex-row md:items-center shadow-sm">
           <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" /><Input className="pl-10 h-10 rounded-xl border-[rgba(15,23,42,0.06)] focus-visible:ring-[#0891B2]/20" placeholder="Search transactions, vendors, accounts" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
           <Select value={type} onValueChange={setType}><SelectTrigger className="w-[140px] h-10 rounded-xl border-[rgba(15,23,42,0.06)]"><SelectValue placeholder="All Types" /></SelectTrigger><SelectContent className="rounded-xl"><SelectItem value="ALL">All Types</SelectItem><SelectItem value="INCOME">Income</SelectItem><SelectItem value="EXPENSE">Expense</SelectItem></SelectContent></Select>
+          <Select value={selectedYear} onValueChange={(value) => {
+            if (value === "ALL") {
+              setDateFrom("");
+              setDateTo("");
+              return;
+            }
+            if (value !== "CUSTOM") {
+              setDateFrom(`${value}-01-01`);
+              setDateTo(`${value}-12-31`);
+            }
+          }}>
+            <SelectTrigger className="w-[130px] h-10 rounded-xl border-[rgba(15,23,42,0.06)]"><SelectValue placeholder="All Years" /></SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="ALL">All Years</SelectItem>
+              {selectedYear === "CUSTOM" ? <SelectItem value="CUSTOM">Custom Range</SelectItem> : null}
+              {availableYears.map((year) => <SelectItem key={year} value={String(year)}>{year}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="md:w-40 h-10 rounded-xl border-[rgba(15,23,42,0.06)] focus-visible:ring-[#0891B2]/20" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="md:w-40 h-10 rounded-xl border-[rgba(15,23,42,0.06)] focus-visible:ring-[#0891B2]/20" />
           <Button variant="outline" onClick={reload} disabled={loading} className="rounded-xl h-10"><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="flex h-auto min-h-12 flex-wrap justify-start gap-1 rounded-xl bg-white border border-[rgba(15,23,42,0.06)] p-1 shadow-sm">
             {["overview", "transactions", "bank", "credit-cards", "accounts", "categories", "vendors", "reconciliation", "recurring", "reports", "ai-assistant"].map((tab) => (
               <TabsTrigger key={tab} value={tab} className="capitalize rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-[#0891B2] data-[state=active]:text-white data-[state=active]:shadow-sm transition-all">{tab.replace("-", " ")}</TabsTrigger>

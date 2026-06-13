@@ -9,7 +9,7 @@ const mockDb = {
   bookkeepingAccount: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn(), count: jest.fn(), findMany: jest.fn() },
   bookkeepingCategory: { findFirst: jest.fn(), create: jest.fn(), count: jest.fn(), findMany: jest.fn() },
   bookkeepingVendor: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn(), findMany: jest.fn(), count: jest.fn() },
-  bookkeepingTransaction: { create: jest.fn(), update: jest.fn(), findFirst: jest.fn(), count: jest.fn(), findMany: jest.fn() },
+  bookkeepingTransaction: { create: jest.fn(), update: jest.fn(), delete: jest.fn(), findFirst: jest.fn(), findUnique: jest.fn(), count: jest.fn(), findMany: jest.fn() },
   bookkeepingJournalEntry: { count: jest.fn(), create: jest.fn() },
   bookkeepingReconciliation: { create: jest.fn(), update: jest.fn(), findFirst: jest.fn(), findMany: jest.fn(), count: jest.fn() },
   bookkeepingRecurringRule: { create: jest.fn(), update: jest.fn(), findFirst: jest.fn(), findMany: jest.fn(), count: jest.fn() },
@@ -20,7 +20,7 @@ jest.mock('../../src/common/services/activity-logger.service', () => ({
   activityLogger: { log: jest.fn() },
 }));
 
-import { bookkeepingService } from '../../src/modules/bookkeeping/bookkeeping.service';
+import { bookkeepingService } from '../../src/modules/accounting-engine/ledger/bookkeeping.service';
 
 describe('BookkeepingService', () => {
   beforeEach(() => {
@@ -42,8 +42,10 @@ describe('BookkeepingService', () => {
     mockDb.bookkeepingTransaction.count.mockResolvedValue(0);
     mockDb.bookkeepingTransaction.findFirst.mockResolvedValue(null);
     mockDb.bookkeepingTransaction.findMany.mockResolvedValue([]);
+    mockDb.bookkeepingTransaction.findUnique.mockResolvedValue(null);
     mockDb.bookkeepingTransaction.create.mockImplementation(({ data }) => Promise.resolve({ id: 'tx-1', ...data }));
     mockDb.bookkeepingTransaction.update.mockImplementation(({ data }) => Promise.resolve({ id: 'tx-1', tenantId: 'tenant-1', ...data }));
+    mockDb.bookkeepingTransaction.delete.mockResolvedValue({});
     mockDb.bookkeepingReconciliation.create.mockImplementation(({ data }) => Promise.resolve({ id: 'rec-1', ...data }));
     mockDb.bookkeepingReconciliation.findFirst.mockResolvedValue({ id: 'rec-1', tenantId: 'tenant-1', accountId: 'account-1', difference: 0, metadata: { transactionIds: [] } });
     mockDb.bookkeepingReconciliation.update.mockImplementation(({ data }) => Promise.resolve({ id: 'rec-1', tenantId: 'tenant-1', ...data }));
@@ -189,6 +191,34 @@ describe('BookkeepingService', () => {
 
     await expect(bookkeepingService.voidTransaction('tx-1', 'tenant-1')).rejects.toThrow('Unreconcile this transaction');
     expect(mockDb.bookkeepingTransaction.update).not.toHaveBeenCalled();
+  });
+
+  it('blocks deleting reconciled transactions until they are unreconciled', async () => {
+    mockDb.bookkeepingTransaction.findUnique.mockResolvedValue({
+      id: 'tx-1',
+      tenantId: 'tenant-1',
+      status: 'RECONCILED',
+      isReconciled: true,
+      accountId: 'account-1',
+      sourceType: 'MANUAL',
+    });
+
+    await expect(bookkeepingService.deleteTransaction('tx-1', 'tenant-1')).rejects.toThrow('Unreconcile this transaction');
+    expect(mockDb.bookkeepingTransaction.delete).not.toHaveBeenCalled();
+  });
+
+  it('blocks permanent deletion of source-synced transactions', async () => {
+    mockDb.bookkeepingTransaction.findUnique.mockResolvedValue({
+      id: 'tx-1',
+      tenantId: 'tenant-1',
+      status: 'POSTED',
+      isReconciled: false,
+      sourceType: 'INVOICE_PAYMENT',
+      sourceId: 'payment-1',
+    });
+
+    await expect(bookkeepingService.deleteTransaction('tx-1', 'tenant-1')).rejects.toThrow('Synced transactions cannot be deleted');
+    expect(mockDb.bookkeepingTransaction.delete).not.toHaveBeenCalled();
   });
 
   it('syncs the same invoice payment into only one bookkeeping transaction', async () => {
@@ -406,7 +436,7 @@ describe('BookkeepingService', () => {
   it('profit and loss subtracts payment refunds from income', async () => {
     mockDb.bookkeepingTransaction.findMany.mockResolvedValue([
       { type: 'INCOME', amount: 250, status: 'POSTED', categoryId: 'category-1', transactionDate: new Date('2026-05-22T00:00:00.000Z') },
-      { type: 'REFUND', amount: 75, status: 'POSTED', categoryId: 'category-1', transactionDate: new Date('2026-05-23T00:00:00.000Z') },
+      { type: 'REFUND', sourceType: 'INVOICE_PAYMENT_REVERSAL', amount: 75, status: 'POSTED', categoryId: 'category-1', transactionDate: new Date('2026-05-23T00:00:00.000Z') },
       { type: 'EXPENSE', amount: 40, status: 'POSTED', categoryId: 'category-2', transactionDate: new Date('2026-05-24T00:00:00.000Z') },
     ]);
     mockDb.bookkeepingCategory.findMany

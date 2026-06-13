@@ -1183,30 +1183,40 @@ export class BookkeepingService {
     return Array.from(map.entries()).map(([name, total]) => ({ name, total: serializeMoney(total) })).sort((a, b) => b.total - a.total).slice(0, 5);
   }
 
+  private isIncomeRefund(tx: any) {
+    if (tx.type !== 'REFUND') return false;
+    const originalSourceType = String(tx.metadata?.originalSourceType || '');
+    const sourceType = String(tx.sourceType || '');
+    return originalSourceType === 'INVOICE_PAYMENT'
+      || sourceType === 'INVOICE_PAYMENT_REVERSAL'
+      || sourceType.startsWith('INVOICE_PAYMENT_');
+  }
+
   private incomeImpact(tx: any) {
     if (tx.status === 'VOID') return 0;
     if (tx.type === 'INCOME') return toNumber(tx.amount);
+    if (this.isIncomeRefund(tx)) return -toNumber(tx.amount);
     return 0;
   }
 
   private expenseImpact(tx: any) {
     if (tx.status === 'VOID') return 0;
     if (tx.type === 'EXPENSE' || tx.type === 'PAYROLL' || tx.type === 'TAX_PAYMENT') return toNumber(tx.amount);
-    if (tx.type === 'REFUND' || tx.type === 'CASHBACK') return -toNumber(tx.amount);
+    if ((tx.type === 'REFUND' && !this.isIncomeRefund(tx)) || tx.type === 'CASHBACK') return -toNumber(tx.amount);
     if (tx.type === 'ADJUSTMENT' && tx.metadata?.originalSourceType === 'EXPENSE') return -toNumber(tx.amount);
     return 0;
   }
 
   private cashInImpact(tx: any) {
     if (tx.status === 'VOID') return 0;
-    if (tx.type === 'INCOME' || tx.type === 'REFUND' || tx.type === 'CASHBACK' || tx.type === 'OWNER_CONTRIBUTION' || tx.type === 'LOAN_PRINCIPAL') return toNumber(tx.amount);
+    if (tx.type === 'INCOME' || (tx.type === 'REFUND' && !this.isIncomeRefund(tx)) || tx.type === 'CASHBACK' || tx.type === 'OWNER_CONTRIBUTION' || tx.type === 'LOAN_PRINCIPAL') return toNumber(tx.amount);
     if (tx.type === 'ADJUSTMENT' && tx.metadata?.originalSourceType === 'EXPENSE') return toNumber(tx.amount);
     return 0;
   }
 
   private cashOutImpact(tx: any) {
     if (tx.status === 'VOID') return 0;
-    if (tx.type === 'EXPENSE' || tx.type === 'PAYROLL' || tx.type === 'TAX_PAYMENT' || tx.type === 'OWNER_DRAW' || tx.type === 'LOAN_PAYMENT' || tx.type === 'CREDIT_CARD_PAYMENT') return toNumber(tx.amount);
+    if (tx.type === 'EXPENSE' || this.isIncomeRefund(tx) || tx.type === 'PAYROLL' || tx.type === 'TAX_PAYMENT' || tx.type === 'OWNER_DRAW' || tx.type === 'LOAN_PAYMENT' || tx.type === 'CREDIT_CARD_PAYMENT') return toNumber(tx.amount);
     return 0;
   }
 
@@ -1267,33 +1277,41 @@ export class BookkeepingService {
   async deleteTransaction(id: string, tenantId: string, actorUserId?: string) {
     const existing = await db().bookkeepingTransaction.findUnique({ where: { id, tenantId } });
     if (!existing) throw new Error('Transaction not found');
-
-    if (existing.accountId && existing.status !== 'VOID') {
-      const isExpense = existing.type === 'EXPENSE' || existing.type === 'REFUND';
-      const isIncome = existing.type === 'INCOME';
-      let oldDelta = 0;
-      if (isExpense) oldDelta = toNumber(existing.amount);
-      if (isIncome) oldDelta = -toNumber(existing.amount);
-      if (oldDelta !== 0) {
-        await db().bookkeepingAccount.update({ where: { id: existing.accountId }, data: { currentBalance: { increment: oldDelta } } });
-      }
+    if (isReconciled(existing)) {
+      throw new BadRequestError('Unreconcile this transaction before deleting it.', ErrorCodes.INVALID_INPUT);
+    }
+    if (existing.sourceType && existing.sourceType !== 'MANUAL') {
+      throw new BadRequestError('Synced transactions cannot be deleted. Void the transaction or update its source record instead.', ErrorCodes.INVALID_INPUT);
     }
 
+    if (existing.accountId && existing.status === 'POSTED') await this.applyTransactionBalance(existing, -1);
+
     await db().bookkeepingTransaction.delete({ where: { id, tenantId } });
+    activityLogger.log({
+      tenantId,
+      entityType: 'BookkeepingTransaction',
+      entityId: id,
+      action: 'DELETE',
+      module: 'bookkeeping',
+      description: `Deleted manual bookkeeping transaction "${existing.description}"`,
+      userId: actorUserId,
+      metadata: { amount: serializeMoney(existing.amount), type: existing.type },
+    });
     return { success: true };
   }
 
   async bulkDeleteTransactions(ids: string[], tenantId: string, actorUserId?: string) {
     let deletedCount = 0;
+    const skipped: Array<{ id: string; reason: string }> = [];
     for (const id of ids) {
       try {
         await this.deleteTransaction(id, tenantId, actorUserId);
         deletedCount++;
-      } catch (err) {
-        console.error(`Failed to delete transaction ${id}:`, err);
+      } catch (err: any) {
+        skipped.push({ id, reason: err?.message || 'Delete failed' });
       }
     }
-    return { success: true, deletedCount };
+    return { success: skipped.length === 0, deletedCount, skippedCount: skipped.length, skipped };
   }
 
   private async getImportStats(tenantId: string) {

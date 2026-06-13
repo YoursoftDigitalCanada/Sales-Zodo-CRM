@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Download, ExternalLink, Eye, Landmark, Plus, RefreshCw, Search, Upload, WalletCards } from "lucide-react";
+import { ArrowDownUp, ChevronLeft, ChevronRight, Download, ExternalLink, Eye, FilterX, Landmark, MoreHorizontal, Plus, RefreshCw, Search, Upload, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
 import { AiAccountantChat } from "@/components/bookkeeping/AiAccountantChat";
 import { DecisionTimelineDialog } from "@/components/bookkeeping/DecisionTimelineDialog";
 import { StatementImportPanel } from "@/components/bookkeeping/StatementImportPanel";
@@ -86,6 +85,23 @@ function sourcePath(tx: BookkeepingRecord) {
   if (tx.invoiceId) return `/invoice/${tx.invoiceId}`;
   if (tx.expenseId) return `/bookkeeping?expenseId=${tx.expenseId}`;
   return null;
+}
+
+function isIncomeReversal(tx: BookkeepingRecord) {
+  if (tx.type !== "REFUND") return false;
+  const sourceType = String(tx.sourceType || "");
+  const originalSourceType = String(tx.metadata?.originalSourceType || "");
+  return originalSourceType === "INVOICE_PAYMENT"
+    || sourceType === "INVOICE_PAYMENT_REVERSAL"
+    || sourceType.startsWith("INVOICE_PAYMENT_");
+}
+
+function transactionAmountTone(tx: BookkeepingRecord) {
+  const moneyOut = tx.type === "EXPENSE" || isIncomeReversal(tx);
+  return {
+    className: moneyOut ? "text-rose-600" : "text-emerald-600",
+    prefix: moneyOut ? "-" : "+",
+  };
 }
 
 async function ensureReceiptsCategoryId() {
@@ -201,6 +217,10 @@ function TransactionDialog({ accounts, categories, vendors, onSaved, tx, open: c
       toast.error("Enter an amount greater than 0");
       return;
     }
+    if (!form.accountId) {
+      toast.error("Select an account for this transaction");
+      return;
+    }
 
     try {
       setSaving(true);
@@ -250,13 +270,13 @@ function TransactionDialog({ accounts, categories, vendors, onSaved, tx, open: c
       {!tx && <DialogTrigger asChild><Button className="rounded-xl bg-[#0891B2] hover:bg-[#0E7490] text-white"><Plus className="mr-2 h-4 w-4" />Add Transaction</Button></DialogTrigger>}
       <DialogContent className="max-w-2xl rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="text-[#0F172A]">Manual Transaction</DialogTitle>
-          <DialogDescription className="text-[#64748B]">Create income, expense, adjustment, or refund records. Receipts are stored in Documents.</DialogDescription>
+          <DialogTitle className="text-[#0F172A]">{tx ? "Edit Transaction" : "Manual Transaction"}</DialogTitle>
+          <DialogDescription className="text-[#64748B]">{tx ? "Update this ledger entry and its account balance." : "Create income, expense, adjustment, or refund records. Receipts are stored in Documents."}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 md:grid-cols-2">
           <Field label="Type"><Select value={form.type} onValueChange={(type) => setForm({ ...form, type })}><SelectTrigger className="rounded-xl h-10 border-[rgba(15,23,42,0.06)]"><SelectValue /></SelectTrigger><SelectContent className="rounded-xl">{["INCOME", "EXPENSE", "ADJUSTMENT", "REFUND"].map((v) => <SelectItem key={v} value={v} className="rounded-xl">{v}</SelectItem>)}</SelectContent></Select></Field>
           <Field label="Account"><Select value={form.accountId || ""} onValueChange={(accountId) => setForm({ ...form, accountId })}><SelectTrigger className="rounded-xl h-10 border-[rgba(15,23,42,0.06)]"><SelectValue placeholder="Select account" /></SelectTrigger><SelectContent className="rounded-xl">{accounts.map((a) => <SelectItem key={a.id} value={a.id} className="rounded-xl">{a.name}</SelectItem>)}</SelectContent></Select></Field>
-          <Field label="Category"><Select value={form.categoryId || ""} onValueChange={(categoryId) => setForm({ ...form, categoryId })}><SelectTrigger className="rounded-xl h-10 border-[rgba(15,23,42,0.06)]"><SelectValue placeholder="Select category" /></SelectTrigger><SelectContent className="rounded-xl">{categories.map((c) => <SelectItem key={c.id} value={c.id} className="rounded-xl">{c.name}</SelectItem>)}</SelectContent></Select></Field>
+          <Field label="Category"><Select value={form.categoryId || ""} onValueChange={(categoryId) => setForm({ ...form, categoryId })}><SelectTrigger className="rounded-xl h-10 border-[rgba(15,23,42,0.06)]"><SelectValue placeholder="Select category" /></SelectTrigger><SelectContent className="rounded-xl">{categories.filter((c) => c.type === (form.type === "INCOME" || form.type === "REFUND" ? "INCOME" : "EXPENSE")).map((c) => <SelectItem key={c.id} value={c.id} className="rounded-xl">{c.name}</SelectItem>)}</SelectContent></Select></Field>
           <Field label="Vendor"><Select value={form.vendorId || ""} onValueChange={(vendorId) => setForm({ ...form, vendorId })}><SelectTrigger className="rounded-xl h-10 border-[rgba(15,23,42,0.06)]"><SelectValue placeholder="Optional vendor" /></SelectTrigger><SelectContent className="rounded-xl">{vendors.map((v) => <SelectItem key={v.id} value={v.id} className="rounded-xl">{v.name}</SelectItem>)}</SelectContent></Select></Field>
           <Field label="Amount"><Input type="number" min="0" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="rounded-xl h-10 border-[rgba(15,23,42,0.06)] focus-visible:ring-[#0891B2]/20" /></Field>
           <Field label="Date"><Input type="date" value={form.transactionDate} onChange={(e) => setForm({ ...form, transactionDate: e.target.value })} className="rounded-xl h-10 border-[rgba(15,23,42,0.06)] focus-visible:ring-[#0891B2]/20" /></Field>
@@ -332,6 +352,14 @@ export default function BookkeepingPage() {
   const [editingTx, setEditingTx] = useState<BookkeepingRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BookkeepingRecord | null>(null);
   const [timelineTarget, setTimelineTarget] = useState<string | null>(null);
+  const [ledgerStatus, setLedgerStatus] = useState("ALL");
+  const [ledgerAccountId, setLedgerAccountId] = useState("ALL");
+  const [ledgerCategoryId, setLedgerCategoryId] = useState("ALL");
+  const [ledgerVendorId, setLedgerVendorId] = useState("ALL");
+  const [ledgerSource, setLedgerSource] = useState("ALL");
+  const [ledgerSort, setLedgerSort] = useState("DATE_DESC");
+  const [ledgerPage, setLedgerPage] = useState(1);
+  const ledgerPageSize = 50;
 
   const reload = () => setRefreshKey((key) => key + 1);
   const filters = useMemo(() => ({ search, dateFrom, dateTo, ...(type && type !== "ALL" ? { type } : {}) }), [search, dateFrom, dateTo, type]);
@@ -405,6 +433,52 @@ export default function BookkeepingPage() {
     return fromMatch && toMatch && fromMatch[1] === toMatch[1] ? fromMatch[1] : dateFrom || dateTo ? "CUSTOM" : "ALL";
   }, [dateFrom, dateTo]);
 
+  const ledgerSourceOptions = useMemo(() => Array.from(new Set(transactions
+    .map((tx) => String(tx.sourceType || "MANUAL"))
+    .filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b)), [transactions]);
+
+  const ledgerRows = useMemo(() => {
+    const filtered = transactions.filter((tx) => {
+      const status = tx.isReconciled ? "RECONCILED" : String(tx.status || "POSTED");
+      if (ledgerStatus !== "ALL" && status !== ledgerStatus) return false;
+      if (ledgerAccountId !== "ALL" && tx.accountId !== ledgerAccountId) return false;
+      if (ledgerCategoryId !== "ALL" && tx.categoryId !== ledgerCategoryId) return false;
+      if (ledgerVendorId !== "ALL" && tx.vendorId !== ledgerVendorId) return false;
+      if (ledgerSource !== "ALL" && String(tx.sourceType || "MANUAL") !== ledgerSource) return false;
+      return true;
+    });
+    return filtered.sort((a, b) => {
+      if (ledgerSort === "AMOUNT_DESC") return Number(b.amount || 0) - Number(a.amount || 0);
+      if (ledgerSort === "AMOUNT_ASC") return Number(a.amount || 0) - Number(b.amount || 0);
+      const aDate = new Date(a.transactionDate || 0).getTime();
+      const bDate = new Date(b.transactionDate || 0).getTime();
+      return ledgerSort === "DATE_ASC" ? aDate - bDate : bDate - aDate;
+    });
+  }, [ledgerAccountId, ledgerCategoryId, ledgerSort, ledgerSource, ledgerStatus, ledgerVendorId, transactions]);
+
+  const ledgerPageCount = Math.max(1, Math.ceil(ledgerRows.length / ledgerPageSize));
+  const visibleLedgerRows = useMemo(
+    () => ledgerRows.slice((ledgerPage - 1) * ledgerPageSize, ledgerPage * ledgerPageSize),
+    [ledgerPage, ledgerRows],
+  );
+  const ledgerTotals = useMemo(() => {
+    const active = ledgerRows.filter((tx) => String(tx.status || "").toUpperCase() !== "VOID");
+    return {
+      income: active.reduce((sum, tx) => sum + (tx.type === "INCOME" ? Number(tx.amount || 0) : isIncomeReversal(tx) ? -Number(tx.amount || 0) : 0), 0),
+      expenses: active.reduce((sum, tx) => sum + (tx.type === "EXPENSE" ? Number(tx.amount || 0) : tx.type === "REFUND" && !isIncomeReversal(tx) ? -Number(tx.amount || 0) : 0), 0),
+      unreconciled: active.filter((tx) => !tx.isReconciled && tx.status !== "RECONCILED").length,
+    };
+  }, [ledgerRows]);
+
+  useEffect(() => {
+    setLedgerPage(1);
+  }, [ledgerAccountId, ledgerCategoryId, ledgerSource, ledgerSort, ledgerStatus, ledgerVendorId, search, dateFrom, dateTo, type]);
+
+  useEffect(() => {
+    if (ledgerPage > ledgerPageCount) setLedgerPage(ledgerPageCount);
+  }, [ledgerPage, ledgerPageCount]);
+
   const kpiCards = useMemo(() => {
     const activeTransactions = transactions.filter((tx) => String(tx.status || "").toUpperCase() !== "VOID");
     const bankAccountIds = new Set(accounts
@@ -414,8 +488,8 @@ export default function BookkeepingPage() {
       .filter((account) => account.type === "LIABILITY" && String(account.subtype || "").toUpperCase() === "CREDIT_CARD")
       .map((account) => account.id));
     const amount = (tx: BookkeepingRecord) => Number(tx.amount || 0);
-    const isMoneyIn = (tx: BookkeepingRecord) => ["INCOME", "REFUND", "CASHBACK", "OWNER_CONTRIBUTION", "LOAN_PRINCIPAL"].includes(String(tx.type || "").toUpperCase());
-    const isMoneyOut = (tx: BookkeepingRecord) => ["EXPENSE", "PAYROLL", "TAX_PAYMENT", "OWNER_DRAW", "LOAN_PAYMENT", "CREDIT_CARD_PAYMENT"].includes(String(tx.type || "").toUpperCase());
+    const isMoneyIn = (tx: BookkeepingRecord) => ["INCOME", "CASHBACK", "OWNER_CONTRIBUTION", "LOAN_PRINCIPAL"].includes(String(tx.type || "").toUpperCase()) || (tx.type === "REFUND" && !isIncomeReversal(tx));
+    const isMoneyOut = (tx: BookkeepingRecord) => ["EXPENSE", "PAYROLL", "TAX_PAYMENT", "OWNER_DRAW", "LOAN_PAYMENT", "CREDIT_CARD_PAYMENT"].includes(String(tx.type || "").toUpperCase()) || isIncomeReversal(tx);
 
     if (activeTab === "bank") {
       const rows = activeTransactions.filter((tx) => bankAccountIds.has(tx.accountId));
@@ -492,6 +566,25 @@ export default function BookkeepingPage() {
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to update reconciliation");
     }
+  };
+
+  const voidLedgerTransaction = async (id: string) => {
+    try {
+      await voidTransaction(id);
+      toast.success("Transaction voided");
+      reload();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to void transaction");
+    }
+  };
+
+  const clearLedgerFilters = () => {
+    setLedgerStatus("ALL");
+    setLedgerAccountId("ALL");
+    setLedgerCategoryId("ALL");
+    setLedgerVendorId("ALL");
+    setLedgerSource("ALL");
+    setLedgerSort("DATE_DESC");
   };
 
   return (
@@ -579,27 +672,80 @@ export default function BookkeepingPage() {
 
                 <Panel>
                   <h2 className="mb-4 text-lg font-semibold text-[#0F172A]">Recent Transactions</h2>
-                  <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { await bulkDeleteTransactions(ids); reload(); }} onTimeline={setTimelineTarget} />
+                  <TransactionTable rows={transactions.slice(0, 8)} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={voidLedgerTransaction} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { const result = await bulkDeleteTransactions(ids); reload(); return result; }} onTimeline={setTimelineTarget} />
                 </Panel>
               </>
             )}
           </TabsContent>
 
-          <TabsContent value="transactions">
-            <Panel className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="rounded-full bg-[#E0F2FE] p-4 mb-4">
-                <Search className="h-8 w-8 text-[#0284C7]" />
+          <TabsContent value="transactions" className="space-y-5">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="border-b-2 border-[#0891B2] bg-white px-4 py-3">
+                <p className="text-xs font-semibold uppercase text-[#64748B]">Matching entries</p>
+                <p className="mt-1 text-2xl font-bold text-[#0F172A]">{ledgerRows.length}</p>
               </div>
-              <h2 className="text-2xl font-bold text-[#0F172A] mb-2">🚧 Coming Soon</h2>
-              <p className="text-[#64748B] max-w-md">The transactions ledger feature is currently under process. Check back later!</p>
-            </Panel>
+              <div className="border-b-2 border-emerald-500 bg-white px-4 py-3">
+                <p className="text-xs font-semibold uppercase text-[#64748B]">Income</p>
+                <p className="mt-1 text-2xl font-bold text-emerald-700">{money(ledgerTotals.income)}</p>
+              </div>
+              <div className="border-b-2 border-rose-500 bg-white px-4 py-3">
+                <p className="text-xs font-semibold uppercase text-[#64748B]">Expenses</p>
+                <p className="mt-1 text-2xl font-bold text-rose-700">{money(ledgerTotals.expenses)}</p>
+              </div>
+              <div className="border-b-2 border-amber-500 bg-white px-4 py-3">
+                <p className="text-xs font-semibold uppercase text-[#64748B]">Unreconciled</p>
+                <p className="mt-1 text-2xl font-bold text-[#0F172A]">{ledgerTotals.unreconciled}</p>
+              </div>
+            </div>
 
-            {false && (
-              <Panel>
-                <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold text-[#0F172A]">Transactions Ledger</h2><TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} /></div>
-                <TransactionTable rows={transactions} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={async (id) => { await voidTransaction(id); reload(); }} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { await bulkDeleteTransactions(ids); reload(); }} onTimeline={setTimelineTarget} />
-              </Panel>
-            )}
+            <Panel>
+              <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-[#0F172A]">Transactions Ledger</h2>
+                  <p className="mt-1 text-sm text-[#64748B]">Review manual and automated entries, receipts, source records, and reconciliation status.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={() => downloadBookkeepingCsv("transactions-export", filters).then((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = "bookkeeping-transactions.csv";
+                    link.click();
+                    URL.revokeObjectURL(url);
+                  }).catch((error) => toast.error(error?.response?.data?.message || "Export failed"))} className="rounded-xl">
+                    <Download className="mr-2 h-4 w-4" />Export CSV
+                  </Button>
+                  <TransactionDialog accounts={accounts} categories={categories} vendors={vendors} onSaved={reload} />
+                </div>
+              </div>
+
+              <div className="mb-5 grid gap-3 border-y border-[#E2E8F0] py-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <Select value={ledgerStatus} onValueChange={setLedgerStatus}><SelectTrigger><SelectValue placeholder="All statuses" /></SelectTrigger><SelectContent><SelectItem value="ALL">All statuses</SelectItem>{["POSTED", "PENDING", "RECONCILED", "VOID", "NEEDS_REVIEW"].map((value) => <SelectItem key={value} value={value}>{value.replace("_", " ")}</SelectItem>)}</SelectContent></Select>
+                <Select value={ledgerAccountId} onValueChange={setLedgerAccountId}><SelectTrigger><SelectValue placeholder="All accounts" /></SelectTrigger><SelectContent><SelectItem value="ALL">All accounts</SelectItem>{accounts.map((account) => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}</SelectContent></Select>
+                <Select value={ledgerCategoryId} onValueChange={setLedgerCategoryId}><SelectTrigger><SelectValue placeholder="All categories" /></SelectTrigger><SelectContent><SelectItem value="ALL">All categories</SelectItem>{categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}</SelectContent></Select>
+                <Select value={ledgerVendorId} onValueChange={setLedgerVendorId}><SelectTrigger><SelectValue placeholder="All vendors" /></SelectTrigger><SelectContent><SelectItem value="ALL">All vendors</SelectItem>{vendors.map((vendor) => <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>)}</SelectContent></Select>
+                <Select value={ledgerSource} onValueChange={setLedgerSource}><SelectTrigger><SelectValue placeholder="All sources" /></SelectTrigger><SelectContent><SelectItem value="ALL">All sources</SelectItem>{ledgerSourceOptions.map((source) => <SelectItem key={source} value={source}>{source.replaceAll("_", " ")}</SelectItem>)}</SelectContent></Select>
+                <div className="flex gap-2">
+                  <Select value={ledgerSort} onValueChange={setLedgerSort}><SelectTrigger className="flex-1"><ArrowDownUp className="mr-2 h-4 w-4" /><SelectValue /></SelectTrigger><SelectContent><SelectItem value="DATE_DESC">Newest first</SelectItem><SelectItem value="DATE_ASC">Oldest first</SelectItem><SelectItem value="AMOUNT_DESC">Amount high-low</SelectItem><SelectItem value="AMOUNT_ASC">Amount low-high</SelectItem></SelectContent></Select>
+                  <Button variant="outline" size="icon" title="Clear ledger filters" onClick={clearLedgerFilters}><FilterX className="h-4 w-4" /></Button>
+                </div>
+              </div>
+
+              <TransactionTable rows={visibleLedgerRows} accountName={accountName} categoryName={categoryName} vendorName={vendorName} onVoid={voidLedgerTransaction} onReceipt={attachReceiptToTransaction} onToggleReconcile={toggleReconciled} onEdit={setEditingTx} onDelete={setDeleteTarget} onBulkDelete={async (ids) => { const result = await bulkDeleteTransactions(ids); reload(); return result; }} onTimeline={setTimelineTarget} />
+
+              {ledgerRows.length ? (
+                <div className="mt-4 flex flex-col gap-3 border-t border-[#E2E8F0] pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-[#64748B]">
+                    Showing {(ledgerPage - 1) * ledgerPageSize + 1}-{Math.min(ledgerPage * ledgerPageSize, ledgerRows.length)} of {ledgerRows.length}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" disabled={ledgerPage <= 1} onClick={() => setLedgerPage((page) => Math.max(1, page - 1))}><ChevronLeft className="mr-1 h-4 w-4" />Previous</Button>
+                    <span className="min-w-24 text-center text-sm font-medium text-[#0F172A]">Page {ledgerPage} of {ledgerPageCount}</span>
+                    <Button variant="outline" size="sm" disabled={ledgerPage >= ledgerPageCount} onClick={() => setLedgerPage((page) => Math.min(ledgerPageCount, page + 1))}>Next<ChevronRight className="ml-1 h-4 w-4" /></Button>
+                  </div>
+                </div>
+              ) : null}
+            </Panel>
           </TabsContent>
 
           <TabsContent value="bank">
@@ -721,7 +867,7 @@ function TransactionTable({
   onToggleReconcile: (tx: BookkeepingRecord) => Promise<void>;
   onEdit?: (tx: BookkeepingRecord) => void;
   onDelete?: (tx: BookkeepingRecord) => void;
-  onBulkDelete?: (ids: string[]) => Promise<void>;
+  onBulkDelete?: (ids: string[]) => Promise<BookkeepingRecord>;
   onTimeline?: (id: string) => void;
 }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -730,11 +876,17 @@ function TransactionTable({
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
   const [tableWidth, setTableWidth] = useState(1200);
+  const selectableRows = rows.filter((tx) =>
+    (tx.sourceType || "MANUAL") === "MANUAL"
+    && !tx.isReconciled
+    && tx.status !== "RECONCILED",
+  );
 
   useEffect(() => {
     if (tableScrollRef.current) {
       setTableWidth(tableScrollRef.current.scrollWidth);
     }
+    setSelectedIds((current) => new Set(Array.from(current).filter((id) => rows.some((row) => row.id === id))));
   }, [rows]);
 
   const handleTopScroll = (e: any) => {
@@ -752,8 +904,8 @@ function TransactionTable({
   if (!rows.length) return <EmptyState title="No transactions found." />;
 
   const toggleAll = () => {
-    if (selectedIds.size === rows.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(rows.map(r => r.id)));
+    if (selectedIds.size === selectableRows.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(selectableRows.map((row) => row.id)));
   };
 
   const toggleOne = (id: string) => {
@@ -790,8 +942,11 @@ function TransactionTable({
                 if (!onBulkDelete) return;
                 try {
                   setIsDeleting(true);
-                  await onBulkDelete(Array.from(selectedIds));
-                  toast.success(`${selectedIds.size} transaction${selectedIds.size > 1 ? "s" : ""} deleted`);
+                  const result = await onBulkDelete(Array.from(selectedIds));
+                  const deletedCount = Number(result?.deletedCount || 0);
+                  const skippedCount = Number(result?.skippedCount || 0);
+                  if (deletedCount) toast.success(`${deletedCount} transaction${deletedCount > 1 ? "s" : ""} deleted`);
+                  if (skippedCount) toast.warning(`${skippedCount} transaction${skippedCount > 1 ? "s were" : " was"} not deleted`);
                   setSelectedIds(new Set());
                 } catch (e: any) {
                   toast.error(e?.response?.data?.message || "Failed to delete transactions");
@@ -825,12 +980,12 @@ function TransactionTable({
         >
           <Table className="min-w-[1500px]">
             <TableHeader className="sticky top-0 z-10 bg-[#F8FAFC] shadow-[0_1px_3px_rgba(0,0,0,0.05)]"><TableRow className="bg-[#F8FAFC] hover:bg-[#F8FAFC]">
-            <TableHead className="w-12 bg-[#F8FAFC]"><Checkbox className="rounded shadow-none border-[#CBD5E1] data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#0891B2]" checked={selectedIds.size > 0 && selectedIds.size === rows.length} onCheckedChange={toggleAll} /></TableHead>
+            <TableHead className="w-12 bg-[#F8FAFC]"><Checkbox className="rounded shadow-none border-[#CBD5E1] data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#0891B2]" disabled={!selectableRows.length} checked={selectedIds.size > 0 && selectedIds.size === selectableRows.length} onCheckedChange={toggleAll} /></TableHead>
             {["Date", "Number", "Type", "Description", "Account", "Category", "Vendor", "Source", "Sync", "Receipt", "Amount", "Status", "Actions"].map((h) => <TableHead key={h} className="text-[#64748B] uppercase text-xs tracking-wide bg-[#F8FAFC]">{h}</TableHead>)}
           </TableRow></TableHeader>
           <TableBody>{rows.map((tx) => (
             <TableRow key={tx.id} className={selectedIds.has(tx.id) ? "bg-[#F0F9FA]" : ""}>
-              <TableCell><Checkbox className="rounded shadow-none border-[#CBD5E1] data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#0891B2]" checked={selectedIds.has(tx.id)} onCheckedChange={() => toggleOne(tx.id)} /></TableCell>
+              <TableCell><Checkbox className="rounded shadow-none border-[#CBD5E1] data-[state=checked]:bg-[#0891B2] data-[state=checked]:border-[#0891B2]" disabled={!selectableRows.some((row) => row.id === tx.id)} checked={selectedIds.has(tx.id)} onCheckedChange={() => toggleOne(tx.id)} /></TableCell>
               <TableCell>{tx.transactionDate ? new Date(tx.transactionDate).toLocaleDateString() : "-"}</TableCell>
               <TableCell className="font-mono text-xs">{tx.transactionNumber || "-"}</TableCell>
               <TableCell><Badge variant={tx.type === "INCOME" ? "default" : "secondary"}>{tx.type}</Badge></TableCell>
@@ -866,7 +1021,7 @@ function TransactionTable({
                 </label>
               </div>
             </TableCell>
-            <TableCell className={tx.type === "EXPENSE" ? "text-rose-600" : "text-emerald-600"}>{money(tx.amount, tx.currency || "CAD")}</TableCell>
+            <TableCell className={transactionAmountTone(tx).className}>{transactionAmountTone(tx).prefix}{money(tx.amount, tx.currency || "CAD")}</TableCell>
             <TableCell>{tx.isReconciled ? <Badge>Reconciled</Badge> : <Badge variant="outline">{tx.status}</Badge>}</TableCell>
             <TableCell>
               <DropdownMenu>
@@ -885,18 +1040,22 @@ function TransactionTable({
                       Void
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem onClick={() => onEdit?.(tx)} className="cursor-pointer rounded-lg font-medium">
-                    Edit
-                  </DropdownMenuItem>
+                  {tx.status !== "VOID" && !(tx.isReconciled || tx.status === "RECONCILED") ? (
+                    <DropdownMenuItem onClick={() => onEdit?.(tx)} className="cursor-pointer rounded-lg font-medium">
+                      Edit
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuItem onClick={() => onTimeline?.(tx.id)} className="cursor-pointer rounded-lg font-medium text-[#0891B2] focus:text-[#0E7490]">
                     AI Timeline
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => {
-                    onDelete?.(tx);
-                  }} className="cursor-pointer rounded-lg text-rose-600 focus:text-rose-600 font-medium">
-                    Delete
-                  </DropdownMenuItem>
+                  {(tx.sourceType || "MANUAL") === "MANUAL" && !(tx.isReconciled || tx.status === "RECONCILED") ? (
+                    <DropdownMenuItem onClick={() => {
+                      onDelete?.(tx);
+                    }} className="cursor-pointer rounded-lg text-rose-600 focus:text-rose-600 font-medium">
+                      Delete
+                    </DropdownMenuItem>
+                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             </TableCell>

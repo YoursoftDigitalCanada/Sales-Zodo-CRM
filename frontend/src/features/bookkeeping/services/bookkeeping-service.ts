@@ -88,8 +88,7 @@ export async function updateTransaction(id: string, data: BookkeepingRecord) {
 }
 
 export async function bulkDeleteTransactions(ids: string[]) {
-  const { data } = await api.post(`/api/v1/bookkeeping/transactions/bulk-delete`, { ids });
-  return data?.data || data;
+  return unwrap<BookkeepingRecord>((await api.post("/bookkeeping/transactions/bulk-delete", { ids })));
 }
 
 export async function deleteTransaction(id: string) {

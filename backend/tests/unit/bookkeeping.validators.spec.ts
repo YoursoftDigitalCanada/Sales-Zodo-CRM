@@ -1,4 +1,4 @@
-import { createVendorSchema } from '../../src/modules/bookkeeping/bookkeeping.validators';
+import { createVendorSchema } from '../../src/modules/accounting-engine/api/bookkeeping.validators';
 
 describe('bookkeeping.validators', () => {
   it('accepts normal Sales CRM vendor details', () => {

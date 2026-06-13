@@ -368,6 +368,13 @@ export default function BookkeepingPage() {
   const [editingTx, setEditingTx] = useState<BookkeepingRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BookkeepingRecord | null>(null);
   const [timelineTarget, setTimelineTarget] = useState<string | null>(null);
+  const [bankStatementSummary, setBankStatementSummary] = useState<{
+    charges: number;
+    credits: number;
+    net: number;
+    largestCharge: number;
+    rows: number;
+  } | null>(null);
   const [creditCardStatementSummary, setCreditCardStatementSummary] = useState<{
     charges: number;
     credits: number;
@@ -515,6 +522,14 @@ export default function BookkeepingPage() {
     const isMoneyOut = (tx: BookkeepingRecord) => ["EXPENSE", "PAYROLL", "TAX_PAYMENT", "OWNER_DRAW", "LOAN_PAYMENT", "CREDIT_CARD_PAYMENT"].includes(String(tx.type || "").toUpperCase()) || isIncomeReversal(tx);
 
     if (activeTab === "bank") {
+      if (bankStatementSummary) {
+        return [
+          ["Money In", bankStatementSummary.credits, "text-[#0F766E]"],
+          ["Money Out", bankStatementSummary.charges, "text-[#E11D48]"],
+          ["Net Bank Movement", bankStatementSummary.credits - bankStatementSummary.charges, "text-[#0F172A]"],
+          ["Total Bank Activity", bankStatementSummary.credits + bankStatementSummary.charges, "text-[#0891B2]"],
+        ];
+      }
       const rows = activeTransactions.filter((tx) => bankAccountIds.has(tx.accountId));
       const moneyIn = rows.filter(isMoneyIn).reduce((sum, tx) => sum + amount(tx), 0);
       const moneyOut = rows.filter(isMoneyOut).reduce((sum, tx) => sum + amount(tx), 0);
@@ -527,7 +542,7 @@ export default function BookkeepingPage() {
     }
 
     if (activeTab === "credit-cards") {
-      if (creditCardStatementSummary?.rows) {
+      if (creditCardStatementSummary) {
         return [
           ["Card Charges", creditCardStatementSummary.charges, "text-[#E11D48]"],
           ["Payments & Credits", creditCardStatementSummary.credits, "text-[#0F766E]"],
@@ -553,7 +568,7 @@ export default function BookkeepingPage() {
       ["Net Profit", dashboard.totals?.netProfit, "text-[#0F172A]"],
       ["Cash / Bank Movement", dashboard.totals?.cashBankBalance, "text-[#0891B2]"],
     ];
-  }, [accounts, activeTab, creditCardStatementSummary, dashboard.totals, transactions]);
+  }, [accounts, activeTab, bankStatementSummary, creditCardStatementSummary, dashboard.totals, transactions]);
 
   const sync = async () => {
     try {
@@ -626,6 +641,16 @@ export default function BookkeepingPage() {
     rows: number;
   } | null) => {
     setCreditCardStatementSummary(summary);
+  }, []);
+
+  const updateBankStatementSummary = useCallback((summary: {
+    charges: number;
+    credits: number;
+    net: number;
+    largestCharge: number;
+    rows: number;
+  } | null) => {
+    setBankStatementSummary(summary);
   }, []);
 
   return (
@@ -790,11 +815,33 @@ export default function BookkeepingPage() {
           </TabsContent>
 
           <TabsContent value="bank">
-            <StatementImportPanel mode="BANK" accounts={accounts} categories={categories} vendors={vendors} onPosted={reload} />
+            <StatementImportPanel
+              mode="BANK"
+              accounts={accounts}
+              categories={categories}
+              vendors={vendors}
+              onPosted={reload}
+              onSummaryChange={updateBankStatementSummary}
+              globalSearch={search}
+              globalType={type}
+              globalDateFrom={dateFrom}
+              globalDateTo={dateTo}
+            />
           </TabsContent>
 
           <TabsContent value="credit-cards">
-            <StatementImportPanel mode="CREDIT_CARD" accounts={accounts} categories={categories} vendors={vendors} onPosted={reload} onSummaryChange={updateCreditCardStatementSummary} />
+            <StatementImportPanel
+              mode="CREDIT_CARD"
+              accounts={accounts}
+              categories={categories}
+              vendors={vendors}
+              onPosted={reload}
+              onSummaryChange={updateCreditCardStatementSummary}
+              globalSearch={search}
+              globalType={type}
+              globalDateFrom={dateFrom}
+              globalDateTo={dateTo}
+            />
           </TabsContent>
 
           <TabsContent value="accounts">

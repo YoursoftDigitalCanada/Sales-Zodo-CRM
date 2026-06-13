@@ -68,6 +68,10 @@ export function StatementImportPanel({
   vendors,
   onPosted,
   onSummaryChange,
+  globalSearch = "",
+  globalType = "",
+  globalDateFrom = "",
+  globalDateTo = "",
 }: {
   mode: StatementMode;
   accounts: BookkeepingRecord[];
@@ -75,6 +79,10 @@ export function StatementImportPanel({
   vendors: BookkeepingRecord[];
   onPosted: () => void;
   onSummaryChange?: (summary: { charges: number; credits: number; net: number; largestCharge: number; rows: number } | null) => void;
+  globalSearch?: string;
+  globalType?: string;
+  globalDateFrom?: string;
+  globalDateTo?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const prefix = mode === "BANK" ? "Bank statement" : "Credit card statement";
@@ -140,14 +148,34 @@ export function StatementImportPanel({
     .sort((a, b) => Number(b) - Number(a)), [rows]);
 
   const filteredRows = useMemo(() => rows.filter((row) => {
-    const transactionDate = String(row.normalizedData?.date || "").match(/^(\d{4})-(\d{2})-(\d{2})/)?.slice(1);
+    const normalized = row.normalizedData || {};
+    const overrides = row.manualOverrides || {};
+    const dateMatch = String(normalized.date || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const transactionDate = dateMatch?.slice(1);
+    const isoDate = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}` : "";
+    const transactionType = String(overrides.transactionType || row.aiTransactionType || (normalized.type === "CREDIT" ? "INCOME" : "EXPENSE")).toUpperCase();
+    const searchTerm = globalSearch.trim().toLowerCase();
+    const searchableText = [
+      normalized.description,
+      normalized.merchant,
+      normalized.reference,
+      overrides.vendor,
+      row.aiVendor,
+      overrides.category,
+      row.aiCategory,
+    ].filter(Boolean).join(" ").toLowerCase();
+
+    if (searchTerm && !searchableText.includes(searchTerm)) return false;
+    if (globalType && globalType !== "ALL" && transactionType !== globalType) return false;
+    if (globalDateFrom && (!isoDate || isoDate < globalDateFrom)) return false;
+    if (globalDateTo && (!isoDate || isoDate > globalDateTo)) return false;
     if (!transactionDate) return !filterDate && filterMonth === "ALL" && filterYear === "ALL";
     const [year, month, day] = transactionDate;
     if (filterDate && `${year}-${month}-${day}` !== filterDate) return false;
     if (filterMonth !== "ALL" && month !== filterMonth) return false;
     if (filterYear !== "ALL" && year !== filterYear) return false;
     return true;
-  }), [filterDate, filterMonth, filterYear, rows]);
+  }), [filterDate, filterMonth, filterYear, globalDateFrom, globalDateTo, globalSearch, globalType, rows]);
 
   const statementSummary = useMemo(() => {
     const activeRows = filteredRows.filter((row) => row.status !== "SKIPPED" && Number(row.duplicateScore || 0) < 95);
@@ -229,7 +257,15 @@ export function StatementImportPanel({
   const reviewCount = filteredRows.filter((row) => row.status === "NEEDS_REVIEW").length;
   const duplicateCount = filteredRows.filter((row) => Number(row.duplicateScore || 0) >= 95).length;
   const readyCount = filteredRows.filter((row) => ["CATEGORIZED", "PENDING", "MATCHED"].includes(String(row.status))).length;
-  const hasFilters = Boolean(filterDate || filterMonth !== "ALL" || filterYear !== "ALL");
+  const hasFilters = Boolean(
+    filterDate
+    || filterMonth !== "ALL"
+    || filterYear !== "ALL"
+    || globalSearch.trim()
+    || (globalType && globalType !== "ALL")
+    || globalDateFrom
+    || globalDateTo,
+  );
   const Icon = mode === "BANK" ? Landmark : CreditCard;
 
   return (

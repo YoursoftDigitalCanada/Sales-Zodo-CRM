@@ -67,12 +67,14 @@ export function StatementImportPanel({
   categories,
   vendors,
   onPosted,
+  onSummaryChange,
 }: {
   mode: StatementMode;
   accounts: BookkeepingRecord[];
   categories: BookkeepingRecord[];
   vendors: BookkeepingRecord[];
   onPosted: () => void;
+  onSummaryChange?: (summary: { charges: number; credits: number; net: number; largestCharge: number; rows: number } | null) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const prefix = mode === "BANK" ? "Bank statement" : "Credit card statement";
@@ -87,7 +89,16 @@ export function StatementImportPanel({
   const [filterYear, setFilterYear] = useState("ALL");
 
   const eligibleAccounts = useMemo(() => accounts.filter((account) => {
-    if (mode === "CREDIT_CARD") return account.type === "LIABILITY" || account.subtype === "CREDIT_CARD";
+    if (mode === "CREDIT_CARD") {
+      const subtype = String(account.subtype || "").toUpperCase().replace(/[\s-]+/g, "_");
+      const searchableName = `${account.name || ""} ${account.institutionName || ""}`.toLowerCase();
+      return subtype === "CREDIT_CARD"
+        || searchableName.includes("credit card")
+        || searchableName.includes("visa")
+        || searchableName.includes("mastercard")
+        || searchableName.includes("amex")
+        || (account.type === "LIABILITY" && account.isSystem === false);
+    }
     return account.type === "ASSET" && (account.isBankAccount || ["CHECKING", "SAVINGS", "CASH"].includes(String(account.subtype || "").toUpperCase()));
   }), [accounts, mode]);
 
@@ -137,6 +148,33 @@ export function StatementImportPanel({
     if (filterYear !== "ALL" && year !== filterYear) return false;
     return true;
   }), [filterDate, filterMonth, filterYear, rows]);
+
+  const statementSummary = useMemo(() => {
+    const activeRows = filteredRows.filter((row) => row.status !== "SKIPPED" && Number(row.duplicateScore || 0) < 95);
+    let charges = 0;
+    let credits = 0;
+    let largestCharge = 0;
+    activeRows.forEach((row) => {
+      const normalized = row.normalizedData || {};
+      const overrides = row.manualOverrides || {};
+      const transactionType = String(overrides.transactionType || row.aiTransactionType || (normalized.type === "CREDIT" ? "INCOME" : "EXPENSE")).toUpperCase();
+      const amount = Math.abs(Number(normalized.amount || 0));
+      const isCredit = ["INCOME", "REFUND", "CASHBACK", "TRANSFER", "CREDIT_CARD_PAYMENT"].includes(transactionType);
+      if (isCredit) {
+        credits += amount;
+      } else {
+        charges += amount;
+        largestCharge = Math.max(largestCharge, amount);
+      }
+    });
+    return { charges, credits, net: charges - credits, largestCharge, rows: activeRows.length };
+  }, [filteredRows]);
+
+  useEffect(() => {
+    if (!onSummaryChange) return;
+    onSummaryChange(rows.length ? statementSummary : null);
+    return () => onSummaryChange(null);
+  }, [onSummaryChange, rows.length, statementSummary]);
 
   const upload = async (file: File) => {
     try {

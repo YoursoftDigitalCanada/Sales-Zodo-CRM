@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ArrowDownUp, ChevronLeft, ChevronRight, Download, ExternalLink, Eye, FilterX, Landmark, MoreHorizontal, Plus, RefreshCw, Search, Upload, WalletCards } from "lucide-react";
 import { toast } from "sonner";
@@ -102,6 +102,22 @@ function transactionAmountTone(tx: BookkeepingRecord) {
     className: moneyOut ? "text-rose-600" : "text-emerald-600",
     prefix: moneyOut ? "-" : "+",
   };
+}
+
+function isCreditCardAccount(account: BookkeepingRecord) {
+  const subtype = String(account.subtype || "").toUpperCase().replace(/[\s-]+/g, "_");
+  const searchableName = `${account.name || ""} ${account.institutionName || ""}`.toLowerCase();
+  return subtype === "CREDIT_CARD"
+    || searchableName.includes("credit card")
+    || searchableName.includes("visa")
+    || searchableName.includes("mastercard")
+    || searchableName.includes("amex")
+    || (account.type === "LIABILITY" && account.isSystem === false);
+}
+
+function isCreditCardTransaction(tx: BookkeepingRecord, creditCardAccountIds: Set<string>) {
+  const provider = String(tx.metadata?.provider || "").toUpperCase();
+  return provider === "CREDIT_CARD" || Boolean(tx.accountId && creditCardAccountIds.has(tx.accountId));
 }
 
 async function ensureReceiptsCategoryId() {
@@ -352,6 +368,13 @@ export default function BookkeepingPage() {
   const [editingTx, setEditingTx] = useState<BookkeepingRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BookkeepingRecord | null>(null);
   const [timelineTarget, setTimelineTarget] = useState<string | null>(null);
+  const [creditCardStatementSummary, setCreditCardStatementSummary] = useState<{
+    charges: number;
+    credits: number;
+    net: number;
+    largestCharge: number;
+    rows: number;
+  } | null>(null);
   const [ledgerStatus, setLedgerStatus] = useState("ALL");
   const [ledgerAccountId, setLedgerAccountId] = useState("ALL");
   const [ledgerCategoryId, setLedgerCategoryId] = useState("ALL");
@@ -485,7 +508,7 @@ export default function BookkeepingPage() {
       .filter((account) => account.type === "ASSET" && (account.isBankAccount || ["CHECKING", "SAVINGS", "CASH"].includes(String(account.subtype || "").toUpperCase())))
       .map((account) => account.id));
     const creditCardAccountIds = new Set(accounts
-      .filter((account) => account.type === "LIABILITY" && String(account.subtype || "").toUpperCase() === "CREDIT_CARD")
+      .filter(isCreditCardAccount)
       .map((account) => account.id));
     const amount = (tx: BookkeepingRecord) => Number(tx.amount || 0);
     const isMoneyIn = (tx: BookkeepingRecord) => ["INCOME", "CASHBACK", "OWNER_CONTRIBUTION", "LOAN_PRINCIPAL"].includes(String(tx.type || "").toUpperCase()) || (tx.type === "REFUND" && !isIncomeReversal(tx));
@@ -504,7 +527,15 @@ export default function BookkeepingPage() {
     }
 
     if (activeTab === "credit-cards") {
-      const rows = activeTransactions.filter((tx) => creditCardAccountIds.has(tx.accountId));
+      if (creditCardStatementSummary?.rows) {
+        return [
+          ["Card Charges", creditCardStatementSummary.charges, "text-[#E11D48]"],
+          ["Payments & Credits", creditCardStatementSummary.credits, "text-[#0F766E]"],
+          ["Net Card Activity", creditCardStatementSummary.net, "text-[#0F172A]"],
+          ["Largest Charge", creditCardStatementSummary.largestCharge, "text-[#0891B2]"],
+        ];
+      }
+      const rows = activeTransactions.filter((tx) => isCreditCardTransaction(tx, creditCardAccountIds));
       const charges = rows.filter(isMoneyOut).reduce((sum, tx) => sum + amount(tx), 0);
       const credits = rows.filter((tx) => isMoneyIn(tx) || ["TRANSFER", "CREDIT_CARD_PAYMENT"].includes(String(tx.type || "").toUpperCase())).reduce((sum, tx) => sum + amount(tx), 0);
       const largestCharge = rows.filter(isMoneyOut).reduce((largest, tx) => Math.max(largest, amount(tx)), 0);
@@ -522,7 +553,7 @@ export default function BookkeepingPage() {
       ["Net Profit", dashboard.totals?.netProfit, "text-[#0F172A]"],
       ["Cash / Bank Movement", dashboard.totals?.cashBankBalance, "text-[#0891B2]"],
     ];
-  }, [accounts, activeTab, dashboard.totals, transactions]);
+  }, [accounts, activeTab, creditCardStatementSummary, dashboard.totals, transactions]);
 
   const sync = async () => {
     try {
@@ -586,6 +617,16 @@ export default function BookkeepingPage() {
     setLedgerSource("ALL");
     setLedgerSort("DATE_DESC");
   };
+
+  const updateCreditCardStatementSummary = useCallback((summary: {
+    charges: number;
+    credits: number;
+    net: number;
+    largestCharge: number;
+    rows: number;
+  } | null) => {
+    setCreditCardStatementSummary(summary);
+  }, []);
 
   return (
     <main className="min-h-screen bg-[#F8FAFC] p-4 md:p-6">
@@ -753,7 +794,7 @@ export default function BookkeepingPage() {
           </TabsContent>
 
           <TabsContent value="credit-cards">
-            <StatementImportPanel mode="CREDIT_CARD" accounts={accounts} categories={categories} vendors={vendors} onPosted={reload} />
+            <StatementImportPanel mode="CREDIT_CARD" accounts={accounts} categories={categories} vendors={vendors} onPosted={reload} onSummaryChange={updateCreditCardStatementSummary} />
           </TabsContent>
 
           <TabsContent value="accounts">

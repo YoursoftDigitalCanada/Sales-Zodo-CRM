@@ -283,17 +283,17 @@ function ContractDetailDialog({
 
   return (
     <Dialog open={Boolean(contract)} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle className="flex flex-wrap items-center gap-3">
-            {contract.contractNumber}
+      <DialogContent className="grid h-[calc(100svh-1rem)] w-[calc(100vw-1rem)] max-w-4xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-xl p-0 sm:h-auto sm:max-h-[calc(100svh-2rem)] sm:w-[calc(100vw-2rem)] sm:rounded-2xl">
+        <DialogHeader className="shrink-0 border-b border-[rgba(15,23,42,0.08)] bg-white px-4 py-4 pr-12 text-left sm:px-6 sm:py-5 sm:pr-14">
+          <DialogTitle className="flex min-w-0 flex-wrap items-center gap-2 text-base sm:gap-3 sm:text-lg">
+            <span className="min-w-0 break-all sm:break-normal">{contract.contractNumber}</span>
             {statusBadge(contract.status)}
           </DialogTitle>
-          <DialogDescription>{contract.title}</DialogDescription>
+          <DialogDescription className="break-words pr-2">{contract.title}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain bg-[#F8FAFC] px-4 py-4 sm:space-y-5 sm:px-6 sm:py-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <DetailRow label="Company" value={contract.client?.clientName} />
             <DetailRow label="Contact" value={contactName(contract.contact)} />
             <DetailRow label="Value" value={money(contract.value, contract.currency)} />
@@ -304,9 +304,9 @@ function ContractDetailDialog({
             <section className="rounded-md border bg-white p-4">
               <h3 className="mb-3 flex items-center gap-2 font-semibold text-[#0F172A]"><Building2 className="h-4 w-4 text-[#0F766E]" />Relationships</h3>
               <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between"><span className="text-[#64748B]">Proposal</span>{proposalUrl ? <Button size="sm" variant="ghost" className="text-[#0F766E]" onClick={() => window.location.assign(proposalUrl)}>Open</Button> : <span>-</span>}</div>
-                <div className="flex items-center justify-between"><span className="text-[#64748B]">Deal</span>{dealUrl ? <Button size="sm" variant="ghost" className="text-[#0F766E]" onClick={() => window.location.assign(dealUrl)}>Open</Button> : <span>-</span>}</div>
-                <div className="flex items-center justify-between"><span className="text-[#64748B]">Documents</span><Button size="sm" variant="ghost" className="text-[#0F766E]" onClick={() => window.location.assign(docsUrl)}>Open</Button></div>
+                <div className="flex min-h-9 items-center justify-between gap-3"><span className="text-[#64748B]">Proposal</span>{proposalUrl ? <Button size="sm" variant="ghost" className="shrink-0 text-[#0F766E]" onClick={() => window.location.assign(proposalUrl)}>Open</Button> : <span>-</span>}</div>
+                <div className="flex min-h-9 items-center justify-between gap-3"><span className="text-[#64748B]">Deal</span>{dealUrl ? <Button size="sm" variant="ghost" className="shrink-0 text-[#0F766E]" onClick={() => window.location.assign(dealUrl)}>Open</Button> : <span>-</span>}</div>
+                <div className="flex min-h-9 items-center justify-between gap-3"><span className="text-[#64748B]">Documents</span><Button size="sm" variant="ghost" className="shrink-0 text-[#0F766E]" onClick={() => window.location.assign(docsUrl)}>Open</Button></div>
               </div>
             </section>
 
@@ -324,23 +324,23 @@ function ContractDetailDialog({
           {(contract.terms || contract.notes || contract.description) && (
             <section className="rounded-md border bg-white p-4">
               <h3 className="mb-3 font-semibold text-[#0F172A]">Terms, Notes, and Scope</h3>
-              <div className="space-y-3 text-sm text-[#475569]">
-                {contract.description && <p className="whitespace-pre-line">{contract.description}</p>}
-                {contract.terms && <p className="whitespace-pre-line">{contract.terms}</p>}
-                {contract.notes && <p className="whitespace-pre-line">{contract.notes}</p>}
+              <div className="space-y-3 break-words text-sm text-[#475569]">
+                {contract.description && <p className="whitespace-pre-wrap">{contract.description}</p>}
+                {contract.terms && <p className="whitespace-pre-wrap">{contract.terms}</p>}
+                {contract.notes && <p className="whitespace-pre-wrap">{contract.notes}</p>}
               </div>
             </section>
           )}
         </div>
 
-        <DialogFooter className="flex-wrap gap-2">
-          {["DRAFT", "SENT"].includes(contract.status) && <Button onClick={() => onSend(contract)} style={{ background: "#0F766E" }}><Send className="mr-2 h-4 w-4" />{contract.status === "SENT" ? "Resend" : "Send"}</Button>}
-          {contract.status === "SENT" && <Button onClick={() => onAction("Contract signed", () => signContract(contract.id))} style={{ background: "#10B981" }}><CheckCircle2 className="mr-2 h-4 w-4" />Mark Signed</Button>}
-          {contract.status === "SENT" && <Button variant="outline" onClick={() => onAction("Contract declined", () => declineContract(contract.id))}><XCircle className="mr-2 h-4 w-4" />Decline</Button>}
-          <Button variant="outline" onClick={() => onDownload(contract)}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
-          <Button variant="outline" onClick={() => onAction("Contract saved to Documents", () => saveContractDocument(contract.id, contract.status === "ACTIVE" ? "signed" : "sent"))}><Save className="mr-2 h-4 w-4" />Save to Documents</Button>
-          <Button variant="outline" onClick={() => onCreateInvoice(contract)}><FileText className="mr-2 h-4 w-4" />Create Invoice</Button>
-          <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" onClick={() => onDelete(contract)}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
+        <DialogFooter className="max-h-[42svh] shrink-0 overflow-y-auto border-t border-[rgba(15,23,42,0.08)] bg-white px-4 py-3 sm:max-h-none sm:flex-row sm:flex-wrap sm:justify-end sm:gap-2 sm:space-x-0 sm:px-6 sm:py-4">
+          {["DRAFT", "SENT"].includes(contract.status) && <Button className="w-full sm:w-auto" onClick={() => onSend(contract)} style={{ background: "#0F766E" }}><Send className="mr-2 h-4 w-4" />{contract.status === "SENT" ? "Resend" : "Send"}</Button>}
+          {contract.status === "SENT" && <Button className="w-full sm:w-auto" onClick={() => onAction("Contract signed", () => signContract(contract.id))} style={{ background: "#10B981" }}><CheckCircle2 className="mr-2 h-4 w-4" />Mark Signed</Button>}
+          {contract.status === "SENT" && <Button className="w-full sm:w-auto" variant="outline" onClick={() => onAction("Contract declined", () => declineContract(contract.id))}><XCircle className="mr-2 h-4 w-4" />Decline</Button>}
+          <Button className="w-full sm:w-auto" variant="outline" onClick={() => onDownload(contract)}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
+          <Button className="w-full sm:w-auto" variant="outline" onClick={() => onAction("Contract saved to Documents", () => saveContractDocument(contract.id, contract.status === "ACTIVE" ? "signed" : "sent"))}><Save className="mr-2 h-4 w-4" />Save to Documents</Button>
+          <Button className="w-full sm:w-auto" variant="outline" onClick={() => onCreateInvoice(contract)}><FileText className="mr-2 h-4 w-4" />Create Invoice</Button>
+          <Button variant="outline" className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 sm:w-auto" onClick={() => onDelete(contract)}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

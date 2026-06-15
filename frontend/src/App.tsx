@@ -329,7 +329,7 @@ const AppRoutes = () => {
 
     document.title = `${companyName} | Sales CRM`;
 
-    const faviconHref = companyLogoUrl || "/favicon.png";
+    const faviconHref = companyLogoUrl || "/favicon.svg";
     const faviconType = faviconHref.toLowerCase().includes(".svg")
       ? "image/svg+xml"
       : faviconHref.toLowerCase().includes(".webp")

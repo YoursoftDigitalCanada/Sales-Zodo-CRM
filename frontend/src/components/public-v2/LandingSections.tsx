@@ -1608,7 +1608,7 @@ export function LandingFooter() {
         <div className="mt-16 border-t border-section-dark-foreground/10 pt-8">
           <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
             <div className="flex items-center gap-3">
-              <BrandLogo />
+              <BrandLogo variant="dark" />
               <span className="ml-2 text-xs text-section-dark-foreground/40">{footerTagline}</span>
             </div>
 

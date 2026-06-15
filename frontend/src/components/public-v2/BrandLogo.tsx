@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 
 type LogoSize = "sm" | "default" | "lg";
+type LogoVariant = "auto" | "light" | "dark";
 
 const sizeClasses: Record<LogoSize, string> = {
   sm: "h-7",
@@ -11,16 +12,28 @@ const sizeClasses: Record<LogoSize, string> = {
 interface BrandLogoProps {
   className?: string;
   size?: LogoSize;
+  variant?: LogoVariant;
 }
 
-export function BrandLogo({ className, size = "default" }: BrandLogoProps) {
+export function BrandLogo({ className, size = "default", variant = "auto" }: BrandLogoProps) {
+  const imageClassName = cn("w-auto object-contain", sizeClasses[size]);
+
   return (
     <div className={cn("flex items-center", className)}>
-      <img
-        src="/assets/zodo-logo.png"
-        alt="Zodo"
-        className={cn("rounded-md object-contain", sizeClasses[size])}
-      />
+      {variant !== "dark" ? (
+        <img
+          src="/assets/zodo-logo-light.svg"
+          alt="Zodo"
+          className={cn(imageClassName, variant === "auto" && "dark:hidden")}
+        />
+      ) : null}
+      {variant !== "light" ? (
+        <img
+          src="/assets/zodo-logo-dark.svg"
+          alt="Zodo"
+          className={cn(imageClassName, variant === "auto" && "hidden dark:block")}
+        />
+      ) : null}
     </div>
   );
 }

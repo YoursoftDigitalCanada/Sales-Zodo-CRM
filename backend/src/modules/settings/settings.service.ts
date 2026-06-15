@@ -8,6 +8,7 @@ import { settingsRepository } from './settings.repository';
 import { config } from '../../config';
 import fs from 'fs/promises';
 import path from 'path';
+import sharp from 'sharp';
 import { BILLING_PLANS, normalizeBillingCycle, normalizePlanKey } from './settings.constants';
 import {
   type BillingInvoiceDto,
@@ -326,6 +327,36 @@ export class SettingsService {
     }
 
     return this.buildEmailSettingsResponse(tenantId, userId);
+  }
+
+  async normalizeAndUpdateSignatureAsset(
+    tenantId: string,
+    userId: string,
+    kind: 'logo' | 'signature',
+    file: Express.Multer.File,
+  ) {
+    const parsedPath = path.parse(file.path);
+    const normalizedPath = path.join(parsedPath.dir, `${parsedPath.name}-email.png`);
+
+    try {
+      await sharp(file.path, { density: 192 })
+        .rotate()
+        .resize({
+          width: kind === 'logo' ? 480 : 640,
+          height: kind === 'logo' ? 160 : 220,
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .png({ compressionLevel: 9 })
+        .toFile(normalizedPath);
+    } catch {
+      await fs.unlink(file.path).catch(() => undefined);
+      throw new BadRequestError('The uploaded image could not be processed. Use a valid SVG, PNG, JPG, or JPEG file.');
+    }
+
+    await fs.unlink(file.path).catch(() => undefined);
+    const publicPath = `/uploads/${tenantId}/settings/${path.basename(normalizedPath)}`;
+    return this.updateSignatureAsset(tenantId, userId, kind, publicPath);
   }
 
   async updateImapSettings(tenantId: string, userId: string, data: UpdateImapSettingsDto) {

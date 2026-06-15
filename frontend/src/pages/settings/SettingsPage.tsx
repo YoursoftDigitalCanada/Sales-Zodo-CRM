@@ -1660,6 +1660,9 @@ export default function SettingsPage() {
                   <div className="mt-4 rounded-md border border-[#BAE6FD] bg-[#F0F9FF] p-3 text-xs leading-5 text-[#075985]">
                     Use port 465 with SSL/TLS, or port 587 with STARTTLS. Gmail needs an App Password, Microsoft 365 needs SMTP AUTH enabled, and some providers block SMTP from VPS servers until the server IP is allowed.
                   </div>
+                  <div className="mt-3 rounded-md border border-[#FDE68A] bg-[#FFFBEB] p-3 text-xs leading-5 text-[#92400E]">
+                    For reliable inbox delivery, the authenticated SMTP username is used as the From address. A different Sender email is used as Reply-To. Configure SPF, DKIM, and DMARC for your sending domain to reduce spam placement.
+                  </div>
                   <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                     <div className="inline-flex items-center gap-2 rounded-full bg-[#F8FAFC] px-3 py-1 text-xs font-medium text-[#475569]">
                       {emailSettings.smtp.configured ? <CheckCircle2 size={14} className="text-[#16A34A]" /> : <AlertTriangle size={14} className="text-[#D97706]" />}

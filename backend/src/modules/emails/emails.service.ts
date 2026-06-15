@@ -19,6 +19,7 @@ import { mailboxRepository } from './mailbox.repository';
 import { config } from '../../config';
 import fs from 'fs/promises';
 import path from 'path';
+import sharp from 'sharp';
 
 export class EmailsService {
     private escapeHtml(value: string) {
@@ -30,13 +31,6 @@ export class EmailsService {
             .replace(/'/g, '&#039;');
     }
 
-    private getImageContentType(filePath: string) {
-        const extension = path.extname(filePath).toLowerCase();
-        if (extension === '.svg') return 'image/svg+xml';
-        if (extension === '.png') return 'image/png';
-        return 'image/jpeg';
-    }
-
     private async buildMailboxSignature(smtp: {
         signature?: string;
         signatureLogoUrl?: string;
@@ -44,52 +38,59 @@ export class EmailsService {
     }) {
         const signatureText = String(smtp.signature || '').trim();
         const assetDefinitions = [
-            { storedPath: String(smtp.signatureLogoUrl || ''), cid: 'zodo-mailbox-logo', alt: 'Company logo', maxHeight: 56 },
-            { storedPath: String(smtp.signatureImageUrl || ''), cid: 'zodo-mailbox-signature', alt: 'Email signature', maxHeight: 72 },
+            { storedPath: String(smtp.signatureLogoUrl || ''), alt: 'Company logo', maxWidth: 180, maxHeight: 60 },
+            { storedPath: String(smtp.signatureImageUrl || ''), alt: 'Email signature', maxWidth: 220, maxHeight: 78 },
         ].filter((asset) => asset.storedPath);
 
-        const inlineAttachments: Array<{
-            filename: string;
-            content: Buffer;
-            contentType: string;
-            cid: string;
-            contentDisposition: 'inline';
-        }> = [];
         const imageHtml: string[] = [];
+        const publicApiOrigin = String(process.env.PUBLIC_API_URL || process.env.API_BASE_URL || (
+            config.app.isProduction ? 'https://salesapi.zodo.ca' : `http://localhost:${config.app.port}`
+        )).replace(/\/+$/, '');
 
         for (const asset of assetDefinitions) {
             if (!asset.storedPath.startsWith('/uploads/')) continue;
-            try {
-                const absolutePath = this.resolveAttachmentPath(asset.storedPath);
-                const content = await fs.readFile(absolutePath);
-                inlineAttachments.push({
-                    filename: path.basename(absolutePath),
-                    content,
-                    contentType: this.getImageContentType(absolutePath),
-                    cid: asset.cid,
-                    contentDisposition: 'inline',
-                });
-                imageHtml.push(
-                    `<div style="margin-top:8px"><img src="cid:${asset.cid}" alt="${asset.alt}" style="display:block;max-width:240px;max-height:${asset.maxHeight}px;width:auto;height:auto" /></div>`,
-                );
-            } catch {
-                // A missing optional asset must not prevent an otherwise valid email from sending.
+            let mailSafePath = asset.storedPath;
+            if (path.extname(asset.storedPath).toLowerCase() !== '.png') {
+                try {
+                    const absoluteSourcePath = this.resolveAttachmentPath(asset.storedPath);
+                    const parsedSourcePath = path.parse(absoluteSourcePath);
+                    const absolutePngPath = path.join(parsedSourcePath.dir, `${parsedSourcePath.name}-email.png`);
+                    await fs.access(absolutePngPath).catch(async () => {
+                        await sharp(absoluteSourcePath, { density: 192 })
+                            .rotate()
+                            .resize({
+                                width: asset.maxWidth * 2,
+                                height: asset.maxHeight * 2,
+                                fit: 'inside',
+                                withoutEnlargement: true,
+                            })
+                            .png({ compressionLevel: 9 })
+                            .toFile(absolutePngPath);
+                    });
+                    mailSafePath = `${asset.storedPath.slice(0, asset.storedPath.lastIndexOf('/') + 1)}${path.basename(absolutePngPath)}`;
+                } catch {
+                    continue;
+                }
             }
+
+            const publicUrl = `${publicApiOrigin}${mailSafePath}`;
+            imageHtml.push(
+                `<tr><td style="padding:8px 0 0 0;text-align:left"><img src="${publicUrl}" alt="${asset.alt}" width="${asset.maxWidth}" style="display:block;border:0;outline:none;text-decoration:none;width:auto;max-width:${asset.maxWidth}px;height:auto;max-height:${asset.maxHeight}px;margin:0" /></td></tr>`,
+            );
         }
 
         if (!signatureText && imageHtml.length === 0) {
-            return { html: '', text: '', attachments: inlineAttachments };
+            return { html: '', text: '' };
         }
 
         const textHtml = signatureText
-            ? `<div style="white-space:pre-line">${this.escapeHtml(signatureText)}</div>`
+            ? `<tr><td style="padding:0;text-align:left;font-family:Arial,sans-serif;font-size:14px;line-height:20px;color:#334155;white-space:pre-line">${this.escapeHtml(signatureText)}</td></tr>`
             : '';
         const plainText = signatureText ? `\n\n${signatureText}` : '';
 
         return {
-            html: `<div data-zodo-mailbox-signature="true" style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0">${textHtml}${imageHtml.join('')}</div>`,
+            html: `<table data-zodo-mailbox-signature="true" role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:420px;margin-top:24px;border-collapse:collapse;border-top:1px solid #e2e8f0"><tbody><tr><td style="height:16px;line-height:16px;font-size:0">&nbsp;</td></tr>${textHtml}${imageHtml.join('')}</tbody></table>`,
             text: plainText,
-            attachments: inlineAttachments,
         };
     }
 
@@ -217,7 +218,10 @@ export class EmailsService {
             );
         }
 
-        const senderEmail = mailboxConfig.smtp.senderEmail || mailboxConfig.smtp.user;
+        const senderEmail = mailboxConfig.smtp.user;
+        const replyTo = mailboxConfig.smtp.senderEmail && mailboxConfig.smtp.senderEmail !== mailboxConfig.smtp.user
+            ? mailboxConfig.smtp.senderEmail
+            : undefined;
         const senderName = mailboxConfig.smtp.senderName || 'ZODO CRM';
 
         const toAddresses = Array.isArray(data.toAddresses)
@@ -257,14 +261,12 @@ export class EmailsService {
                 subject: data.subject,
                 html: bodyHtml,
                 text: bodyText || undefined,
-                attachments: [
-                    ...uploadedAttachments.map((attachment) => ({
-                        filename: attachment.filename,
-                        content: attachment.content,
-                        contentType: attachment.mimeType,
-                    })),
-                    ...mailboxSignature.attachments,
-                ],
+                replyTo,
+                attachments: uploadedAttachments.map((attachment) => ({
+                    filename: attachment.filename,
+                    content: attachment.content,
+                    contentType: attachment.mimeType,
+                })),
             },
         );
 
@@ -472,8 +474,14 @@ export class EmailsService {
                     content: await fs.readFile(this.resolveAttachmentPath(attachment.path)),
                 })));
 
-                const senderEmail = mailboxConfig.smtp.senderEmail || mailboxConfig.smtp.user;
+                const senderEmail = mailboxConfig.smtp.user;
+                const replyTo = mailboxConfig.smtp.senderEmail && mailboxConfig.smtp.senderEmail !== mailboxConfig.smtp.user
+                    ? mailboxConfig.smtp.senderEmail
+                    : undefined;
                 const senderName = mailboxConfig.smtp.senderName || 'ZODO CRM';
+                const mailboxSignature = await this.buildMailboxSignature(mailboxConfig.smtp);
+                const bodyHtml = `${draft.bodyHtml || draft.bodyText || ''}${mailboxSignature.html}`;
+                const bodyText = `${draft.bodyText || ''}${mailboxSignature.text}`;
 
                 const delivery = await mailerService.sendMailWithConfigDetailed(
                     {
@@ -490,8 +498,9 @@ export class EmailsService {
                         cc: ccAddresses,
                         bcc: bccAddresses,
                         subject: draft.subject,
-                        html: draft.bodyHtml || draft.bodyText || '',
-                        text: draft.bodyText || undefined,
+                        html: bodyHtml,
+                        text: bodyText || undefined,
+                        replyTo,
                         attachments,
                     },
                 );

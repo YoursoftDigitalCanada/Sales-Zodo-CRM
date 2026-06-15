@@ -169,12 +169,11 @@ export class SettingsController {
         throw new BadRequestError('Signature image file is required');
       }
 
-      const publicPath = `/uploads/${req.context.tenantId}/settings/${file.filename}`;
-      const emailSettings = await settingsService.updateSignatureAsset(
+      const emailSettings = await settingsService.normalizeAndUpdateSignatureAsset(
         req.context.tenantId,
         req.context.userId,
         kind,
-        publicPath,
+        file,
       );
       await auditService.logWithContext(req, AuditAction.UPDATE, 'settings', `Updated email signature ${kind}`);
       sendSuccess(res, emailSettings, `Email signature ${kind} uploaded`);

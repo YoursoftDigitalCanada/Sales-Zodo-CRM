@@ -6,6 +6,7 @@ import { Request } from 'express';
 import { config } from '../../config';
 
 const MAX_LOGO_SIZE = 2 * 1024 * 1024;
+const MAX_SIGNATURE_ASSET_SIZE = 2 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml']);
 
 const storage = multer.diskStorage({
@@ -37,3 +38,17 @@ export const uploadCompanyLogo = multer({
     fileSize: MAX_LOGO_SIZE,
   },
 }).single('logo');
+
+export const uploadEmailSignatureAsset = multer({
+  storage,
+  fileFilter: (_req, file, cb) => {
+    if (!ALLOWED_MIME_TYPES.has(file.mimetype) || file.mimetype === 'image/webp') {
+      cb(new Error('Only SVG, PNG, JPG, or JPEG signature images are allowed'));
+      return;
+    }
+    cb(null, true);
+  },
+  limits: {
+    fileSize: MAX_SIGNATURE_ASSET_SIZE,
+  },
+}).single('asset');

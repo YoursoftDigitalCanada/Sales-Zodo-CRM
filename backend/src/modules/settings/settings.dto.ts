@@ -72,6 +72,8 @@ export interface SmtpSettingsDto {
   senderName: string;
   senderEmail: string;
   signature: string;
+  signatureLogoUrl: string;
+  signatureImageUrl: string;
   configured: boolean;
 }
 
@@ -323,6 +325,8 @@ export function toEmailSettingsDto(record: WorkspaceSettingsRecord): EmailSettin
       senderName: String(integrations.senderName ?? ''),
       senderEmail: String(integrations.senderEmail ?? ''),
       signature: record.emailSignature || '',
+      signatureLogoUrl: '',
+      signatureImageUrl: '',
       configured: Boolean(smtpHost && smtpUser && smtpPass),
     },
     imap: {

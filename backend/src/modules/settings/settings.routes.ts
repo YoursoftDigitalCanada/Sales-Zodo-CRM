@@ -4,7 +4,7 @@ import { requireAnyPermission, requirePermission } from '../../common/middleware
 import { validate } from '../../common/middleware/validate.middleware';
 import { PERMISSIONS } from '../../common/constants/permissions';
 import { settingsController } from './settings.controller';
-import { uploadCompanyLogo } from './settings-upload.middleware';
+import { uploadCompanyLogo, uploadEmailSignatureAsset } from './settings-upload.middleware';
 import {
   sendTestEmailSchema,
   updateBillingSchema,
@@ -50,6 +50,17 @@ router.post(
   requireAnyPermission([PERMISSIONS.SETTINGS_MANAGE_INTEGRATIONS, PERMISSIONS.EMAILS_VIEW, PERMISSIONS.EMAILS_SEND]),
   validate(updateSmtpSettingsSchema),
   settingsController.updateSmtp.bind(settingsController),
+);
+router.post(
+  '/email/signature-assets/:kind',
+  requireAnyPermission([PERMISSIONS.SETTINGS_MANAGE_INTEGRATIONS, PERMISSIONS.EMAILS_VIEW, PERMISSIONS.EMAILS_SEND]),
+  uploadEmailSignatureAsset,
+  settingsController.uploadEmailSignatureAsset.bind(settingsController),
+);
+router.delete(
+  '/email/signature-assets/:kind',
+  requireAnyPermission([PERMISSIONS.SETTINGS_MANAGE_INTEGRATIONS, PERMISSIONS.EMAILS_VIEW, PERMISSIONS.EMAILS_SEND]),
+  settingsController.removeEmailSignatureAsset.bind(settingsController),
 );
 router.post(
   '/email/imap',

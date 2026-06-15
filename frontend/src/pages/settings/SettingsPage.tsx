@@ -12,12 +12,15 @@ import {
   CreditCard,
   Download,
   Globe2,
+  ImageIcon,
   Loader2,
   Mail,
+  PenLine,
   RefreshCw,
   Save,
   Settings,
   Shield,
+  Trash2,
   Upload,
   UserPlus,
   Users,
@@ -54,6 +57,8 @@ import {
   updateSmtpSettings,
   updateUserRole,
   uploadCompanyLogo,
+  uploadEmailSignatureAsset,
+  removeEmailSignatureAsset,
   type AuditLogItem,
   type BillingCycle,
   type BillingInvoice,
@@ -142,11 +147,15 @@ const currencies = ["CAD", "USD", "EUR", "GBP", "INR"];
 const dateFormats: DateFormatValue[] = ["YYYY-MM-DD", "DD-MM-YYYY", "MM-DD-YYYY", "DD/MM/YYYY", "MM/DD/YYYY"];
 const emailEncryptions = ["SSL/TLS", "STARTTLS", "NONE"] as const;
 const MAX_COMPANY_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
+const MAX_EMAIL_SIGNATURE_ASSET_SIZE_BYTES = 2 * 1024 * 1024;
+const EMAIL_SIGNATURE_ASSET_TYPES = new Set(["image/svg+xml", "image/png", "image/jpeg", "image/jpg"]);
 
 const fieldClass =
   "w-full rounded-md border border-[rgba(15,23,42,0.06)] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0F172A] outline-none transition focus:border-[#0891B2] focus:ring-4 focus:ring-[#22D3EE]/30";
 
 const cardClass = "rounded-md border border-[rgba(15,23,42,0.06)] bg-white p-6 shadow-sm hover:shadow-lg transition-shadow";
+const secondaryButtonClass =
+  "inline-flex h-9 items-center justify-center gap-2 rounded-md border border-[#CBD5E1] bg-white px-3 text-sm font-medium text-[#334155] transition hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800";
 
 function getErrorMessage(error: unknown): string {
   const maybeError = error as { response?: { data?: { message?: string } }; message?: string };
@@ -366,6 +375,8 @@ export default function SettingsPage() {
     roleId: "",
   });
   const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const signatureLogoInputRef = useRef<HTMLInputElement | null>(null);
+  const signatureImageInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setActiveTab(routeMap[location.pathname] || "general");
@@ -725,6 +736,51 @@ export default function SettingsPage() {
       }
     } catch (error) {
       toast({ title: "Save failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      setSavingSection(null);
+    }
+  };
+
+  const handleUploadSignatureAsset = async (kind: "logo" | "signature", file: File) => {
+    const inputRef = kind === "logo" ? signatureLogoInputRef : signatureImageInputRef;
+    const hasAllowedExtension = /\.(svg|png|jpe?g)$/i.test(file.name);
+    if ((!EMAIL_SIGNATURE_ASSET_TYPES.has(file.type) && !hasAllowedExtension) || file.size > MAX_EMAIL_SIGNATURE_ASSET_SIZE_BYTES) {
+      toast({
+        title: "Upload failed",
+        description: "Upload an SVG, PNG, JPG, or JPEG image smaller than 2MB.",
+        variant: "destructive",
+      });
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
+
+    setSavingSection(`signature-${kind}`);
+    try {
+      const next = await uploadEmailSignatureAsset(kind, file);
+      setEmailSettings(next);
+      toast({
+        title: kind === "logo" ? "Signature logo uploaded" : "Signature image uploaded",
+        description: "The image will be included in future personal emails.",
+      });
+    } catch (error) {
+      toast({ title: "Upload failed", description: getErrorMessage(error), variant: "destructive" });
+    } finally {
+      if (inputRef.current) inputRef.current.value = "";
+      setSavingSection(null);
+    }
+  };
+
+  const handleRemoveSignatureAsset = async (kind: "logo" | "signature") => {
+    setSavingSection(`signature-${kind}`);
+    try {
+      const next = await removeEmailSignatureAsset(kind);
+      setEmailSettings(next);
+      toast({
+        title: kind === "logo" ? "Signature logo removed" : "Signature image removed",
+        description: "Future personal emails will no longer include this image.",
+      });
+    } catch (error) {
+      toast({ title: "Remove failed", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setSavingSection(null);
     }
@@ -1517,9 +1573,89 @@ export default function SettingsPage() {
                     <Field label="Sender email">
                       <input className={fieldClass} type="email" value={emailSettings.smtp.senderEmail} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, senderEmail: event.target.value } })} />
                     </Field>
-                    <Field label="Signature" hint="Stored with your mailbox profile for future personal email defaults.">
+                    <Field label="Signature text" hint="Stored with your mailbox profile for future personal email defaults.">
                       <textarea className={cn(fieldClass, "min-h-[120px]")} value={emailSettings.smtp.signature} onChange={(event) => setEmailSettings({ ...emailSettings, smtp: { ...emailSettings.smtp, signature: event.target.value } })} />
                     </Field>
+                    <div className="lg:col-span-2">
+                      <div className="mb-2">
+                        <p className="text-sm font-medium text-[#0F172A] dark:text-slate-100">Signature images</p>
+                        <p className="mt-1 text-xs text-[#64748B] dark:text-slate-400">
+                          Add a logo and handwritten signature. SVG, PNG, JPG, and JPEG files up to 2MB are supported.
+                        </p>
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {([
+                          {
+                            kind: "logo" as const,
+                            label: "Logo",
+                            description: "Brand mark shown above your signature.",
+                            url: emailSettings.smtp.signatureLogoUrl,
+                            inputRef: signatureLogoInputRef,
+                            icon: ImageIcon,
+                          },
+                          {
+                            kind: "signature" as const,
+                            label: "Signature",
+                            description: "Uploaded handwritten or designed sign-off.",
+                            url: emailSettings.smtp.signatureImageUrl,
+                            inputRef: signatureImageInputRef,
+                            icon: PenLine,
+                          },
+                        ]).map((asset) => {
+                          const AssetIcon = asset.icon;
+                          const isUploading = savingSection === `signature-${asset.kind}`;
+                          return (
+                            <div key={asset.kind} className="rounded-md border border-[#E2E8F0] p-4 dark:border-slate-700">
+                              <div className="flex min-h-[92px] items-center gap-4">
+                                <div className="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-2 dark:border-slate-600 dark:bg-slate-900">
+                                  {asset.url ? (
+                                    <img src={asset.url} alt={`${asset.label} preview`} className="max-h-full max-w-full object-contain" />
+                                  ) : (
+                                    <AssetIcon className="h-7 w-7 text-[#94A3B8]" aria-hidden="true" />
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-[#0F172A] dark:text-slate-100">{asset.label}</p>
+                                  <p className="mt-1 text-xs leading-5 text-[#64748B] dark:text-slate-400">{asset.description}</p>
+                                </div>
+                              </div>
+                              <input
+                                ref={asset.inputRef}
+                                type="file"
+                                className="hidden"
+                                accept=".svg,.png,.jpg,.jpeg,image/svg+xml,image/png,image/jpeg"
+                                onChange={(event) => {
+                                  const file = event.target.files?.[0];
+                                  if (file) void handleUploadSignatureAsset(asset.kind, file);
+                                }}
+                              />
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  className={secondaryButtonClass}
+                                  disabled={isUploading}
+                                  onClick={() => asset.inputRef.current?.click()}
+                                >
+                                  {isUploading ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
+                                  {asset.url ? "Replace" : "Upload"}
+                                </button>
+                                {asset.url ? (
+                                  <button
+                                    type="button"
+                                    className={secondaryButtonClass}
+                                    disabled={isUploading}
+                                    onClick={() => void handleRemoveSignatureAsset(asset.kind)}
+                                  >
+                                    <Trash2 size={15} />
+                                    Remove
+                                  </button>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                   <div className="mt-4 rounded-md border border-[#BAE6FD] bg-[#F0F9FF] p-3 text-xs leading-5 text-[#075985]">
                     Use port 465 with SSL/TLS, or port 587 with STARTTLS. Gmail needs an App Password, Microsoft 365 needs SMTP AUTH enabled, and some providers block SMTP from VPS servers until the server IP is allowed.

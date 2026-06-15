@@ -78,6 +78,9 @@ export interface MailboxRuntimeConfig {
     encryption: EmailEncryption;
     senderName: string;
     senderEmail: string;
+    signature?: string;
+    signatureLogoUrl?: string;
+    signatureImageUrl?: string;
   };
   imap: {
     host: string;
@@ -142,6 +145,9 @@ function toRuntimeConfig(user: MailboxUserRecord): MailboxRuntimeConfig | null {
       encryption: normalizedSmtp.encryption as EmailEncryption,
       senderName: normalizedSmtp.senderName,
       senderEmail: normalizedSmtp.senderEmail,
+      signature: String(smtp.signature ?? ''),
+      signatureLogoUrl: String(smtp.signatureLogoUrl ?? ''),
+      signatureImageUrl: String(smtp.signatureImageUrl ?? ''),
     },
     imap: {
       host: normalizedImap.host,
@@ -212,6 +218,8 @@ export class MailboxRepository {
         senderName: normalizedSmtp.senderName,
         senderEmail: normalizedSmtp.senderEmail,
         signature: String(smtp.signature ?? ''),
+        signatureLogoUrl: String(smtp.signatureLogoUrl ?? ''),
+        signatureImageUrl: String(smtp.signatureImageUrl ?? ''),
         configured: Boolean(smtp.host && smtpUser && smtpPass),
       },
       imap: {
@@ -245,6 +253,8 @@ export class MailboxRepository {
       ...(data.smtp?.senderName !== undefined ? { senderName: data.smtp.senderName } : {}),
       ...(data.smtp?.senderEmail !== undefined ? { senderEmail: data.smtp.senderEmail } : {}),
       ...(data.smtp?.signature !== undefined ? { signature: data.smtp.signature } : {}),
+      ...(data.smtp?.signatureLogoUrl !== undefined ? { signatureLogoUrl: data.smtp.signatureLogoUrl } : {}),
+      ...(data.smtp?.signatureImageUrl !== undefined ? { signatureImageUrl: data.smtp.signatureImageUrl } : {}),
       ...(data.smtp ? { username: mergeSecret(existingSmtp.username, data.smtp.username) } : {}),
       ...(data.smtp ? { password: mergeSecret(existingSmtp.password, data.smtp.password) } : {}),
     };
@@ -541,6 +551,9 @@ export class MailboxRepository {
           encryption: normalizedSmtp.encryption as EmailEncryption,
           senderName: normalizedSmtp.senderName,
           senderEmail: normalizedSmtp.senderEmail,
+          signature: String(smtp.signature ?? ''),
+          signatureLogoUrl: String(smtp.signatureLogoUrl ?? ''),
+          signatureImageUrl: String(smtp.signatureImageUrl ?? ''),
         },
         imap: {
           host: normalizedImap.host,
@@ -549,7 +562,7 @@ export class MailboxRepository {
           pass: normalizedImap.pass,
           encryption: normalizedImap.encryption as EmailEncryption,
         },
-      } satisfies MailboxRuntimeConfig;
+      } as MailboxRuntimeConfig;
     }));
 
     return configs.filter((config): config is MailboxRuntimeConfig => Boolean(config));

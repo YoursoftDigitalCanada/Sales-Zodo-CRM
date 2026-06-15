@@ -5,6 +5,9 @@ import { imapPoller } from '../../common/services/imap-poller.service';
 import { mailboxRepository } from '../emails/mailbox.repository';
 import { settingsManager } from './settings.manager';
 import { settingsRepository } from './settings.repository';
+import { config } from '../../config';
+import fs from 'fs/promises';
+import path from 'path';
 import { BILLING_PLANS, normalizeBillingCycle, normalizePlanKey } from './settings.constants';
 import {
   type BillingInvoiceDto,
@@ -52,6 +55,8 @@ export class SettingsService {
         senderName: mailboxSettings.smtp.senderName,
         senderEmail: mailboxSettings.smtp.senderEmail,
         signature: mailboxSettings.smtp.signature || workspaceEmail.smtp.signature || '',
+        signatureLogoUrl: mailboxSettings.smtp.signatureLogoUrl,
+        signatureImageUrl: mailboxSettings.smtp.signatureImageUrl,
         configured: mailboxSettings.smtp.configured,
       },
       imap: {
@@ -290,6 +295,37 @@ export class SettingsService {
     }
 
     return { ...emailSettings, connectionTest };
+  }
+
+  async updateSignatureAsset(
+    tenantId: string,
+    userId: string,
+    kind: 'logo' | 'signature',
+    publicPath: string | null,
+  ) {
+    const mailbox = await mailboxRepository.getRuntimeConfig(userId);
+    if (!mailbox || mailbox.tenantId !== tenantId) {
+      throw new BadRequestError('Mailbox does not belong to this workspace');
+    }
+
+    const current = await mailboxRepository.getMailboxSettings(userId);
+    const previousPath = kind === 'logo'
+      ? current.smtp.signatureLogoUrl
+      : current.smtp.signatureImageUrl;
+
+    await mailboxRepository.updateMailboxSettings(userId, {
+      smtp: kind === 'logo'
+        ? { signatureLogoUrl: publicPath || '' }
+        : { signatureImageUrl: publicPath || '' },
+    });
+
+    if (previousPath && previousPath !== publicPath && previousPath.startsWith(`/uploads/${tenantId}/settings/`)) {
+      const relativePath = previousPath.replace(/^\/uploads\/?/, '');
+      const absolutePath = path.resolve(config.upload.uploadPath, relativePath);
+      await fs.unlink(absolutePath).catch(() => undefined);
+    }
+
+    return this.buildEmailSettingsResponse(tenantId, userId);
   }
 
   async updateImapSettings(tenantId: string, userId: string, data: UpdateImapSettingsDto) {

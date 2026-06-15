@@ -65,6 +65,8 @@ export interface SmtpSettings {
   senderName: string;
   senderEmail: string;
   signature: string;
+  signatureLogoUrl: string;
+  signatureImageUrl: string;
   configured: boolean;
 }
 
@@ -251,6 +253,24 @@ function normalizeLogoUrl(company: CompanyProfile): CompanyProfile {
   };
 }
 
+function normalizeAssetUrl(value: string): string {
+  if (!value || /^https?:\/\//i.test(value) || value.startsWith("blob:")) {
+    return value;
+  }
+  return `${API_ORIGIN}${value}`;
+}
+
+function normalizeEmailSettings(settings: EmailSettings): EmailSettings {
+  return {
+    ...settings,
+    smtp: {
+      ...settings.smtp,
+      signatureLogoUrl: normalizeAssetUrl(settings.smtp.signatureLogoUrl || ""),
+      signatureImageUrl: normalizeAssetUrl(settings.smtp.signatureImageUrl || ""),
+    },
+  };
+}
+
 export async function getWorkspaceSettings(): Promise<WorkspaceSettingsResponse> {
   const response = await api.get("/settings");
   return extractData<WorkspaceSettingsResponse>(response.data);
@@ -315,7 +335,7 @@ export async function reactivateBillingSubscription(): Promise<BillingSettings> 
 
 export async function getEmailSettings(): Promise<EmailSettings> {
   const response = await api.get("/settings/email");
-  return extractData<EmailSettings>(response.data);
+  return normalizeEmailSettings(extractData<EmailSettings>(response.data));
 }
 
 export async function updateSmtpSettings(payload: {
@@ -329,7 +349,24 @@ export async function updateSmtpSettings(payload: {
   signature?: string;
 }): Promise<EmailSettings> {
   const response = await api.post("/settings/email/smtp", payload);
-  return extractData<EmailSettings>(response.data);
+  return normalizeEmailSettings(extractData<EmailSettings>(response.data));
+}
+
+export async function uploadEmailSignatureAsset(
+  kind: "logo" | "signature",
+  file: File,
+): Promise<EmailSettings> {
+  const formData = new FormData();
+  formData.append("asset", file);
+  const response = await api.post(`/settings/email/signature-assets/${kind}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return normalizeEmailSettings(extractData<EmailSettings>(response.data));
+}
+
+export async function removeEmailSignatureAsset(kind: "logo" | "signature"): Promise<EmailSettings> {
+  const response = await api.delete(`/settings/email/signature-assets/${kind}`);
+  return normalizeEmailSettings(extractData<EmailSettings>(response.data));
 }
 
 export async function updateImapSettings(payload: {

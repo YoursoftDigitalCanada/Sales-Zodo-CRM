@@ -157,6 +157,52 @@ export class SettingsController {
     }
   }
 
+  async uploadEmailSignatureAsset(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const kind = req.params.kind;
+      if (kind !== 'logo' && kind !== 'signature') {
+        throw new BadRequestError('Signature asset type must be logo or signature');
+      }
+
+      const file = (req as Request & { file?: Express.Multer.File }).file;
+      if (!file) {
+        throw new BadRequestError('Signature image file is required');
+      }
+
+      const publicPath = `/uploads/${req.context.tenantId}/settings/${file.filename}`;
+      const emailSettings = await settingsService.updateSignatureAsset(
+        req.context.tenantId,
+        req.context.userId,
+        kind,
+        publicPath,
+      );
+      await auditService.logWithContext(req, AuditAction.UPDATE, 'settings', `Updated email signature ${kind}`);
+      sendSuccess(res, emailSettings, `Email signature ${kind} uploaded`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async removeEmailSignatureAsset(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const kind = req.params.kind;
+      if (kind !== 'logo' && kind !== 'signature') {
+        throw new BadRequestError('Signature asset type must be logo or signature');
+      }
+
+      const emailSettings = await settingsService.updateSignatureAsset(
+        req.context.tenantId,
+        req.context.userId,
+        kind,
+        null,
+      );
+      await auditService.logWithContext(req, AuditAction.UPDATE, 'settings', `Removed email signature ${kind}`);
+      sendSuccess(res, emailSettings, `Email signature ${kind} removed`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async updateImap(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const emailSettings = await settingsService.updateImapSettings(req.context.tenantId, req.context.userId, sanitizeBody(req.body));

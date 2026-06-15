@@ -107,6 +107,8 @@ export interface MailboxSmtpSettingsDto {
     senderName: string;
     senderEmail: string;
     signature: string;
+    signatureLogoUrl: string;
+    signatureImageUrl: string;
     configured: boolean;
 }
 
@@ -140,6 +142,8 @@ export interface UpdateMailboxSmtpDto {
     senderName?: string;
     senderEmail?: string;
     signature?: string;
+    signatureLogoUrl?: string;
+    signatureImageUrl?: string;
 }
 
 export interface UpdateMailboxImapDto {

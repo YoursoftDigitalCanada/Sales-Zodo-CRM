@@ -3,6 +3,10 @@ import { authController } from './auth.controller';
 import { validate } from '../../common/middleware/validate.middleware';
 import { authenticate } from '../../common/middleware/auth.middleware';
 import { rateLimiter } from '../../common/middleware/rateLimiter.middleware';
+import {
+  passwordResetRequestRateLimitKey,
+  passwordResetSubmissionRateLimitKey,
+} from './password-reset-rate-limit';
 import { tenantMembershipGuard } from '../../common/middleware/tenant-membership.guard';
 import { config } from '../../config';
 import {
@@ -234,7 +238,11 @@ router.post(
  */
 router.post(
   '/forgot-password',
-  rateLimiter({ windowMs: 60 * 60 * 1000, max: 3 }),
+  rateLimiter({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    keyGenerator: passwordResetRequestRateLimitKey,
+  }),
   validate(forgotPasswordSchema),
   authController.forgotPassword.bind(authController)
 );
@@ -248,7 +256,12 @@ router.post(
  */
 router.post(
   '/reset-password',
-  rateLimiter({ windowMs: 60 * 60 * 1000, max: 3 }),
+  rateLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    keyGenerator: passwordResetSubmissionRateLimitKey,
+    skipSuccessfulRequests: true,
+  }),
   validate(resetPasswordSchema),
   authController.resetPassword.bind(authController)
 );

@@ -1,4 +1,5 @@
 import jwt, { JwtPayload, SignOptions } from 'jsonwebtoken';
+import crypto from 'crypto';
 import { config } from '../../config';
 
 export interface TokenPayload {
@@ -60,6 +61,7 @@ export function generatePasswordResetToken(payload: Omit<PasswordResetTokenPaylo
       expiresIn: '1h',
       issuer: config.app.name,
       subject: payload.userId,
+      jwtid: crypto.randomUUID(),
     },
   );
 }

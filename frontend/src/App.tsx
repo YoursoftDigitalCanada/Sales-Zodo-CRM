@@ -1267,7 +1267,7 @@ const AppRoutes = () => {
       />
       <SessionTakeoverGuard />
       <GlobalAiFloatingButton />
-      <GlobalFloatingCalculator />
+      {showPersistentSidebar ? <GlobalFloatingCalculator /> : null}
     </>
   );
 };

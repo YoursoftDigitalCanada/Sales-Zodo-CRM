@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { importSessionService } from './import-session.service';
 import { transferMatchingService } from '../transfer-intelligence/transfer-matching.service';
 import { bookkeepingAuditService } from '../event-store/audit.service';
+import { statementExportService, type StatementExportQuery } from './statement-export.service';
 
 function tenant(req: Request): string { return req.context.tenantId; }
 function actor(req: Request): string | undefined { return req.user?.userId || req.user?.employeeId; }
@@ -72,6 +73,25 @@ class ImportSessionController {
     try {
       const result = await importSessionService.listRawTransactions(req.params.sessionId, tenant(req), req.query as any);
       sendSuccess(res, result);
+    } catch (error) { next(error); }
+  };
+
+  exportStatement = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const query = req.query as unknown as StatementExportQuery;
+      const reportName = query.mode === 'BANK' ? 'bank-statement' : 'credit-card-statement';
+      const date = new Date().toISOString().slice(0, 10);
+      if (query.format === 'pdf') {
+        const pdf = await statementExportService.pdf(req.params.sessionId, tenant(req), query, actor(req));
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${reportName}-${date}.pdf"`);
+        res.send(pdf);
+        return;
+      }
+      const csv = await statementExportService.csv(req.params.sessionId, tenant(req), query, actor(req));
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${reportName}-${date}.csv"`);
+      res.send(csv);
     } catch (error) { next(error); }
   };
 

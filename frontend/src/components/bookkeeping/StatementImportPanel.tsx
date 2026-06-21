@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BrainCircuit, Check, CreditCard, FileSpreadsheet, Landmark, Loader2, RefreshCw, Upload } from "lucide-react";
+import { BrainCircuit, Check, CreditCard, Download, FileSpreadsheet, FileText, Landmark, Loader2, RefreshCw, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   BookkeepingRecord,
   createImportSession,
+  downloadStatementExport,
   finalizeImportSession,
   getImportSession,
   getImportSessions,
@@ -92,6 +94,7 @@ export function StatementImportPanel({
   const [rows, setRows] = useState<BookkeepingRecord[]>([]);
   const [accountId, setAccountId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
   const [filterDate, setFilterDate] = useState("");
   const [filterMonth, setFilterMonth] = useState("ALL");
   const [filterYear, setFilterYear] = useState("ALL");
@@ -254,6 +257,36 @@ export function StatementImportPanel({
     }
   };
 
+  const exportStatement = async (format: "csv" | "pdf") => {
+    if (!activeSessionId) return;
+    try {
+      setExporting(format);
+      const { blob, fileName } = await downloadStatementExport(activeSessionId, format, {
+        mode,
+        search: globalSearch || undefined,
+        type: globalType && globalType !== "ALL" ? globalType : undefined,
+        dateFrom: globalDateFrom || undefined,
+        dateTo: globalDateTo || undefined,
+        exactDate: filterDate || undefined,
+        month: filterMonth !== "ALL" ? filterMonth : undefined,
+        year: filterYear !== "ALL" ? filterYear : undefined,
+      });
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(`${format.toUpperCase()} export downloaded`);
+    } catch (error: any) {
+      toast.error(errorMessage(error, "Statement export failed."));
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const reviewCount = filteredRows.filter((row) => row.status === "NEEDS_REVIEW").length;
   const duplicateCount = filteredRows.filter((row) => Number(row.duplicateScore || 0) >= 95).length;
   const readyCount = filteredRows.filter((row) => ["CATEGORIZED", "PENDING", "MATCHED"].includes(String(row.status))).length;
@@ -294,6 +327,17 @@ export function StatementImportPanel({
           <Button onClick={() => inputRef.current?.click()} disabled={busy} className="h-10 rounded-xl bg-[#0891B2] hover:bg-[#0E7490]">
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}Upload CSV
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={!activeSessionId || rows.length === 0 || Boolean(exporting)} className="h-10 rounded-xl">
+                {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => void exportStatement("pdf")}><FileText className="mr-2 h-4 w-4" />Export branded PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void exportStatement("csv")}><FileSpreadsheet className="mr-2 h-4 w-4" />Export CSV</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Input ref={inputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => {
             const file = event.target.files?.[0];
             if (file) upload(file);

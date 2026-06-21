@@ -12,6 +12,7 @@ import {
   updateRawTxSchema,
   listRawTxQuerySchema,
   auditLogQuerySchema,
+  statementExportSchema,
 } from './import-session.validators';
 
 const router = Router();
@@ -20,6 +21,7 @@ const canCreateBookkeeping = requireAnyPermission([PERMISSIONS.BOOKKEEPING_CREAT
 const canViewBookkeeping = requireAnyPermission([PERMISSIONS.BOOKKEEPING_VIEW]);
 const canUpdateBookkeeping = requireAnyPermission([PERMISSIONS.BOOKKEEPING_UPDATE, PERMISSIONS.EXPENSES_UPDATE]);
 const canDeleteBookkeeping = requireAnyPermission([PERMISSIONS.BOOKKEEPING_DELETE, PERMISSIONS.EXPENSES_DELETE]);
+const canExportBookkeeping = requireAnyPermission([PERMISSIONS.BOOKKEEPING_EXPORT, PERMISSIONS.BOOKKEEPING_REPORTS, PERMISSIONS.BOOKKEEPING_VIEW]);
 
 // Import Sessions
 router.post('/', canCreateBookkeeping, validate(createSessionSchema), importSessionController.createSession);
@@ -34,6 +36,7 @@ router.post('/:sessionId/finalize', canCreateBookkeeping, validate(sessionIdSche
 
 // Raw Transactions
 router.get('/:sessionId/raw-transactions', canViewBookkeeping, validate(sessionIdSchema), importSessionController.listRawTransactions);
+router.get('/:sessionId/export', canExportBookkeeping, validate(statementExportSchema), importSessionController.exportStatement);
 router.put('/:sessionId/raw-transactions/:rawTxId', canUpdateBookkeeping, validate(updateRawTxSchema), importSessionController.updateRawTransaction);
 
 // Transfer Matching

@@ -61,6 +61,21 @@ export const listRawTxQuerySchema = z.object({
   }).optional(),
 });
 
+export const statementExportSchema = z.object({
+  params: z.object({ sessionId: z.string().uuid() }),
+  query: z.object({
+    format: z.enum(['csv', 'pdf']),
+    mode: z.enum(['BANK', 'CREDIT_CARD']),
+    search: z.string().max(200).optional(),
+    type: z.string().max(40).optional(),
+    dateFrom: z.string().optional(),
+    dateTo: z.string().optional(),
+    exactDate: z.string().optional(),
+    month: z.string().max(3).optional(),
+    year: z.string().max(4).optional(),
+  }),
+});
+
 export const auditLogQuerySchema = z.object({
   query: z.object({
     entityType: z.string().optional(),

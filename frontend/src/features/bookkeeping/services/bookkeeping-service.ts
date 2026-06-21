@@ -239,6 +239,21 @@ export async function updateRawImportTransaction(sessionId: string, rawTransacti
   )));
 }
 
+export async function downloadStatementExport(
+  sessionId: string,
+  format: "csv" | "pdf",
+  params: Record<string, unknown>,
+) {
+  const response = await api.get(`/bookkeeping/import-sessions/${sessionId}/export`, {
+    params: { ...params, format },
+    responseType: "blob",
+  });
+  const disposition = String(response.headers?.["content-disposition"] || "");
+  const fileName = disposition.match(/filename="?([^";]+)"?/i)?.[1]
+    || `statement-${new Date().toISOString().slice(0, 10)}.${format}`;
+  return { blob: response.data as Blob, fileName };
+}
+
 export function exportUrl(path: "transactions-export" | "profit-loss-export", params?: Record<string, string>) {
   const search = new URLSearchParams(params || {}).toString();
   return `/bookkeeping/reports/${path}${search ? `?${search}` : ""}`;
